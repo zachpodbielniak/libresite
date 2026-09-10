@@ -7,6 +7,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <string.h>
+#include <stdlib.h>
 struct _LsPipeline {
 	GObject parent_instance;
 	LsProvider *provider;
@@ -144,6 +145,13 @@ ls_pipeline_register(LsPipeline *self, const gchar *name, GType step_type, GErro
 gboolean
 ls_pipeline_validate(LsPipeline *self, LsRecipe *recipe, GError **error){
 	g_autoptr(LsContext) empty = ls_context_new();
+	return ls_pipeline_validate_context(self, recipe, empty, error);
+}
+
+/* Share preflight across fresh generation, imported projects and CLI inspection. */
+gboolean
+ls_pipeline_validate_context(LsPipeline *self, LsRecipe *recipe,
+	LsContext *context, GError **error){
 	JsonArray *steps = ls_recipe_get_steps(recipe);
 	guint i;
 	for (i = 0; i < json_array_get_length(steps); i++) {
@@ -156,7 +164,7 @@ ls_pipeline_validate(LsPipeline *self, LsRecipe *recipe, GError **error){
 		}
 		if (g_type_is_a(type, LS_TYPE_GENERATE_STEP)) {
 			g_autofree gchar *rendered =
-				ls_prompts_render(self->prompts, recipe, config, empty, error);
+				ls_prompts_render(self->prompts, recipe, config, context, error);
 			if (rendered == NULL)
 				return FALSE;
 		} else if (type == LS_TYPE_VALIDATE_STEP) {
@@ -242,7 +250,7 @@ load_checkpoint(
 	json_object_remove_member(object, "next");
 	json_object_remove_member(object, "version");
 	bundle = ls_json_encode(parsed);
-	if (!ls_context_apply(context, bundle, error))
+	if (!ls_context_restore(context, bundle, error))
 		return FALSE;
 	*next = (guint)index;
 	return TRUE;
@@ -251,7 +259,7 @@ invalid:
 		error,
 		LS_ERROR,
 		LS_ERROR_CONFLICT,
-		"Checkpoint is corrupt or recipe/prompts changed; use a new output directory"
+		"Checkpoint is corrupt or recipe/prompts/source changed; use a new output directory"
 	);
 	return FALSE;
 }
@@ -319,8 +327,7 @@ initialize_repository(const gchar *directory, LsContext *context,
 	GCancellable *cancellable, GError **error){
 	const LsArtifact *existing = ls_context_lookup(context, ".gitignore");
 	g_autofree gchar *path = g_build_filename(directory, ".gitignore", NULL);
-	g_autofree gchar *contents = g_strconcat(
-		existing != NULL ? ls_artifact_get_content(existing) : "",
+	const gchar *defaults =
 		"\n# Libresite: local metadata, secrets, build output and caches\n"
 		"/.libresite/\n*.libresite-work/\n"
 		".env\n.env.*\n!.env.example\n!.env.sample\n!.env.template\n"
@@ -328,11 +335,15 @@ initialize_repository(const gchar *directory, LsContext *context,
 		"__pycache__/\n*.py[cod]\n.pytest_cache/\n.next/\n.nuxt/\n"
 		"*.o\n*.a\n*.so\n*.so.*\n*.log\n*.sqlite\n*.sqlite3\n"
 		"*.sqlite-*\n*.sqlite3-*\n*.db\n*.db-*\n*~\n*.swp\n"
-		"# Always retain the repository ignore policy\n!/.gitignore\n", NULL);
+		"# Always retain the repository ignore policy\n!/.gitignore\n";
+	const gchar *original = existing != NULL ? ls_artifact_get_content(existing) : "";
+	g_autofree gchar *contents = g_str_has_suffix(original, defaults)
+		? g_strdup(original) : g_strconcat(original, defaults, NULL);
 	const gchar *init[] = {"init", "--quiet", "--initial-branch=master", "--template=", NULL};
 	const gchar *add[] = {"add", "--all", "--", ".", NULL};
 	const gchar *commit[] = {"commit", "--no-gpg-sign", "--quiet",
-		"-m", "chore: initial generated project", NULL};
+		"-m", ls_context_is_revision(context) ? "feat: revise existing project"
+			: "chore: initial generated project", NULL};
 	if (!g_file_set_contents(path, contents, -1, error))
 		return FALSE;
 	return run_git(directory, init, cancellable, error) &&
@@ -342,10 +353,11 @@ initialize_repository(const gchar *directory, LsContext *context,
 
 /* Lock one workspace through publication. All generated code remains inert;
  * publication is a same-filesystem directory move with no overwrite flag. */
-gboolean
-ls_pipeline_run(
+static gboolean
+run_pipeline(
 	LsPipeline *self,
 	LsRecipe *recipe,
+	const gchar *project,
 	const gchar *output,
 	gboolean resume,
 	GCancellable *cancellable,
@@ -355,6 +367,7 @@ ls_pipeline_run(
 	g_autofree gchar *absolute = NULL, *work = NULL, *lock_path = NULL, *checkpoint = NULL;
 	g_autofree gchar *recipe_json = NULL, *fingerprint_input = NULL, *fingerprint = NULL;
 	g_autofree gchar *export_path = NULL, *uuid = NULL;
+	g_autofree gchar *initial = NULL;
 	g_autoptr(JsonNode) recipe_node = json_node_new(JSON_NODE_OBJECT);
 	g_autoptr(GFile) source = NULL, destination = NULL;
 	JsonArray *steps = ls_recipe_get_steps(recipe);
@@ -372,6 +385,41 @@ ls_pipeline_run(
 	if (output == NULL || *output == '\0') {
 		g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID, "An output directory is required");
 		return FALSE;
+	}
+	/* Import before creating a workspace, and bind resume to actual source bytes.
+	 * The imported snapshot, never the previous run's metadata, is the baseline. */
+	if (project != NULL) {
+		g_autofree gchar *source_real = realpath(project, NULL);
+		g_autofree gchar *output_clean = g_canonicalize_filename(output, NULL);
+		g_autofree gchar *output_parent = g_path_get_dirname(output_clean);
+		g_autofree gchar *output_name = g_path_get_basename(output_clean);
+		g_autofree gchar *work_name = g_strconcat(output_name, ".libresite-work", NULL);
+		g_autofree gchar *parent_real = realpath(output_parent, NULL);
+		g_autofree gchar *work_real = parent_real != NULL
+			? g_build_filename(parent_real, work_name, NULL) : NULL;
+		g_autofree gchar *work_prefix = work_real != NULL
+			? g_strconcat(work_real, "/", NULL) : NULL;
+		g_autofree gchar *source_prefix = source_real != NULL
+			? g_strconcat(source_real, "/", NULL) : NULL;
+		if (source_real == NULL || parent_real == NULL) {
+			g_set_error(error, G_IO_ERROR, g_io_error_from_errno(errno),
+				"Source and output parent must exist: %s", g_strerror(errno));
+			return FALSE;
+		}
+		if (g_str_equal(source_real, "/") || g_str_equal(source_real, parent_real) ||
+			g_str_has_prefix(parent_real, source_prefix) ||
+			g_str_equal(source_real, work_real) || g_str_has_prefix(source_real, work_prefix)) {
+			g_set_error_literal(error, LS_ERROR, LS_ERROR_CONFLICT,
+				"Revision output and workspace must not overlap the source project");
+			return FALSE;
+		}
+		g_clear_object(&context);
+		context = ls_context_import(project, cancellable, error);
+		if (context == NULL)
+			return FALSE;
+		initial = ls_context_snapshot(context);
+		if (!ls_pipeline_validate_context(self, recipe, context, error))
+			return FALSE;
 	}
 	self->running = TRUE;
 	absolute = g_canonicalize_filename(output, NULL);
@@ -409,7 +457,8 @@ ls_pipeline_run(
 	json_node_set_object(recipe_node, ls_recipe_get_root(recipe));
 	recipe_json = ls_json_encode(recipe_node);
 	fingerprint_input = g_strconcat(
-		"libresite-checkpoint-v1\n", recipe_json, "\n", ls_prompts_get_digest(self->prompts), NULL
+		"libresite-checkpoint-v1\n", recipe_json, "\n", ls_prompts_get_digest(self->prompts),
+		project != NULL ? "\nrevision-v1\n" : "", initial != NULL ? initial : "", NULL
 	);
 	fingerprint = g_compute_checksum_for_string(G_CHECKSUM_SHA256, fingerprint_input, -1);
 	if (resume && g_lstat(checkpoint, &info) == 0) {
@@ -519,4 +568,22 @@ out:
 		(void)g_rmdir(work);
 	self->running = FALSE;
 	return success;
+}
+
+/* Preserve the existing generation entry point and its checkpoint identity. */
+gboolean
+ls_pipeline_run(LsPipeline *self, LsRecipe *recipe, const gchar *output,
+	gboolean resume, GCancellable *cancellable, GError **error){
+	return run_pipeline(self, recipe, NULL, output, resume, cancellable, error);
+}
+
+/* Revision publishes a new standalone repository; the source is read-only. */
+gboolean
+ls_pipeline_revise(LsPipeline *self, LsRecipe *recipe, const gchar *project,
+	const gchar *output, gboolean resume, GCancellable *cancellable, GError **error){
+	if (project == NULL || *project == '\0') {
+		g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID, "A source directory is required");
+		return FALSE;
+	}
+	return run_pipeline(self, recipe, project, output, resume, cancellable, error);
 }

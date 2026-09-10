@@ -12,6 +12,7 @@ typedef struct {
 	LsRecipe *recipe;
 	GCancellable *cancellable;
 	const gchar *output;
+	const gchar *project;
 	gboolean resume;
 	gboolean okay;
 	GError *error;
@@ -32,9 +33,11 @@ quit_loop(gpointer data){
 static gpointer
 run_thread(gpointer data){
 	Run *run = (Run *)data;
-	run->okay = ls_pipeline_run(
-		run->pipeline, run->recipe, run->output, run->resume, run->cancellable, &run->error
-	);
+	run->okay = run->project != NULL
+		? ls_pipeline_revise(run->pipeline, run->recipe, run->project, run->output,
+			run->resume, run->cancellable, &run->error)
+		: ls_pipeline_run(run->pipeline, run->recipe, run->output, run->resume,
+			run->cancellable, &run->error);
 	g_idle_add_full(G_PRIORITY_DEFAULT, quit_loop, run->loop, NULL);
 	return NULL;
 }
@@ -164,7 +167,11 @@ main(int argc, char **argv){
 	g_autoptr(LsAiProvider) provider = NULL;
 	g_autoptr(LsPipeline) pipeline = NULL;
 	g_autofree gchar *yaml = NULL;
+	g_autofree gchar *project = NULL;
+	g_autoptr(LsContext) preview_context = NULL;
 	GOptionEntry entries[] = {
+		{"revise", 0, 0, G_OPTION_ARG_FILENAME, &project,
+		 "Load an existing text project; site.brief describes the changes", "DIR"},
 		{"unlimited", 0, 0, G_OPTION_ARG_NONE, &unlimited,
 		 "Disable provider time and requested output budgets for this run", NULL},
 		{"timeout", 0, 0, G_OPTION_ARG_INT, &timeout,
@@ -214,7 +221,7 @@ main(int argc, char **argv){
 		 0,
 		 G_OPTION_ARG_STRING,
 		 &preview,
-		 "Print system and step prompt with empty project context",
+		 "Print system and step prompt (loads --revise source when supplied)",
 		 "STEP-ID"},
 		{"resume", 0, 0, G_OPTION_ARG_NONE, &resume, "Resume OUTPUT.libresite-work", NULL},
 		{"list-modules", 0, 0, G_OPTION_ARG_NONE, &list, "List built-in step modules", NULL},
@@ -229,7 +236,8 @@ main(int argc, char **argv){
 		"Examples:\n  libresite -r recipes/landing.yaml --validate\n  libresite -r "
 		"recipes/landing.yaml --plan\n  libresite -r recipes/landing.yaml --preview design\n  "
 		"libresite -r recipes/landing.yaml -o ./my-site\n  libresite -r recipes/landing.yaml -o "
-		"./my-site --resume\n\nProviders: codex, claude-code, grok-build, cursor, "
+		"./my-site --resume\n  libresite -r recipes/revision.yaml --revise ./my-site "
+		"-o ./my-site-v2\n\nProviders: codex, claude-code, grok-build, cursor, "
 		"antigravity.\nGeneration uses your installed and authenticated provider CLI.\nGenerated "
 		"code is published as files; no build, deployment or hosting is automatic."
 	);
@@ -295,6 +303,13 @@ main(int argc, char **argv){
 	pipeline = ls_pipeline_new(LS_PROVIDER(provider), prompts);
 	if (!load_plugins(pipeline, plugins, &error) || !ls_pipeline_validate(pipeline, recipe, &error))
 		goto fail;
+	/* Inspection uses the same import and rendering boundaries as execution. */
+	if (project != NULL && (validate || plan || preview != NULL)) {
+		preview_context = ls_context_import(project, NULL, &error);
+		if (preview_context == NULL ||
+			!ls_pipeline_validate_context(pipeline, recipe, preview_context, &error))
+			goto fail;
+	}
 	if (validate) {
 		g_print("Recipe valid\n");
 		return 0;
@@ -306,8 +321,10 @@ main(int argc, char **argv){
 			JsonObject *step = json_array_get_object_element(steps, i);
 			g_autoptr(JsonObject) settings = ls_recipe_resolve_ai(recipe, step);
 			if (preview != NULL && g_str_equal(preview, ls_string(step, "id"))) {
-				g_autoptr(LsContext) empty = ls_context_new();
-				g_autofree gchar *text = ls_prompts_render(prompts, recipe, step, empty, &error);
+				g_autofree gchar *text = NULL;
+				if (preview_context == NULL)
+					preview_context = ls_context_new();
+				text = ls_prompts_render(prompts, recipe, step, preview_context, &error);
 				if (text == NULL)
 					goto fail;
 				g_print("%s\n\n%s", ls_prompts_get_system(prompts), text);
@@ -340,7 +357,7 @@ main(int argc, char **argv){
 	{
 		g_autoptr(GMainLoop) loop = g_main_loop_new(NULL, FALSE);
 		g_autoptr(GCancellable) cancellable = g_cancellable_new();
-		Run run = {loop, pipeline, recipe, cancellable, output, resume, FALSE, NULL};
+		Run run = {loop, pipeline, recipe, cancellable, output, project, resume, FALSE, NULL};
 		Progress progress = {0};
 		guint pulse;
 		guint interrupt = g_unix_signal_add(SIGINT, cancel_run, cancellable);

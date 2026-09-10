@@ -18,6 +18,7 @@ then
 	exit 1
 fi
 binary="$test_dir/usr/bin/libresite"
+(cd /tmp && bash "$root/tests/revision.sh" "$binary")
 for recipe in "$root"/recipes/*.yaml
 do
 	(cd /tmp && "$binary" --recipe "$recipe" --validate)

@@ -19,6 +19,22 @@ GType ls_artifact_get_type(void) G_GNUC_CONST;
  */
 LsArtifact *ls_artifact_new(const gchar *path, const gchar *content, GError **error);
 /**
+ * ls_artifact_new_full:
+ * @path: safe relative output path
+ * @content: UTF-8 file contents
+ * @executable: whether to export the file with owner execute permission
+ * @error: return location for an error
+ * Returns: (transfer full) (nullable): a validated immutable artifact
+ */
+LsArtifact *ls_artifact_new_full(const gchar *path, const gchar *content,
+	gboolean executable, GError **error);
+/**
+ * ls_artifact_get_executable:
+ * @self: an artifact
+ * Returns: whether this file is executable
+ */
+gboolean ls_artifact_get_executable(const LsArtifact *self);
+/**
  * ls_artifact_copy:
  * @self: an artifact
  * Returns: (transfer full): an independent copy

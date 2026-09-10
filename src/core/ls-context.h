@@ -11,12 +11,39 @@ G_DECLARE_FINAL_TYPE(LsContext, ls_context, LS, CONTEXT, GObject)
  */
 LsContext *ls_context_new(void);
 /**
- * ls_context_apply:
- * @self: an artifact store
- * @response: JSON object with a files array and optional summary
+ * ls_context_import:
+ * @directory: source directory containing UTF-8 regular files
+ * @cancellable: (nullable): cancellation token
  * @error: return location for an error
  *
- * Validates the whole bundle before changing the store. Existing files are replaced.
+ * Ignores .git, .libresite and *.libresite-work entries. Rejects symlinks,
+ * special files, invalid paths, binary data and projects exceeding limits.
+ * Returns: (transfer full) (nullable): complete revision context
+ */
+LsContext *ls_context_import(const gchar *directory, GCancellable *cancellable, GError **error);
+/**
+ * ls_context_is_revision:
+ * @self: artifact store
+ * Returns: whether this context was imported for revision
+ */
+gboolean ls_context_is_revision(LsContext *self);
+/**
+ * ls_context_restore:
+ * @self: artifact store
+ * @snapshot: complete JSON snapshot
+ * @error: return location for an error
+ * Returns: whether the snapshot replaced all files atomically
+ */
+gboolean ls_context_restore(LsContext *self, const gchar *snapshot, GError **error);
+/**
+ * ls_context_apply:
+ * @self: an artifact store
+ * @response: JSON object with files, optional delete path array and optional summary
+ * @error: return location for an error
+ *
+ * Validates the whole bundle before changing the store. Existing files are replaced;
+ * omitted files survive. Deletions must name unique existing files and cannot
+ * overlap replacements. File/directory conflicts are checked after all operations.
  * Returns: whether every artifact was accepted
  */
 gboolean ls_context_apply(LsContext *self, const gchar *response, GError **error);

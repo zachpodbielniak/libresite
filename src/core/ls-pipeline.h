@@ -29,6 +29,16 @@ gboolean ls_pipeline_register(LsPipeline *self, const gchar *name, GType step_ty
  */
 gboolean ls_pipeline_validate(LsPipeline *self, LsRecipe *recipe, GError **error);
 /**
+ * ls_pipeline_validate_context:
+ * @self: pipeline
+ * @recipe: recipe
+ * @context: current project, optionally imported for revision
+ * @error: return location for an error
+ * Returns: whether modules and prompts validate against this context without AI
+ */
+gboolean ls_pipeline_validate_context(LsPipeline *self, LsRecipe *recipe,
+	LsContext *context, GError **error);
+/**
  * ls_pipeline_run:
  * @self: pipeline; use only from one thread at a time
  * @recipe: recipe
@@ -50,4 +60,21 @@ gboolean ls_pipeline_run(
 	GCancellable *cancellable,
 	GError **error
 );
+/**
+ * ls_pipeline_revise:
+ * @self: pipeline; use only from one thread at a time
+ * @recipe: recipe whose site.brief describes the requested changes
+ * @project: existing text project directory; never modified
+ * @output: nonexistent destination directory
+ * @resume: reuse a checkpoint matching the recipe, catalog and source snapshot
+ * @cancellable: (nullable): cancellation token
+ * @error: return location for an error
+ *
+ * Loads current files, applies recipe steps incrementally, and publishes a new
+ * standalone Git repository. Source history is not copied. Signals and recovery
+ * follow ls_pipeline_run(). See ls_context_import() for supported source files.
+ * Returns: whether the complete revised project was published
+ */
+gboolean ls_pipeline_revise(LsPipeline *self, LsRecipe *recipe, const gchar *project,
+	const gchar *output, gboolean resume, GCancellable *cancellable, GError **error);
 G_END_DECLS

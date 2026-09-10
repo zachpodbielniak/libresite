@@ -1,9 +1,15 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
 #include "core/ls-context.h"
 #include <string.h>
+#include <dirent.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
 struct _LsContext {
 	GObject parent_instance;
 	GHashTable *files;
+	gboolean revision;
 };
 G_DEFINE_TYPE(LsContext, ls_context, G_TYPE_OBJECT)
 /* All artifact ownership lives in the hash table. */
@@ -49,7 +55,7 @@ ls_context_apply(LsContext *self, const gchar *response, GError **error){
 	if (!JSON_NODE_HOLDS_OBJECT(root))
 		goto invalid;
 	object = json_node_get_object(root);
-	if (!ls_object_keys(object, "|files|summary|", error))
+	if (!ls_object_keys(object, "|files|summary|delete|", error))
 		return FALSE;
 	if (json_object_has_member(object, "summary") && ls_string(object, "summary") == NULL)
 		goto invalid;
@@ -64,17 +70,50 @@ ls_context_apply(LsContext *self, const gchar *response, GError **error){
 		g_hash_table_insert(
 			candidate, g_strdup((const gchar *)key), ls_artifact_copy((const LsArtifact *)value)
 		);
+	/* Deletions and replacements share one transaction and one duplicate set.
+	 * Removing a directory means explicitly naming each stored file beneath it. */
+	node = json_object_get_member(object, "delete");
+	if (node != NULL) {
+		JsonArray *removed;
+		if (!JSON_NODE_HOLDS_ARRAY(node))
+			goto invalid;
+		removed = json_node_get_array(node);
+		if (json_array_get_length(removed) > 4096)
+			goto invalid;
+		for (i = 0; i < json_array_get_length(removed); i++) {
+			const gchar *path;
+			node = json_array_get_element(removed, i);
+			if (json_node_get_value_type(node) != G_TYPE_STRING)
+				goto invalid;
+			path = json_node_get_string(node);
+			if (!ls_path_valid(path) || !g_hash_table_add(seen, (gpointer)path) ||
+				!g_hash_table_remove(candidate, path)) {
+				g_set_error(error, LS_ERROR, LS_ERROR_INVALID,
+					"Deletion requires a unique existing file: %s", path);
+				return FALSE;
+			}
+		}
+	}
 	for (i = 0; i < json_array_get_length(files); i++) {
 		LsArtifact *artifact;
+		const LsArtifact *previous;
+		JsonNode *mode;
+		gboolean executable;
 		const gchar *path;
 		node = json_array_get_element(files, i);
 		if (!JSON_NODE_HOLDS_OBJECT(node))
 			goto invalid;
 		object = json_node_get_object(node);
-		if (!ls_object_keys(object, "|path|content|", error))
+		if (!ls_object_keys(object, "|path|content|executable|", error))
 			return FALSE;
 		path = ls_string(object, "path");
-		artifact = ls_artifact_new(path, ls_string(object, "content"), error);
+		previous = path != NULL ? ls_context_lookup(self, path) : NULL;
+		mode = json_object_get_member(object, "executable");
+		if (mode != NULL && json_node_get_value_type(mode) != G_TYPE_BOOLEAN)
+			goto invalid;
+		executable = mode != NULL ? json_node_get_boolean(mode)
+			: previous != NULL && ls_artifact_get_executable(previous);
+		artifact = ls_artifact_new_full(path, ls_string(object, "content"), executable, error);
 		if (artifact == NULL)
 			return FALSE;
 		if (!g_hash_table_add(seen, (gpointer)path)) {
@@ -115,7 +154,7 @@ invalid:
 		error,
 		LS_ERROR,
 		LS_ERROR_INVALID,
-		"Expected JSON {files: [{path: string, content: string}], summary?: string}"
+		"Expected JSON {files: [{path: string, content: string}], delete?: [path], summary?: string}"
 	);
 	return FALSE;
 }
@@ -138,6 +177,10 @@ ls_context_snapshot(LsContext *self){
 		json_builder_add_string_value(builder, ls_artifact_get_path(artifact));
 		json_builder_set_member_name(builder, "content");
 		json_builder_add_string_value(builder, ls_artifact_get_content(artifact));
+		if (ls_artifact_get_executable(artifact)) {
+			json_builder_set_member_name(builder, "executable");
+			json_builder_add_boolean_value(builder, TRUE);
+		}
 		json_builder_end_object(builder);
 	}
 	json_builder_end_array(builder);
@@ -175,10 +218,182 @@ ls_context_export(
 			) ||
 			!g_output_stream_close(G_OUTPUT_STREAM(stream), cancellable, error))
 			return FALSE;
+		if (ls_artifact_get_executable((const LsArtifact *)value) &&
+			!g_file_set_attribute_uint32(file, G_FILE_ATTRIBUTE_UNIX_MODE, 0700,
+				G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS, cancellable, error))
+			return FALSE;
 	}
 	return TRUE;
 }
 const LsArtifact *
 ls_context_lookup(LsContext *self, const gchar *path){
 	return (const LsArtifact *)g_hash_table_lookup(self->files, path);
+}
+
+/* Replace a complete snapshot atomically, retaining the context's run mode. */
+gboolean
+ls_context_restore(LsContext *self, const gchar *snapshot, GError **error){
+	g_autoptr(LsContext) candidate = ls_context_new();
+	GHashTable *previous;
+	if (!ls_context_apply(candidate, snapshot, error))
+		return FALSE;
+	previous = self->files;
+	self->files = candidate->files;
+	candidate->files = previous;
+	return TRUE;
+}
+
+/* Open children relative to pinned directory descriptors. Never follow symlinks,
+ * even if another process replaces an entry between enumeration and openat(). */
+static gboolean
+import_directory(LsContext *self, gint directory_fd, const gchar *prefix,
+	gsize *total, guint *entries, GCancellable *cancellable, GError **error){
+	DIR *directory;
+	struct dirent *entry;
+	gboolean okay = FALSE;
+	directory = fdopendir(directory_fd);
+	if (directory == NULL) {
+		gint saved_errno = errno;
+		(void)close(directory_fd);
+		g_set_error(error, G_IO_ERROR, g_io_error_from_errno(saved_errno),
+			"Cannot enumerate source '%s': %s", prefix, g_strerror(saved_errno));
+		return FALSE;
+	}
+	for (;;) {
+		g_autofree gchar *path = NULL;
+		struct stat info;
+		gint child_fd;
+		g_autoptr(GString) contents = g_string_new(NULL);
+		gchar buffer[8192];
+		gssize count;
+		LsArtifact *artifact;
+		if (g_cancellable_set_error_if_cancelled(cancellable, error))
+			goto out;
+		errno = 0;
+		entry = readdir(directory);
+		if (entry == NULL) {
+			if (errno != 0)
+				goto io_error;
+			break;
+		}
+		/* Repository administration and Libresite workspaces are never artifacts. */
+		if (g_str_equal(entry->d_name, ".") || g_str_equal(entry->d_name, "..") ||
+			g_str_equal(entry->d_name, ".git") || g_str_equal(entry->d_name, ".libresite") ||
+			g_str_has_suffix(entry->d_name, ".libresite-work"))
+			continue;
+		path = *prefix != '\0' ? g_strconcat(prefix, "/", entry->d_name, NULL)
+			: g_strdup(entry->d_name);
+		if (!ls_path_valid(path)) {
+			g_set_error(error, LS_ERROR, LS_ERROR_INVALID, "Unsafe source path: %s", path);
+			goto out;
+		}
+		/* Bound directory-only trees as well as the artifact count and bytes. */
+		if (++(*entries) > 8192) {
+			g_set_error_literal(error, LS_ERROR, LS_ERROR_LIMIT,
+				"Source exceeds 8192 filesystem entries");
+			goto out;
+		}
+		if (fstatat(dirfd(directory), entry->d_name, &info, AT_SYMLINK_NOFOLLOW) != 0)
+			goto io_error;
+		if (!S_ISDIR(info.st_mode) && !S_ISREG(info.st_mode)) {
+			g_set_error(error, LS_ERROR, LS_ERROR_INVALID,
+				"Source must contain only regular text files and directories: %s", path);
+			goto out;
+		}
+		child_fd = openat(dirfd(directory), entry->d_name,
+			O_RDONLY | O_CLOEXEC | O_NOFOLLOW | O_NONBLOCK |
+			(S_ISDIR(info.st_mode) ? O_DIRECTORY : 0));
+		if (child_fd < 0)
+			goto io_error;
+		if (S_ISDIR(info.st_mode)) {
+			if (!import_directory(self, child_fd, path, total, entries, cancellable, error))
+				goto out;
+			continue;
+		}
+		/* Recheck the opened object, then bound every read rather than trusting size. */
+		if (fstat(child_fd, &info) != 0 || !S_ISREG(info.st_mode)) {
+			(void)close(child_fd);
+			g_set_error(error, LS_ERROR, LS_ERROR_CONFLICT,
+				"Source file changed while opening: %s", path);
+			goto out;
+		}
+		for (;;) {
+			if (g_cancellable_set_error_if_cancelled(cancellable, error)) {
+				(void)close(child_fd);
+				goto out;
+			}
+			count = read(child_fd, buffer, sizeof(buffer));
+			if (count < 0 && errno == EINTR)
+				continue;
+			if (count <= 0)
+				break;
+			if (contents->len + (gsize)count > LS_MAX_DOCUMENT ||
+				*total + (gsize)count > LS_MAX_PROJECT ||
+				memchr(buffer, 0, (gsize)count) != NULL) {
+				(void)close(child_fd);
+				g_set_error(error, LS_ERROR, LS_ERROR_LIMIT,
+					"Source is binary or exceeds text/project limits: %s", path);
+				goto out;
+			}
+			*total += (gsize)count;
+			g_string_append_len(contents, buffer, count);
+		}
+		if (count < 0) {
+			gint saved_errno = errno;
+			(void)close(child_fd);
+			errno = saved_errno;
+			goto io_error;
+		}
+		(void)close(child_fd);
+		artifact = ls_artifact_new_full(path, contents->str, (info.st_mode & 0111) != 0, error);
+		if (artifact == NULL)
+			goto out;
+		g_hash_table_insert(self->files, g_strdup(path), artifact);
+		if (g_hash_table_size(self->files) > 4096) {
+			g_set_error_literal(error, LS_ERROR, LS_ERROR_LIMIT, "Source exceeds 4096 files");
+			goto out;
+		}
+	}
+	okay = TRUE;
+	goto out;
+io_error:
+	g_set_error(error, G_IO_ERROR, g_io_error_from_errno(errno),
+		"Cannot read source directory '%s': %s", prefix, g_strerror(errno));
+out:
+	(void)closedir(directory);
+	return okay;
+}
+
+/* Build privately; callers never receive a partial import on failure. */
+LsContext *
+ls_context_import(const gchar *directory, GCancellable *cancellable, GError **error){
+	g_autoptr(LsContext) self = ls_context_new();
+	gsize total = 0;
+	guint entries = 0;
+	gint directory_fd;
+	if (directory == NULL || *directory == '\0') {
+		g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID, "A source directory is required");
+		return NULL;
+	}
+	if (g_cancellable_set_error_if_cancelled(cancellable, error))
+		return NULL;
+	directory_fd = open(directory, O_RDONLY | O_DIRECTORY | O_NOFOLLOW | O_CLOEXEC);
+	if (directory_fd < 0) {
+		g_set_error(error, G_IO_ERROR, g_io_error_from_errno(errno),
+			"Cannot open source directory '%s': %s", directory, g_strerror(errno));
+		return NULL;
+	}
+	if (!import_directory(self, directory_fd, "", &total, &entries, cancellable, error))
+		return NULL;
+	if (g_hash_table_size(self->files) == 0) {
+		g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID, "Source project contains no files");
+		return NULL;
+	}
+	self->revision = TRUE;
+	return (LsContext *)g_steal_pointer(&self);
+}
+
+gboolean
+ls_context_is_revision(LsContext *self){
+	return self->revision;
 }

@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+version: 1
+name: revise-existing-site
+site:
+  brief: Improve the contact form's keyboard focus and validation messages while preserving the existing layout and all other behavior.
+ai:
+  provider: codex
+  timeout: 0
+  max_tokens: 0
+  retries: 1
+pipeline:
+  steps:
+    - id: revision
+      type: generate
+      prompt: revision
+    - id: acceptance
+      type: validate
+      options:
+        required: [index.html]

@@ -104,3 +104,7 @@ The complete project is sent to each model. Libresite imposes no prompt byte cei
 Optional =validate.options.checks= enforce literal content and inclusive byte bounds before publication. Missing required text, forbidden text or out-of-range byte counts in a model response are retryable acceptance failures when native validation immediately follows generation. Whitespace-only required files also fail. =--validate= checks the entire predicate schema locally; =--preview= includes the exact rules in the generation prompt. See [[file:recipe-format.org][the recipe reference]] and [[file:../recipes/checked-landing.yaml][the checked landing recipe]]. These checks do not execute generated programs.
 
 Inputs with quoted numeric/boolean/null values now retain their YAML string type. This corrects dependency scalar coercion; it can invalidate a checkpoint whose original recipe depended on that bug. Keep the original binary/catalog for recovering such existing work or generate into a fresh output with a corrected recipe. Existing shipped recipe and catalog bytes are unchanged by this review.
+
+* Incremental revision
+
+=--revise DIR= imports an existing text project and interprets =site.brief= as a change brief. It works with =--validate=, =--plan= and =--preview=; generation still requires a new =--output= outside the source tree. The revision result has its own Git repository and =feat: revise existing project= commit. Resume also verifies the current source snapshot. See [[file:revision.org][revision.org]] for commands, supported files and exclusions.

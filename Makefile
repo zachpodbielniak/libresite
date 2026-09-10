@@ -35,6 +35,7 @@ tests test: all $(OUTDIR)/test-libresite $(OUTDIR)/test-contracts
 	G_DEBUG=fatal-warnings $(OUTDIR)/test-libresite
 	G_DEBUG=fatal-warnings $(OUTDIR)/test-contracts
 	bash tests/cli.sh $(CLI)
+	bash tests/revision.sh $(CLI)
 # Optional probes compile against pinned generation libraries without making
 # database/client development packages mandatory for the builder itself.
 stack-tests:

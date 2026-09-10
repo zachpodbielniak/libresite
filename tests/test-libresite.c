@@ -2,6 +2,7 @@
 #include "libresite.h"
 #include <glib/gstdio.h>
 #include <sys/file.h>
+#include <sys/stat.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
@@ -13,6 +14,7 @@ typedef struct {
 	guint malformed;
 	guint incomplete;
 	GPtrArray *models;
+	gboolean revision;
 } FixtureProvider;
 typedef struct {
 	GObjectClass parent_class;
@@ -56,6 +58,12 @@ fixture_generate(
 	g_assert_nonnull(strstr(prompt, "PIPELINE ACCEPTANCE"));
 	g_assert_nonnull(strstr(prompt, "docs/build.org"));
 	self->calls++;
+	if (self->revision) {
+		g_assert_nonnull(strstr(prompt, "SITE DATA brief is the change brief"));
+		g_assert_nonnull(strstr(prompt, "user-maintained sentinel"));
+		if (self->calls > 1)
+			g_assert_null(strstr(prompt, "obsolete sentinel"));
+	}
 	g_ptr_array_add(self->models, g_strdup(ls_string(settings, "model")));
 	if (self->calls == self->fail_at) {
 		g_set_error_literal(error, LS_ERROR, LS_ERROR_PROVIDER, "Simulated provider interruption");
@@ -69,6 +77,9 @@ fixture_generate(
 		self->incomplete--;
 		return g_strdup("{\"files\":[{\"path\":\"index.html\",\"content\":\"incorrect draft\"},{\"path\":\"unwanted.txt\",\"content\":\"rejected attempt\"}]}");
 	}
+	if (self->revision && self->calls == 1)
+		return g_strdup("{\"files\":[{\"path\":\"index.html\",\"content\":\"revised\"},"
+			"{\"path\":\"docs/build.org\",\"content\":\"updated docs\"}],\"delete\":[\"old.txt\"]}");
 	return g_strdup(bundle);
 }
 static void
@@ -175,6 +186,152 @@ artifact_replace(void){
 	));
 	g_assert_cmpstr(ls_artifact_get_content(ls_context_lookup(context, "index.html")), ==, "new");
 	g_assert_nonnull(ls_context_lookup(context, "docs/build.org"));
+}
+
+/* A failed mixed delete/write bundle cannot discard any existing source. */
+static void
+artifact_delete(void){
+	g_autoptr(LsContext) context = ls_context_new();
+	g_autoptr(GError) error = NULL;
+	g_autofree gchar *snapshot = NULL;
+	g_assert_true(ls_context_apply(context, bundle, NULL));
+	g_assert_true(ls_context_apply(context,
+		"{\"files\":[{\"path\":\"docs\",\"content\":\"now a file\",\"executable\":true}],"
+		"\"delete\":[\"docs/build.org\"]}", &error));
+	g_assert_no_error(error);
+	g_assert_null(ls_context_lookup(context, "docs/build.org"));
+	g_assert_nonnull(ls_context_lookup(context, "index.html"));
+	g_assert_true(ls_artifact_get_executable(ls_context_lookup(context, "docs")));
+	g_assert_true(ls_context_apply(context,
+		"{\"files\":[{\"path\":\"docs\",\"content\":\"keep execute\"}]}", &error));
+	g_assert_true(ls_artifact_get_executable(ls_context_lookup(context, "docs")));
+	snapshot = ls_context_snapshot(context);
+	g_assert_true(ls_context_restore(context, snapshot, &error));
+	g_assert_true(ls_artifact_get_executable(ls_context_lookup(context, "docs")));
+	g_assert_true(ls_context_apply(context,
+		"{\"files\":[{\"path\":\"docs\",\"content\":\"plain\",\"executable\":false}]}", &error));
+	g_assert_false(ls_artifact_get_executable(ls_context_lookup(context, "docs")));
+	g_assert_true(ls_context_restore(context, "{\"files\":[]}", &error));
+	g_assert_null(ls_context_lookup(context, "index.html"));
+}
+
+/* Import rejects unsupported entries explicitly instead of losing source data.
+ * Metadata exclusion has a positive control containing deliberately invalid data. */
+static void
+import_case(gconstpointer data){
+	const gchar *mode = (const gchar *)data;
+	g_autofree gchar *temp = g_dir_make_tmp("libresite-import-XXXXXX", NULL);
+	g_autofree gchar *file = g_build_filename(temp, "source.txt", NULL);
+	g_autofree gchar *metadata = g_build_filename(temp, ".git", NULL);
+	g_autoptr(GError) error = NULL;
+	g_autoptr(LsContext) context = NULL;
+	g_autoptr(GCancellable) cancellable = g_cancellable_new();
+	g_assert_true(g_file_set_contents(metadata, "\0", 1, NULL));
+	if (g_str_equal(mode, "symlink"))
+		g_assert_cmpint(symlink(".git", file), ==, 0);
+	else if (g_str_equal(mode, "fifo"))
+		g_assert_cmpint(mkfifo(file, 0600), ==, 0);
+	else if (g_str_equal(mode, "binary"))
+		g_assert_true(g_file_set_contents(file, "before\0after", 12, NULL));
+	else if (g_str_equal(mode, "utf8"))
+		g_assert_true(g_file_set_contents(file, "\xff", 1, NULL));
+	else if (!g_str_equal(mode, "empty")) {
+		g_assert_true(g_file_set_contents(file, "text sentinel", -1, NULL));
+		g_assert_cmpint(g_chmod(file, 0700), ==, 0);
+	}
+	if (g_str_equal(mode, "cancel"))
+		g_cancellable_cancel(cancellable);
+	context = ls_context_import(temp, cancellable, &error);
+	if (g_str_equal(mode, "success")) {
+		g_assert_no_error(error);
+		g_assert_nonnull(context);
+		g_assert_true(ls_context_is_revision(context));
+		g_assert_cmpstr(ls_artifact_get_content(ls_context_lookup(context, "source.txt")),
+			==, "text sentinel");
+		g_assert_true(ls_artifact_get_executable(ls_context_lookup(context, "source.txt")));
+		g_assert_null(ls_context_lookup(context, ".git"));
+	} else {
+		g_assert_null(context);
+		g_assert_nonnull(error);
+		if (g_str_equal(mode, "cancel"))
+			g_assert_error(error, G_IO_ERROR, G_IO_ERROR_CANCELLED);
+	}
+	remove_tree(temp);
+}
+
+/* Check incremental publication and source-bound recovery through real steps. */
+static void
+revision_case(gconstpointer data){
+	const gchar *mode = (const gchar *)data;
+	g_autoptr(GError) error = NULL;
+	g_autoptr(LsRecipe) recipe = ls_recipe_new(recipe_text, NULL);
+	g_autoptr(LsPrompts) prompts = ls_prompts_new(NULL, NULL);
+	g_autoptr(GObject) provider = g_object_new(fixture_provider_get_type(), NULL);
+	FixtureProvider *fixture = (FixtureProvider *)provider;
+	g_autoptr(LsPipeline) pipeline = ls_pipeline_new(LS_PROVIDER(provider), prompts);
+	g_autofree gchar *temp = g_dir_make_tmp("libresite-revision-XXXXXX", NULL);
+	g_autofree gchar *project = g_build_filename(temp, "source", NULL);
+	g_autofree gchar *output = g_build_filename(temp, "result", NULL);
+	g_autofree gchar *retained = g_build_filename(project, "retained.txt", NULL);
+	g_autofree gchar *obsolete = g_build_filename(project, "old.txt", NULL);
+	g_autofree gchar *published = g_build_filename(output, "retained.txt", NULL);
+	g_autofree gchar *deleted = g_build_filename(output, "old.txt", NULL);
+	g_autofree gchar *before = NULL, *after = NULL;
+	g_autoptr(LsContext) source = NULL;
+	GStatBuf info;
+	g_assert_cmpint(g_mkdir(project, 0700), ==, 0);
+	g_assert_true(g_file_set_contents(retained, "user-maintained sentinel", -1, NULL));
+	g_assert_cmpint(g_chmod(retained, 0700), ==, 0);
+	g_assert_true(g_file_set_contents(obsolete, "obsolete sentinel", -1, NULL));
+	source = ls_context_import(project, NULL, NULL);
+	before = ls_context_snapshot(source);
+	fixture->revision = TRUE;
+	if (g_str_equal(mode, "nested")) {
+		g_autofree gchar *nested = g_build_filename(project, "output", NULL);
+		g_assert_false(ls_pipeline_revise(pipeline, recipe, project, nested, FALSE, NULL, &error));
+		g_assert_error(error, LS_ERROR, LS_ERROR_CONFLICT);
+		g_assert_cmpuint(fixture->calls, ==, 0);
+	} else {
+		fixture->fail_at = 2;
+		g_assert_false(ls_pipeline_revise(pipeline, recipe, project, output, FALSE, NULL, &error));
+		g_assert_error(error, LS_ERROR, LS_ERROR_PROVIDER);
+		g_clear_error(&error);
+		g_assert_false(g_file_test(output, G_FILE_TEST_EXISTS));
+		if (g_str_equal(mode, "changed"))
+			g_assert_true(g_file_set_contents(retained, "changed source", -1, NULL));
+		else if (g_str_equal(mode, "mode-changed"))
+			g_assert_cmpint(g_chmod(retained, 0600), ==, 0);
+		else if (g_str_equal(mode, "brief-changed")) {
+			g_autofree gchar *changed = g_strconcat(recipe_text, "# new parser-neutral comment\n", NULL);
+			gchar *brief = strstr(changed, "Build a small site");
+			/* Same-length content edit changes the parsed recipe fingerprint. */
+			memcpy(brief, "Alter a small site", strlen("Alter a small site"));
+			g_clear_object(&recipe);
+			recipe = ls_recipe_new(changed, NULL);
+		}
+		if (g_str_equal(mode, "resume")) {
+			g_assert_true(ls_pipeline_revise(pipeline, recipe, project, output, TRUE, NULL, &error));
+			g_assert_no_error(error);
+			g_assert_cmpuint(fixture->calls, ==, 3);
+			g_assert_true(g_file_test(published, G_FILE_TEST_IS_REGULAR));
+			g_assert_false(g_file_test(deleted, G_FILE_TEST_EXISTS));
+			g_assert_cmpint(g_stat(published, &info), ==, 0);
+			g_assert_cmpuint(info.st_mode & 0777, ==, 0700);
+		} else {
+			g_assert_false(ls_pipeline_revise(pipeline, recipe, project, output, TRUE, NULL, &error));
+			g_assert_error(error, LS_ERROR, LS_ERROR_CONFLICT);
+			g_assert_cmpuint(fixture->calls, ==, 2);
+			g_assert_false(g_file_test(output, G_FILE_TEST_EXISTS));
+		}
+	}
+	if (g_str_equal(mode, "nested") || g_str_equal(mode, "resume") ||
+		g_str_equal(mode, "brief-changed")) {
+		g_clear_object(&source);
+		source = ls_context_import(project, NULL, NULL);
+		after = ls_context_snapshot(source);
+		g_assert_cmpstr(before, ==, after);
+	}
+	remove_tree(temp);
 }
 static void
 count_step(LsPipeline *pipeline, const gchar *id, guint index, gpointer data){
@@ -785,6 +942,14 @@ main(int argc, char **argv){
 		".."
 	};
 	const gchar *bundles[] = {
+		"{\"files\":[],\"delete\":null}",
+		"{\"files\":[],\"delete\":[1]}",
+		"{\"files\":[],\"delete\":[\"../escape\"]}",
+		"{\"files\":[],\"delete\":[\"missing\"]}",
+		"{\"files\":[],\"delete\":[\"index.html\",\"index.html\"]}",
+		"{\"files\":[{\"path\":\"index.html\",\"content\":\"x\"}],\"delete\":[\"index.html\"]}",
+		"{\"files\":[{\"path\":\"../bad\",\"content\":\"x\"}],\"delete\":[\"index.html\"]}",
+		"{\"files\":[{\"path\":\"index.html\",\"content\":\"x\",\"executable\":1}]}",
 		"{\"files\":[],\"files\":[]}",
 		"{\"files\":[{\"path\":\"a\",\"path\":\"b\",\"content\":\"x\"}]}",
 		"{\"files\":[{\"path\":\"a\\u0000b\",\"content\":\"x\"}]}",
@@ -806,8 +971,19 @@ main(int argc, char **argv){
 	const gchar *modes[] = {
 		"success", "resume", "corrupt", "changed", "cancel", "existing", "symlink", "lock"
 	};
+	const gchar *imports[] = {"success", "empty", "symlink", "fifo", "binary", "utf8", "cancel"};
+	const gchar *revisions[] = {"resume", "changed", "mode-changed", "brief-changed", "nested"};
 	guint i;
 	g_test_init(&argc, &argv, NULL);
+	for (i = 0; i < G_N_ELEMENTS(imports); i++) {
+		g_autofree gchar *name = g_strdup_printf("/revision/import/%s", imports[i]);
+		g_test_add_data_func(name, imports[i], import_case);
+	}
+	for (i = 0; i < G_N_ELEMENTS(revisions); i++) {
+		g_autofree gchar *name = g_strdup_printf("/revision/pipeline/%s", revisions[i]);
+		g_test_add_data_func(name, revisions[i], revision_case);
+	}
+	g_test_add_func("/artifact/delete", artifact_delete);
 	g_test_add_func("/recipe/valid", valid_recipe);
 	g_test_add_func("/recipe/provider-defaults", provider_defaults);
 	for (i = 0; i < G_N_ELEMENTS(invalid_recipes); i++) {

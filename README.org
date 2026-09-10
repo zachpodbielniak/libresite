@@ -47,6 +47,15 @@ The requested output directory contains a standalone Git repository on =master= 
 
 Open a generated static =index.html= directly, or follow the output's =README.org= and =AGENTS.md= for application build/run instructions. A loopback application must work from both =http://127.0.0.1:PORT/= and =http://localhost:PORT/=; the database file is created on first start. From cmacs, =M-x compile= can run the builder, and =C-x C-f= opens the output's org documentation or source files.
 
+** Revise an existing project
+
+Use =--revise DIR= with a change recipe whose =site.brief= describes the requested edits. Existing files enter the pipeline as context; omitted files survive and explicit deletions are transactional. The source stays unchanged and the new output receives its own =feat: revise existing project= commit. The input supports regular UTF-8 text and executable intent; binary files and symlinks are rejected. See [[file:docs/revision.org][revision.org]] for input selection, limits and source-bound resume.
+
+#+begin_src bash
+./build/release/libresite -r recipes/revision.yaml --revise ./my-site --preview revision
+./build/release/libresite -r recipes/revision.yaml --revise ./my-site -o ./my-site-v2
+#+end_src
+
 ** Resume interrupted generation
 
 #+begin_src bash
@@ -116,6 +125,7 @@ Repository skills live in [[file:skills/libresite-landing/SKILL.md][skills/libre
 - [[file:docs/c-application.org][C application stack, configuration and database providers]]
 - [[file:docs/building.org][Build, install and dependency modes]]
 - [[file:docs/operations.org][CLI, checkpoints, limits and troubleshooting]]
+- [[file:docs/revision.org][Existing-project revisions and incremental file operations]]
 - [[file:docs/testing.org][Verification and its limits]]
 - [[file:docs/robustness-review.org][Robustness review and deterministic acceptance]]
 

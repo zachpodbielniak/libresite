@@ -125,3 +125,7 @@ The full current project is resent to every stage. Prompt bytes are unlimited by
 Specify the product's actual audience, content, primary action, stack and constraints in the recipe. Split large work into coherent modules and use =instructions= to target one integration boundary at a time. Models cannot infer undocumented local APIs reliably: provide the relevant API contract as recipe requirements or a stage's instructions, or implement a deterministic native module. Avoid advertising a database or service until the generated project actually implements it.
 
 The final review prompt asks for source-level corrections and honest reporting. Source review is useful but does not substitute for compiling the generated application, checking it in a browser or auditing accessibility. Keep those checks in the generated project's own acceptance procedure. Live generation quality should be evaluated on actual outputs, not on a passing fixture test.
+
+* Revision scope
+
+Imported contexts receive =stages.revision= as a separate revision contract in every rendered generation prompt. It interprets =site.brief= as the change brief and preserves existing choices over default new-project guidance unless the brief requests otherwise. Custom catalogs must include this stage when used for AI revisions. =--revise DIR --preview STEP= renders actual imported files. The protocol allows explicit transactional =delete= paths and optional boolean file =executable= settings; see [[file:revision.org][revision.org]].

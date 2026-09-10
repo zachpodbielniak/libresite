@@ -1,0 +1,57 @@
+#+title: Revising an existing project
+#+description: Incremental edits from a change brief with source-preserving publication
+#+authors: Zach Podbielniak
+#+categories: libresite, revision, operations
+#+created: 2026-09-10T17:21:00-04:00
+#+updated: 2026-09-10T17:21:00-04:00
+#+version: 0.1.0
+
+* Load, revise, publish
+
+Use =--revise DIR= to load an existing text project. In revision mode, the recipe's =site.brief= describes the requested changes. Existing files are supplied to each model call; responses replace or add only the files they name. Omitted files remain unchanged. The shared revision contract applies to every generation stage and gives existing architecture, stack, design and user edits priority over new-project defaults unless the change brief asks to replace them.
+
+Start from =recipes/revision.yaml=, copy it to your own recipe, and replace its brief and acceptance requirements. The sample uses one generation stage with =prompt: revision= followed by a native check requiring =index.html=. Change that check for a project with a different entry point, and add concrete content predicates for the requested behavior. A source project does not need Libresite metadata or a Git repository.
+
+#+begin_src bash
+libresite -r change.yaml --revise ./my-site --validate
+libresite -r change.yaml --revise ./my-site --preview revision
+libresite -r change.yaml --revise ./my-site -o ./my-site-v2
+#+end_src
+
+Validation imports the source and validates recipe/module/prompt configuration without calling a provider. Preview shows the imported project and actual change brief; it is not a preview of the eventual generated result. The provider receives current project contents as inert data, using the normal response protocol. Libresite does not execute imported or generated code, test scripts, repository hooks or instructions in project files.
+
+* Publication and recovery
+
+The destination must be new, its parent must exist, and it must be outside the source project. This includes parent paths resolving through symbolic links. Publication follows complete generation, validation and Git initialization. Existing source files and source Git state are never overwritten. The result is a standalone repository on =master= with one Conventional Commit, =feat: revise existing project=. Source history, remotes and Git configuration are not copied. No remote push or deployment happens automatically. Normal fresh generation retains its =chore: initial generated project= commit.
+
+Interrupted revisions use the same private =OUTPUT.libresite-work/checkpoint.json= lifecycle as generation. Resume with the same arguments plus =--resume=:
+
+#+begin_src bash
+libresite -r change.yaml --revise ./my-site -o ./my-site-v2 --resume
+#+end_src
+
+The fingerprint includes the parsed recipe, exact prompt catalog, revision mode and a sorted snapshot of imported paths, contents and executable intent. Source additions, deletions, content edits and executable-bit changes invalidate the checkpoint. Filesystem timestamps, ignored administrative metadata and source location do not affect identity; an identical copy is acceptable. Keep the source stable throughout the run: input is a bounded snapshot taken before generation, not a live filesystem view. Resume reloads that baseline to check identity, then replaces it with the last successful checkpoint; deleted files cannot be resurrected by merging the source back in. Changing the brief also invalidates resume. Timeout and output-budget overrides retain their existing execution-only semantics.
+
+* Supported source files and limits
+
+The artifact protocol supports regular UTF-8 text files, including SVG and empty files. Imports preserve contents and whether any execute bit was set. Exported files use private permissions: =0600= for ordinary files and =0700= for executable files. Other permission bits, owners, extended attributes and timestamps are not preserved. Empty directories are not artifacts and are omitted. Imports reject symbolic links, FIFOs and other special files, unsafe artifact paths, invalid UTF-8, embedded NUL bytes and binary assets. Errors abort the import before a provider call or output workspace creation; unsupported files are never silently discarded.
+
+At every depth, =.git=, =.libresite= and names ending in =.libresite-work= are excluded. All other files are imported, including untracked and Git-ignored files: =.gitignore= does not select input. Choose a source-only directory containing the files you intend to send to the provider; remove local credentials, databases, binary assets, dependency trees and build output from that input copy. The existing text-only protocol cannot revise a mixed binary project directly.
+
+Limits are 16 MiB per file, 64 MiB total text, 4096 files, 8192 visited filesystem entries and the existing safe-path limits. Checkpoints must also fit their 16 MiB serialized-document limit, including JSON escaping. Imports use descriptor-relative opens without following child symlinks and honor cancellation between reads. =--max-prompt-bytes= also applies to imported contexts; exceeding the configured cap is an explicit error, never truncation.
+
+* Incremental response protocol
+
+Responses still require =files=, even for deletion-only operations. Optional =delete= names individual existing file paths. An empty =files= array with =delete= is valid. Deletions must be unique, safe, present in the current context, and absent from the replacement list. To rename, return the new file with complete contents and delete its old path in the same bundle. Directories are not deletion targets: name every affected file. File/directory conflicts are checked after all removals and replacements, allowing a file to replace a directory when every conflicting child is removed.
+
+A file object accepts optional boolean =executable=. Omission preserves an existing file's executable intent and defaults to false for new files. The entire response is validated against a private candidate, including immediately following native acceptance checks, before any operation changes the live context. Failed deletion, unsafe path, duplicate operation, resource-limit violation or failed acceptance leaves the original project intact. Checkpoints contain full snapshots with no pending deletion operations.
+
+* Library and custom catalogs
+
+=ls_context_import()= returns a complete revision context or an error. =ls_context_is_revision()= identifies its run mode, and =ls_pipeline_validate_context()= performs the same imported-context preflight used by the CLI. =ls_pipeline_revise()= takes a recipe, source directory, new output directory, resume flag and cancellable. It uses the same signals, provider injection and native module registration as =ls_pipeline_run()=. =ls_context_restore()= atomically replaces all stored files while retaining run mode; this differs from incremental =ls_context_apply()=.
+
+Replacement catalogs used by generative revision pipelines must supply a nonempty =stages.revision= contract. Missing contracts fail preflight. The bundled contract treats =site.brief= as the change request and scopes every generation stage accordingly. Native-only plugin pipelines continue working without artificial requirements to render their module names as prompt stages.
+
+* Verification
+
+=make tests= includes import, transactional deletion, executable intent, source and brief drift, interruption/resume and source-preservation GTests, plus =tests/revision.sh= exercising the CLI through a controlled provider executable. The installed-binary suite runs the revision fixture from outside the checkout. These tests verify orchestration and publication without a real AI account; they do not establish live model edit quality or prove generated application behavior. Inspect the published diff and execute the project's own tests separately when authorized.
