@@ -69,6 +69,30 @@ YAML
 	rg -q 'Offline site' "$test_dir/$provider/index.html"
 	test -f "$test_dir/$provider/.libresite/run.json"
 	rg -q 'fixture-model' "$test_dir/args"
+	# Unattended adapters must skip approval prompts; otherwise Codex exec
+	# waits forever for sandbox-escalation on a non-TTY stdin.
+	case "$provider" in
+		codex)
+			rg -qx -- '--dangerously-bypass-approvals-and-sandbox' "$test_dir/args"
+			if rg -qx -- '--sandbox' "$test_dir/args"
+			then
+				exit 1
+			fi
+			;;
+		claude-code|antigravity)
+			rg -qx -- '--dangerously-skip-permissions' "$test_dir/args"
+			;;
+		cursor)
+			rg -qx -- '--force' "$test_dir/args"
+			;;
+		grok-build)
+			rg -qx -- '--permission-mode' "$test_dir/args"
+			rg -qx -- 'bypassPermissions' "$test_dir/args"
+			;;
+		*)
+			exit 1
+			;;
+	esac
 	# Output conflicts must fail even with resume requested.
 	if "$binary" -r "$test_dir/recipe.yaml" -o "$test_dir/$provider" --resume > /dev/null 2>&1
 	then

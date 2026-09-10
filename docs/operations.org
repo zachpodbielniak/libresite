@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, operations
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-09T20:00:00-04:00
+#+updated: 2026-09-09T23:10:00-04:00
 #+version: 0.1.0
 
 * Commands
@@ -18,7 +18,7 @@
 
 Authenticate each requested CLI using its own normal account setup before invoking a recipe. ai-glib reads provider-specific executable overrides: =CODEX_PATH=, =CLAUDE_CODE_PATH=, =GROK_PATH=, =CURSOR_AGENT_PATH= (or =CURSOR_PATH=), and =AGY_PATH=. These are useful for explicit installations and offline protocol tests. Model/effort settings are opaque identifiers interpreted by the adapter and installed CLI.
 
-Every generation call creates a fresh temporary working directory, disables session persistence, and sends the current project in the prompt. Codex is requested in read-only sandbox mode. Libresite does not turn on permission bypass for any provider. Other CLI policies and defaults belong to ai-glib and the installed provider. A working directory is not a security sandbox; the prompt's instruction to avoid tools is not an OS access-control mechanism. Use your provider's own sandbox when stronger isolation is required.
+Every generation call creates a fresh temporary working directory, disables session persistence, and sends the current project in the prompt. Permission bypass is enabled for every CLI adapter so the worker thread cannot stall on an approval prompt. Codex therefore uses =--dangerously-bypass-approvals-and-sandbox= rather than a read-only sandbox: Codex 0.153 =exec= does not accept =--ask-for-approval=, and read-only plus never-ask still waits for sandbox-escalation approval on the same stdin used for the prompt. Other CLI flags and defaults belong to ai-glib and the installed provider. A working directory is not a security sandbox. Use an external isolation boundary when stronger confinement is required.
 
 Empty temporary provider directories are removed. Directories in which a third-party CLI created files are deliberately retained rather than recursively deleting unknown files. No global CLI configuration or credentials are modified by libresite.
 

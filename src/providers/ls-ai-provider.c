@@ -53,13 +53,15 @@ generate(
 		);
 		return NULL;
 	}
-	/* No permission bypass. This directory is a working location, not a sandbox;
-	 * the account's CLI policy still controls any native tool access. */
+	/* Unattended generation cannot answer TTY or stdin approval prompts.
+	 * Codex exec rejects --ask-for-approval; read-only plus never-ask still
+	 * waits for sandbox-escalation approval and never returns. Bypass is
+	 * required for every CLI adapter. skip-permissions conflicts with an
+	 * explicit restrictive Codex sandbox, so do not set one. */
 	directory = g_dir_make_tmp("libresite-provider-XXXXXX", error);
 	if (directory == NULL)
 		return NULL;
-	if (AI_IS_CODEX_CLI_CLIENT(client))
-		ai_codex_cli_client_set_sandbox(AI_CODEX_CLI_CLIENT(client), "read-only");
+	g_object_set(client, "skip-permissions", TRUE, NULL);
 	ai_cli_client_set_working_directory(client, directory);
 	ai_cli_client_set_session_persistence(client, FALSE);
 	ai_cli_client_set_process_timeout_ms(

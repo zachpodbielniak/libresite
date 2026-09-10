@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, testing
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-09T20:00:00-04:00
+#+updated: 2026-09-09T23:10:00-04:00
 #+version: 0.1.0
 
 * Run checks
@@ -23,7 +23,7 @@ GTest covers valid recipes, wrong types, unknown keys, duplicate YAML keys, docu
 
 The injected provider replaces only model transport; the real recipe parser, prompt renderer, step engine, artifact store, checkpointing and filesystem publication run end to end. This avoids vacuous tests that merely assert that a mock was called.
 
-CLI integration tests use actual =LsAiProvider= and ai-glib adapters with controlled executable fixtures for Codex, Claude Code, Grok Build, Cursor and Antigravity. They check file publication, model forwarding, output conflict handling, nonzero subprocess exit, resume, process deadlines and actual SIGTERM cancellation. No provider credentials, model calls or network access are required. Fixtures emit provider-specific envelopes; Antigravity success status is uppercase =SUCCESS=.
+CLI integration tests use actual =LsAiProvider= and ai-glib adapters with controlled executable fixtures for Codex, Claude Code, Grok Build, Cursor and Antigravity. They check file publication, model forwarding, unattended permission-bypass flags, output conflict handling, nonzero subprocess exit, resume, process deadlines and actual SIGTERM cancellation. No provider credentials, model calls or network access are required. Fixtures emit provider-specific envelopes; Antigravity success status is uppercase =SUCCESS=. Codex argv must include =--dangerously-bypass-approvals-and-sandbox= and must not include =--sandbox=.
 
 * What passing tests do not prove
 
