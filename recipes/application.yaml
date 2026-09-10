@@ -5,11 +5,12 @@ site:
     Build Reading Room, a local-first reading-list web application. Users can add a title and URL, filter unread versus finished entries, mark an entry finished and delete an entry with confirmation. Persist entries across restarts. Bind to loopback by default; this is a single-user local application with no cloud accounts. Implement a complete vertical slice and tests, not a dashboard mockup.
   audience: A single reader curating a small personal reading list.
   style: application
-  frontend: Server-rendered semantic HTML and native CSS; ordinary form POSTs with redirects, no JavaScript required.
-  backend: GNU89 C with GCC, GLib/GObject/GIO and libsoup 3 SoupServer. Use config.mk, rules.mk and Makefile.
-  database: SQLite with parameterized prepared statements; one entries table with id, title, url, finished and created_at.
+  stack: c-glib
+  frontend: Server-rendered semantic HTML and native CSS via htmx-glib; locally served HTMX enhances forms and filtering, with ordinary form POST/redirect fallbacks when JavaScript is disabled.
+  backend: GNU89 C with GCC, GLib/GObject/GIO, htmx-glib routing and yaml-glib runtime configuration. Use config.mk, rules.mk and Makefile with pinned GitLab dependency bootstrap.
+  database: orm-glib with persistent SQLite out of the box; one entries table with id, title, url, finished and created_at. Support optional PostgreSQL and MySQL/MariaDB providers with matching bootstrap SQL.
   requirements: >-
-    Validate http/https URLs and field lengths, escape HTML, implement CSRF protection for local form posts, bind 127.0.0.1, accept Host and Origin for both 127.0.0.1 and localhost on the listening port, configure database path with GOptionContext, create the SQLite file on first start, include --help/--license, AGPLv3, zero compiler warnings, GTest make tests, org documentation and AGENTS.md. Document Fedora build packages and exact local run command. Do not 403 ordinary browser POSTs from http://localhost:PORT/ or http://127.0.0.1:PORT/. Do not introduce external services.
+    Validate http/https URLs and field lengths, escape HTML, implement CSRF protection for both ordinary and HTMX form posts, bind 127.0.0.1, accept Host and Origin for both 127.0.0.1 and localhost on the listening port. Load config/application.yaml with yaml-glib via GOptionContext --config, resolve database paths relative to that file, create the SQLite file and schema on first start, and preserve data on restart. Include --help/--license, AGPLv3, zero compiler warnings, GTest make tests, org documentation and AGENTS.md. Follow the c-glib stack contract for dependency setup, configuration validation, optional provider switches and dialect-specific bootstrap SQL. Document Fedora build packages and exact local run command. Do not 403 ordinary browser POSTs from http://localhost:PORT/ or http://127.0.0.1:PORT/. No external services are required for the default SQLite configuration.
 ai:
   provider: codex
   timeout: 0
@@ -32,4 +33,29 @@ pipeline:
     - id: acceptance
       type: validate
       options:
-        required: [Makefile, config.mk, rules.mk, README.org, AGENTS.md, docs/product.org, docs/design.org, docs/review.org]
+        required:
+          - Makefile
+          - config.mk
+          - rules.mk
+          - README.org
+          - AGENTS.md
+          - deps/manifest.yaml
+          - scripts/bootstrap-deps.sh
+          - config/application.yaml
+          - src/main.c
+          - src/app-config.c
+          - src/app-config.h
+          - src/pages.c
+          - src/database.c
+          - src/database.h
+          - sql/bootstrap-sqlite.sql
+          - sql/bootstrap-postgresql.sql
+          - sql/bootstrap-mysql.sql
+          - tests/test-config.c
+          - tests/test-database.c
+          - tests/http.sh
+          - docs/configuration.org
+          - docs/database.org
+          - docs/product.org
+          - docs/design.org
+          - docs/review.org

@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, reference
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-10T12:00:00-04:00
+#+updated: 2026-09-10T14:41:00-04:00
 #+version: 0.1.0
 
 * Contract
@@ -52,7 +52,7 @@ pipeline:
 | ai | no | mapping | Default AI settings |
 | pipeline | yes | mapping | Exactly one key, steps |
 
-=site= accepts only =brief=, =audience=, =style=, =frontend=, =backend=, =database= and =requirements=. All present values must be nonempty strings; =brief= is required. YAML =none= is text, while =null= is not. =style= defaults to =editorial= and must exist in the selected prompt catalog. Stack strings are open-ended instructions, not a finite list of compiled backends. The builder emits source projects; it does not link every generated site's runtime into itself.
+=site= accepts only =brief=, =audience=, =style=, =stack=, =frontend=, =backend=, =database= and =requirements=. All present values must be nonempty strings; =brief= is required. YAML =none= is text, while =null= is not. =style= defaults to =editorial= and must exist in the selected prompt catalog. Optional =stack= selects a named =stacks= entry in that catalog; an unknown name fails preflight. No stack profile is selected implicitly. The bundled =c-glib= profile supplies yaml-glib configuration, htmx-glib pages and orm-glib persistence with SQLite by default; see [[file:c-application.org][C applications]]. It is independent of visual style. The =frontend=, =backend= and =database= strings remain open-ended instructions, not a finite list of compiled backends. The builder emits source projects; it does not link every generated site's runtime into itself.
 
 =pipeline.steps= is an ordered sequence of 1 through 128 mappings. A step runs only after all preceding steps have succeeded and checkpointed. There is no implicit parallelism, conditional execution or hidden dependency graph.
 

@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: development, websites, ai, glib
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-10T14:39:18-04:00
+#+updated: 2026-09-10T14:41:00-04:00
 #+version: 0.1.0
 
 * Build a site from a recipe
@@ -64,10 +64,12 @@ Prompt size is unlimited by default. Use =--max-prompt-bytes BYTES= only when yo
 | [[file:recipes/landing.yaml][landing.yaml]] | Editorial static studio site with product/design/review documents |
 | [[file:recipes/checked-landing.yaml][checked-landing.yaml]] | Static studio site with deterministic content and byte-size acceptance checks |
 | [[file:recipes/flagship.yaml][flagship.yaml]] | FIELDWORK: eight-page studio, two case studies, journal, work filters and local project-brief export |
-| [[file:recipes/application.yaml][application.yaml]] | Local reading-list application with a GNU89/GLib backend and SQLite |
+| [[file:recipes/application.yaml][application.yaml]] | GNU89 reading-list app with yaml-glib config, htmx-glib pages and orm-glib SQLite; optional PostgreSQL/MySQL |
 | [[file:recipes/mixed-providers.yaml][mixed-providers.yaml]] | Static portfolio demonstrating all five CLI adapters and step-specific models |
 
 Change =site.brief=, the requested stack, and the design profile. Built-in profiles are =editorial=, =minimalist=, =industrial=, =cinematic= and =application=. Provider model identifiers are passed through to ai-glib; example model aliases are examples, not a promise of account availability.
+
+For C applications select =site.stack: c-glib= to supply pinned GitLab dependency setup, verified library API context, YAML runtime configuration, HTMX progressive enhancement, SQLite first-start initialization and optional provider bootstrap SQL. The [[file:docs/c-application.org][C application guide]] explains output artifacts, Fedora packages and verification limits. This stack profile is independent of visual style and does not add ORM/HTTP runtime dependencies to the builder.
 
 ** Generate the flagship site
 
@@ -104,6 +106,7 @@ Repository skills live in [[file:skills/libresite-landing/SKILL.md][skills/libre
 - [[file:docs/architecture.org][Architecture, ownership, signals and extension contracts]]
 - [[file:docs/prompts.org][Prompt organization and design provenance]]
 - [[file:docs/flagship.org][Full multi-page example and quality checks]]
+- [[file:docs/c-application.org][C application stack, configuration and database providers]]
 - [[file:docs/building.org][Build, install and dependency modes]]
 - [[file:docs/operations.org][CLI, checkpoints, limits and troubleshooting]]
 - [[file:docs/testing.org][Verification and its limits]]

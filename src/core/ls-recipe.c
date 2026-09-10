@@ -115,7 +115,7 @@ ls_recipe_new(const gchar *yaml, GError **error){
 	}
 	site = json_object_get_object_member(root, "site");
 	if (!ls_object_keys(
-			site, "|brief|audience|style|frontend|backend|database|requirements|", error
+			site, "|brief|audience|style|stack|frontend|backend|database|requirements|", error
 		) ||
 		!text_member(site, "brief", TRUE, error))
 		return NULL;

@@ -494,6 +494,158 @@ application_generation_contracts(void){
 	g_assert_nonnull(strstr(prompt, "Do not generate a product that tells the user localhost is intentionally rejected"));
 }
 
+/* Stack profiles are opt-in catalog data, independent of visual style. Unknown
+ * selections fail preflight, before the injected transport can be called. */
+static void
+stack_profiles(void){
+	const gchar *selectors[] = {NULL, "c-glib", "unknown", "../c-glib"};
+	const gchar *invalid[] = {"''", "null", "[]", "{}", "42", "false"};
+	g_autoptr(LsPrompts) prompts = ls_prompts_new(NULL, NULL);
+	g_autoptr(LsContext) context = ls_context_new();
+	guint i;
+	for (i = 0; i < G_N_ELEMENTS(selectors); i++) {
+		g_autofree gchar *field = selectors[i] != NULL
+			? g_strdup_printf(", stack: '%s'", selectors[i]) : g_strdup("");
+		g_autofree gchar *yaml = g_strdup_printf("version: 1\nname: profile\n"
+			"site: {brief: test, style: minimalist%s}\npipeline: {steps: [{id: page, type: frontend}]}\n", field);
+		g_autoptr(GError) error = NULL;
+		g_autoptr(LsRecipe) recipe = ls_recipe_new(yaml, &error);
+		g_autoptr(GObject) provider = g_object_new(fixture_provider_get_type(), NULL);
+		g_autoptr(LsPipeline) pipeline = ls_pipeline_new(LS_PROVIDER(provider), prompts);
+		g_autofree gchar *rendered = NULL;
+		g_assert_no_error(error);
+		if (i >= 2) {
+			g_assert_false(ls_pipeline_validate(pipeline, recipe, &error));
+			g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+			g_assert_nonnull(strstr(error->message, "Unknown stack profile"));
+			g_assert_cmpuint(((FixtureProvider *)provider)->calls, ==, 0);
+			continue;
+		}
+		g_assert_true(ls_pipeline_validate(pipeline, recipe, &error));
+		rendered = ls_prompts_render(prompts, recipe,
+			json_array_get_object_element(ls_recipe_get_steps(recipe), 0), context, &error);
+		g_assert_no_error(error);
+		if (i == 0)
+			g_assert_null(strstr(rendered, "orm_engine_new_sqlite"));
+		else {
+			g_assert_nonnull(strstr(rendered, "orm_engine_new_sqlite"));
+			g_assert_nonnull(strstr(rendered, "warm monochrome"));
+		}
+	}
+	for (i = 0; i < G_N_ELEMENTS(invalid); i++) {
+		g_autofree gchar *yaml = g_strdup_printf("version: 1\nname: profile\n"
+			"site: {brief: test, stack: %s}\npipeline: {steps: [{id: page, type: frontend}]}\n", invalid[i]);
+		invalid_recipe(yaml);
+	}
+}
+
+/* Replacement catalogs may omit stacks for old recipes. Every supplied profile
+ * is validated, including unused entries, and no embedded fallback leaks in. */
+static void
+stack_catalogs(void){
+	const gchar *groups[] = {"", "stacks: {custom: Custom-stack}\n", "stacks: {}\n",
+		"stacks: []\n", "stacks: null\n", "stacks: {unused: ''}\n",
+		"stacks: {custom: Valid, unused: 7}\n", "stacks: {unused: {nested: nope}}\n"};
+	g_autofree gchar *temp = g_dir_make_tmp("libresite-stacks-XXXXXX", NULL);
+	g_autofree gchar *path = g_build_filename(temp, "catalog.yaml", NULL);
+	guint i;
+	for (i = 0; i < G_N_ELEMENTS(groups); i++) {
+		g_autofree gchar *yaml = g_strconcat("version: 1\nsystem: Custom\n"
+			"styles: {editorial: Plain}\nstages: {frontend: Page}\n", groups[i], NULL);
+		g_autoptr(GError) error = NULL;
+		g_autoptr(LsPrompts) prompts = NULL;
+		g_assert_true(g_file_set_contents(path, yaml, -1, &error));
+		prompts = ls_prompts_new(path, &error);
+		if (i >= 2) {
+			g_assert_null(prompts);
+			g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+		} else {
+			g_autoptr(LsRecipe) recipe = ls_recipe_new("version: 1\nname: test\n"
+				"site: {brief: test, stack: custom}\npipeline: {steps: [{id: page, type: frontend}]}", NULL);
+			g_autoptr(LsContext) context = ls_context_new();
+			g_autofree gchar *rendered = NULL;
+			g_assert_no_error(error);
+			rendered = ls_prompts_render(prompts, recipe,
+				json_array_get_object_element(ls_recipe_get_steps(recipe), 0), context, &error);
+			if (i == 0) {
+				g_assert_null(rendered);
+				g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+			} else {
+				g_assert_no_error(error);
+				g_assert_nonnull(strstr(rendered, "Custom-stack"));
+				g_assert_null(strstr(rendered, "orm_engine_new"));
+			}
+		}
+	}
+	remove_tree(temp);
+}
+
+/* All stages receive verified API context; the demo rejects each missing or
+ * empty required file. These sentinel bundles test presence, not app quality. */
+static void
+application_stack_artifacts(void){
+	const gchar *contracts[] = {"deps/manifest.yaml", "scripts/bootstrap-deps.sh", "config/application.yaml",
+		"src/main.c", "src/app-config.c", "src/app-config.h", "src/pages.c", "src/database.c", "src/database.h",
+		"sql/bootstrap-sqlite.sql", "sql/bootstrap-postgresql.sql", "sql/bootstrap-mysql.sql",
+		"tests/test-config.c", "tests/test-database.c", "tests/http.sh", "docs/configuration.org", "docs/database.org"};
+	g_autofree gchar *yaml = NULL;
+	g_autoptr(LsRecipe) recipe = NULL;
+	g_autoptr(LsPrompts) prompts = ls_prompts_new(NULL, NULL);
+	g_autoptr(LsContext) empty = ls_context_new();
+	g_autoptr(LsStep) validator = g_object_new(LS_TYPE_VALIDATE_STEP, NULL);
+	JsonArray *steps, *required;
+	JsonObject *acceptance;
+	guint i, j;
+	g_assert_true(g_file_get_contents("recipes/application.yaml", &yaml, NULL, NULL));
+	recipe = ls_recipe_new(yaml, NULL);
+	g_assert_nonnull(recipe);
+	steps = ls_recipe_get_steps(recipe);
+	acceptance = json_array_get_object_element(steps, json_array_get_length(steps) - 1);
+	required = json_object_get_array_member(json_object_get_object_member(acceptance, "options"), "required");
+	for (i = 0; i < G_N_ELEMENTS(contracts); i++) {
+		gboolean found = FALSE;
+		for (j = 0; j < json_array_get_length(required); j++)
+			found |= g_str_equal(contracts[i], json_array_get_string_element(required, j));
+		g_assert_true(found);
+	}
+	for (i = 0; i + 1 < json_array_get_length(steps); i++) {
+		g_autoptr(GError) error = NULL;
+		g_autofree gchar *rendered = ls_prompts_render(prompts, recipe,
+			json_array_get_object_element(steps, i), empty, &error);
+		g_assert_no_error(error);
+		g_assert_nonnull(strstr(rendered, "yaml_node_to_json_node"));
+		g_assert_nonnull(strstr(rendered, "htmx_router_post"));
+		g_assert_nonnull(strstr(rendered, "orm_connection_query_with_params"));
+		g_assert_nonnull(strstr(rendered, "orm_result_get_error"));
+		g_assert_nonnull(strstr(rendered, "gitlab.com/"));
+		g_assert_nonnull(strstr(rendered, "sql/bootstrap-postgresql.sql"));
+	}
+	/* A complete positive control, then missing and empty variants of every path. */
+	for (i = 0; i <= json_array_get_length(required) * 2; i++) {
+		g_autoptr(LsContext) context = ls_context_new();
+		g_autoptr(GError) error = NULL;
+		g_autoptr(GString) artifact_bundle = g_string_new("{\"files\":[");
+		gboolean first = TRUE;
+		for (j = 0; j < json_array_get_length(required); j++) {
+			gboolean affected = i > 0 && j == (i - 1) / 2;
+			if (affected && i % 2 == 1)
+				continue;
+			g_string_append_printf(artifact_bundle, "%s{\"path\":\"%s\",\"content\":\"%s\"}",
+				first ? "" : ",", json_array_get_string_element(required, j), affected ? "" : "sentinel");
+			first = FALSE;
+		}
+		g_string_append(artifact_bundle, "]}");
+		g_assert_true(ls_context_apply(context, artifact_bundle->str, &error));
+		g_assert_cmpint(ls_step_execute(validator, recipe, acceptance, prompts, context, NULL, NULL, &error), ==, i == 0);
+		if (i == 0)
+			g_assert_no_error(error);
+		else {
+			g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+			g_assert_nonnull(strstr(error->message, json_array_get_string_element(required, (i - 1) / 2)));
+		}
+	}
+}
+
 /* Replacement catalogs are checked using the same path as the installed CLI. */
 static void
 catalog_override(void){
@@ -608,6 +760,9 @@ main(int argc, char **argv){
 	g_test_add_func("/json/limits", json_limits);
 	g_test_add_func("/prompt/catalog", catalog_override);
 	g_test_add_func("/prompt/application-contracts", application_generation_contracts);
+	g_test_add_func("/prompt/stack-profiles", stack_profiles);
+	g_test_add_func("/prompt/stack-catalogs", stack_catalogs);
+	g_test_add_func("/prompt/application-stack-artifacts", application_stack_artifacts);
 	g_test_add_data_func("/preflight/style", "style", preflight_case);
 	g_test_add_data_func("/preflight/prompt", "prompt", preflight_case);
 	g_test_add_data_func("/preflight/type", "type", preflight_case);

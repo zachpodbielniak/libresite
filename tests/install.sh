@@ -54,6 +54,19 @@ YAML
 	rg -q '360x800 and 390x844' "$test_dir/embedded"
 	rg -q '1366x768 laptop and 1440x900 desktop' "$test_dir/embedded"
 done
+
+# Installed stack selection must use embedded data from outside the checkout.
+# Exercise the installed recipe as well, so no source-relative API lookup helps.
+(cd /tmp && "$binary" -r "$test_dir/usr/share/libresite/recipes/application.yaml" --preview backend) > "$test_dir/c-stack"
+for contract in 'yaml_node_to_json_node' 'htmx_router_post' 'orm_result_get_error' \
+	'gitlab.com/zachpodbielniak/orm-glib.git' 'sql/bootstrap-postgresql.sql'
+do
+	rg -Fq "$contract" "$test_dir/c-stack"
+done
+# The replacement catalog path must render the same stack contract as GResource.
+(cd /tmp && "$binary" -r "$test_dir/usr/share/libresite/recipes/application.yaml" \
+	--prompts "$test_dir/usr/share/libresite/data/prompts.yaml" --preview backend) > "$test_dir/c-stack-external"
+cmp "$test_dir/c-stack" "$test_dir/c-stack-external"
 # Compile an external plugin using only installed public headers. This checks
 # the real library extension boundary rather than internal registration calls.
 read -r -a flags <<< "$(pkg-config --cflags --libs gio-2.0 gobject-2.0 json-glib-1.0 gmodule-2.0)"
