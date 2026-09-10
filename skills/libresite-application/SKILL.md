@@ -5,6 +5,8 @@ description: Create a libresite recipe for a complete web-application slice with
 
 # Generate an application with libresite
 
+Embed supplied client copy, logo SVG, brand YAML and approved legal text in top-level `seed_artifacts`, a sequence of exact `path` / `content` mappings using YAML literal blocks. Read the seed contract in `docs/recipe-format.org`. These text artifacts exist before the first step and appear in previews; no host file imports or binary assets are supported. Use instructions and native checks when content must be preserved. Changing seeds invalidates a checkpoint; resume preserves accepted replacements.
+
 Locate the checkout or installed CLI and read `docs/recipe-format.org`, `docs/operations.org`, `docs/c-application.org` and `recipes/application.yaml`. Define a small complete user workflow before selecting modules. Preserve the requested stack. For C/GLib applications select `site.stack: c-glib`: yaml-glib runtime configuration, htmx-glib routing/HTML with local HTMX enhancement and ordinary form fallbacks, and orm-glib with SQLite by default. Optional PostgreSQL/MySQL providers need explicit build flags and matching bootstrap SQL. Visual style remains independent.
 
 Write a new recipe describing routes, input constraints, state transitions, persistence and the actual audience. Use `application` style for repeated-use product interfaces. Choose a pipeline of brief, design, database, backend, frontend, review and native validate, adjusting order when a concrete integration requires it. Every step may specify its own `ai.provider` and `ai.model`. A changed provider should get its own model; inspect `--plan` before generation.

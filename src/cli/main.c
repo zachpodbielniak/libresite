@@ -306,8 +306,11 @@ main(int argc, char **argv){
 			JsonObject *step = json_array_get_object_element(steps, i);
 			g_autoptr(JsonObject) settings = ls_recipe_resolve_ai(recipe, step);
 			if (preview != NULL && g_str_equal(preview, ls_string(step, "id"))) {
-				g_autoptr(LsContext) empty = ls_context_new();
-				g_autofree gchar *text = ls_prompts_render(prompts, recipe, step, empty, &error);
+				g_autoptr(LsContext) initial = ls_recipe_create_context(recipe, &error);
+				g_autofree gchar *text = NULL;
+				if (initial == NULL)
+					goto fail;
+				text = ls_prompts_render(prompts, recipe, step, initial, &error);
 				if (text == NULL)
 					goto fail;
 				g_print("%s\n\n%s", ls_prompts_get_system(prompts), text);

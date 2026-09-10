@@ -143,9 +143,11 @@ ls_pipeline_register(LsPipeline *self, const gchar *name, GType step_type, GErro
 /* Native validation options are checked before AI calls, not at the final step. */
 gboolean
 ls_pipeline_validate(LsPipeline *self, LsRecipe *recipe, GError **error){
-	g_autoptr(LsContext) empty = ls_context_new();
+	g_autoptr(LsContext) initial = ls_recipe_create_context(recipe, error);
 	JsonArray *steps = ls_recipe_get_steps(recipe);
 	guint i;
+	if (initial == NULL)
+		return FALSE;
 	for (i = 0; i < json_array_get_length(steps); i++) {
 		JsonObject *config = json_array_get_object_element(steps, i);
 		const gchar *name = ls_string(config, "type");
@@ -156,7 +158,7 @@ ls_pipeline_validate(LsPipeline *self, LsRecipe *recipe, GError **error){
 		}
 		if (g_type_is_a(type, LS_TYPE_GENERATE_STEP)) {
 			g_autofree gchar *rendered =
-				ls_prompts_render(self->prompts, recipe, config, empty, error);
+				ls_prompts_render(self->prompts, recipe, config, initial, error);
 			if (rendered == NULL)
 				return FALSE;
 		} else if (type == LS_TYPE_VALIDATE_STEP) {
@@ -423,8 +425,14 @@ ls_pipeline_run(
 				checkpoint, fingerprint, json_array_get_length(steps), context, &next, error
 			))
 			goto out;
-	} else if (!save_checkpoint(checkpoint, context, fingerprint, 0, error))
-		goto out;
+	} else {
+		/* Seeds precede every step and the initial checkpoint. Never reapply
+		 * them over a resumed project's accepted replacements. */
+		g_clear_object(&context);
+		context = ls_recipe_create_context(recipe, error);
+		if (context == NULL || !save_checkpoint(checkpoint, context, fingerprint, 0, error))
+			goto out;
+	}
 	for (i = next; i < json_array_get_length(steps); i++) {
 		JsonObject *config = json_array_get_object_element(steps, i);
 		const gchar *id = ls_string(config, "id");
