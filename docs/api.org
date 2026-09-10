@@ -1,0 +1,187 @@
+#+title: Public C API
+#+description: Complete embedder surface from libresite.h, ownership and error codes
+#+authors: Zach Podbielniak
+#+categories: libresite, development, api
+#+created: 2026-09-10T20:00:00-04:00
+#+updated: 2026-09-10T20:00:00-04:00
+#+version: 0.1.0
+
+* Boundary
+
+Include =#include <libresite.h>= after =pkg-config --cflags libresite-1.0=. The umbrella header is the public surface: recipe, prompts, context, pipeline, package, artifact, provider, AI adapter, steps, usage and QA. =LS_VERSION= is the string ="0.1.0"=. This is a new 0.1 C API; pin compatible releases. Headers carry gtk-doc/GObject Introspection ownership comments. This release does not install GIR/typelib files.
+
+All owning GObject types support =g_autoptr()=. =LsArtifact= is a boxed value with =g_autoptr= via =ls_artifact_free()=. Borrowed JSON nodes from a recipe or catalog are immutable; do not mutate them. Never return success while setting a =GError=. Honor =GCancellable=. Pipeline operations are synchronous and not reentrant. See [[file:architecture.org][architecture.org]] for lifecycle, signals, plugins and threading.
+
+* Errors and limits
+
+Domain =LS_ERROR= (=ls_error_quark()=). Codes:
+
+| Code | Meaning |
+|------+---------|
+| =LS_ERROR_INVALID= | Malformed input, unknown keys/types, invalid provider JSON |
+| =LS_ERROR_CONFLICT= | Existing output, locked workspace or incompatible checkpoint |
+| =LS_ERROR_PROVIDER= | Transport failure after a valid request |
+| =LS_ERROR_LIMIT= | Document, file, project, prompt or nesting limit |
+
+Public size macros: =LS_MAX_DOCUMENT= is 16 MiB (YAML, catalog and checkpoint text) and =LS_MAX_PROJECT= is 64 MiB of decoded project bytes. Other limits (4096 files, 128 recipe steps, 16 MiB per file, 128 MiB encoded checkpoints, 32 JSON/YAML nesting, 100000 YAML events) are enforced by the same parsers; see [[file:operations.org][operations.org]].
+
+Cancellation after a callback is normalized to =G_IO_ERROR_CANCELLED=. CLI exit status is 0 on success, 130 on that cancellation error and 1 otherwise.
+
+* Recipe
+
+=LsRecipe= owns the parsed YAML tree. Construction validates schema; catalog and module names still require =ls_pipeline_validate()=.
+
+| Function | Transfer | Role |
+|----------+----------+------|
+| =ls_recipe_new(yaml, error)= | full, nullable | Parse and validate YAML |
+| =ls_recipe_from_form(json, error)= | full, nullable | JSON form to recipe; supplies =version: 1= and a static pipeline when omitted |
+| =ls_recipe_to_yaml(self, error)= | full, nullable | Re-emit YAML with explicit string types; no execution overrides |
+| =ls_recipe_get_source(self)= | none | Original YAML bytes used for identity |
+| =ls_recipe_set_scaffold_source(self, bundle, error)= | — | Pin archived native JSON; failure keeps the previous pin |
+| =ls_recipe_get_scaffold_source(self)= | none, nullable | Archived native bundle or NULL for embedded defaults |
+| =ls_recipe_create_context(self, error)= | full, nullable | Fresh seed context for previews and first runs |
+| =ls_recipe_seed_context(self, context, error)= | — | Overlay seeds onto an imported revision context |
+| =ls_recipe_set_timeout(self, seconds)= | — | Execution-only deadline: =-1= recipe, =0= unlimited, =1..86400= |
+| =ls_recipe_set_unlimited(self, unlimited)= | — | Disable time and =max_tokens= for this run |
+| =ls_recipe_approve(self, step_id)= | — | Approve one native gate |
+| =ls_recipe_set_approve_all(self, approve_all)= | — | Approve every gate for this run |
+| =ls_recipe_is_approved(self, step_id)= | — | Whether that gate may pass |
+| =ls_recipe_get_root(self)= | none | Immutable root mapping |
+| =ls_recipe_get_steps(self)= | none | Ordered step array |
+| =ls_recipe_resolve_ai(self, step)= | full | Merged defaults plus step overrides |
+
+Timeout, unlimited and approvals are execution-only: they do not change =ls_recipe_get_source()= or checkpoint identity. Do not mutate them during a run. Seeds belong in the parsed tree and therefore in identity; apply them only before a fresh run or preview, never over a restored checkpoint. Form conversion is documented in [[file:structured-recipes.org][structured-recipes.org]].
+
+* Prompts
+
+=LsPrompts= owns the catalog YAML.
+
+| Function | Transfer | Role |
+|----------+----------+------|
+| =ls_prompts_new(path, error)= | full, nullable | Load a replacement file, or the embedded catalog when =path= is NULL |
+| =ls_prompts_new_from_yaml(yaml, error)= | full, nullable | Parse exact UTF-8 bytes (package load uses this) |
+| =ls_prompts_get_source(self)= | none | Exact original YAML for digest and sealing |
+| =ls_prompts_get_digest(self)= | none | SHA-256 of those bytes |
+| =ls_prompts_get_system(self)= | none | Shared system prompt |
+| =ls_prompts_set_max_bytes(self, max_bytes)= | — | Admission cap; =0= unlimited; not part of identity |
+| =ls_prompts_render(self, recipe, step, context, error)= | full, nullable | Task prompt for one generation step |
+
+A replacement catalog is complete: there is no merge with embedded styles, stages or stacks. Catalog schema lives in [[file:prompts.org][prompts.org]].
+
+* Context and artifacts
+
+=LsContext= owns the project files. =LsArtifact= is an immutable boxed file.
+
+| Function | Transfer | Role |
+|----------+----------+------|
+| =ls_context_new()= | full | Empty store |
+| =ls_context_import(directory, cancellable, error)= | full, nullable | Revision snapshot; rejects symlinks and special files |
+| =ls_context_is_revision(self)= | — | Whether the store was imported |
+| =ls_context_restore(self, snapshot, error)= | — | Replace every file from a JSON snapshot |
+| =ls_context_apply(self, response, error)= | — | Transactional files/delete/rename bundle |
+| =ls_context_snapshot(self)= | full | Canonical JSON bundle, sorted by path |
+| =ls_context_prompt_bundle(self, step, error)= | full, nullable | Manifest plus focused UTF-8 contents |
+| =ls_context_export(self, directory, cancellable, error)= | — | Write a new directory |
+| =ls_context_lookup(self, path)= | none, nullable | Borrowed immutable artifact |
+
+| Function | Transfer | Role |
+|----------+----------+------|
+| =ls_artifact_new(path, content, error)= | full, nullable | UTF-8 text, non-executable |
+| =ls_artifact_new_full(path, content, executable, error)= | full, nullable | UTF-8 text with execute intent |
+| =ls_artifact_new_bytes(path, data, size, binary, executable, error)= | full, nullable | Opaque or UTF-8 bytes |
+| =ls_artifact_copy(self)= | full | Independent clone |
+| =ls_artifact_with_path(self, path, error)= | full, nullable | Same bytes at a new safe path |
+| =ls_artifact_free(self)= | — | Destroy; NULL-safe |
+| =ls_artifact_get_path(self)= | none | Relative path |
+| =ls_artifact_get_content(self)= | none, nullable | UTF-8 text, or NULL when binary |
+| =ls_artifact_get_data(self, size)= | none | Borrowed bytes |
+| =ls_artifact_get_size(self)= | — | Byte count |
+| =ls_artifact_is_binary(self)= | — | Opaque storage |
+| =ls_artifact_get_executable(self)= | — | Export execute bit |
+
+=ls_artifact_get_type()= is the boxed GType. Copy signal arguments that must outlive the callback. Path, encoding and bundle rules are in [[file:recipe-format.org][recipe-format.org]]; revision import limits are in [[file:revision.org][revision.org]].
+
+* Pipeline
+
+=ls_pipeline_new(provider, prompts)= returns a pipeline with the ten built-in module names already registered: =brief=, =design=, =frontend=, =backend=, =database=, =review=, =generate=, =scaffold=, =validate= and =gate=. Duplicate names and abstract types are errors.
+
+| Function | Role |
+|----------|------|
+| =ls_pipeline_register(self, name, step_type, error)= | Concrete =LsStep= with a zero-argument constructor |
+| =ls_pipeline_validate(self, recipe, error)= | Resolve types, styles, stages and stacks without AI |
+| =ls_pipeline_validate_context(self, recipe, context, error)= | Same, against an imported or seeded context |
+| =ls_pipeline_run(self, recipe, output, resume, cancellable, error)= | Generate and publish a new directory |
+| =ls_pipeline_revise(self, recipe, project, output, resume, cancellable, error)= | Import =project=, leave it unchanged, publish a new tree |
+
+Signals (calling thread, zero-based indices): =step-started= (id, index), =step-completed= (id, index), =step-progress= (id, index, message), =artifact-written= (=LsArtifact=), =completed= (output path). Resume emits only for steps actually run. Failures return through =GError=.
+
+* Provider and AI adapter
+
+Implement =LsProviderInterface.generate=: return an owned UTF-8 JSON file-bundle string or NULL with an error. Eight reserved vtable slots exist for ABI growth. Call through =ls_provider_generate()= so dispatch wrapping, cancellation precedence and usage accounting apply.
+
+=LsProvider::usage= fires after each dispatched call with borrowed provider, model, input-byte and output-byte values. Do not share a provider across concurrent executions. Custom steps that bypass the wrapper are not counted.
+
+=ls_ai_provider_new()= constructs the ai-glib CLI adapter (Codex, Claude Code, Grok Build, Cursor, Antigravity). =ls_ai_provider_set_debug()= is transport configuration, not recipe state. The stock CLI uses this adapter; embedders may inject any =LsProvider=.
+
+* Steps
+
+Subclass =LsStep=, override =LsStepClass.execute= (eight reserved slots) and register the type. =ls_step_execute()= is the dispatch wrapper. =ls_step_dup_usage()= returns an owned JSON object for the last execution, including failures, or NULL before the first call. =LsStep::progress= carries a borrowed human-readable message on the executing thread; the pipeline forwards it as =step-progress=.
+
+Built-in final types and helpers:
+
+| Type / function | Role |
+|-----------------+------|
+| =LS_TYPE_GENERATE_STEP= | Model file-bundle step; reuse under another registered name |
+| =LS_TYPE_VALIDATE_STEP= | Native required-path and optional predicate checks |
+| =ls_validate_step_check_options(options, error)= | Schema only; no artifacts, no transport |
+| =LS_TYPE_SCAFFOLD_STEP= | Embedded static templates |
+| =ls_scaffold_step_check_options(options, error)= | =profile: static= or omitted |
+| =ls_scaffold_step_render(options, context, error)= | Missing-file JSON; does not mutate context |
+| =ls_scaffold_step_render_recipe(recipe, options, context, error)= | Archived snapshot when pinned, else embedded |
+| =LS_TYPE_GATE_STEP= | Stops until =ls_recipe_approve()= / =ls_recipe_set_approve_all()= |
+| =ls_gate_step_check_options(options, error)= | Optional =message= and =review= paths |
+| =ls_gate_step_preview(options, error)= | Human-readable review text |
+
+CLI plugins export =gboolean ls_plugin_register(LsPipeline *pipeline, GError **error)=. See [[file:architecture.org][architecture.org]] for the complete plugin example and trust model.
+
+* Packages, usage and QA
+
+| Function | Role |
+|----------|------|
+| =ls_package_save(directory, recipe, prompts, error)= | New archive: recipe.yaml, prompts.yaml, package.yaml, optional scaffold.json |
+| =ls_package_load(directory, recipe, prompts, error)= | Verify SHA-256 pins; both out-params NULL on failure |
+| =ls_usage_validate(records, error)= | Typed usage array |
+| =ls_usage_price(usage_json, rates_yaml, error)= | Owned JSON price report; refuses incomplete history |
+| =ls_qa_check(directory, report, cancellable, error)= | Published-tree structural scan |
+
+Call =ls_pipeline_validate()= before =ls_package_save()=. Load never substitutes the embedded catalog or current native templates. Pricing and rate-card schema are in [[file:usage.org][usage.org]]. QA report format is in [[file:qa.org][qa.org]].
+
+* Shared helpers
+
+These parser and path helpers ship in the public headers because recipe, artifact and CLI code share them. Prefer the typed constructors above for application logic.
+
+| Function | Role |
+|----------|------|
+| =ls_yaml_parse(text, error)= | Strict YAML to JSON-GLib; rejects aliases, tags and oversize input |
+| =ls_json_parse(text, error)= | Strict JSON; rejects duplicates, NUL, comments and extra nesting |
+| =ls_json_encode(node)= | Compact JSON text |
+| =ls_read_text(path, error)= | Entire UTF-8 file within document limits |
+| =ls_object_keys(object, keys, error)= | Allowlist; pipe-delimited names, rejects delimiter-in-key bypasses |
+| =ls_string(object, key)= | Borrowed string member or NULL |
+| =ls_path_valid(path)= | Safe relative artifact path |
+
+* Embedding sketch
+
+#+begin_src c
+#include <libresite.h>
+
+g_autoptr(LsPrompts) prompts = ls_prompts_new(NULL, &error);
+g_autoptr(LsRecipe) recipe = ls_recipe_new(yaml, &error);
+g_autoptr(LsAiProvider) provider = ls_ai_provider_new();
+g_autoptr(LsPipeline) pipeline = ls_pipeline_new(LS_PROVIDER(provider), prompts);
+if (!ls_pipeline_validate(pipeline, recipe, &error))
+	return FALSE;
+return ls_pipeline_run(pipeline, recipe, output, FALSE, cancellable, &error);
+#+end_src
+
+Install tests compile an external plugin and a shared-library consumer against these headers. Generated application code does not belong in this repository; keep product files in the requested output directory.

@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, testing
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-10T18:40:00-04:00
+#+updated: 2026-09-10T20:00:00-04:00
 #+version: 0.1.0
 
 * Generated Git repository checks
@@ -23,7 +23,21 @@ bash tests/install.sh
 make DEBUG=1 ASAN=1 UBSAN=1 tests
 #+end_src
 
-=make tests= compiles and runs the GTest executables with fatal GLib warnings, then CLI integration tests. =verify.sh= runs clean parallel release and debug builds/tests, rejects warning/error diagnostics and runs ShellCheck. It checks its warning detector against a known positive control first. =install.sh= stages installation under a new temporary directory, runs the installed CLI outside the checkout, compiles and loads an external step plugin against installed headers, and runs a shared-library consumer. Temporary fixture directories are owned by the test that creates and removes them.
+=make tests= compiles and runs the GTest executables with fatal GLib warnings, then CLI integration tests. The three GTest binaries are =test-libresite= (parser, pipeline, artifacts, prompts, checkpoints), =test-contracts= (dispatch, JSON/YAML, native predicates) and =test-packages= (SKU acceptance and archive pins). Shell suites invoked afterward:
+
+| Script | Coverage |
+|--------+----------|
+| =tests/packages.sh= | Seal/load every catalog SKU, overwrite and tamper rejection |
+| =tests/cli.sh= | Five provider fixtures, resume, cancellation, debug, flags |
+| =tests/revision.sh= | Import, preview, publication and source-bound resume |
+| =tests/usage.sh= | =--price-usage= JSON against a fixed rate card |
+| =tests/scaffold.sh= | Native templates, previews and generated Makefile checks |
+| =tests/qa.sh= | Gate approval and published-tree QA |
+| =tests/verify.sh= | Clean release/debug builds, warning detector, ShellCheck |
+| =tests/install.sh= | Staged install, plugin, shared-library consumer, installed CLI |
+| =tests/stack-api.sh= | Opt-in =make stack-tests= against pinned generation libraries |
+
+=verify.sh= runs clean parallel release and debug builds/tests, rejects warning/error diagnostics and runs ShellCheck. It checks its warning detector against a known positive control first. =install.sh= stages installation under a new temporary directory, runs the installed CLI outside the checkout, compiles and loads an external step plugin against installed headers, and runs a shared-library consumer. Temporary fixture directories are owned by the test that creates and removes them. Default tests never call a live AI account; =tests/fixtures/provider.sh= is the injectable transport.
 
 * Coverage
 

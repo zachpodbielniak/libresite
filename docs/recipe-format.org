@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, reference
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-10T18:40:00-04:00
+#+updated: 2026-09-10T20:00:00-04:00
 #+version: 0.1.0
 
 * Contract
@@ -50,7 +50,7 @@ pipeline:
 | name | yes | nonempty string | Human-readable project identity |
 | site | yes | mapping | Product and stack brief |
 | ai | no | mapping | Default AI settings |
-| seed_artifacts | no | sequence | Initial UTF-8 files, each with exactly path and content |
+| seed_artifacts | no | sequence | Initial files, each with path, content and optional encoding |
 | package | no | mapping | Sold SKU identity: sku, release and kind; see below |
 | pipeline | yes | mapping | Exactly one key, steps |
 
@@ -101,7 +101,7 @@ Resume restores the accepted checkpoint without reapplying seeds, preserving lat
 | ai | no | mapping | Settings overriding pipeline AI defaults |
 | options | no | mapping | Module-specific data; passed intact to the module and generation prompt |
 
-Built-in AI module names are =brief=, =design=, =frontend=, =backend=, =database=, =review= and =generate=. These all use =LsGenerateStep= with different centralized stage contracts. =generate= is the general-purpose extension for instructions that need no custom C implementation. A custom =prompt= can reuse any catalog stage or a stage added to a replacement catalog.
+Built-in AI module names are =brief=, =design=, =frontend=, =backend=, =database=, =review= and =generate=. These all use =LsGenerateStep= with different centralized stage contracts. =generate= is the general-purpose extension for instructions that need no custom C implementation. A custom =prompt= can reuse any catalog stage or a stage added to a replacement catalog. Catalog keys =foundation=, =pages=, =interactions=, =polish= and =revision= have no dedicated C type; select them with =prompt=. The complete stage table is in [[file:prompts.org][prompts.org]].
 
 The native =scaffold= module emits static boilerplate without a model call. Its only option is =profile: static= (the default). It preserves existing paths and applies missing templates as one transaction. See [[file:scaffold.org][scaffold reference]] for the file inventory, contact contract, installed previews and checkpoint identity. Bundled static recipes require the scaffold artifacts in final acceptance.
 

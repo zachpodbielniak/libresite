@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, design, prompts
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-10T18:07:19-04:00
+#+updated: 2026-09-10T20:00:00-04:00
 #+version: 0.1.0
 
 * Flagship quality is the default
@@ -113,14 +113,24 @@ Loopback applications are a known generation failure class: a Host check that ac
 
 The shared contract now requires a subject-specific visual thesis, deliberate section rhythm, complete route content, concrete control states and consistent cross-route interfaces. Art direction is expressed through composition, type roles, text/surface color pairs and a small original asset family. The review criterion is evidence across identity, content, consistency, behavior and accessibility, not an invented numerical quality score. These additions synthesize the existing reference snapshots; no new snapshots were imported.
 
-Four additional stage keys support larger sites without new C modules:
+The bundled =stages= mapping is the complete runtime catalog. Built-in generation module names default =prompt= to their =type=; extra keys are selected with =type: generate= plus an explicit =prompt=.
 
-| Stage key | Responsibility | Selection |
-|-----------+----------------+-----------|
+| Stage key | Responsibility | Typical selection |
+|-----------+----------------+-------------------|
+| brief | Product contract, routes, non-goals and shared frontend/backend/database contracts in =docs/product.org= | =type: brief= |
+| design | Tokens, layout, components and asset direction in =docs/design.org= | =type: design= |
+| frontend | Complete frontend or static site against the product/design contracts | =type: frontend= |
+| backend | Routes, validation, encoding, configuration and HTTP tests | =type: backend= |
+| database | Schema, migrations, parameterized access and persistence tests | =type: database= |
+| review | Source-level product, a11y, SEO and responsive repair plus =docs/review.org= | =type: review= |
+| generate | Custom instructions against the current project | =type: generate= |
 | foundation | Shared styles, art, component hooks and reference home page | =type: generate=, =prompt: foundation= |
 | pages | Scoped batches of complete interior routes | =type: generate=, =prompt: pages= |
 | interactions | Connect progressive workflows, fallback states and tests | =type: generate=, =prompt: interactions= |
 | polish | Correct the weakest visual/interaction dimension across the site | =type: generate=, =prompt: polish= |
+| revision | Change-brief contract prepended to every generation stage under =--revise= | required in catalogs used for AI revision |
+
+Native =scaffold=, =validate= and =gate= have no stage strings. =stacks= currently contains only =c-glib=. Unused stack entries are still validated. Custom catalogs must include every stage they select; replacement catalogs do not inherit missing keys from the embedded file.
 
 =options.files= in the flagship example is a model-facing list of primary deliverables, not a filesystem write restriction or a new reserved schema field. Integrating scripts or shared classes can require updating previously created files. Only =validate.options.required= is enforced by the native presence validator. Intermediate checks catch omitted artifacts before later calls; they do not prove link correctness, visual quality or behavior.
 

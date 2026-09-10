@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, development
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-10T14:12:00-04:00
+#+updated: 2026-09-10T20:00:00-04:00
 #+version: 0.1.0
 
 * Three-file build
@@ -37,11 +37,25 @@ make -j4
 make DEBUG=1 -j4
 make DEBUG=1 ASAN=1 UBSAN=1 tests
 make clean all tests -j4
+make stack-tests
+make help
 bash tests/verify.sh
 bash tests/install.sh
 #+end_src
 
-Release files live under =build/release/=; debug files under =build/debug/=. =clean= removes only the selected build type and leaves dependencies alone. Switching sanitizer flags rebuilds affected objects even within the same output directory. Upstream dependencies retain their own build policy; the project verification checks combined build output for warnings as well as nonzero status.
+| Target | Result |
+|--------+--------|
+| =all= (default) | CLI, shared library, static archive and =libresite-1.0.pc= |
+| =tests= / =test= | Build, then GTest plus packages/cli/revision/usage/scaffold/qa scripts |
+| =stack-tests= | Opt-in compile against pinned yaml-glib/htmx-glib/orm-glib archives |
+| =install= | CLI, libraries, headers, pkg-config, =data/=, recipes, skills, docs, license |
+| =bundled-deps= | Initialize nested gitlinks if needed and build pinned static archives |
+| =clean= | Remove only =build/release/= or =build/debug/= for the selected =DEBUG= |
+| =help= | Print the supported targets and =DEBUG=/=ASAN=/=UBSAN=/=DEPS= switches |
+
+=config.mk= knobs: =DEBUG= (0/1), =ASAN=, =UBSAN=, =DEPS= (=bundled= or =system=), =PREFIX= (default =/usr/local=), =BINDIR=, =LIBDIR=, =INCLUDEDIR= and =DATADIR=. Compiler is =CC=gcc=. pkg-config also requires =gio-unix-2.0= and =gmodule-2.0= in addition to the Fedora development packages listed above. Bundled mode adds =libdex-1= and =libxml-2.0=. =data/resources.xml= embeds =data/prompts.yaml=, =LICENSE= and =data/scaffold/= through =glib-compile-resources=.
+
+Release files live under =build/release/=; debug files under =build/debug/=. =clean= removes only the selected build type and leaves dependencies alone. Switching sanitizer flags rebuilds affected objects even within the same output directory. Upstream dependencies retain their own build policy; the project verification checks combined build output for warnings as well as nonzero status. Libresite itself does not ship a Containerfile; generated applications may add one.
 
 * Install
 

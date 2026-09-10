@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, generation
 #+created: 2026-09-10T00:00:00+00:00
-#+updated: 2026-09-10T18:07:19-04:00
+#+updated: 2026-09-10T20:00:00-04:00
 #+version: 1
 
 * Purpose and scope
@@ -62,7 +62,7 @@ libresite -r recipes/landing.yaml --preview design
 
 =--list-modules= includes scaffold. =--plan= reports native with no model. Scaffold preview emits the missing-file JSON bundle; later CLI previews apply preceding scaffold steps to an in-memory context before rendering. They do not execute earlier AI or plugin steps and therefore cannot predict their changes. No preview exports files or calls a provider.
 
-Templates live in =data/scaffold/= and are embedded through GResource, so the installed binary works outside the checkout. =--prompts= replaces runtime design instructions, not native templates. Embedders can instantiate =LS_TYPE_SCAFFOLD_STEP= or use =ls_scaffold_step_render()= followed by =ls_context_apply()=. The renderer leaves the input context untouched; application performs transactional conflict and limit validation. =ls_scaffold_step_check_options()= exposes the same schema check used by pipeline preflight.
+Templates live in =data/scaffold/= and are embedded through GResource, so the installed binary works outside the checkout. =--prompts= replaces runtime design instructions, not native templates. Embedders can instantiate =LS_TYPE_SCAFFOLD_STEP= or use =ls_scaffold_step_render()= followed by =ls_context_apply()=. =ls_scaffold_step_render_recipe()= uses an archived native snapshot when the recipe has one, otherwise the embedded templates. The renderer leaves the input context untouched; application performs transactional conflict and limit validation. =ls_scaffold_step_check_options()= exposes the same schema check used by pipeline preflight. GResource paths are listed in =data/resources.xml=: prompts, license and every file under =data/scaffold/=.
 
 * Verification
 =make tests= covers zero transport calls, seed preservation, idempotence, cancellation, atomic conflict rejection, invalid options, CLI previews and generated Makefile positive/negative checks. =bash tests/install.sh= repeats native generation from an installed binary outside the checkout and exercises checkpoint recovery after Git publication failures. Fixtures establish native emission and orchestration, not live model design quality, browser behavior, legal review or contact delivery.

@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: development, websites, ai, glib
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-10T18:40:00-04:00
+#+updated: 2026-09-10T20:00:00-04:00
 #+version: 0.1.0
 
 * Build a site from a recipe
@@ -146,10 +146,12 @@ Repository skills live in [[file:skills/libresite-landing/SKILL.md][skills/libre
 * Documentation
 
 - [[file:docs/packages.org][Sold SKU catalog, fixed scopes and archived recipe/catalog pins]]
-
 - [[file:docs/copy-lock.org][Copy-lock client sentences and contact details]]
 - [[file:docs/recipe-format.org][Recipe schema and per-step settings]]
+- [[file:docs/structured-recipes.org][Structured recipes, platform forms and YAML export]]
+- [[file:docs/scaffold.org][Native static scaffolding and contact contract]]
 - [[file:docs/architecture.org][Architecture, ownership, signals and extension contracts]]
+- [[file:docs/api.org][Public C API]]
 - [[file:docs/prompts.org][Prompt organization and design provenance]]
 - [[file:docs/seo.org][SEO defaults and production preparation]]
 - [[file:docs/flagship.org][Full multi-page example and quality checks]]
@@ -160,6 +162,7 @@ Repository skills live in [[file:skills/libresite-landing/SKILL.md][skills/libre
 - [[file:docs/testing.org][Verification and its limits]]
 - [[file:docs/qa.org][Published-tree QA runner]]
 - [[file:docs/robustness-review.org][Robustness review and deterministic acceptance]]
+- [[file:docs/usage.org][Usage records, rate-card format and accounting limits]]
 
 * Step usage and job pricing
 

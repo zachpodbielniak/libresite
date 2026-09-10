@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, quality, testing
 #+created: 2026-09-10T18:40:00-04:00
-#+updated: 2026-09-10T18:40:00-04:00
+#+updated: 2026-09-10T20:00:00-04:00
 #+version: 0.1.0
 
 * Boundary
@@ -16,7 +16,17 @@ Native =validate= stays an in-process literal check: required non-whitespace tex
 libresite --qa ./my-site
 #+end_src
 
-Library callers use =ls_qa_check()=. A readable tree with no structural findings returns true and a report. Import failures (symlinks, special files, empty directories) are errors. Findings are not errors: the function returns false and still fills the report.
+Library callers use =ls_qa_check()=. A readable tree with no structural findings returns true and a report. Import failures (symlinks, special files, empty directories) are errors. Findings are not errors: the function returns false and still fills the report. The CLI prints that report on stdout.
+
+A successful report looks like:
+
+#+begin_example
+QA ./my-site
+files: 12 (2 binary, 8 html)
+OK structural checks; this is not an a11y, SEO, compile or browser audit
+#+end_example
+
+Each finding is a =FAIL= line naming the artifact and defect, followed by a finding count. HTML token search is ASCII case-insensitive. =javascript:= URLs are treated as external and ignored, same as =http(s)=, =mailto=, =tel=, =data= and fragments. Query strings and fragments are stripped before resolving relative targets. Root-relative paths are resolved from the project root. Traversal that escapes the tree is a finding.
 
 * What it checks
 

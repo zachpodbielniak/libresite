@@ -3,10 +3,42 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, operations
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-10T18:40:00-04:00
+#+updated: 2026-09-10T20:00:00-04:00
 #+version: 0.1.0
 
 * Commands
+
+=libresite --help= / =-h= prints this table and examples. Modes that write YAML, plans, previews, usage prices or QA reports use stdout; progress and errors use stderr.
+
+| Option | Role |
+|--------+------|
+| =-r FILE= / =--recipe FILE= | YAML recipe |
+| =-o DIR= / =--output DIR= | New output directory; parent must exist |
+| =--prompts FILE= | Replace the entire embedded catalog |
+| =--plugin FILE= | Load a native step plugin (repeatable) |
+| =--package DIR= | Load a sealed recipe and catalog, verifying both digests |
+| =--seal-package DIR= | Archive recipe and catalog without generation |
+| =--from-form FILE= | Validate structured JSON and emit YAML |
+| =--emit-yaml= | Re-emit a validated recipe as YAML |
+| =--validate= | Schema, modules and prompts; no provider calls |
+| =--plan= | Tab-separated index, id, type, provider and model (index starts at 1) |
+| =--preview STEP-ID= | System and task prompt, or native gate/scaffold text |
+| =--resume= | Reuse a matching =OUTPUT.libresite-work= |
+| =--revise DIR= | Import an existing project; =site.brief= is the change brief |
+| =--approve STEP-ID= | Approve a native gate (repeatable) |
+| =--approve-all= | Approve every native gate for this run |
+| =--qa DIR= | Inspect a published tree; no generation |
+| =--price-usage FILE= | Price checkpoint or =.libresite/run.json= using =--rates= |
+| =--rates FILE= | YAML rate card for =--price-usage= |
+| =--unlimited= | Disable time and requested output budgets for this run |
+| =--timeout SECONDS= | Per-attempt deadline; =0= unlimited, omitted uses the recipe |
+| =--max-prompt-bytes BYTES= | System plus task cap; =0= unlimited (default) |
+| =--debug= | Persist provider sessions and log diagnostic metadata |
+| =--list-modules= | Print the ten built-in step names |
+| =--license= | Print the AGPLv3 license |
+| =--version= | Print =LS_VERSION= |
+
+Positional arguments are errors. =--validate=, =--plan=, =--preview= and =--emit-yaml= are mutually exclusive. =--qa= and =--price-usage= cannot combine with generation or inspection flags. =--package= excludes =--recipe=, =--prompts=, =--from-form= and =--seal-package=. =--from-form= emits YAML and cannot combine with =--recipe= or generation. =--seal-package= cannot also run output, revision or inspection. =--timeout= must be 0 through 86400; =--max-prompt-bytes= must be nonnegative and fit the platform size type.
 
 For sold jobs, =--seal-package DIR= archives an approved =-r FILE= recipe and its selected catalog without AI calls. Generate or resume with =--package DIR -o OUTPUT [--resume]= to verify both SHA-256 pins and use the archived inputs. =--package= cannot be combined with recipe/catalog overrides. Archive retention and compatible generator/plugin versions remain operator responsibilities. See [[file:packages.org][package catalog and long-term resume]].
 
@@ -18,13 +50,13 @@ Changing a bundled recipe's budget values changes its fingerprint. For the activ
 ./build/debug/libresite -r ./example-site.libresite-work/recipe-before-unlimited.yaml -o ./example-site --resume --debug --unlimited
 #+end_src
 
-=--help= / =-h= provides examples. =--version= prints the release and =--license= prints the preserved license. =--list-modules= lists the ten built-in names, including =gate=. =--recipe FILE= / =-r FILE= selects the YAML recipe. =--output DIR= / =-o DIR= selects a new directory for generation; its parent must already exist.
-
-=--validate= checks local schema, AI settings, registered module names, prompt/style resolution and native validation options without calling providers or creating output. =--plan= prints tab-separated index, id, type, provider and model; the display index starts at one. =--preview STEP-ID= shows the system and task prompt with the recipe's seed artifacts (empty when omitted), without simulating earlier steps. Native =gate= previews print the review message instead of a model prompt. These three modes are mutually exclusive. Native validate steps have no AI prompt to preview. All positional arguments are errors.
+=--validate= checks local schema, AI settings, registered module names, prompt/style resolution and native validation options without calling providers or creating output. =--plan= prints tab-separated index, id, type, provider and model; the display index starts at one. =--preview STEP-ID= shows the system and task prompt with the recipe's seed artifacts (empty when omitted), without simulating earlier AI steps; preceding native scaffold steps are applied in memory. Native =gate= previews print the review message instead of a model prompt. Native =scaffold= previews emit the missing-file JSON bundle. Native =validate= steps have no AI prompt to preview.
 
 =--approve STEP-ID= may be repeated. =--approve-all= passes every native gate for an unattended run. Approvals are execution-only and do not change checkpoint identity. A rejected gate writes inspectable files under =OUTPUT.libresite-work/review/STEP-ID/= and leaves the previous checkpoint intact. Resume with the same output plus =--approve=.
 
 =--qa DIR= inspects a published project tree and cannot be combined with generation or inspection flags. See [[file:qa.org][the QA runner]]. Native =validate= remains the in-process literal check.
+
+=--from-form FILE= validates structured JSON and prints a recipe on stdout; see [[file:structured-recipes.org][structured recipes]]. =--emit-yaml= re-emits an already valid recipe without generation. =--price-usage FILE --rates FILE= prices a checkpoint or published run record offline; see [[file:usage.org][usage.org]].
 
 =--prompts FILE= replaces the embedded catalog. =--plugin FILE= loads a native module and may be repeated. =--resume= permits reuse of an existing matching private workspace. Recipe and catalog paths are resolved from the CLI's working directory. There is no server process, deployment action or generated build execution inside this command.
 
