@@ -19,5 +19,5 @@ Scope: Import an existing text project, apply a change brief incrementally, publ
   EXPECT: CLI VERIFIED
   EVIDENCE: exit=0; shell=/bin/sh; cwd=/var/home/zach/source/projects/libresite/trees/feat-revision-mode; path=604a669fb015/14 entries; EXPECT=matched; output-sha256=8f8709b389d397c657265531cd67c360a917264c5371d2cae99668dc92ef9ae3; output-bytes=86080
 
-- [ ] G4: Documentation matches the implementation and Conventional Commits are merged into master.
-  EVIDENCE: pending
+- [x] G4: Documentation matches the implementation and Conventional Commits are merged into master.
+  EVIDENCE: Reviewed source import, transactional file operations, source-bound resume, executable intent, seed overlays, CLI mode compatibility and docs/revision.org against the final combined tree. G1-G3 passed after integrating master 112452e. Master was fast-forwarded to verified commit 428ad2f; git status was clean and git diff --check passed. Implementation commit 90f67d4 and integration/test commits use Conventional Commit subjects. Tests used controlled providers only; no live model or generated application execution is claimed.
