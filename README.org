@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: development, websites, ai, glib
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-10T14:41:00-04:00
+#+updated: 2026-09-10T15:48:12-04:00
 #+version: 0.1.0
 
 * Build a site from a recipe
@@ -13,6 +13,8 @@ Libresite turns a YAML recipe into a website project in a new output directory. 
 The implementation is a reusable GLib/GObject library plus a CLI, with the =config.mk= / =rules.mk= / =Makefile= layout used by ai-glib and clawtilla. Extend it with a native =LsStep= subclass or an alternative =LsProvider= transport. Eight built-in step names cover the common workflows; arbitrary module options and prompt overrides support additional tasks without changing the recipe grammar.
 
 Mobile and desktop are first-class generation defaults for every site, application and design profile; no recipe flag is needed. The shared prompts require deliberate layouts and complete workflows on phones, tablets and desktops, with responsive acceptance steps in the generated documentation and =AGENTS.md=. These are generation requirements, not a claim of verified browser rendering; see [[file:docs/prompts.org::*Mobile and desktop defaults][the responsive contract and verification limits]].
+
+Generated sites use open-source fonts from Bunny Fonts by default, with system fallback stacks for offline or blocked requests. Explicit font families, sources and hosting requirements take precedence; no recipe flag is needed. See [[file:docs/prompts.org::*Font defaults][font defaults and overrides]].
 
 * Getting started
 

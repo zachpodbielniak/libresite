@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, design, prompts
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-10T14:41:00-04:00
+#+updated: 2026-09-10T15:48:12-04:00
 #+version: 0.1.0
 
 * One maintained prompt catalog
@@ -55,6 +55,14 @@ Generated project documentation and =AGENTS.md= carry a responsive acceptance ma
 For each route and main workflow, check navigation, readable content, media sizing, touch/keyboard/pointer access, focus visibility, error/loading/empty/success states and unintended overflow. Include runnable responsive checks when suitable project tooling exists. The model may inspect supplied source but cannot execute browser tools under the generation protocol; checks without supplied execution evidence must remain marked unexecuted. Native =validate= still checks artifact presence only. Offline CLI/provider/install checks prove delivery of these instructions, not the responsiveness of a live generated site.
 
 A =--prompts= catalog replaces the bundled catalog completely: maintain this contract in custom catalogs to retain the defaults. Existing generated projects are not retroactively changed. Catalog edits change the checkpoint digest, so an interrupted run needs its original catalog to resume; use a fresh output for generation with the new defaults.
+
+* Font defaults
+
+The shared =FONT DEFAULTS= contract selects open-source families from [[https://fonts.bunny.net/][Bunny Fonts]] for every generated site and application unless the user or recipe specifies otherwise. Implementation uses a stylesheet link to =https://fonts.bunny.net/css= with the chosen families, required weights/styles and =display=swap=, then applies those families in shared CSS. No single family is mandated. Google Fonts endpoints and framework helpers that fetch from Google are not defaults. Remote fonts are an explicit exception to the otherwise local artwork guidance.
+
+Specify a family, source or hosting policy in =site.brief= or step =instructions= to override the default; there is no new schema field. Supplied licensed fonts, self-hosting, system-only typography and offline-only requirements take precedence. A named family unavailable from Bunny Fonts must retain its requested identity with the required licensed source/setup documented, without overriding an explicit hosting restriction. The UTF-8 artifact protocol cannot carry font binaries; never fabricate local font files.
+
+System fallback stacks keep text immediately readable and workflows usable when remote fonts are blocked or offline. Generated documentation records families, source, overrides and browser checks for online font loading and offline fallback. Offline builder tests verify prompt delivery across stages/styles and installed versus external catalogs; they do not prove generated CSS, browser font loading or live model compliance. Existing output is unchanged, replacement =--prompts= catalogs own their defaults, and changed catalog fingerprints require a fresh output or the original catalog for resume.
 
 * Imported reference snapshots
 

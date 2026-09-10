@@ -3,14 +3,14 @@
 #+authors: Zach Podbielniak
 #+categories: libresite
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-10T14:41:00-04:00
+#+updated: 2026-09-10T15:48:12-04:00
 #+version: 0.1.0
 
 * Guides
 
 - [[file:recipe-format.org][Recipe reference]]
 - [[file:architecture.org][Architecture and extension API]]
-- [[file:prompts.org][Prompt catalog, mobile/desktop defaults and design provenance]]
+- [[file:prompts.org][Prompt catalog, font and mobile/desktop defaults, and design provenance]]
 - [[file:flagship.org][FIELDWORK multi-page example and quality checks]]
 - [[file:c-application.org][C applications: YAML, HTMX and ORM providers]]
 - [[file:building.org][Building and installation]]
