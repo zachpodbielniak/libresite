@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, design, prompts
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-10T12:00:00-04:00
+#+updated: 2026-09-10T14:41:00-04:00
 #+version: 0.1.0
 
 * One maintained prompt catalog
@@ -14,7 +14,9 @@ A replacement catalog passed with =--prompts FILE= replaces the whole catalog, n
 
 * Prompt composition
 
-For each AI step the builder sends the shared system prompt plus these task sections: the selected visual direction, selected stage contract, site data encoded as JSON, step data encoded as JSON, and the entire current project encoded as a file bundle. The model sees each previous file's full contents. This maintains continuity across provider/model switches without depending on an external CLI conversation session.
+Optional =stacks= mappings contain nonempty named string contracts selected by =site.stack=. Every entry is validated, including unused entries; an empty or malformed mapping fails. A selected unknown profile fails pipeline preflight before provider calls. Older catalogs may omit =stacks= when no profile is selected. Replacement catalogs are complete replacements: there is no fallback to embedded stack entries. =stacks.c-glib= supplies the [[file:c-application.org][C application integration contract]], with API/build provenance tied to the repository's pinned library revisions. It is independent of =styles.application=.
+
+For each AI step the builder sends the shared system prompt plus these task sections: the selected visual direction, selected stage contract, selected =STACK CONTRACT= (or an explicit no-profile marker), site data encoded as JSON, step data encoded as JSON, and the entire current project encoded as a file bundle. Stack text counts toward prompt size limits and catalog fingerprints. The model sees each previous file's full contents. This maintains continuity across provider/model switches without depending on an external CLI conversation session.
 
 The =PIPELINE ACCEPTANCE= section additionally supplies every native validation step as JSON, so product/design stages and implementation agree on the recipe's exact filenames. A final generation stage cannot be checkpointed with files that violate the immediately following native validation checks; it retries within the configured AI attempt budget.
 

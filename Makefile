@@ -18,7 +18,7 @@ LIB_SOURCES = $(wildcard src/core/*.c src/interfaces/*.c src/model/*.c src/provi
 LIB_OBJECTS = $(patsubst src/%.c,$(OBJDIR)/%.o,$(LIB_SOURCES)) $(OBJDIR)/resources.o
 PUBLIC_HEADERS = $(wildcard src/*.h src/core/*.h src/interfaces/*.h src/model/*.h src/providers/*.h src/steps/*.h)
 include rules.mk
-.PHONY: all tests test clean install help bundled-deps
+.PHONY: all tests test stack-tests clean install help bundled-deps
 all: $(CLI) $(LIB_SHARED) $(OUTDIR)/libresite-1.0.pc
 $(LIB_STATIC): $(LIB_OBJECTS)
 	$(AR) rcs $@ $^
@@ -32,6 +32,10 @@ $(OUTDIR)/test-libresite: tests/test-libresite.c $(LIB_STATIC) $(DEP_ARCHIVES) $
 tests test: all $(OUTDIR)/test-libresite
 	G_DEBUG=fatal-warnings $(OUTDIR)/test-libresite
 	bash tests/cli.sh $(CLI)
+# Optional probes compile against pinned generation libraries without making
+# database/client development packages mandatory for the builder itself.
+stack-tests:
+	bash tests/stack-api.sh
 $(OUTDIR)/libresite-1.0.pc: config.mk $(OUTDIR)/.flags | $(OUTDIR)
 	printf '%s\n' 'prefix=$(PREFIX)' 'libdir=$(LIBDIR)' 'includedir=$(INCLUDEDIR)' 'Name: libresite' 'Description: Recipe-driven GLib AI site builder' 'Version: $(VERSION)' 'Requires: gio-2.0 gobject-2.0 json-glib-1.0' 'Requires.private: ai-glib-1.0 yaml-glib-1.0 yaml-0.1' 'Libs: -L$${libdir} -llibresite-1.0' 'Cflags: -I$${includedir}/libresite-1.0' > $@
 install: all
@@ -56,5 +60,5 @@ bundled-deps:
 clean:
 	$(RM) -r $(OUTDIR)
 help:
-	@printf '%s\n' 'make [DEBUG=1] [ASAN=1] [UBSAN=1] [DEPS=bundled]' 'make tests | install DESTDIR=... PREFIX=... | clean'
+	@printf '%s\n' 'make [DEBUG=1] [ASAN=1] [UBSAN=1] [DEPS=bundled]' 'make tests | stack-tests | install DESTDIR=... PREFIX=... | clean'
 endif

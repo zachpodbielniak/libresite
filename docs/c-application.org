@@ -1,0 +1,81 @@
+#+title: C applications with YAML, HTMX and ORM persistence
+#+description: Generated C stack dependencies, configuration, providers and acceptance contracts
+#+authors: Zach Podbielniak
+#+categories: libresite, applications, glib
+#+created: 2026-09-10T14:00:00-04:00
+#+updated: 2026-09-10T14:41:00-04:00
+#+version: 0.1.0
+
+* Select the integration
+
+Set =site.stack: c-glib= and describe the application in the recipe's existing =brief=, =frontend=, =backend= and =database= fields. =site.style= remains independent: a C application can use any visual profile. The bundled [[file:../recipes/application.yaml][Reading Room recipe]] requests a complete local reading-list workflow through yaml-glib, htmx-glib and orm-glib. SQLite works by default; PostgreSQL and MySQL/MariaDB are explicit optional builds. Libresite generates application files into the requested output directory; it neither installs these libraries globally nor starts a database server.
+
+#+begin_src bash
+./build/release/libresite -r recipes/application.yaml --validate
+./build/release/libresite -r recipes/application.yaml --preview backend
+./build/release/libresite -r recipes/application.yaml -o ./reading-room
+#+end_src
+
+The selected =stacks.c-glib= text in =data/prompts.yaml= is supplied to every generation stage, including planning and review. It contains pinned API context because runtime providers cannot inspect local headers or execute tools. The native final validation requires dependency setup, configuration, implementation, provider SQL, documentation and tests. Required-file checks cannot prove that the generated application uses the libraries correctly or compiles: read its output and run its documented tests.
+
+* Dependencies and reproducible output
+
+Generated projects must include =deps/manifest.yaml=, =scripts/bootstrap-deps.sh= and =make deps=. The response protocol cannot create gitlinks or =.git= directories, so a generated =.gitmodules= file alone would not initialize dependencies. The script must work from a plain exported directory, verify full commit pins, preserve existing dirty/mismatched checkouts and support repeat execution. Failure to access a remote must produce a useful error rather than substitute a different source. Libraries are built within the output project; no host installation is part of dependency setup.
+
+| Library | GitLab source | Pinned revision | Role |
+|---------+---------------+-----------------+------|
+| yaml-glib | https://gitlab.com/copyleft-games/yaml-glib.git | 89a835be02757526b61266a39f728afff3707eee | Runtime configuration |
+| htmx-glib | https://gitlab.com/zachpodbielniak/htmx-glib.git | d2f0e625c877e27083491ed58c9cb7b7b8ed1268 | HTTP routes, HTML and HTMX attributes |
+| orm-glib | https://gitlab.com/zachpodbielniak/orm-glib.git | 96c360f2a50d5afc55d58c41cca87b823eedbd37 | Database connections, parameters, results and transactions |
+
+These revisions match libresite's gitlinks. API provenance is the pinned =deps/yaml-glib/src/yaml-{parser,node,mapping}.h=, =deps/htmx-glib/src/core/= and builder headers, =deps/orm-glib/src/engine/= and =src/core/orm-value.h=, and each library's =config.mk= and =Makefile=. The ORM session example in its README is explicitly marked Coming Soon; the profile uses its implemented connection/query API. Updates must review headers, ownership and build flags together with the profile and tests. Libresite's own dependency pins and source URLs are separate from the generated project's dependency manifest.
+
+On 2026-09-10, htmx-glib and yaml-glib pins were verified over anonymous HTTPS; orm-glib's pin was verified over authenticated GitLab SSH, while its HTTPS endpoint rejected anonymous access. Configure GitLab access through Git's credential mechanism if required; do not place tokens in a manifest or script. This repository does not change upstream visibility or provision credentials.
+
+Fedora build packages for generated applications: =gcc=, =make=, =git=, =pkgconf-pkg-config=, =glib2-devel=, =json-glib-devel=, =libsoup3-devel=, =libyaml-devel= and =sqlite-devel=. Tests additionally use =ShellCheck= and =curl=. PostgreSQL requires =libpq-devel= with =ENABLE_POSTGRES=1=; MySQL/MariaDB requires =mariadb-connector-c-devel= with =ENABLE_MYSQL=1=. Generated build preflight must fail when an explicitly requested provider cannot be built, rather than accept upstream auto-disable warnings. On Immutablue add missing packages to the image build; do not run host package installation or create an unapproved writable =/usr= overlay.
+
+HTMX's browser runtime is a separate, locally served asset with a pinned version, integrity verification and license. htmx-glib is the C library, not the browser script. Dependency bootstrap may obtain the pinned asset; the running application must not require a CDN. Offline ordinary forms remain usable if JavaScript is disabled.
+
+* Runtime YAML is separate from the recipe
+
+The generated =config/application.yaml= configures the running application. The libresite recipe configures generation. The runtime loader uses yaml-glib and produces a typed application configuration only after validating the complete file. Precedence is built-in defaults, YAML, then explicitly supplied CLI overrides. An explicitly requested missing =--config= file fails; paths resolve relative to that file's directory, including when the process is launched elsewhere.
+
+#+begin_src yaml
+server:
+  host: "127.0.0.1"
+  port: 8080
+database:
+  provider: "sqlite"
+  path: "../var/application.db"
+  migrate: true
+#+end_src
+
+The loader rejects unknown keys/providers, invalid node types, empty paths, out-of-range ports and multiple documents before opening the database or HTTP listener. yaml-glib scalar convenience getters can coerce values: use =yaml_node_get_scalar_style()= to require plain numeric/boolean scalars and validate the complete raw text with bounds. JSON conversion alone also infers types for quoted text, so it is insufficient. Use a fresh parser (or reset it) for each load because repeated loads accumulate documents. Copy borrowed YAML strings before freeing their parser.
+
+Optional network configurations name a =database.url_env= environment variable containing a =postgresql://= or =mysql://= connection URL. Do not commit credentials, print connection strings in errors, or fall back to SQLite after a provider failure. Document missing variables and disabled provider builds distinctly. Network operations must not block the HTTP main loop indefinitely.
+
+* Pages and persistence
+
+htmx-glib owns routing and HTML construction. Normal GETs render complete pages; =HX-Request= requests render stable fragments with =Vary: HX-Request=. Successful ordinary POSTs use 303 redirects. Forms retain native method/action semantics and accessible error feedback. HTMX needs explicit error-swap behavior for 422/403/503 responses. Its headers do not authorize requests: CSRF and Host/Origin validation apply to both modes. Both =127.0.0.1= and =localhost= must work on the configured port, including form submissions and token refresh after swaps.
+
+All database operations go through orm-glib. Application code owns parameter lists and boxed =OrmValue= instances; =orm_value_free()= frees values, not =g_object_unref()=. Rows and their strings are borrowed during result iteration. Check =orm_result_get_error()= after iteration so a failed fetch is not mistaken for EOF. Multi-write operations use one connection and a transaction, with the original failure preserved if rollback also fails.
+
+On first SQLite startup, create the parent directory, database file and schema without seed data or manual imports. Reopening must preserve entries. Track schema versions, reject incompatible/newer schemas and roll back failed migrations. Keep provider-specific SQL in the database adapter: PostgreSQL parameter markers, identity retrieval and DDL differ from SQLite/MySQL. Optional provider support means real adapters and tests, not three URLs wired to SQLite SQL.
+
+* Bootstrap SQL and migration policy
+
+The output includes =sql/bootstrap-sqlite.sql=, =sql/bootstrap-postgresql.sql= and =sql/bootstrap-mysql.sql=. Each contains the application's real tables, constraints, indexes and matching schema version for that dialect. SQLite's equivalent schema is applied automatically through orm-glib. The server SQL files bootstrap an already provisioned database; they must not create privileged users, contain passwords or drop existing user data.
+
+The generated =docs/database.org= gives exact import commands, supported server versions, backup instructions and migration behavior. Repeated bootstrap imports preserve data. MySQL DDL can commit implicitly: document this instead of promising transactional rollback for all schema changes. With =database.migrate: false=, startup verifies an imported schema and identifies the correct bootstrap file when absent or incompatible. Changes to either startup migrations or SQL must update parity tests in the same output.
+
+* Verification and limits
+
+Builder =make tests= exercises profile schema validation, catalog overrides, unknown-profile preflight without provider calls, every application generation stage's API context, and positive/missing/empty required-artifact controls. Installed previews verify that this context survives installation outside the source checkout. Release/debug verification and ShellCheck run through =bash tests/verify.sh=; =bash tests/install.sh= verifies installed consumers.
+
+Generated application tests are a separate deliverable: fresh SQLite creation, CRUD, persistence after reopen, rollback, injection, constraint errors, empty results, invalid/unwritable databases, schema mismatch, strict YAML validation, dependency setup repeat/failure behavior and both ordinary/HTMX HTTP flows. Optional PostgreSQL/MySQL tests require explicitly supplied test database URLs, import their SQL and run the same persistence contract; report skips. Read generated scripts before execution. A fixture bundle is evidence of orchestration only, never evidence of a live AI-generated build, working browser interaction or server-provider compatibility.
+
+For direct conformance evidence against the pinned libraries, run =make stack-tests= with all three submodules initialized. This optional suite compiles real C API probes, tests YAML scalar types and HTMX routing/escaping, and creates/reopens a temporary SQLite database through orm-glib with parameter, constraint and transaction tests. It does not run an AI-generated app or optional database server. Default builder tests remain independent of these extra libraries.
+
+* Browser asset provenance
+
+The profile supplies the browser asset pin as well as the C libraries, so an offline generation provider does not have to invent an integrity hash. The version linked by [[https://htmx.org/docs/][upstream HTMX documentation]] was checked on 2026-09-10: =htmx.org@2.0.10/dist/htmx.min.js= has SHA-256 =71ea67185bfa8c98c39d31717c6fce5d852370fcdfd129db4543774d3145c0de= and its =LICENSE= has SHA-256 =d3d2456f76414f2456104660ebd65aff1c04cd7966b942bdabd63f3cdb316a38=. Versioned download URLs are in =data/prompts.yaml=. Generated bootstrap uses =curl= and =coreutils= to download into temporary files, verify checksums and publish =assets/vendor/htmx.min.js= and =assets/vendor/htmx.LICENSE= locally. The running application uses the local asset; there is no runtime CDN dependency. These downloads were verified, but no generated application's bootstrap was executed.

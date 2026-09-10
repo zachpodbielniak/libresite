@@ -1,20 +1,26 @@
-# Gates: premium prompts and flagship recipe
+# Gates: C application generation
 
-OWNS: data/prompts.yaml, recipes/flagship.yaml, docs/**, README.org, tests/cli.sh, tests/install.sh, tests/fixtures/provider.sh, GATES.md
+Scope: reusable C stack prompts with pinned GitLab dependencies, YAML configuration, HTMX pages, SQLite by default and optional database bootstrap SQL.
 
-Scope: Actionable design and delivery contracts, a complete multi-page recipe, and documented, tested CLI preflight. Fixture tests do not establish live visual quality.
+- [x] G1: profile selection, API context and application artifact contracts pass regression tests
+  CHECK: make tests
+  EXPECT: CLI VERIFIED
+  EVIDENCE: exit=0; shell=/bin/sh; cwd=/var/home/zach/source/projects/libresite/trees/c-application-stack; path=c1e10aa6edd2/14 entries; EXPECT=matched; output-sha256=32e322f7e72a5df41258edce0104eb32ca022692c61e340e04956cdd76b4f298; output-bytes=16132
 
-Prompt-limit correction: the 100000-byte cap blocked a live flagship checkpoint of 91202 bytes plus prompt framing. Runtime prompt bytes now default to unlimited; the CLI/API can opt into a cap without changing checkpoint identity. Existing recipe/catalog bytes remain unchanged for resume compatibility. Reverified with DEPS=system bash tests/verify.sh and DEPS=system bash tests/install.sh: both exited zero with their success markers; 68 GTests, release/debug zero-warning builds, ShellCheck, five adapters and installed plugin checks passed. Expanded tests cover requests above 100000 bytes, exact/one-byte-over boundaries, disabling a cap, invalid CLI limits and resume with a changed cap.
-
-- [x] G1: Release/debug builds and all offline tests pass with zero compiler warnings, including every flagship generation stage preview.
-  CHECK: DEPS=system bash tests/verify.sh
+- [x] G2: release/debug builds and shell checks pass without warnings
+  CHECK: bash tests/verify.sh
   EXPECT: LIBRESITE VERIFIED
-  EVIDENCE: exit=0; shell=/bin/sh; cwd=/var/home/zach/source/projects/libresite/trees/premium-prompts; path=35c4b50b4f40/14 entries; EXPECT=matched; output-sha256=fc4b5ff5db53a0fb3a396d0c9fd726b735fc1ac20a0e9dda79ae2f57d102d551; output-bytes=19
+  EVIDENCE: exit=0; shell=/bin/sh; cwd=/var/home/zach/source/projects/libresite/trees/c-application-stack; path=c1e10aa6edd2/14 entries; EXPECT=matched; output-sha256=fc4b5ff5db53a0fb3a396d0c9fd726b735fc1ac20a0e9dda79ae2f57d102d551; output-bytes=19
 
-- [x] G2: Installed CLI resolves every flagship stage outside the checkout and public plugin/consumer checks pass.
-  CHECK: DEPS=system bash tests/install.sh
+- [x] G3: installed catalogs render C stack context outside the checkout and public consumers work
+  CHECK: bash tests/install.sh
   EXPECT: INSTALL VERIFIED
-  EVIDENCE: exit=0; shell=/bin/sh; cwd=/var/home/zach/source/projects/libresite/trees/premium-prompts; path=35c4b50b4f40/14 entries; EXPECT=matched; output-sha256=8be8e32735ecaa54b1c1490e9c8dca8bd5efddaeec8ac242280c2909545b5d0d; output-bytes=207
+  EVIDENCE: exit=0; shell=/bin/sh; cwd=/var/home/zach/source/projects/libresite/trees/c-application-stack; path=c1e10aa6edd2/14 entries; EXPECT=matched; output-sha256=80b42a6138c77df1699793c1e002926f96d5c81f8c517bd75ac4640f2192bcb0; output-bytes=315
 
-- [x] G3: Manual review confirms coherent routes, exact phase acceptance paths, usable local workflows, bounded project scope and honest documentation of runtime verification limits.
-  EVIDENCE: Reviewed 2026-09-09 against the CLI plan: eight AI stages, six native checks, eight routes and twenty final required artifacts. Phase deliverables match following required paths. All routes have defined content and onward journeys; local export, reset and no-JavaScript behavior are specified. The review preflight measures 14425 bytes with empty context; the 55000-byte artifact target is explicitly advisory. README and docs distinguish source/native checks from unexecuted live generation and browser evaluation. System-dependency release/debug, all 68 GTests, five provider fixtures, ShellCheck and installed extension checks passed.
+- [x] G4: documentation and API contract agree with pinned dependency headers and build flags
+  EVIDENCE: Reviewed pinned yaml-glib parser/node/mapping headers and parser implementation, htmx-glib server/router/response/builder headers, orm-glib engine/connection/result/transaction/value headers and all three build configurations; real-library probes confirmed ORM 0.2 naming, YAML scalar style handling, routing ownership and SQLite persistence. docs/c-application.org and the agent skill describe the same contract and distinguish generation guidance from executed checks.
+
+- [x] G5: pinned YAML typing, HTMX routing/escaping and ORM SQLite persistence probes pass
+  CHECK: make stack-tests
+  EXPECT: STACK API VERIFIED
+  EVIDENCE: exit=0; shell=/bin/sh; cwd=/var/home/zach/source/projects/libresite/trees/c-application-stack; path=c1e10aa6edd2/14 entries; EXPECT=matched; output-sha256=1ee3b1201047f1ae14f25b563002049cf4dc3ec5fcf3694380b720c1bf4db994; output-bytes=243
