@@ -21,7 +21,7 @@ bash tests/install.sh
 make DEBUG=1 ASAN=1 UBSAN=1 tests
 #+end_src
 
-=make tests= compiles and runs the GTest executable with fatal GLib warnings, then CLI integration tests. =verify.sh= runs clean parallel release and debug builds/tests, rejects warning/error diagnostics and runs ShellCheck. It checks its warning detector against a known positive control first. =install.sh= stages installation under a new temporary directory, runs the installed CLI outside the checkout, compiles and loads an external step plugin against installed headers, and runs a shared-library consumer. Temporary fixture directories are owned by the test that creates and removes them.
+=make tests= compiles and runs the GTest executables with fatal GLib warnings, then CLI integration tests. =verify.sh= runs clean parallel release and debug builds/tests, rejects warning/error diagnostics and runs ShellCheck. It checks its warning detector against a known positive control first. =install.sh= stages installation under a new temporary directory, runs the installed CLI outside the checkout, compiles and loads an external step plugin against installed headers, and runs a shared-library consumer. Temporary fixture directories are owned by the test that creates and removes them.
 
 * Coverage
 
@@ -41,7 +41,7 @@ Acceptance regression tests exercise syntactically valid provider bundles that o
 
 Fixture success establishes the builder's deterministic behavior and its use of ai-glib protocol surfaces. It does not prove that every installed CLI version accepts the same flags, that a particular account has access to an example model, or that a live model will obey a prompt. This implementation has not been evaluated by paying for live generation across all five providers.
 
-The generated site's =validate= stage checks artifact existence and nonempty text. It is not a compiler, browser, HTML validator or accessibility checker. For a live acceptance run, create a new output with an authenticated provider, read its README, AGENTS.md and review report, compile/test its application, submit the primary form from both =http://127.0.0.1:PORT/= and =http://localhost:PORT/=, inspect narrow and wide viewports, follow the main workflow and verify keyboard/error states. Record actual evidence separately from model claims.
+The generated site's =validate= stage checks required non-whitespace text and any configured literal-content and byte-size predicates. It is not a compiler, browser, HTML validator or accessibility checker. For a live acceptance run, create a new output with an authenticated provider, read its README, AGENTS.md and review report, compile/test its application, submit the primary form from both =http://127.0.0.1:PORT/= and =http://localhost:PORT/=, inspect narrow and wide viewports, follow the main workflow and verify keyboard/error states. Record actual evidence separately from model claims.
 
 GTest =/prompt/application-contracts= and CLI preview checks pin the loopback Host/Origin, =AGENTS.md= and first-start database instructions in the embedded catalog and =recipes/application.yaml=. They do not compile a generated application. A generated project's own HTTP tests must POST successfully with =Host: localhost:PORT=.
 
@@ -50,3 +50,11 @@ GTest =/prompt/application-contracts= and CLI preview checks pin the loopback Ho
 Deadline recovery tests first time out a controlled provider under the recipe's two-second limit, then resume that exact checkpoint with a ten-second execution override and a three-second response. Success proves the override reaches the transport and does not invalidate existing work. Prompt assertions verify the resolved timeout and output budget are visible to the model. Negative CLI checks reject invalid deadlines. These tests do not establish a live model's generation time or output quality.
 
 Add new cases when they measure a real failure boundary. A new native step needs successful output plus invalid configuration, failure and cancellation cases. A new artifact operation needs transaction and path-conflict cases. A new provider should have a fixture exercising its real subprocess protocol and a documented optional live check. Keep tests offline by default and never silently skip required dependencies. Never lower warnings to make a test pass.
+
+* Artifact contract regression suite
+
+=tests/test-contracts.c= adds public-boundary tests for callback failures without errors, success with errors, post-callback cancellation and ignored diagnostics. Input tests cover strict JSON syntax, rootless input, allowlist-delimiter bypasses, quoted/block YAML string preservation and malformed native predicate schemas. Artifact checks exercise exact inclusive UTF-8 byte bounds, literal inclusion/exclusion, whitespace rejection, transactional corrective retries and retry exhaustion followed by checkpoint resume. The second GTest executable is part of =make tests= and therefore release/debug and sanitizer verification. Controlled CLI adapters and the installed native plugin also execute content predicates.
+
+Native validation now proves required non-whitespace text plus any configured exact-content and byte predicates. It still does not prove a generated application build, browser behavior, accessibility or live design quality.
+
+Installed plugin regression tests also reject registration success accompanied by an error and registration failure without a diagnostic. Both cases must stop local preflight and produce a useful error.

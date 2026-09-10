@@ -31,6 +31,8 @@ ls_step_execute(
 	GError **error
 ){
 	LsStepClass *klass = LS_STEP_GET_CLASS(self);
+	g_autoptr(GError) local_error = NULL;
+	gboolean success;
 	if (g_cancellable_set_error_if_cancelled(cancellable, error))
 		return FALSE;
 	if (klass->execute == NULL) {
@@ -39,5 +41,18 @@ ls_step_execute(
 		);
 		return FALSE;
 	}
-	return klass->execute(self, recipe, config, prompts, context, provider, cancellable, error);
+	success = klass->execute(self, recipe, config, prompts, context, provider,
+		cancellable, &local_error);
+	/* Cancellation wins even if a plugin returned success or a private error
+	 * domain. Failure cannot be checkpointed just because diagnostics are NULL. */
+	if (g_cancellable_set_error_if_cancelled(cancellable, error))
+		return FALSE;
+	if (!success && local_error == NULL)
+		g_set_error_literal(&local_error, LS_ERROR, LS_ERROR_INVALID,
+			"Step failed without an error");
+	if (local_error != NULL) {
+		g_propagate_error(error, g_steal_pointer(&local_error));
+		return FALSE;
+	}
+	return success;
 }

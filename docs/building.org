@@ -56,3 +56,7 @@ Install writes the CLI, shared/static libraries, public headers preserving their
 The shared library SONAME is =liblibresite-1.0.so.0= and the linker name is =liblibresite-1.0.so=. Embedding applications can use =pkg-config --cflags --libs libresite-1.0=. Ensure a nonstandard shared library prefix is discoverable by the normal loader configuration or a process-local =LD_LIBRARY_PATH= when testing.
 
 Headers contain gtk-doc/GObject Introspection-compatible ownership comments. This release does not generate or install GIR/typelib files; embedding is through the C API.
+
+* JSON parser version
+
+=json-glib-devel= must provide JSON-GLib 1.10 or newer; strict JSON parsing is required at the provider/checkpoint boundary. No new Fedora package is required. The review checks use =DEPS=system= with installed ai-glib/yaml-glib development libraries; this does not change the pinned bundled dependency revisions.

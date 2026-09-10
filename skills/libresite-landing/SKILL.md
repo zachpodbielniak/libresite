@@ -18,3 +18,5 @@ Run the recipe through `--validate`, inspect `--plan`, and inspect `--preview de
 Use `--resume` only with the same output, recipe and prompt catalog after an interruption. After publication, read the generated README and review document. Check the actual HTML, stylesheet, links and keyboard behavior, and use browser tooling if available. Distinguish what was checked from model claims. Report the generated directory and how to open it; do not deploy or publish it to a service unless requested.
 
 For prompt changes, edit a copied full `data/prompts.yaml` catalog and use `--prompts FILE`. The snapshots in `data/design-references` are reference material; the centralized runtime catalog already reconciles their conflicting directions.
+
+For explicit delivery contracts, add `validate.options.checks` with exact `path`, `contains`/`excludes` literal lists and optional inclusive `min_bytes`/`max_bytes` integers. Read `recipes/checked-landing.yaml` as an example. Keep `required` for files that must contain non-whitespace text. These predicates run before candidate acceptance and can trigger corrective retries; they do not replace browser or accessibility review.

@@ -15,3 +15,5 @@
 - [[file:building.org][Building and installation]]
 - [[file:operations.org][Operations and recovery]]
 - [[file:testing.org][Tests and validation limits]]
+
+- [[file:robustness-review.org][Robustness review and verification scope]]

@@ -112,6 +112,8 @@ load_plugins(LsPipeline *pipeline, gchar **paths, GError **error){
 	for (i = 0; paths[i] != NULL; i++) {
 		GModule *module = g_module_open(paths[i], G_MODULE_BIND_LOCAL);
 		gboolean (*register_plugin)(LsPipeline *, GError **) = NULL;
+		g_autoptr(GError) local_error = NULL;
+		gboolean registered;
 		if (module == NULL) {
 			g_set_error(
 				error, LS_ERROR, LS_ERROR_INVALID, "Cannot load plugin: %s", g_module_error()
@@ -130,14 +132,18 @@ load_plugins(LsPipeline *pipeline, gchar **paths, GError **error){
 			return FALSE;
 		}
 		g_module_make_resident(module);
-		if (!register_plugin(pipeline, error)) {
-			if (error != NULL && *error == NULL)
-				g_set_error_literal(
-					error, LS_ERROR, LS_ERROR_INVALID, "Plugin registration failed"
-				);
+		registered = register_plugin(pipeline, &local_error);
+		g_module_close(module);
+		/* A plugin can register types before failing, so it remains resident.
+		 * Match step/provider dispatch: never continue on success plus error. */
+		if (!registered && local_error == NULL)
+			g_set_error_literal(&local_error, LS_ERROR, LS_ERROR_INVALID,
+				"Plugin registration failed without an error");
+		if (local_error != NULL) {
+			g_prefix_error(&local_error, "Plugin '%s': ", paths[i]);
+			g_propagate_error(error, g_steal_pointer(&local_error));
 			return FALSE;
 		}
-		g_module_close(module);
 	}
 	return TRUE;
 }

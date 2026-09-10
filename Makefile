@@ -29,8 +29,11 @@ $(CLI): $(OBJDIR)/cli/main.o $(LIB_STATIC) $(DEP_ARCHIVES)
 	$(CC) -o $@ $(OBJDIR)/cli/main.o $(LIB_STATIC) $(LDFLAGS)
 $(OUTDIR)/test-libresite: tests/test-libresite.c $(LIB_STATIC) $(DEP_ARCHIVES) $(OUTDIR)/.flags
 	$(CC) $(CFLAGS) -MMD -MP -MF $@.d -o $@ $< $(LIB_STATIC) $(LDFLAGS)
-tests test: all $(OUTDIR)/test-libresite
+$(OUTDIR)/test-contracts: tests/test-contracts.c $(LIB_STATIC) $(DEP_ARCHIVES) $(OUTDIR)/.flags
+	$(CC) $(CFLAGS) -MMD -MP -MF $@.d -o $@ $< $(LIB_STATIC) $(LDFLAGS)
+tests test: all $(OUTDIR)/test-libresite $(OUTDIR)/test-contracts
 	G_DEBUG=fatal-warnings $(OUTDIR)/test-libresite
+	G_DEBUG=fatal-warnings $(OUTDIR)/test-contracts
 	bash tests/cli.sh $(CLI)
 $(OUTDIR)/libresite-1.0.pc: config.mk $(OUTDIR)/.flags | $(OUTDIR)
 	printf '%s\n' 'prefix=$(PREFIX)' 'libdir=$(LIBDIR)' 'includedir=$(INCLUDEDIR)' 'Name: libresite' 'Description: Recipe-driven GLib AI site builder' 'Version: $(VERSION)' 'Requires: gio-2.0 gobject-2.0 json-glib-1.0' 'Requires.private: ai-glib-1.0 yaml-glib-1.0 yaml-0.1' 'Libs: -L$${libdir} -llibresite-1.0' 'Cflags: -I$${includedir}/libresite-1.0' > $@

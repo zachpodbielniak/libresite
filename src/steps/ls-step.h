@@ -51,4 +51,15 @@ gboolean ls_step_execute(
 G_DECLARE_FINAL_TYPE(LsGenerateStep, ls_generate_step, LS, GENERATE_STEP, LsStep)
 #define LS_TYPE_VALIDATE_STEP (ls_validate_step_get_type())
 G_DECLARE_FINAL_TYPE(LsValidateStep, ls_validate_step, LS, VALIDATE_STEP, LsStep)
+/**
+ * ls_validate_step_check_options:
+ * @options: (nullable) (transfer none): native validation options
+ * @error: return location for an error
+ *
+ * Checks required paths and optional literal-content and byte-size predicates
+ * without accessing artifacts or invoking a provider. Does not mutate @options.
+ *
+ * Returns: whether the options have a valid schema
+ */
+gboolean ls_validate_step_check_options(JsonObject *options, GError **error);
 G_END_DECLS

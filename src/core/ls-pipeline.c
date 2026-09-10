@@ -160,37 +160,12 @@ ls_pipeline_validate(LsPipeline *self, LsRecipe *recipe, GError **error){
 			if (rendered == NULL)
 				return FALSE;
 		} else if (type == LS_TYPE_VALIDATE_STEP) {
-			JsonObject *options = json_object_has_member(config, "options")
-									  ? json_object_get_object_member(config, "options")
-									  : NULL;
-			JsonNode *node = options != NULL ? json_object_get_member(options, "required") : NULL;
-			JsonArray *paths;
-			guint j;
-			if (options != NULL && !ls_object_keys(options, "|required|", error))
+			JsonNode *node = json_object_get_member(config, "options");
+			JsonObject *options = node != NULL && JSON_NODE_HOLDS_OBJECT(node)
+				? json_node_get_object(node) : NULL;
+			if (!ls_validate_step_check_options(options, error)) {
+				g_prefix_error(error, "Step '%s': ", ls_string(config, "id"));
 				return FALSE;
-			if (node == NULL || !JSON_NODE_HOLDS_ARRAY(node) ||
-				json_array_get_length(json_node_get_array(node)) == 0) {
-				g_set_error_literal(
-					error,
-					LS_ERROR,
-					LS_ERROR_INVALID,
-					"validate requires nonempty options.required array"
-				);
-				return FALSE;
-			}
-			paths = json_node_get_array(node);
-			for (j = 0; j < json_array_get_length(paths); j++) {
-				node = json_array_get_element(paths, j);
-				if (json_node_get_value_type(node) != G_TYPE_STRING ||
-					!ls_path_valid(json_node_get_string(node))) {
-					g_set_error_literal(
-						error,
-						LS_ERROR,
-						LS_ERROR_INVALID,
-						"validate required paths must be safe relative strings"
-					);
-					return FALSE;
-				}
 			}
 		}
 	}

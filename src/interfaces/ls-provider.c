@@ -19,6 +19,7 @@ ls_provider_generate(
 ){
 	LsProviderInterface *iface;
 	g_autofree gchar *response = NULL;
+	g_autoptr(GError) local_error = NULL;
 	g_return_val_if_fail(LS_IS_PROVIDER(self), NULL);
 	if (g_cancellable_set_error_if_cancelled(cancellable, error))
 		return NULL;
@@ -29,13 +30,20 @@ ls_provider_generate(
 		);
 		return NULL;
 	}
-	response = iface->generate(self, settings, system, prompt, cancellable, error);
+	response = iface->generate(self, settings, system, prompt, cancellable, &local_error);
 	/* ai-glib adapters may use their own cancellation domain. Normalize at
 	 * the interface boundary so all consumers see the same GIO contract. */
 	if (g_cancellable_is_cancelled(cancellable)) {
-		if (error != NULL)
-			g_clear_error(error);
 		g_cancellable_set_error_if_cancelled(cancellable, error);
+		return NULL;
+	}
+	/* Isolate a broken implementation's error even when the caller ignores
+	 * diagnostics. A response accompanied by an error must never be accepted. */
+	if (response == NULL && local_error == NULL)
+		g_set_error_literal(&local_error, LS_ERROR, LS_ERROR_PROVIDER,
+			"Provider failed without an error");
+	if (local_error != NULL) {
+		g_propagate_error(error, g_steal_pointer(&local_error));
 		return NULL;
 	}
 	return (gchar *)g_steal_pointer(&response);

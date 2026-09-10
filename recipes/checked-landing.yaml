@@ -1,0 +1,43 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+version: 1
+name: checked-studio
+site:
+  brief: >-
+    Build a restrained editorial landing page for an independent software studio.
+    Explain its services and working process without invented testimonials,
+    client names, metrics or contact details. Let visitors explore the services
+    through an in-page navigation link. Use original local SVG artwork.
+  audience: Technical founders evaluating a small independent studio
+  style: editorial
+  frontend: Semantic HTML and CSS with no build step or remote dependencies
+  requirements: >-
+    Provide keyboard navigation, visible focus, reduced-motion support and
+    responsive layouts. Use lang="en" and name="viewport" in index.html.
+    Include README.org and AGENTS.md with accurate preview and review commands.
+ai:
+  provider: codex
+  timeout: 0
+  max_tokens: 0
+  retries: 2
+pipeline:
+  steps:
+    - {id: brief, type: brief}
+    - {id: design, type: design}
+    - {id: frontend, type: frontend}
+    - {id: review, type: review}
+    - id: acceptance
+      type: validate
+      options:
+        required: [index.html, styles.css, README.org, AGENTS.md]
+        checks:
+          - path: index.html
+            contains: ['lang="en"', 'name="viewport"', '<main', '</html>']
+            excludes: ['TODO', 'Lorem ipsum']
+            min_bytes: 512
+            max_bytes: 131072
+          - path: styles.css
+            contains: [':focus-visible', 'prefers-reduced-motion']
+            min_bytes: 128
+            max_bytes: 131072
+          - path: README.org
+            contains: ['#+title:']
