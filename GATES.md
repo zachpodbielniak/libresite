@@ -4,6 +4,8 @@ OWNS: data/prompts.yaml, recipes/flagship.yaml, docs/**, README.org, tests/cli.s
 
 Scope: Actionable design and delivery contracts, a complete multi-page recipe, and documented, tested CLI preflight. Fixture tests do not establish live visual quality.
 
+Prompt-limit correction: the 100000-byte cap blocked a live flagship checkpoint of 91202 bytes plus prompt framing. Runtime prompt bytes now default to unlimited; the CLI/API can opt into a cap without changing checkpoint identity. Existing recipe/catalog bytes remain unchanged for resume compatibility. Reverified with DEPS=system bash tests/verify.sh and DEPS=system bash tests/install.sh: both exited zero with their success markers; 68 GTests, release/debug zero-warning builds, ShellCheck, five adapters and installed plugin checks passed. Expanded tests cover requests above 100000 bytes, exact/one-byte-over boundaries, disabling a cap, invalid CLI limits and resume with a changed cap.
+
 - [x] G1: Release/debug builds and all offline tests pass with zero compiler warnings, including every flagship generation stage preview.
   CHECK: DEPS=system bash tests/verify.sh
   EXPECT: LIBRESITE VERIFIED

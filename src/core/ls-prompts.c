@@ -7,6 +7,7 @@ struct _LsPrompts {
 	GObject parent_instance;
 	JsonNode *root;
 	gchar *digest;
+	gsize max_bytes;
 };
 G_DEFINE_TYPE(LsPrompts, ls_prompts, G_TYPE_OBJECT)
 static void
@@ -22,7 +23,12 @@ ls_prompts_class_init(LsPromptsClass *klass){
 }
 static void
 ls_prompts_init(LsPrompts *self){
-	(void)self;
+	self->max_bytes = 0;
+}
+/* A transport admission setting, not part of the immutable prompt catalog. */
+void
+ls_prompts_set_max_bytes(LsPrompts *self, gsize max_bytes){
+	self->max_bytes = max_bytes;
 }
 /* Validate every catalog entry once; typos fail even in unused profiles. */
 LsPrompts *
@@ -154,14 +160,17 @@ ls_prompts_render(
 		acceptance_json,
 		files
 	);
-	if (strlen(result) + strlen(ls_prompts_get_system(self)) > 100000) {
-		g_free(result);
-		g_set_error_literal(
+	if (self->max_bytes != 0 &&
+		strlen(result) + strlen(ls_prompts_get_system(self)) > self->max_bytes) {
+		g_set_error(
 			error,
 			LS_ERROR,
 			LS_ERROR_LIMIT,
-			"Prompt exceeds 100000 bytes; split or reduce the project context"
+			"Prompt needs %" G_GSIZE_FORMAT " bytes; limit is %" G_GSIZE_FORMAT
+			"; raise --max-prompt-bytes for your provider and resume",
+			strlen(result) + strlen(ls_prompts_get_system(self)), self->max_bytes
 		);
+		g_free(result);
 		return NULL;
 	}
 	return result;

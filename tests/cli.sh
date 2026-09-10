@@ -32,6 +32,19 @@ do
 done
 "$binary" --recipe "$root/recipes/landing.yaml" --preview design > "$test_dir/preview"
 rg -q 'DESIGN DIRECTION' "$test_dir/preview"
+for limit in -1 9223372036854775808 invalid
+do
+	if "$binary" -r "$root/recipes/flagship.yaml" --preview polish --max-prompt-bytes "$limit" > /dev/null 2>&1
+	then
+		exit 1
+	fi
+done
+if "$binary" -r "$root/recipes/flagship.yaml" --preview polish --max-prompt-bytes 1 > "$test_dir/limit" 2>&1
+then
+	exit 1
+fi
+rg -q 'Prompt needs .* bytes; limit is 1' "$test_dir/limit"
+"$binary" -r "$root/recipes/flagship.yaml" --preview polish --max-prompt-bytes 262144 > "$test_dir/preview"
 if "$binary" --recipe "$root/recipes/landing.yaml" --preview nonexistent > /dev/null 2>&1
 then
 	exit 1
@@ -72,7 +85,7 @@ fi
 test ! -e "$test_dir/failure"
 test -f "$test_dir/failure.libresite-work/checkpoint.json"
 export LS_TEST_FAIL=0
-"$binary" -r "$test_dir/failure.yaml" -o "$test_dir/failure" --resume
+"$binary" -r "$test_dir/failure.yaml" -o "$test_dir/failure" --resume --max-prompt-bytes 262144
 # ai-glib enforces process deadlines; cancellation must not masquerade as success.
 export LS_TEST_SLEEP=1
 if "$binary" -r "$test_dir/failure.yaml" -o "$test_dir/timeout" > "$test_dir/timeout.log" 2>&1

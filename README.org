@@ -43,6 +43,8 @@ Open a generated static =index.html= directly, or follow the output's =README.or
 
 Successful steps are saved under =my-site.libresite-work/checkpoint.json=. Resume restores their files and starts at the next step. The parsed recipe and exact prompt catalog must match. Existing output directories are never overwritten. The output's parent directory must already exist. Concurrent runs targeting the same workspace are rejected.
 
+Prompt size is unlimited by default. Use =--max-prompt-bytes BYTES= only when you want a local cap; =0= disables it. Runs stopped by the former 100000-byte limit can resume with the rebuilt binary and their original recipe/catalog. Provider token windows still apply. Changing this CLI cap does not invalidate a checkpoint.
+
 ** Choose a recipe
 
 | Recipe | Result |

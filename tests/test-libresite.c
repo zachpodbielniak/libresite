@@ -341,6 +341,7 @@ prompt_limit(void){
 	g_autoptr(LsContext) context = ls_context_new();
 	g_autoptr(GError) error = NULL;
 	g_autofree gchar *large = g_strnfill(100001, 'x');
+	gsize needed;
 	g_autofree gchar *response =
 		g_strdup_printf("{\"files\":[{\"path\":\"big.txt\",\"content\":\"%s\"}]}", large);
 	g_autofree gchar *prompt = NULL;
@@ -352,8 +353,29 @@ prompt_limit(void){
 		context,
 		&error
 	);
+	g_assert_no_error(error);
+	g_assert_nonnull(strstr(prompt, large));
+	needed = strlen(prompt) + strlen(ls_prompts_get_system(prompts));
+	g_clear_pointer(&prompt, g_free);
+	/* Exact boundary accepts, one byte less rejects without truncation. */
+	ls_prompts_set_max_bytes(prompts, needed);
+	prompt = ls_prompts_render(prompts, recipe,
+		json_array_get_object_element(ls_recipe_get_steps(recipe), 0), context, &error);
+	g_assert_no_error(error);
+	g_assert_nonnull(prompt);
+	g_clear_pointer(&prompt, g_free);
+	ls_prompts_set_max_bytes(prompts, needed - 1);
+	prompt = ls_prompts_render(prompts, recipe,
+		json_array_get_object_element(ls_recipe_get_steps(recipe), 0), context, &error);
 	g_assert_null(prompt);
 	g_assert_error(error, LS_ERROR, LS_ERROR_LIMIT);
+	g_clear_error(&error);
+	/* Zero removes a previously configured cap. */
+	ls_prompts_set_max_bytes(prompts, 0);
+	prompt = ls_prompts_render(prompts, recipe,
+		json_array_get_object_element(ls_recipe_get_steps(recipe), 0), context, &error);
+	g_assert_no_error(error);
+	g_assert_nonnull(strstr(prompt, large));
 }
 static void
 registry(void){

@@ -92,6 +92,7 @@ int
 main(int argc, char **argv){
 	g_autofree gchar *recipe_path = NULL, *output = NULL, *catalog = NULL, *preview = NULL;
 	g_auto(GStrv) plugins = NULL;
+	gint64 max_prompt_bytes = 0;
 	gboolean validate = FALSE, plan = FALSE, resume = FALSE, license = FALSE, version = FALSE,
 			 list = FALSE;
 	g_autoptr(GOptionContext) options = NULL;
@@ -103,6 +104,8 @@ main(int argc, char **argv){
 	g_autofree gchar *yaml = NULL;
 	GOptionEntry entries[] = {
 		{"recipe", 'r', 0, G_OPTION_ARG_FILENAME, &recipe_path, "YAML recipe", "FILE"},
+		{"max-prompt-bytes", 0, 0, G_OPTION_ARG_INT64, &max_prompt_bytes,
+		 "System plus task byte limit (0 = unlimited, the default)", "BYTES"},
 		{"output",
 		 'o',
 		 0,
@@ -204,6 +207,12 @@ main(int argc, char **argv){
 	prompts = recipe != NULL ? ls_prompts_new(catalog, &error) : NULL;
 	if (prompts == NULL)
 		goto fail;
+	if (max_prompt_bytes < 0 || (guint64)max_prompt_bytes > G_MAXSIZE) {
+		g_set_error_literal(&error, LS_ERROR, LS_ERROR_INVALID,
+			"--max-prompt-bytes must be nonnegative and fit the platform size type");
+		goto fail;
+	}
+	ls_prompts_set_max_bytes(prompts, (gsize)max_prompt_bytes);
 	provider = ls_ai_provider_new();
 	pipeline = ls_pipeline_new(LS_PROVIDER(provider), prompts);
 	if (!load_plugins(pipeline, plugins, &error) || !ls_pipeline_validate(pipeline, recipe, &error))

@@ -55,7 +55,7 @@ Brief and design establish compact route and component contracts. Foundation cre
 
 The recipe's =options.files= lists primary deliverables as model guidance, not a write sandbox. An interactions step must also update earlier HTML to attach its script. Future-page links can exist during foundation; the final project must resolve them all.
 
-The target is under 55000 bytes of final file contents, with compact planning docs, shared assets and small scripts. This leaves headroom under the 100000-byte system-plus-task ceiling, including JSON escaping. It is an advisory budget, not a guaranteed bound. More stages do not shrink accumulated context. If the provider produces oversized files, narrow the content/asset scope for a fresh run rather than silently removing artifacts from a checkpoint.
+The recipe retains an advisory 55000-byte target for compact output and compatibility with existing checkpoints. Libresite now defaults to unlimited prompt bytes; the old 100000-byte local ceiling no longer applies. To opt into a cap, pass =--max-prompt-bytes BYTES=; =0= disables it. Resume a run stopped by the old limit using the rebuilt binary and =--resume=, with the original recipe/catalog. No saved files or completed stages need to be removed. Provider token windows still apply, and more stages do not shrink accumulated context.
 
 Use =--resume= with exactly the same recipe and catalog after interruption. Prompt changes, including this catalog upgrade, invalidate old checkpoints. Start a fresh output for the upgraded prompts. Existing outputs are never overwritten.
 

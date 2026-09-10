@@ -13,6 +13,15 @@ G_DECLARE_FINAL_TYPE(LsPrompts, ls_prompts, LS, PROMPTS, GObject)
  */
 LsPrompts *ls_prompts_new(const gchar *path, GError **error);
 /**
+ * ls_prompts_set_max_bytes:
+ * @self: a catalog
+ * @max_bytes: system plus task byte limit, or zero for unlimited (the default)
+ *
+ * Configure before rendering or starting a pipeline.
+ * This admission limit does not change prompt contents or checkpoint identity.
+ */
+void ls_prompts_set_max_bytes(LsPrompts *self, gsize max_bytes);
+/**
  * ls_prompts_get_system:
  * @self: a catalog
  * Returns: (transfer none): shared system prompt
