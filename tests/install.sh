@@ -30,6 +30,8 @@ do
 			rg -q 'CURRENT PROJECT' "$test_dir/preview"
 			rg -q 'MOBILE AND DESKTOP DEFAULTS' "$test_dir/preview"
 			rg -q 'ACCESSIBILITY AND ARIA DEFAULTS' "$test_dir/preview"
+			rg -Fq 'FONT DEFAULTS' "$test_dir/preview"
+			rg -Fq 'https://fonts.bunny.net/css' "$test_dir/preview"
 		fi
 	done < "$test_dir/plan"
 done
@@ -51,6 +53,11 @@ YAML
 	(cd /tmp && "$binary" -r "$test_dir/responsive.yaml" \
 		--prompts "$test_dir/usr/share/libresite/data/prompts.yaml" --preview site) > "$test_dir/catalog"
 	cmp "$test_dir/embedded" "$test_dir/catalog"
+	# Every style must receive the font source, override and offline contract.
+	rg -Fq 'https://fonts.bunny.net/css' "$test_dir/embedded"
+	rg -Fq 'requesting display=swap' "$test_dir/embedded"
+	rg -Fq 'Explicit font and hosting choices take precedence' "$test_dir/embedded"
+	rg -Fq 'when font requests are blocked or offline' "$test_dir/embedded"
 	rg -q 'MOBILE AND DESKTOP DEFAULTS' "$test_dir/embedded"
 	rg -q '360x800 and 390x844' "$test_dir/embedded"
 	rg -q '1366x768 laptop and 1440x900 desktop' "$test_dir/embedded"

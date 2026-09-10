@@ -16,6 +16,8 @@ Mobile and desktop are first-class generation defaults for every site, applicati
 
 Accessibility and conforming WAI-ARIA 1.2 usage are also generation defaults across every route and state. The catalog requires native HTML semantics, correct names/roles/states, keyboard and focus behavior, and generated automated browser audits plus manual screen-reader procedures. Libresite does not execute generated code or certify conformance: see [[file:docs/prompts.org::*Accessibility and ARIA defaults][the accessibility contract and verification limits]].
 
+Generated sites use open-source fonts from Bunny Fonts by default, with system fallback stacks for offline or blocked requests. Explicit font families, sources and hosting requirements take precedence; no recipe flag is needed. See [[file:docs/prompts.org::*Font defaults][font defaults and overrides]].
+
 * Getting started
 
 The bundled recipes use =timeout: 0= and =max_tokens: 0= for unlimited testing. =--unlimited= also disables both budgets for an existing recipe without changing its checkpoint identity. =--timeout 0= disables only the deadline. Provider/model limits still apply. The flagship recipe has no advisory generated-file byte budgets.
