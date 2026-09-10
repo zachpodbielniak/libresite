@@ -1,0 +1,36 @@
+#+title: Libresite testing
+#+description: Deterministic tests, integration coverage and honest validation limits
+#+authors: Zach Podbielniak
+#+categories: libresite, testing
+#+created: 2026-09-09T20:00:00-04:00
+#+updated: 2026-09-09T20:00:00-04:00
+#+version: 0.1.0
+
+* Run checks
+
+#+begin_src bash
+make tests
+bash tests/verify.sh
+bash tests/install.sh
+make DEBUG=1 ASAN=1 UBSAN=1 tests
+#+end_src
+
+=make tests= compiles and runs the GTest executable with fatal GLib warnings, then CLI integration tests. =verify.sh= runs clean parallel release and debug builds/tests, rejects warning/error diagnostics and runs ShellCheck. It checks its warning detector against a known positive control first. =install.sh= stages installation under a new temporary directory, runs the installed CLI outside the checkout, compiles and loads an external step plugin against installed headers, and runs a shared-library consumer. Temporary fixture directories are owned by the test that creates and removes them.
+
+* Coverage
+
+GTest covers valid recipes, wrong types, unknown keys, duplicate YAML keys, document/alias/tag rejection, invalid scalar settings, malformed catalog replacements, unknown prompt/style/module preflight, JSON duplicate/NUL/nesting rejection, duplicate step IDs, per-provider default isolation, safe paths, immutable boxed copies, atomic bundle rejection, replacements, file/directory collisions, complete publication, stage signals, per-step model changes, resume after interruption, corrupt/mismatched checkpoints, cancellation, existing outputs, symlinked workspaces, workspace locks, registration contracts, malformed-output retry and prompt size limits.
+
+The injected provider replaces only model transport; the real recipe parser, prompt renderer, step engine, artifact store, checkpointing and filesystem publication run end to end. This avoids vacuous tests that merely assert that a mock was called.
+
+CLI integration tests use actual =LsAiProvider= and ai-glib adapters with controlled executable fixtures for Codex, Claude Code, Grok Build, Cursor and Antigravity. They check file publication, model forwarding, output conflict handling, nonzero subprocess exit, resume, process deadlines and actual SIGTERM cancellation. No provider credentials, model calls or network access are required. Fixtures emit provider-specific envelopes; Antigravity success status is uppercase =SUCCESS=.
+
+* What passing tests do not prove
+
+Fixture success establishes the builder's deterministic behavior and its use of ai-glib protocol surfaces. It does not prove that every installed CLI version accepts the same flags, that a particular account has access to an example model, or that a live model will obey a prompt. This implementation has not been evaluated by paying for live generation across all five providers.
+
+The generated site's =validate= stage checks artifact existence and nonempty text. It is not a compiler, browser, HTML validator or accessibility checker. For a live acceptance run, create a new output with an authenticated provider, read its README and review report, compile/test its application, inspect narrow and wide viewports, follow the main workflow and verify keyboard/error states. Record actual evidence separately from model claims.
+
+* Adding tests
+
+Add new cases when they measure a real failure boundary. A new native step needs successful output plus invalid configuration, failure and cancellation cases. A new artifact operation needs transaction and path-conflict cases. A new provider should have a fixture exercising its real subprocess protocol and a documented optional live check. Keep tests offline by default and never silently skip required dependencies. Never lower warnings to make a test pass.

@@ -1,0 +1,16 @@
+#+title: Libresite documentation
+#+description: Documentation entry point
+#+authors: Zach Podbielniak
+#+categories: libresite
+#+created: 2026-09-09T20:00:00-04:00
+#+updated: 2026-09-09T20:00:00-04:00
+#+version: 0.1.0
+
+* Guides
+
+- [[file:recipe-format.org][Recipe reference]]
+- [[file:architecture.org][Architecture and extension API]]
+- [[file:prompts.org][Prompt catalog and design provenance]]
+- [[file:building.org][Building and installation]]
+- [[file:operations.org][Operations and recovery]]
+- [[file:testing.org][Tests and validation limits]]

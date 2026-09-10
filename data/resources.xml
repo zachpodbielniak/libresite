@@ -1,0 +1,6 @@
+<gresources>
+  <gresource prefix="/org/libresite">
+    <file>prompts.yaml</file>
+    <file>LICENSE</file>
+  </gresource>
+</gresources>

@@ -1,0 +1,103 @@
+#+title: Libresite recipe format
+#+description: Complete version 1 recipe schema and execution semantics
+#+authors: Zach Podbielniak
+#+categories: libresite, reference
+#+created: 2026-09-09T20:00:00-04:00
+#+updated: 2026-09-09T20:00:00-04:00
+#+version: 0.1.0
+
+* Contract
+
+A recipe is exactly one UTF-8 YAML document with scalar string mapping keys. Unknown structural keys fail. Duplicate keys, aliases, anchors, explicit tags, complex keys and more than 32 nested collections are rejected. Input is limited to 16 MiB and 100,000 parser events. Use literal YAML blocks for long prose. Empty strings are not valid settings. No shell expansion, environment expansion, template evaluation or recipe command execution occurs.
+
+#+begin_src yaml
+version: 1
+name: example
+site:
+  brief: Build an accessible static site for a small open-source project.
+  audience: Developers evaluating the project.
+  style: editorial
+  frontend: Semantic HTML and native CSS.
+  backend: none
+  database: none
+  requirements: Local assets, no tracking, working keyboard navigation.
+ai:
+  provider: codex
+  timeout: 600
+  retries: 1
+  max_tokens: 16384
+pipeline:
+  steps:
+    - id: product
+      type: brief
+    - id: design
+      type: design
+    - id: frontend
+      type: frontend
+    - id: review
+      type: review
+    - id: verify
+      type: validate
+      options:
+        required: [index.html, README.org]
+#+end_src
+
+* Top-level fields
+
+| Key | Required | Type | Meaning |
+|-----+----------+------+---------|
+| version | yes | integer | Exactly 1; quoted "1" is not an integer |
+| name | yes | nonempty string | Human-readable project identity |
+| site | yes | mapping | Product and stack brief |
+| ai | no | mapping | Default AI settings |
+| pipeline | yes | mapping | Exactly one key, steps |
+
+=site= accepts only =brief=, =audience=, =style=, =frontend=, =backend=, =database= and =requirements=. All present values must be nonempty strings; =brief= is required. YAML =none= is text, while =null= is not. =style= defaults to =editorial= and must exist in the selected prompt catalog. Stack strings are open-ended instructions, not a finite list of compiled backends. The builder emits source projects; it does not link every generated site's runtime into itself.
+
+=pipeline.steps= is an ordered sequence of 1 through 128 mappings. A step runs only after all preceding steps have succeeded and checkpointed. There is no implicit parallelism, conditional execution or hidden dependency graph.
+
+* Steps
+
+| Key | Required | Type | Meaning |
+|-----+----------+------+---------|
+| id | yes | nonempty unique string | Progress and checkpoint identity |
+| type | yes | nonempty string | Registered module name |
+| prompt | no | nonempty string | Catalog stage key; defaults to type for generation modules |
+| instructions | no | nonempty string | Specific task refinement included as step data |
+| ai | no | mapping | Settings overriding pipeline AI defaults |
+| options | no | mapping | Module-specific data; passed intact to the module and generation prompt |
+
+Built-in AI module names are =brief=, =design=, =frontend=, =backend=, =database=, =review= and =generate=. These all use =LsGenerateStep= with different centralized stage contracts. =generate= is the general-purpose extension for instructions that need no custom C implementation. A custom =prompt= can reuse any catalog stage or a stage added to a replacement catalog.
+
+The native =validate= module calls no provider. It accepts exactly =options.required=, a nonempty sequence of safe relative file paths, and requires every named artifact to exist with nonempty contents. This proves presence, not HTML correctness, accessibility, compilation or working application behavior. Unknown native validation options fail before any AI calls. Add source-specific native checks as separate registered steps when needed.
+
+For a generation step, =options= is open-ended task data understood by the model; it is not an executable instruction language. For a plugin, its author defines and validates =options=. A native plugin can use the same artifact store as built-in generation.
+
+* AI settings
+
+| Key | Default | Accepted value |
+|-----+---------+----------------|
+| provider | codex | codex, claude-code, grok-build, cursor, antigravity |
+| model | provider's default | Nonempty opaque model identifier |
+| effort | provider's default | Nonempty effort identifier passed to ai-glib |
+| timeout | 600 | Integer seconds, 1 through 86400 |
+| retries | 1 | Integer additional attempts, 0 through 5 |
+| max_tokens | 16384 | Integer requested output budget, 256 through 131072 |
+
+Settings are resolved independently for every step. Changing provider drops an inherited =model= and =effort= unless the step explicitly sets them; this prevents accidentally sending a Codex model to Claude. Other defaults remain inherited. An unchanged provider inherits the model and effort normally. =--plan= prints the result without contacting providers.
+
+Not all CLIs implement every budget or effort knob; ai-glib translates what the chosen adapter supports. Unknown model/effort identifiers are not remotely validated by =--validate=. Provider authentication and installed CLI compatibility remain runtime requirements.
+
+A failed provider call or invalid artifact bundle is retried up to =retries= times. Corrective feedback describes the rejected response. There is no retry after cancellation. Every attempt may consume provider usage; keep retries explicit for expensive pipelines.
+
+* Artifact protocol
+
+Provider results are JSON because they carry exact file contents that may themselves contain YAML, markup or source code. This is a transport format, while user-authored recipes and prompts remain YAML.
+
+#+begin_example
+{"files":[{"path":"index.html","content":"<!doctype html>..."}],"summary":"Implemented the homepage"}
+#+end_example
+
+Only =files= and optional string =summary= are allowed. Every file contains exactly =path= and =content=. Full replacement text is required; omitted files remain unchanged. A bundle is validated completely before applying any replacements. Duplicate paths, traversal, absolute paths, backslashes, colons, control characters, reserved =.git= / =.libresite= path components and file/directory conflicts are errors. File content is UTF-8. Binary assets should be supplied outside this protocol; generated vector artwork can be SVG text. The current version has no file deletion operation.
+
+Duplicate JSON members, embedded NUL escapes and JSON nesting beyond 32 collections are also rejected. Empty bundles are permitted for no-change review steps, but a complete pipeline that produces no files fails. Each file is limited to 16 MiB; the project to 64 MiB and 4096 files. The smaller prompt and checkpoint limits described in [[file:operations.org][operations.org]] usually constrain practical project size first.

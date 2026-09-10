@@ -1,0 +1,12 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+#pragma once
+#include "core/ls-util.h"
+#include "core/ls-recipe.h"
+#include "core/ls-context.h"
+#include "core/ls-prompts.h"
+#include "core/ls-pipeline.h"
+#include "model/ls-artifact.h"
+#include "interfaces/ls-provider.h"
+#include "providers/ls-ai-provider.h"
+#include "steps/ls-step.h"
+#define LS_VERSION "0.1.0"

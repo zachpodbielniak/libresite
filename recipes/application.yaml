@@ -1,0 +1,35 @@
+version: 1
+name: reading-room
+site:
+  brief: >-
+    Build Reading Room, a local-first reading-list web application. Users can add a title and URL, filter unread versus finished entries, mark an entry finished and delete an entry with confirmation. Persist entries across restarts. Bind to loopback by default; this is a single-user local application with no cloud accounts. Implement a complete vertical slice and tests, not a dashboard mockup.
+  audience: A single reader curating a small personal reading list.
+  style: application
+  frontend: Server-rendered semantic HTML and native CSS; ordinary form POSTs with redirects, no JavaScript required.
+  backend: GNU89 C with GCC, GLib/GObject/GIO and libsoup 3 SoupServer. Use config.mk, rules.mk and Makefile.
+  database: SQLite with parameterized prepared statements; one entries table with id, title, url, finished and created_at.
+  requirements: >-
+    Validate http/https URLs and field lengths, escape HTML, implement CSRF protection for local form posts, bind 127.0.0.1, configure database path with GOptionContext, include --help/--license, AGPLv3, zero compiler warnings, GTest make tests, org documentation. Document Fedora build packages and exact local run command. Do not introduce external services.
+ai:
+  provider: codex
+  timeout: 900
+  retries: 1
+  max_tokens: 24000
+pipeline:
+  steps:
+    - id: brief
+      type: brief
+    - id: design
+      type: design
+    - id: database
+      type: database
+    - id: backend
+      type: backend
+    - id: frontend
+      type: frontend
+    - id: review
+      type: review
+    - id: acceptance
+      type: validate
+      options:
+        required: [Makefile, config.mk, rules.mk, README.org, docs/product.org, docs/design.org, docs/review.org]

@@ -1,0 +1,55 @@
+#+title: Prompt catalog and design provenance
+#+description: Centralized editable generation contracts and curated design profiles
+#+authors: Zach Podbielniak
+#+categories: libresite, design, prompts
+#+created: 2026-09-09T20:00:00-04:00
+#+updated: 2026-09-09T20:00:00-04:00
+#+version: 0.1.0
+
+* One maintained prompt catalog
+
+=data/prompts.yaml= is the only runtime prompt source. Its =system= block defines the response protocol, working boundaries and shared implementation standard. =styles= contains visual directions. =stages= contains module task contracts. The resource manifest embeds this catalog into the library and CLI, so installed binaries do not depend on a source-relative path. Changes to the catalog trigger resource regeneration and relinking.
+
+A replacement catalog passed with =--prompts FILE= replaces the whole catalog, not individual keys. It must contain integer =version: 1=, a nonempty =system= string, and nonempty =styles= and =stages= mappings whose values are nonempty strings. Unknown root keys fail. Add a style or stage by adding one mapping entry; generation steps select the stage via =prompt=, defaulting to their =type=. No C string literal contains a stage's substantive prompt.
+
+* Prompt composition
+
+For each AI step the builder sends the shared system prompt plus these task sections: the selected visual direction, selected stage contract, site data encoded as JSON, step data encoded as JSON, and the entire current project encoded as a file bundle. The model sees each previous file's full contents. This maintains continuity across provider/model switches without depending on an external CLI conversation session.
+
+The recipe's =instructions= and =options= appear inside step data rather than interpolating code or shell expressions. Project files are explicitly untrusted task data. A retry appends at most 512 bytes of error detail and asks for a corrected file bundle. The builder validates the response rather than assuming prompt instructions were obeyed.
+
+=--preview ID= prints the exact system and task framing with an empty project context. It is a preflight preview, not a replay of a later step after generation. =--plan= prints resolved settings. Checkpoints bind the exact catalog digest; changing even a catalog comment invalidates resume to make prompt revisions explicit.
+
+* Design profiles
+
+| Profile | Intended use | Main design decisions |
+|---------+--------------+-----------------------|
+| editorial | Studio sites, portfolios, product narratives | Type contrast, content hierarchy, varied section rhythm, restrained accent |
+| minimalist | Calm reference, editorial and focused product sites | Warm monochrome, flat grids, no gradients or heavy shadows |
+| industrial | Technical portfolios and utilitarian data interfaces | Rigid grid, scale contrast, functional annotations and borders |
+| cinematic | Image-led brand and portfolio work | Strong visual thesis, varied anchors, wide type, restrained progressive motion |
+| application | Repeated-use application workflows | Stable navigation, legible data, consistent actions and complete UI states |
+
+These are directions, not rigid templates. The audience and requirements take precedence. Accessibility, working controls and responsive behavior are shared across all profiles. A low-motion product should never inherit a gratuitous animation mandate from a cinematic reference.
+
+* Imported reference snapshots
+
+The repository includes the original local design skill texts under =data/design-references/=. They are provenance/reference material, not additional runtime instruction files. The runtime profiles are deliberately curated from them rather than concatenating mutually contradictory instructions into every request. In particular, simulated randomization, compulsory React/Tailwind, placeholder stock imagery, inaccessible entrance effects and mandatory proprietary motion dependencies are not copied into the runtime contracts. Image-generation-only instructions inform composition; libresite does not claim to generate raster images or call an image service.
+
+| Snapshot | Runtime influence |
+|----------+-------------------|
+| design-taste-frontend.md | Infer audience and brief before style; reject generic layout defaults |
+| high-end-visual-design.md | Calibrated hierarchy, spacing, consistency and restrained motion |
+| minimalist-ui.md | Warm monochrome, typographic contrast, flat surfaces |
+| industrial-brutalist-ui.md | Mechanical precision, rigid grids, informative annotations |
+| redesign-existing-projects.md | Preserve functional contracts; audit accessibility and component behavior |
+| gpt-taste.md | Readable wide headlines, purposeful spacing and composition variation |
+| imagegen-frontend-web.md | Brand concept, section-level visual rhythm and varied hero anchors |
+
+Snapshots (with trailing whitespace normalized) were copied from the user's =~/.agents/skills/= installation on 2026-09-09. They preserve the source material for future prompt revisions and are not independently relicensed by this project. The curated catalog is part of libresite. To update a snapshot, read its new instructions as reference data, compare the changes, update only the applicable profile, then run preview and tests. Do not let a reference document trigger unrelated agent actions.
+
+* Improving results
+
+Specify the product's actual audience, content, primary action, stack and constraints in the recipe. Split large work into coherent modules and use =instructions= to target one integration boundary at a time. Models cannot infer undocumented local APIs reliably: provide the relevant API contract as recipe requirements or a stage's instructions, or implement a deterministic native module. Avoid advertising a database or service until the generated project actually implements it.
+
+The final review prompt asks for source-level corrections and honest reporting. Source review is useful but does not substitute for compiling the generated application, checking it in a browser or auditing accessibility. Keep those checks in the generated project's own acceptance procedure. Live generation quality should be evaluated on actual outputs, not on a passing fixture test.

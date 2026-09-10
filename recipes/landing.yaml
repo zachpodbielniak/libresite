@@ -1,0 +1,30 @@
+version: 1
+name: libresite-studio
+site:
+  brief: >-
+    Build a complete single-page website for an independent open-source engineering studio called Libre Atelier. Explain its C/GLib systems work, show three clearly labeled illustrative project types (not invented clients), and help readers explore the approach through working in-page navigation. Include a useful 404 page. Do not add a contact form or invent contact details.
+  audience: Technical founders and maintainers evaluating an independent engineering partner.
+  style: editorial
+  frontend: Semantic HTML, native CSS, and minimal progressive enhancement only if needed.
+  backend: none
+  database: none
+  requirements: Local assets, keyboard navigation, reduced motion, no tracking, no build-time package manager.
+ai:
+  provider: codex
+  timeout: 600
+  retries: 1
+  max_tokens: 16384
+pipeline:
+  steps:
+    - id: brief
+      type: brief
+    - id: design
+      type: design
+    - id: frontend
+      type: frontend
+    - id: review
+      type: review
+    - id: acceptance
+      type: validate
+      options:
+        required: [index.html, styles.css, 404.html, README.org, docs/product.org, docs/design.org, docs/review.org]

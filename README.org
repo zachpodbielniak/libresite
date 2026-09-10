@@ -1,0 +1,81 @@
+#+title: libresite
+#+description: Recipe-driven AI website generation in GNU89 C and GLib
+#+authors: Zach Podbielniak
+#+categories: development, websites, ai, glib
+#+created: 2026-09-09T20:00:00-04:00
+#+updated: 2026-09-09T20:00:00-04:00
+#+version: 0.1.0
+
+* Build a site from a recipe
+
+Libresite turns a YAML recipe into a website project in a new output directory. A pipeline can define the product, establish its design, implement a frontend, backend and database, review the result, and check required artifacts. Every AI step can use a different provider, model, effort level, timeout and retry limit. The generated project includes its own build/run documentation; libresite does not host, deploy or execute generated code.
+
+The implementation is a reusable GLib/GObject library plus a CLI, with the =config.mk= / =rules.mk= / =Makefile= layout used by ai-glib and clawtilla. Extend it with a native =LsStep= subclass or an alternative =LsProvider= transport. Eight built-in step names cover the common workflows; arbitrary module options and prompt overrides support additional tasks without changing the recipe grammar.
+
+* Getting started
+
+** Build requirements
+
+Fedora packages for the builder: =gcc=, =make=, =pkgconf-pkg-config=, =glib2-devel=, =json-glib-devel=, =libsoup3-devel=, =libyaml-devel=, =libxml2-devel= and =libdex-devel=. Testing also uses =ShellCheck=, =ripgrep= and =coreutils=. The default builds the pinned dependencies from =deps/=; initialize their nested submodules first. Alternatively, =DEPS=system= uses compatible installed =ai-glib-1.0= and =yaml-glib-1.0= development builds. See [[file:docs/building.org][building.org]] for details.
+
+On Immutablue/Hyacinth Macaw add missing packages to the image build. No host package installation or writable-/usr overlay is part of this project.
+
+#+begin_src bash
+git submodule update --init --recursive
+make -j4
+make tests
+./build/release/libresite --help
+./build/release/libresite -r recipes/landing.yaml --validate
+./build/release/libresite -r recipes/landing.yaml --plan
+./build/release/libresite -r recipes/landing.yaml --preview design
+./build/release/libresite -r recipes/landing.yaml -o ./my-site
+#+end_src
+
+Generation requires an installed and authenticated CLI for the chosen provider: =codex=, =claude=, =grok=, =cursor-agent= or =agy=. Libresite uses ai-glib's adapters and provider-native defaults; it does not store API credentials. AI generation uses your provider account. The offline test suite does not make real model calls.
+
+Open a generated static =index.html= directly, or follow the output's =README.org= for application build/run instructions. From cmacs, =M-x compile= can run the builder, and =C-x C-f= opens the output's org documentation or source files.
+
+** Resume interrupted generation
+
+#+begin_src bash
+./build/release/libresite -r recipes/landing.yaml -o ./my-site --resume
+#+end_src
+
+Successful steps are saved under =my-site.libresite-work/checkpoint.json=. Resume restores their files and starts at the next step. The parsed recipe and exact prompt catalog must match. Existing output directories are never overwritten. The output's parent directory must already exist. Concurrent runs targeting the same workspace are rejected.
+
+** Choose a recipe
+
+| Recipe | Result |
+|--------+--------|
+| [[file:recipes/landing.yaml][landing.yaml]] | Editorial static studio site with product/design/review documents |
+| [[file:recipes/application.yaml][application.yaml]] | Local reading-list application with a GNU89/GLib backend and SQLite |
+| [[file:recipes/mixed-providers.yaml][mixed-providers.yaml]] | Static portfolio demonstrating all five CLI adapters and step-specific models |
+
+Change =site.brief=, the requested stack, and the design profile. Built-in profiles are =editorial=, =minimalist=, =industrial=, =cinematic= and =application=. Provider model identifiers are passed through to ai-glib; example model aliases are examples, not a promise of account availability.
+
+** Edit prompts in one place
+
+[[file:data/prompts.yaml][data/prompts.yaml]] holds the shared system instructions, design profiles and stage contracts. It is embedded with GResource at build time and can be replaced without recompilation:
+
+#+begin_src bash
+./build/release/libresite -r recipes/landing.yaml --prompts data/prompts.yaml --preview frontend
+#+end_src
+
+The design profiles distill the design skills under =~/.agents/skills/= into consistent, runnable guidance. Snapshots and provenance ship under =data/design-references/= and [[file:docs/prompts.org][prompts.org]]. The installed binary works without the source checkout or a personal skills directory.
+
+** Drive it from an agent
+
+Repository skills live in [[file:skills/libresite-landing/SKILL.md][skills/libresite-landing]] and [[file:skills/libresite-application/SKILL.md][skills/libresite-application]]. They teach agents to turn a concrete brief into a validated recipe, inspect prompts and execute the pipeline. An agent can read these files directly; normal skill installation/discovery is optional.
+
+* Documentation
+
+- [[file:docs/recipe-format.org][Recipe schema and per-step settings]]
+- [[file:docs/architecture.org][Architecture, ownership, signals and extension contracts]]
+- [[file:docs/prompts.org][Prompt organization and design provenance]]
+- [[file:docs/building.org][Build, install and dependency modes]]
+- [[file:docs/operations.org][CLI, checkpoints, limits and troubleshooting]]
+- [[file:docs/testing.org][Verification and its limits]]
+
+* License
+
+Libresite is licensed under the GNU Affero General Public License, version 3 or later. The existing [[file:LICENSE][LICENSE]] is preserved verbatim and available from =libresite --license=. Dependencies and design reference snapshots retain their upstream provenance; do not infer a license grant for unrelated third-party assets generated by a model.

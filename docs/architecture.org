@@ -1,0 +1,94 @@
+#+title: Libresite architecture and extension API
+#+description: Ownership, pipeline lifecycle, provider boundaries, modules and signals
+#+authors: Zach Podbielniak
+#+categories: libresite, development
+#+created: 2026-09-09T20:00:00-04:00
+#+updated: 2026-09-09T20:00:00-04:00
+#+version: 0.1.0
+
+* Components
+
+| Directory | Responsibility |
+|-----------+----------------|
+| src/core | Recipe validation, prompt catalog, artifact context and pipeline |
+| src/interfaces | LsProvider transport interface |
+| src/model | Immutable boxed LsArtifact |
+| src/providers | ai-glib CLI transport adapter |
+| src/steps | Abstract LsStep and generation/validation subclasses |
+| src/cli | GOptionContext CLI, signal delivery and native plugin loading |
+| data | Centralized prompt catalog, embedded resources and design references |
+| recipes | Executable recipe examples |
+| tests | GTest coverage, subprocess fixtures and external plugin/install checks |
+
+The public umbrella header is =libresite.h=. The build emits a static archive, a shared library with SONAME =liblibresite-1.0.so.0=, a CLI and =libresite-1.0.pc=. This is a new 0.1 API; reserved vtable slots leave room for additions, but callers should pin compatible releases.
+
+* Lifecycle
+
+=LsRecipe= parses and validates YAML before output creation. =LsPipeline= resolves registered types and catalog names before any provider call. Each generation step builds a fresh merged settings object and sends the current project plus the stage contract to =LsProvider=. A complete provider bundle is applied transactionally to =LsContext=. A durable checkpoint is written before the step is considered complete. After every step succeeds, the context is exported into a fresh directory within the private workspace, metadata is added, and a same-filesystem GFile move publishes the output without replacing an existing destination.
+
+The checkpoint is the source of truth on resume. Partially exported directories do not become input, and failed model output is never reused. Matching fingerprints bind the parsed recipe, prompt catalog and checkpoint format. The fingerprint detects configuration drift, not a malicious user who can rewrite the checkpoint. Workspace ownership/mode checks and an advisory exclusive lock protect normal concurrent use.
+
+* GLib ownership and threading
+
+=LsRecipe= and =LsPrompts= own their parsed JSON trees. Accessors return borrowed data; do not mutate it. =LsPipeline= references its provider and prompt catalog. =LsContext= owns its artifacts, and =ls_context_lookup()= returns a borrowed immutable artifact. =LsArtifact= is a boxed value with a deep copy operation; strings returned from its accessors live as long as the artifact. All owning public types support automatic scope cleanup.
+
+Pipeline operations are synchronous and intended for a worker thread. Do not call a pipeline concurrently or reenter it from a callback; an active-run guard rejects reentry. Its signals run on the calling thread. The CLI uses one worker plus the default main context for SIGINT/SIGTERM delivery; applications must marshal UI updates to their own UI context. Custom providers and steps must honor =GCancellable= and return a useful =GError=. They must not return success while setting an error.
+
+* Signals
+
+| Signal | Arguments | Timing |
+|--------+-----------+--------|
+| step-started | id string, index unsigned | Before step execution |
+| step-completed | id string, index unsigned | After durable checkpoint write |
+| artifact-written | LsArtifact boxed value | After successful directory publication, once per final artifact |
+| completed | output path string | After successful directory publication |
+
+Indices are zero-based. Resume emits signals only for steps actually run. The callback arguments are borrowed; copy an artifact or duplicate strings to retain them. Failures return through =GError= rather than a second competing completion channel. The CLI prints progress and errors to stderr.
+
+* Implement a new module
+
+Subclass =LsStep=, override =LsStepClass.execute= and register the concrete type with =ls_pipeline_register()=. A registered type must support construction with no required arguments. Store per-run state on the instance, read configuration from =config=, and publish files through =ls_context_apply()=. Register before starting a run. Duplicate names and abstract types are errors. The registry belongs to one pipeline and has no global registration order.
+
+The execute vfunc receives the parsed recipe, step options, prompt catalog, current artifact context, transport, cancellable and error location. This supports modules for frontend frameworks, database migrations, backend scaffolds, source validation, asset transforms or deterministic templates. A new generative specialization can simply register =LS_TYPE_GENERATE_STEP= under another name and select an existing =prompt= key; add its dedicated contract to the YAML catalog when it needs different instructions.
+
+For a CLI-loadable module export this function:
+
+#+begin_src c
+#include <libresite.h>
+#include <gmodule.h>
+
+G_MODULE_EXPORT gboolean ls_plugin_register(LsPipeline *pipeline, GError **error);
+
+/**
+ * ls_plugin_register:
+ * @pipeline: host pipeline
+ * @error: return location for an error
+ * Returns: whether registration succeeded
+ */
+gboolean
+ls_plugin_register(
+	LsPipeline *pipeline,
+	GError **error
+){
+	/* Reuse the built-in generator with prompt: generate in the recipe. */
+	return ls_pipeline_register(pipeline, "catalog-page", LS_TYPE_GENERATE_STEP, error);
+}
+#+end_src
+
+#+begin_src bash
+gcc -std=gnu89 -Wall -Wextra -Werror -fPIC -shared catalog-plugin.c \
+    -o catalog-plugin.so $(pkg-config --cflags --libs libresite-1.0 gmodule-2.0)
+libresite --plugin ./catalog-plugin.so -r catalog.yaml -o ./catalog-site
+#+end_src
+
+Plugins are explicitly selected native code and run with the caller's privileges. The CLI keeps them resident because registered GTypes outlive registration. This is a C ABI extension boundary, not an untrusted plugin sandbox. Plugin options, external resources and plugin version compatibility must be managed by the plugin; changing plugin code is not detected by the built-in recipe/catalog fingerprint. Use a new output path after changing a plugin.
+
+[[file:../tests/fixture-plugin.c][The external fixture plugin]] is a complete non-AI subclass example compiled against installed public headers by the install test. It demonstrates artifact generation independently of the transport.
+
+* Implement another provider
+
+Implement =LsProviderInterface.generate=. Return an owned UTF-8 JSON file-bundle string or NULL with an error. The interface receives merged settings and separate system/task prompts. The pipeline is independent of ai-glib beyond =LsAiProvider=; a test transport, local model server or another API implementation can be injected without changing recipe, checkpoint or artifact code. The current CLI selects =LsAiProvider=; applications embedding the library may inject any provider object.
+
+* Dependency roles
+
+=ai-glib= implements CLI protocol details. =yaml-glib= provides YAML document conversion, with libyaml used for stricter syntax validation before conversion. GLib/GObject/GIO provide ownership, signals, filesystem operations, subprocess cancellation integration and CLI parsing; JSON-GLib represents validated recipes and exact file bundles. =htmx-glib= and =orm-glib= remain pinned dependencies for generated GLib web/persistence integrations, rather than mandatory links in the builder: generating a static site does not require a web server or database runtime inside libresite. A recipe must specify its stack and provide precise API context when asking a model to use project-specific libraries.

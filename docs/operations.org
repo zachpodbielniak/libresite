@@ -1,0 +1,55 @@
+#+title: CLI operations and recovery
+#+description: Invocation, progress, publication, checkpoints and failure handling
+#+authors: Zach Podbielniak
+#+categories: libresite, operations
+#+created: 2026-09-09T20:00:00-04:00
+#+updated: 2026-09-09T20:00:00-04:00
+#+version: 0.1.0
+
+* Commands
+
+=--help= / =-h= provides examples. =--version= prints the release and =--license= prints the preserved license. =--list-modules= lists the eight built-in names. =--recipe FILE= / =-r FILE= selects the YAML recipe. =--output DIR= / =-o DIR= selects a new directory for generation; its parent must already exist.
+
+=--validate= checks local schema, AI settings, registered module names, prompt/style resolution and native validation options without calling providers or creating output. =--plan= prints tab-separated index, id, type, provider and model; the display index starts at one. =--preview STEP-ID= shows the system and task prompt with an empty project. These three modes are mutually exclusive. Native validate steps have no AI prompt to preview. All positional arguments are errors.
+
+=--prompts FILE= replaces the embedded catalog. =--plugin FILE= loads a native module and may be repeated. =--resume= permits reuse of an existing matching private workspace. Recipe and catalog paths are resolved from the CLI's working directory. There is no server process, deployment action or generated build execution inside this command.
+
+* Provider setup
+
+Authenticate each requested CLI using its own normal account setup before invoking a recipe. ai-glib reads provider-specific executable overrides: =CODEX_PATH=, =CLAUDE_CODE_PATH=, =GROK_PATH=, =CURSOR_AGENT_PATH= (or =CURSOR_PATH=), and =AGY_PATH=. These are useful for explicit installations and offline protocol tests. Model/effort settings are opaque identifiers interpreted by the adapter and installed CLI.
+
+Every generation call creates a fresh temporary working directory, disables session persistence, and sends the current project in the prompt. Codex is requested in read-only sandbox mode. Libresite does not turn on permission bypass for any provider. Other CLI policies and defaults belong to ai-glib and the installed provider. A working directory is not a security sandbox; the prompt's instruction to avoid tools is not an OS access-control mechanism. Use your provider's own sandbox when stronger isolation is required.
+
+Empty temporary provider directories are removed. Directories in which a third-party CLI created files are deliberately retained rather than recursively deleting unknown files. No global CLI configuration or credentials are modified by libresite.
+
+* Checkpoints and publication
+
+During generation, =OUTPUT.libresite-work/= is a private, owner-only directory. =lock= provides advisory process exclusion. =checkpoint.json= holds format version, the recipe/catalog fingerprint, next step index and all successful file contents. It is replaced consistently and durably after each successful step. Logs/progress go to stderr; redirect or tee stderr for a persistent human-readable run log. Checkpoint records and final metadata are structured machine records, not secrets storage.
+
+A failure leaves the workspace available for inspection and resume. Re-run the same recipe and catalog with the same =--output= and =--resume=. If the recipe changes semantically or the catalog bytes change, resume fails instead of mixing incompatible generation. Comments/formatting changes in a recipe normally preserve its parsed fingerprint; mapping-order changes can alter it. Changing native plugin code/resources is not fingerprinted; start a new output for that case.
+
+After the last step succeeds, files are exported to a fresh UUID-named directory inside the workspace. =.libresite/run.json= records the final checkpoint. A same-filesystem move publishes the directory only when the destination is absent. Interrupted exports remain inside the private workspace and are not resumed as trusted state. Successful workspaces are removed if empty; old failed export directories can keep a workspace around for inspection. Libresite never recursively removes an existing project.
+
+* Cancellation and errors
+
+SIGINT/SIGTERM cancel the run through =GCancellable=. Cancelled calls are not retried. Completed checkpoints remain available. Exit status is 0 on success, 130 for a returned cancellation error, and 1 for other failures. Provider-specific timeout failures are errors and may be retried within the configured bound. No successful output is published when a provider fails or a required artifact is missing.
+
+Errors report the failed stage ID where possible. Common remedies:
+
+| Error | Resolution |
+|-------+------------|
+| Unknown key/type/style/prompt | Correct the recipe or catalog; load the required native plugin |
+| CLI executable/authentication failure | Fix the provider's own installation/account setup |
+| Truncated model output | Increase a supported output budget or split the stage |
+| Invalid file-bundle JSON/path | Inspect the prompt; a bounded retry can ask the model to correct it |
+| Existing output | Use a different output path; completed projects are not overwritten |
+| Existing workspace | Resume matching work or choose a new output |
+| Workspace locked | Wait for the active run; do not delete its lock inode |
+| Checkpoint mismatch | Use the original recipe/catalog or start new work |
+| Missing required artifact | Refine generation instructions; the checkpoint retains earlier successful stages |
+
+* Practical limits
+
+YAML/catalog/checkpoint text: 16 MiB. YAML nesting: 32 collections. YAML events: 100,000. Recipe steps: 128. Generated file: 16 MiB. Project: 4096 files and 64 MiB of text. Generated paths: 1024 bytes with components at most 255 bytes. System plus task prompt: 100,000 bytes before small bounded retry feedback. These are hard errors, not silent truncation.
+
+The complete project is currently sent to each model, so the prompt limit is the practical ceiling for multi-step projects. This version deliberately favors coherent small sites and application slices. For large projects, design a native module with focused context or generate independent components as separate recipes; there is no automatic retrieval, summarization, binary asset pipeline or incremental editing of an existing output directory. Runtime build/test/browser verification belongs to the generated project and must be performed separately.

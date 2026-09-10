@@ -1,0 +1,40 @@
+# Uses provider defaults unless a model is explicitly selected per step.
+version: 1
+name: field-notes
+site:
+  brief: A static editorial portfolio for an open-source systems developer, with working in-page project navigation and no invented credentials.
+  style: minimalist
+  frontend: Semantic HTML and CSS with local SVG assets.
+ai:
+  provider: codex
+  timeout: 600
+  retries: 1
+pipeline:
+  steps:
+    - id: brief
+      type: brief
+      ai:
+        provider: claude-code
+        model: sonnet
+    - id: design
+      type: design
+      ai:
+        provider: cursor
+    - id: implementation
+      type: frontend
+      ai:
+        provider: codex
+        model: gpt-6-astra
+    - id: refine
+      type: generate
+      instructions: Refine typography and spacing while preserving all existing functionality.
+      ai:
+        provider: grok-build
+    - id: review
+      type: review
+      ai:
+        provider: antigravity
+    - id: acceptance
+      type: validate
+      options:
+        required: [index.html, styles.css, README.org]

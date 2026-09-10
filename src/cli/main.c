@@ -1,0 +1,277 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+#include "libresite.h"
+#include <glib-unix.h>
+#include <gmodule.h>
+#include <signal.h>
+#include <stdio.h>
+GResource *ls_resources_get_resource(void);
+/* Execute on a worker thread so the main context can deliver SIGINT/SIGTERM. */
+typedef struct {
+	GMainLoop *loop;
+	LsPipeline *pipeline;
+	LsRecipe *recipe;
+	GCancellable *cancellable;
+	const gchar *output;
+	gboolean resume;
+	gboolean okay;
+	GError *error;
+} Run;
+static gboolean
+quit_loop(gpointer data){
+	g_main_loop_quit((GMainLoop *)data);
+	return G_SOURCE_REMOVE;
+}
+static gpointer
+run_thread(gpointer data){
+	Run *run = (Run *)data;
+	run->okay = ls_pipeline_run(
+		run->pipeline, run->recipe, run->output, run->resume, run->cancellable, &run->error
+	);
+	g_idle_add_full(G_PRIORITY_DEFAULT, quit_loop, run->loop, NULL);
+	return NULL;
+}
+static gboolean
+cancel_run(gpointer data){
+	g_cancellable_cancel(G_CANCELLABLE(data));
+	return G_SOURCE_CONTINUE;
+}
+/* Progress is stderr; stdout remains useful for plans and prompt inspection. */
+static void
+step_started(LsPipeline *pipeline, const gchar *id, guint index, gpointer data){
+	(void)pipeline;
+	(void)data;
+	g_printerr("[%u] %s: started\n", index + 1, id);
+}
+static void
+step_completed(LsPipeline *pipeline, const gchar *id, guint index, gpointer data){
+	(void)pipeline;
+	(void)data;
+	g_printerr("[%u] %s: checkpoint saved\n", index + 1, id);
+}
+/* GModule extensions are explicit user-supplied native code; keep modules
+ * resident because their registered GTypes outlive the entrypoint call. */
+static gboolean
+load_plugins(LsPipeline *pipeline, gchar **paths, GError **error){
+	guint i;
+	if (paths == NULL)
+		return TRUE;
+	for (i = 0; paths[i] != NULL; i++) {
+		GModule *module = g_module_open(paths[i], G_MODULE_BIND_LOCAL);
+		gboolean (*register_plugin)(LsPipeline *, GError **) = NULL;
+		if (module == NULL) {
+			g_set_error(
+				error, LS_ERROR, LS_ERROR_INVALID, "Cannot load plugin: %s", g_module_error()
+			);
+			return FALSE;
+		}
+		if (!g_module_symbol(module, "ls_plugin_register", (gpointer *)&register_plugin)) {
+			g_set_error(
+				error,
+				LS_ERROR,
+				LS_ERROR_INVALID,
+				"Plugin needs ls_plugin_register: %s",
+				g_module_error()
+			);
+			g_module_close(module);
+			return FALSE;
+		}
+		g_module_make_resident(module);
+		if (!register_plugin(pipeline, error)) {
+			if (error != NULL && *error == NULL)
+				g_set_error_literal(
+					error, LS_ERROR, LS_ERROR_INVALID, "Plugin registration failed"
+				);
+			return FALSE;
+		}
+		g_module_close(module);
+	}
+	return TRUE;
+}
+/* A single option parser supports manual use and deterministic agent calls. */
+int
+main(int argc, char **argv){
+	g_autofree gchar *recipe_path = NULL, *output = NULL, *catalog = NULL, *preview = NULL;
+	g_auto(GStrv) plugins = NULL;
+	gboolean validate = FALSE, plan = FALSE, resume = FALSE, license = FALSE, version = FALSE,
+			 list = FALSE;
+	g_autoptr(GOptionContext) options = NULL;
+	g_autoptr(GError) error = NULL;
+	g_autoptr(LsRecipe) recipe = NULL;
+	g_autoptr(LsPrompts) prompts = NULL;
+	g_autoptr(LsAiProvider) provider = NULL;
+	g_autoptr(LsPipeline) pipeline = NULL;
+	g_autofree gchar *yaml = NULL;
+	GOptionEntry entries[] = {
+		{"recipe", 'r', 0, G_OPTION_ARG_FILENAME, &recipe_path, "YAML recipe", "FILE"},
+		{"output",
+		 'o',
+		 0,
+		 G_OPTION_ARG_FILENAME,
+		 &output,
+		 "New output directory (parent must exist)",
+		 "DIR"},
+		{"prompts",
+		 0,
+		 0,
+		 G_OPTION_ARG_FILENAME,
+		 &catalog,
+		 "Replace embedded prompt catalog",
+		 "FILE"},
+		{"plugin",
+		 0,
+		 0,
+		 G_OPTION_ARG_FILENAME_ARRAY,
+		 &plugins,
+		 "Load a native step plugin (repeatable)",
+		 "FILE"},
+		{"validate",
+		 0,
+		 0,
+		 G_OPTION_ARG_NONE,
+		 &validate,
+		 "Validate without calling providers",
+		 NULL},
+		{"plan",
+		 0,
+		 0,
+		 G_OPTION_ARG_NONE,
+		 &plan,
+		 "Print resolved steps, providers and models",
+		 NULL},
+		{"preview",
+		 0,
+		 0,
+		 G_OPTION_ARG_STRING,
+		 &preview,
+		 "Print system and step prompt with empty project context",
+		 "STEP-ID"},
+		{"resume", 0, 0, G_OPTION_ARG_NONE, &resume, "Resume OUTPUT.libresite-work", NULL},
+		{"list-modules", 0, 0, G_OPTION_ARG_NONE, &list, "List built-in step modules", NULL},
+		{"license", 0, 0, G_OPTION_ARG_NONE, &license, "Print the AGPLv3 license", NULL},
+		{"version", 0, 0, G_OPTION_ARG_NONE, &version, "Print version", NULL},
+		{NULL, 0, 0, G_OPTION_ARG_NONE, NULL, NULL, NULL}
+	};
+	options = g_option_context_new("- recipe-driven AI site builder");
+	g_option_context_add_main_entries(options, entries, NULL);
+	g_option_context_set_description(
+		options,
+		"Examples:\n  libresite -r recipes/landing.yaml --validate\n  libresite -r "
+		"recipes/landing.yaml --plan\n  libresite -r recipes/landing.yaml --preview design\n  "
+		"libresite -r recipes/landing.yaml -o ./my-site\n  libresite -r recipes/landing.yaml -o "
+		"./my-site --resume\n\nProviders: codex, claude-code, grok-build, cursor, "
+		"antigravity.\nGeneration uses your installed and authenticated provider CLI.\nGenerated "
+		"code is published as files; no build, deployment or hosting is automatic."
+	);
+	if (!g_option_context_parse(options, &argc, &argv, &error))
+		goto fail;
+	if (argc != 1) {
+		g_set_error_literal(
+			&error, LS_ERROR, LS_ERROR_INVALID, "Unexpected positional argument; use --recipe FILE"
+		);
+		goto fail;
+	}
+	if (license) {
+		g_autoptr(GBytes) bytes = g_resource_lookup_data(
+			ls_resources_get_resource(), "/org/libresite/LICENSE", 0, &error
+		);
+		if (bytes == NULL)
+			goto fail;
+		(void)fwrite(g_bytes_get_data(bytes, NULL), 1, g_bytes_get_size(bytes), stdout);
+		return 0;
+	}
+	if (version) {
+		g_print("libresite %s\n", LS_VERSION);
+		return 0;
+	}
+	if (list) {
+		g_print("brief\ndesign\nfrontend\nbackend\ndatabase\nreview\ngenerate\nvalidate\n");
+		return 0;
+	}
+	if ((guint)validate + (guint)plan + (guint)(preview != NULL) > 1) {
+		g_set_error_literal(
+			&error, LS_ERROR, LS_ERROR_INVALID, "Choose one of --validate, --plan or --preview"
+		);
+		goto fail;
+	}
+	if (recipe_path == NULL) {
+		g_set_error_literal(&error, LS_ERROR, LS_ERROR_INVALID, "--recipe is required; see --help");
+		goto fail;
+	}
+	yaml = ls_read_text(recipe_path, &error);
+	if (yaml == NULL)
+		goto fail;
+	recipe = ls_recipe_new(yaml, &error);
+	prompts = recipe != NULL ? ls_prompts_new(catalog, &error) : NULL;
+	if (prompts == NULL)
+		goto fail;
+	provider = ls_ai_provider_new();
+	pipeline = ls_pipeline_new(LS_PROVIDER(provider), prompts);
+	if (!load_plugins(pipeline, plugins, &error) || !ls_pipeline_validate(pipeline, recipe, &error))
+		goto fail;
+	if (validate) {
+		g_print("Recipe valid\n");
+		return 0;
+	}
+	if (plan || preview != NULL) {
+		JsonArray *steps = ls_recipe_get_steps(recipe);
+		guint i;
+		for (i = 0; i < json_array_get_length(steps); i++) {
+			JsonObject *step = json_array_get_object_element(steps, i);
+			g_autoptr(JsonObject) settings = ls_recipe_resolve_ai(recipe, step);
+			if (preview != NULL && g_str_equal(preview, ls_string(step, "id"))) {
+				g_autoptr(LsContext) empty = ls_context_new();
+				g_autofree gchar *text = ls_prompts_render(prompts, recipe, step, empty, &error);
+				if (text == NULL)
+					goto fail;
+				g_print("%s\n\n%s", ls_prompts_get_system(prompts), text);
+				return 0;
+			}
+			if (plan)
+				g_print(
+					"%u\t%s\t%s\t%s\t%s\n",
+					i + 1,
+					ls_string(step, "id"),
+					ls_string(step, "type"),
+					g_str_equal(ls_string(step, "type"), "validate")
+						? "native"
+						: ls_string(settings, "provider"),
+					ls_string(settings, "model") != NULL ? ls_string(settings, "model")
+														 : "(provider default)"
+				);
+		}
+		if (plan)
+			return 0;
+		g_set_error(&error, LS_ERROR, LS_ERROR_INVALID, "No step with id '%s'", preview);
+		goto fail;
+	}
+	if (output == NULL) {
+		g_set_error_literal(
+			&error, LS_ERROR, LS_ERROR_INVALID, "--output is required for generation"
+		);
+		goto fail;
+	}
+	{
+		g_autoptr(GMainLoop) loop = g_main_loop_new(NULL, FALSE);
+		g_autoptr(GCancellable) cancellable = g_cancellable_new();
+		Run run = {loop, pipeline, recipe, cancellable, output, resume, FALSE, NULL};
+		guint interrupt = g_unix_signal_add(SIGINT, cancel_run, cancellable);
+		guint terminate = g_unix_signal_add(SIGTERM, cancel_run, cancellable);
+		GThread *thread;
+		g_signal_connect(pipeline, "step-started", G_CALLBACK(step_started), NULL);
+		g_signal_connect(pipeline, "step-completed", G_CALLBACK(step_completed), NULL);
+		thread = g_thread_new("libresite-run", run_thread, &run);
+		g_main_loop_run(loop);
+		g_thread_join(thread);
+		g_source_remove(interrupt);
+		g_source_remove(terminate);
+		if (!run.okay) {
+			error = run.error;
+			goto fail;
+		}
+	}
+	g_print("Published %s\n", output);
+	return 0;
+fail:
+	g_printerr("libresite: %s\n", error != NULL ? error->message : "operation failed");
+	return error != NULL && g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED) ? 130 : 1;
+}
