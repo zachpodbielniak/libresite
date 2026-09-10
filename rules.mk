@@ -14,7 +14,7 @@ $(OUTDIR)/resources.c: data/resources.xml data/prompts.yaml LICENSE | $(OUTDIR)
 $(OBJDIR)/resources.o: $(OUTDIR)/resources.c $(OUTDIR)/.flags
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
--include $(LIB_OBJECTS:.o=.d) $(OBJDIR)/cli/main.d $(OUTDIR)/test-libresite.d
+-include $(LIB_OBJECTS:.o=.d) $(OBJDIR)/cli/main.d $(OUTDIR)/test-libresite.d $(OUTDIR)/test-contracts.d
 # Recursion is once per make invocation; changed upstream archives relink users.
 $(DEP_ARCHIVES): bundled-deps
 	@test -f $@

@@ -107,12 +107,43 @@ check_yaml(const gchar *text, GError **error){
 	return okay;
 }
 
-/* Convert once at the boundary; JSON-GLib provides precise scalar typing for
- * recipe validation and the same representation used in provider responses. */
+/* yaml-glib infers numeric/boolean/null types even for quoted scalars. Restore
+ * explicit string styles from libyaml after conversion, including empty and
+ * null-looking strings whose original spelling yaml-glib has discarded.
+ * check_yaml already bounds recursion and rejects aliases/duplicate keys. */
+static void
+restore_yaml_strings(yaml_document_t *document, yaml_node_t *source, JsonNode *target){
+	if (source->type == YAML_SCALAR_NODE) {
+		if (source->data.scalar.style != YAML_PLAIN_SCALAR_STYLE)
+			json_node_init_string(target, (const gchar *)source->data.scalar.value);
+	} else if (source->type == YAML_SEQUENCE_NODE) {
+		yaml_node_item_t *item;
+		guint i = 0;
+		for (item = source->data.sequence.items.start;
+			item < source->data.sequence.items.top; item++, i++)
+			restore_yaml_strings(document, yaml_document_get_node(document, *item),
+				json_array_get_element(json_node_get_array(target), i));
+	} else if (source->type == YAML_MAPPING_NODE) {
+		yaml_node_pair_t *pair;
+		for (pair = source->data.mapping.pairs.start;
+			pair < source->data.mapping.pairs.top; pair++) {
+			yaml_node_t *key = yaml_document_get_node(document, pair->key);
+			restore_yaml_strings(document, yaml_document_get_node(document, pair->value),
+				json_object_get_member(json_node_get_object(target),
+					(const gchar *)key->data.scalar.value));
+		}
+	}
+}
+
+/* Normalize only the converted tree; never modify dependency sources or the
+ * borrowed yaml-glib document. Plain scalar resolution remains compatible. */
 JsonNode *
 ls_yaml_parse(const gchar *text, GError **error){
 	g_autoptr(YamlParser) parser = NULL;
+	g_autoptr(JsonNode) result = NULL;
 	YamlDocument *document;
+	yaml_parser_t raw_parser;
+	yaml_document_t raw_document;
 	if (text == NULL || strlen(text) > LS_MAX_DOCUMENT || !g_utf8_validate(text, -1, NULL)) {
 		g_set_error_literal(
 			error, LS_ERROR, LS_ERROR_INVALID, "Expected UTF-8 YAML of at most 16 MiB"
@@ -129,7 +160,22 @@ ls_yaml_parse(const gchar *text, GError **error){
 		g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID, "Empty YAML document");
 		return NULL;
 	}
-	return yaml_document_to_json_node(document);
+	result = yaml_document_to_json_node(document);
+	if (!yaml_parser_initialize(&raw_parser)) {
+		g_set_error_literal(error, LS_ERROR, LS_ERROR_LIMIT, "Cannot initialize YAML parser");
+		return NULL;
+	}
+	yaml_parser_set_input_string(&raw_parser, (const unsigned char *)text, strlen(text));
+	if (!yaml_parser_load(&raw_parser, &raw_document)) {
+		g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID, "Cannot restore YAML string types");
+		yaml_parser_delete(&raw_parser);
+		return NULL;
+	}
+	if (yaml_document_get_root_node(&raw_document) != NULL)
+		restore_yaml_strings(&raw_document, yaml_document_get_root_node(&raw_document), result);
+	yaml_document_delete(&raw_document);
+	yaml_parser_delete(&raw_parser);
+	return g_steal_pointer(&result);
 }
 
 /* Stream with an allocation ceiling instead of trusting a racy stat size. */
@@ -169,7 +215,8 @@ ls_object_keys(JsonObject *object, const gchar *keys, GError **error){
 	GList *item;
 	for (item = members; item != NULL; item = item->next) {
 		g_autofree gchar *needle = g_strdup_printf("|%s|", (gchar *)item->data);
-		if (strstr(keys, needle) == NULL) {
+		/* Delimiters belong to the allowlist syntax, never to a member name. */
+		if (strchr((const gchar *)item->data, '|') != NULL || strstr(keys, needle) == NULL) {
 			g_set_error(error, LS_ERROR, LS_ERROR_INVALID, "Unknown key '%s'", (gchar *)item->data);
 			return FALSE;
 		}
@@ -264,8 +311,12 @@ ls_json_parse(const gchar *text, GError **error){
 			depth--;
 	}
 	g_signal_connect(parser, "object-member", G_CALLBACK(json_member), &validation);
+	/* JSON-GLib otherwise accepts JavaScript assignments and comments. */
+	json_parser_set_strict(parser, TRUE);
 	if (!json_parser_load_from_data(parser, text, -1, error))
 		return NULL;
+	if (json_parser_get_root(parser) == NULL)
+		goto invalid;
 	if (validation.duplicate) {
 		g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID, "Duplicate JSON object member");
 		return NULL;

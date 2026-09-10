@@ -99,3 +99,13 @@ Configure =ls_ai_provider_set_debug()= before generation to opt into provider-na
 * Dependency roles
 
 =ai-glib= implements CLI protocol details. =yaml-glib= provides YAML document conversion, with libyaml used for stricter syntax validation before conversion. GLib/GObject/GIO provide ownership, signals, filesystem operations, subprocess cancellation integration and CLI parsing; JSON-GLib represents validated recipes and exact file bundles. =htmx-glib= and =orm-glib= remain pinned dependencies for generated GLib web/persistence integrations, rather than mandatory links in the builder: generating a static site does not require a web server or database runtime inside libresite. A recipe must specify its stack and provide precise API context when asking a model to use project-specific libraries.
+
+* Defensive extension and validation boundaries
+
+The provider and step dispatch wrappers capture a private =GError= even when callers pass =NULL=. Success accompanied by an error is rejected; failure without an error receives a diagnostic. Cancellation after a callback takes precedence and is normalized to =G_IO_ERROR_CANCELLED=. This prevents broken extensions from reporting accepted output or completed steps. A native plugin is still trusted code: arbitrary in-memory mutations and external side effects cannot be rolled back by the dispatch wrapper.
+
+=ls_validate_step_check_options()= is the public, non-mutating schema validator shared by preflight and execution. It checks required paths and optional exact-content/byte predicates without a transport call. Generation uses the same validator against isolated candidates before accepting downstream contracts. See [[file:recipe-format.org][the recipe reference]] for predicate semantics.
+
+JSON parsing enables JSON-GLib strict mode and rejects rootless input, comments, JavaScript assignments and trailing commas in addition to duplicate keys, NUL and nesting limits. Schema keys containing the internal allowlist delimiter are rejected rather than matching multiple adjacent allowed names. The builder requires JSON-GLib 1.10 or newer for strict parsing.
+
+CLI plugin registration follows the same result/error rule. A failing registration aborts preflight, including success paired with an error; resident modules stay loaded because they may already have registered GTypes. Install tests compile malformed registration callbacks against the installed headers to verify both failure forms.

@@ -58,6 +58,7 @@ Prompt size is unlimited by default. Use =--max-prompt-bytes BYTES= only when yo
 | Recipe | Result |
 |--------+--------|
 | [[file:recipes/landing.yaml][landing.yaml]] | Editorial static studio site with product/design/review documents |
+| [[file:recipes/checked-landing.yaml][checked-landing.yaml]] | Static studio site with deterministic content and byte-size acceptance checks |
 | [[file:recipes/flagship.yaml][flagship.yaml]] | FIELDWORK: eight-page studio, two case studies, journal, work filters and local project-brief export |
 | [[file:recipes/application.yaml][application.yaml]] | Local reading-list application with a GNU89/GLib backend and SQLite |
 | [[file:recipes/mixed-providers.yaml][mixed-providers.yaml]] | Static portfolio demonstrating all five CLI adapters and step-specific models |
@@ -102,6 +103,7 @@ Repository skills live in [[file:skills/libresite-landing/SKILL.md][skills/libre
 - [[file:docs/building.org][Build, install and dependency modes]]
 - [[file:docs/operations.org][CLI, checkpoints, limits and troubleshooting]]
 - [[file:docs/testing.org][Verification and its limits]]
+- [[file:docs/robustness-review.org][Robustness review and deterministic acceptance]]
 
 * License
 

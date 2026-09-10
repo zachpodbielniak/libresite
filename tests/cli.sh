@@ -79,7 +79,11 @@ ai: {provider: $provider, model: fixture-model, retries: 0, timeout: 2}
 pipeline:
   steps:
     - {id: site, type: frontend}
-    - {id: verify, type: validate, options: {required: [index.html]}}
+    - id: verify
+      type: validate
+      options:
+        required: [index.html]
+        checks: [{path: index.html, contains: ['Offline site'], excludes: ['TODO'], min_bytes: 16}]
 YAML
 	"$binary" -r "$test_dir/recipe.yaml" -o "$test_dir/$provider"
 	rg -q 'Offline site' "$test_dir/$provider/index.html"

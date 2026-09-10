@@ -1,0 +1,43 @@
+#+title: Builder robustness review
+#+description: Review scope, corrected failure boundaries, deterministic acceptance and verification limits
+#+authors: Zach Podbielniak
+#+categories: libresite, development, quality
+#+created: 2026-09-10T14:30:00-04:00
+#+updated: 2026-09-10T14:30:00-04:00
+#+version: 0.1.0
+
+* Outcome and scope
+
+This review covers the recipe/parser, prompt catalog/rendering, artifact store, step/provider dispatch, ai-glib adapter, pipeline/checkpoints, CLI worker/signal handling, public API, build/install scripts and existing tests at base revision =0e642d0=. Work lives on =feat/robustness-review= under =trees/robustness-review=. The deliverable remains the extensible website builder. No generated application is added to its implementation, no provider account is called and no deployment is performed.
+
+* Findings and corrections
+
+| Boundary | Finding | Correction and regression evidence |
+|----------+---------+------------------------------------|
+| Extension dispatch | Success accompanied by an error could be accepted; failure without an error could lose diagnostics | Private error capture, failure normalization and cancellation precedence, exercised with and without caller diagnostics |
+| Schema allowlists | Names containing the internal pipe delimiter could match multiple adjacent permitted keys | Reject delimiter-containing keys; negative JSON and native option tests |
+| JSON input | JSON-GLib defaults permit non-JSON syntax; empty input can have no root | Strict parser mode and explicit root check; empty/comment/assignment/trailing-comma regressions |
+| YAML input | Dependency conversion coerces quoted scalars and discards quoted null-looking strings | Restore explicit string styles from libyaml into the converted tree; nested, empty, numeric, boolean, null and block regressions |
+| Native validation | Whitespace-only files satisfied presence checks; no machine-enforced content contract | Unicode whitespace rejection plus exact inclusion/exclusion and inclusive UTF-8 byte bounds |
+| Validation preflight | Duplicated option-schema code risked divergence from execution | One public non-mutating schema validator used by both paths |
+| Recovery | Content-invalid candidates must never become completed work | Full pipeline retry/exhaustion/resume regression verifies no rejected files enter final artifacts or checkpoint state |
+
+The new checked landing recipe makes exact text contracts inspectable through existing =--validate= and =--preview= commands. Existing shipped recipes and the embedded prompt catalog retain their original bytes. Scalar typing corrections can change parsed identity for recipes previously affected by coercion; their checkpoints require the original binary or a fresh run with corrected input.
+
+* Review conclusions by subsystem
+
+Recipe structure still rejects unknown fields, duplicate IDs, unsafe YAML and invalid budgets. Prompt text remains centralized in =data/prompts.yaml=; new acceptance predicates travel as existing structured task data. No provider/framework conditionals were added to orchestration. The provider transport remains injectable and all default verification uses offline fixtures.
+
+Artifact replacement remains transactional, with centralized path, duplicate, aggregate-size and file/directory conflict checks. Checkpoints still contain only completed steps; interrupted exports are not trusted input. Existing-output rejection and workspace ownership/locking tests remain in the regression suite. Generated code remains inert during builder execution.
+
+The CLI retains one worker and main-context cancellation/heartbeat delivery. Reentry and concurrent pipeline use remain disallowed by the public contract. Native plugins remain explicitly trusted code and can have side effects that library wrappers cannot undo. Dependency pins and sources are unchanged.
+
+* Verification and practical limits
+
+Required verification is =DEPS=system bash tests/verify.sh=, =DEPS=system bash tests/install.sh= and =make DEPS=system DEBUG=1 ASAN=1 UBSAN=1 tests=. The warning oracle has a known-positive fixture. Release/debug checks include all GTests, five subprocess adapters, timeout/cancellation/resume and ShellCheck. Install checks stage under a temporary prefix and exercise the installed CLI, native plugin and dynamic library consumer outside the checkout. Sanitizers cover this project's code while installed dependencies retain their own build instrumentation.
+
+Literal acceptance is intentionally exact and case-sensitive. It is not a DOM/CSS parser, compiler, security scanner or accessibility audit. Minimum bytes alone do not measure quality; callers should combine targeted predicates with inspected generated-project tests. The 16 MiB checkpoint ceiling, complete-context prompts, text-only artifacts and absence of artifact deletion remain documented product constraints. Expanding these would require separate format/resource contracts rather than silently changing existing recovery semantics.
+
+No live model generation, generated application build, browser workflow or subjective design evaluation was performed. Passing these checks establishes builder behavior, not triple-A visual quality from an arbitrary model response.
+
+Final verification on 2026-09-10 passed: 105 GTests in each clean release/debug build, all five offline subprocess adapters, ShellCheck, staged installation including positive/negative plugin registration and the new shared-library validator symbol, and the complete address/undefined-behavior sanitizer test target. Both verification iterations passed; the second includes the final CLI registration fix. The acceptance ledger records command outcomes and output fingerprints. No dependency revisions were changed and no bundled-dependency build was claimed.

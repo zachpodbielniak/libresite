@@ -46,7 +46,11 @@ site: {brief: Test a native module}
 pipeline:
   steps:
     - {id: seed, type: seed}
-    - {id: acceptance, type: validate, options: {required: [index.html]}}
+    - id: acceptance
+      type: validate
+      options:
+        required: [index.html]
+        checks: [{path: index.html, contains: ['Native module'], min_bytes: 16}]
 YAML
 (cd /tmp && "$binary" --plugin "$test_dir/seed.so" -r "$test_dir/native.yaml" -o "$test_dir/site")
 rg -q 'Native module' "$test_dir/site/index.html"
@@ -56,10 +60,54 @@ cat > "$test_dir/consumer.c" <<'C'
 int main(void)
 {
 	g_autoptr(LsContext) context = ls_context_new();
-	return context == NULL;
+	g_autoptr(GError) error = NULL;
+	/* Resolve the new public validator from the installed shared library. */
+	if (context == NULL || ls_validate_step_check_options(NULL, &error))
+		return 1;
+	return !g_error_matches(error, LS_ERROR, LS_ERROR_INVALID);
 }
 C
 gcc -std=gnu89 -Wall -Wextra -Werror -I"$test_dir/usr/include/libresite-1.0" \
 	"$test_dir/consumer.c" -L"$test_dir/usr/lib" -llibresite-1.0 -o "$test_dir/consumer" "${flags[@]}"
 LD_LIBRARY_PATH="$test_dir/usr/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" "$test_dir/consumer"
+# Invalid registration callbacks must stop before preflight or publication,
+# including callbacks that return success while supplying an error.
+cat > "$test_dir/broken.c" <<'C'
+#include <libresite.h>
+#include <gmodule.h>
+G_MODULE_EXPORT gboolean ls_plugin_register(LsPipeline *pipeline, GError **error);
+/**
+ * ls_plugin_register:
+ * @pipeline: host pipeline
+ * @error: return location for an error
+ * Returns: a deliberately invalid registration result for boundary testing
+ */
+gboolean
+ls_plugin_register(LsPipeline *pipeline, GError **error){
+	(void)pipeline;
+	/* Environment selects two distinct broken callback contracts. */
+	if (g_strcmp0(g_getenv("LS_TEST_PLUGIN_FAILURE"), "both") == 0) {
+		g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID, "registration sentinel");
+		return TRUE;
+	}
+	return FALSE;
+}
+C
+gcc -std=gnu89 -Wall -Wextra -Werror -Wstrict-prototypes -Wmissing-prototypes -shared -fPIC \
+	-I"$test_dir/usr/include/libresite-1.0" "$test_dir/broken.c" \
+	-o "$test_dir/broken.so" "${flags[@]}"
+for failure in both missing
+do
+	if LS_TEST_PLUGIN_FAILURE="$failure" "$binary" --plugin "$test_dir/broken.so" \
+		-r "$root/recipes/checked-landing.yaml" --validate > "$test_dir/broken.log" 2>&1
+	then
+		exit 1
+	fi
+	if [[ "$failure" == both ]]
+	then
+		rg -q 'registration sentinel' "$test_dir/broken.log"
+	else
+		rg -q 'Plugin registration failed without an error' "$test_dir/broken.log"
+	fi
+done
 printf '%s\n' 'INSTALL VERIFIED'

@@ -69,7 +69,7 @@ pipeline:
 
 Built-in AI module names are =brief=, =design=, =frontend=, =backend=, =database=, =review= and =generate=. These all use =LsGenerateStep= with different centralized stage contracts. =generate= is the general-purpose extension for instructions that need no custom C implementation. A custom =prompt= can reuse any catalog stage or a stage added to a replacement catalog.
 
-The native =validate= module calls no provider. It accepts exactly =options.required=, a nonempty sequence of safe relative file paths, and requires every named artifact to exist with nonempty contents. This proves presence, not HTML correctness, accessibility, compilation or working application behavior. Unknown native validation options fail before any AI calls. Add source-specific native checks as separate registered steps when needed.
+The native =validate= module calls no provider. It requires =options.required=, a nonempty sequence of unique safe relative file paths, and checks every named artifact for non-whitespace text. Optional =options.checks= adds literal-content and byte-size predicates as described below. These checks do not prove HTML correctness, accessibility, compilation or working application behavior. Unknown native validation options fail before any AI calls. Add semantic checks as separate registered steps when needed.
 
 Generated sites must include =AGENTS.md= so a later coding agent can maintain and troubleshoot the output. Bundled recipes require that path in the final =validate= step. The file is Markdown on purpose: it is an agent instruction file, not project documentation. Project docs remain Org. For a loopback application, =AGENTS.md= and =README.org= must document both =127.0.0.1= and =localhost= as accepted Host/Origin names on the listening port.
 
@@ -105,3 +105,26 @@ Provider results are JSON because they carry exact file contents that may themse
 Only =files= and optional string =summary= are allowed. Every file contains exactly =path= and =content=. Full replacement text is required; omitted files remain unchanged. A bundle is validated completely before applying any replacements. Duplicate paths, traversal, absolute paths, backslashes, colons, control characters, reserved =.git= / =.libresite= path components and file/directory conflicts are errors. File content is UTF-8. Binary assets should be supplied outside this protocol; generated vector artwork can be SVG text. The current version has no file deletion operation.
 
 Duplicate JSON members, embedded NUL escapes and JSON nesting beyond 32 collections are also rejected. Empty bundles are permitted for no-change review steps, but a complete pipeline that produces no files fails. Each file is limited to 16 MiB; the project to 64 MiB and 4096 files. The smaller prompt and checkpoint limits described in [[file:operations.org][operations.org]] usually constrain practical project size first.
+
+* Deterministic artifact checks
+
+Native =validate= steps accept optional =options.checks= alongside the mandatory =required= array. Required files must contain at least one non-whitespace Unicode character. All path lists reject duplicates. Each check applies to one exact safe relative path; the file must exist even if it is not listed in =required=.
+
+#+begin_src yaml
+options:
+  required: [index.html, styles.css, README.org, AGENTS.md]
+  checks:
+    - path: index.html
+      contains: ['lang="en"', 'name="viewport"', '<main']
+      excludes: ['TODO', 'Lorem ipsum']
+      min_bytes: 512
+      max_bytes: 131072
+    - path: styles.css
+      contains: [':focus-visible', 'prefers-reduced-motion']
+#+end_src
+
+=contains= requires every listed literal string; =excludes= rejects any listed literal string. Matching is case-sensitive and does not interpret regular expressions, HTML or CSS. Each supplied list must contain 1..4096 unique nonempty strings. =min_bytes= and =max_bytes= are inclusive UTF-8 byte counts, not character counts; both are optional integers between 0 and 16777216, and a supplied minimum cannot exceed the maximum. A checked file may be empty when the predicates permit it and it is not also required. Checks are limited to 4096 unique paths and each rule must provide at least one predicate. Unknown keys and malformed rules fail local preflight before provider calls.
+
+The complete validation configuration is already included in =PIPELINE ACCEPTANCE= prompt data. Consecutive native checks immediately after a generation stage run against its candidate before acceptance. A failed predicate triggers corrective feedback and bounded retry; an exhausted stage leaves the last successful checkpoint intact, so =--resume= runs generation again. Diagnostics identify the artifact and predicate index without printing file contents. [[file:../recipes/checked-landing.yaml][checked-landing.yaml]] demonstrates these rules with a standalone static recipe. Literal checks are useful for exact delivery contracts but cannot prove semantic correctness, accessibility or design quality.
+
+Quoted and block YAML scalars preserve string types: ='1'= is a string and is rejected for byte counts; plain =1= is an integer. The boundary restores explicit string styles after yaml-glib conversion, including empty and null-looking strings. Existing recipes without formerly misinterpreted quoted scalars retain their parsed checkpoint identity. Recipes that relied on the previous incorrect scalar coercion need corrected input and a fresh output directory.
