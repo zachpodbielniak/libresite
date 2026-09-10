@@ -19,6 +19,24 @@ LsRecipe *ls_recipe_new(const gchar *yaml, GError **error);
  */
 const gchar *ls_recipe_get_source(LsRecipe *self);
 /**
+ * ls_recipe_set_scaffold_source:
+ * @self: a recipe
+ * @bundle: (nullable): archived native JSON files bundle, or NULL for defaults
+ * @error: return location for an error
+ *
+ * Configure before preview or execution. Validates and copies the snapshot
+ * without changing original recipe text. Native bytes bind checkpoint identity;
+ * callers must preserve them alongside the recipe. Package loading does this.
+ * Returns: whether the pin was set; failed validation preserves the old pin
+ */
+gboolean ls_recipe_set_scaffold_source(LsRecipe *self, const gchar *bundle, GError **error);
+/**
+ * ls_recipe_get_scaffold_source:
+ * @self: a recipe
+ * Returns: (transfer none) (nullable): exact archived native bundle, or NULL
+ */
+const gchar *ls_recipe_get_scaffold_source(LsRecipe *self);
+/**
  * ls_recipe_from_form:
  * @json: UTF-8 JSON form with name, site and optional ai/pipeline/seed_artifacts
  * @error: return location for an error

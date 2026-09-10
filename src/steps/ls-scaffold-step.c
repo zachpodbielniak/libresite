@@ -76,12 +76,11 @@ execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *prompts,
 		? json_node_get_object(node) : NULL;
 	g_autofree gchar *bundle = NULL;
 	(void)self;
-	(void)recipe;
 	(void)prompts;
 	(void)provider;
 	if (g_cancellable_set_error_if_cancelled(cancellable, error))
 		return FALSE;
-	bundle = ls_scaffold_step_render(options, context, error);
+	bundle = ls_scaffold_step_render_recipe(recipe, options, context, error);
 	if (bundle == NULL || g_cancellable_set_error_if_cancelled(cancellable, error))
 		return FALSE;
 	return ls_context_apply(context, bundle, error);
@@ -93,4 +92,31 @@ ls_scaffold_step_class_init(LsScaffoldStepClass *klass){
 static void
 ls_scaffold_step_init(LsScaffoldStep *self){
 	(void)self;
+}
+/* A sealed native snapshot replaces embedded templates, including their path
+ * inventory. Filter only existing paths, preserving the normal seed contract. */
+gchar *
+ls_scaffold_step_render_recipe(
+	LsRecipe *recipe, JsonObject *options, LsContext *context, GError **error
+){
+	const gchar *source = ls_recipe_get_scaffold_source(recipe);
+	g_autoptr(JsonNode) node = NULL;
+	JsonArray *files;
+	guint i;
+	if (source == NULL)
+		return ls_scaffold_step_render(options, context, error);
+	if (!ls_scaffold_step_check_options(options, error))
+		return NULL;
+	node = ls_json_parse(source, error);
+	if (node == NULL)
+		return NULL;
+	/* The recipe setter already validated this immutable bundle. Iterate
+	 * backwards so removing entries preserves the archived order. */
+	files = json_object_get_array_member(json_node_get_object(node), "files");
+	for (i = json_array_get_length(files); i > 0; i--) {
+		JsonObject *file = json_array_get_object_element(files, i - 1);
+		if (ls_context_lookup(context, ls_string(file, "path")) != NULL)
+			json_array_remove_element(files, i - 1);
+	}
+	return ls_json_encode(node);
 }

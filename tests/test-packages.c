@@ -99,6 +99,8 @@ roundtrip(void){
 	g_autofree gchar *recipe_path = g_build_filename(sale, "recipe.yaml", NULL);
 	g_autofree gchar *catalog_path = g_build_filename(sale, "prompts.yaml", NULL);
 	g_autofree gchar *manifest_path = g_build_filename(sale, "package.yaml", NULL);
+	g_autofree gchar *scaffold_path = g_build_filename(sale, "scaffold.json", NULL);
+	g_autofree gchar *scaffold = NULL;
 	g_autofree gchar *manifest = NULL;
 	g_autofree gchar *changed = g_strconcat(catalog_text, "# edited\n", NULL);
 	g_assert_no_error(error);
@@ -110,6 +112,8 @@ roundtrip(void){
 	g_assert_cmpstr(ls_recipe_get_source(loaded), ==, recipe_text);
 	g_assert_cmpstr(ls_prompts_get_source(archived), ==, catalog_text);
 	g_assert_cmpstr(ls_prompts_get_digest(archived), ==, ls_prompts_get_digest(prompts));
+	g_assert_true(g_file_get_contents(scaffold_path, &scaffold, NULL, &error));
+	g_assert_cmpstr(ls_recipe_get_scaffold_source(loaded), ==, scaffold);
 	{
 		g_autoptr(JsonObject) ai = ls_recipe_resolve_ai(loaded,
 			json_array_get_object_element(ls_recipe_get_steps(loaded), 0));
@@ -141,6 +145,11 @@ roundtrip(void){
 		assert_rejected(sale);
 	}
 	g_assert_true(g_file_set_contents(manifest_path, manifest, -1, &error));
+	g_assert_true(g_file_set_contents(scaffold_path, "{\"files\":[]}", -1, &error));
+	assert_rejected(sale);
+	g_assert_cmpint(g_unlink(scaffold_path), ==, 0);
+	assert_rejected(sale);
+	g_assert_true(g_file_set_contents(scaffold_path, scaffold, -1, &error));
 	g_assert_cmpint(g_unlink(catalog_path), ==, 0);
 	assert_rejected(sale);
 	g_assert_no_error(error);
@@ -164,6 +173,10 @@ resume_package(void){
 	g_autoptr(LsPipeline) pipeline = ls_pipeline_new(provider, prompts);
 	PackageProvider *fixture = (PackageProvider *)provider;
 	g_assert_no_error(error);
+	/* Simulate an older release whose native template differs from today's
+	 * embedded scaffold. Both the source and its path inventory are pinned. */
+	g_assert_true(ls_recipe_set_scaffold_source(recipe,
+		"{\"files\":[{\"path\":\"Makefile\",\"content\":\"Archived native template 2026\"}]}", &error));
 	g_assert_true(ls_package_save(sale, recipe, prompts, &error));
 	g_assert_false(ls_pipeline_run(pipeline, recipe, output, FALSE, NULL, &error));
 	g_assert_error(error, LS_ERROR, LS_ERROR_PROVIDER);
@@ -176,6 +189,16 @@ resume_package(void){
 	g_assert_cmpuint(fixture->calls, ==, 2);
 	g_clear_error(&error);
 	g_clear_object(&pipeline);
+	/* Matching recipe/catalog alone still fail with changed native templates. */
+	{
+		g_autoptr(LsRecipe) unpinned = ls_recipe_new(recipe_text, &error);
+		pipeline = ls_pipeline_new(provider, prompts);
+		g_assert_false(ls_pipeline_run(pipeline, unpinned, output, TRUE, NULL, &error));
+		g_assert_error(error, LS_ERROR, LS_ERROR_CONFLICT);
+		g_assert_cmpuint(fixture->calls, ==, 2);
+		g_clear_error(&error);
+		g_clear_object(&pipeline);
+	}
 	g_clear_object(&recipe);
 	g_clear_object(&prompts);
 	g_assert_cmpint(g_rename(sale, moved), ==, 0);
@@ -186,7 +209,46 @@ resume_package(void){
 	g_assert_true(ls_pipeline_run(pipeline, loaded, output, TRUE, NULL, &error));
 	g_assert_no_error(error);
 	g_assert_cmpuint(fixture->calls, ==, 3);
+	{
+		g_autofree gchar *path = g_build_filename(output, "Makefile", NULL);
+		g_autofree gchar *contents = ls_read_text(path, &error);
+		g_assert_no_error(error);
+		g_assert_cmpstr(contents, ==, "Archived native template 2026");
+	}
 	remove_tree(directory);
+}
+
+/* Archived templates retain the normal seed-preservation and path-validation
+ * contract, including transactional rejection and self-assignment ownership. */
+static void
+native_snapshot(void){
+	const gchar *source = "{\"files\":[{\"path\":\"Makefile\",\"content\":\"Archived\"}]}";
+	const gchar *invalid[] = {"[]", "{}", "{\"files\":null}",
+		"{\"files\":[{\"path\":\"../escape\",\"content\":\"bad\"}]}",
+		"{\"files\":[],\"delete\":[\"Makefile\"]}"};
+	g_autoptr(GError) error = NULL;
+	g_autoptr(LsRecipe) recipe = ls_recipe_new(recipe_text, &error);
+	g_autoptr(LsContext) context = ls_context_new();
+	g_autofree gchar *rendered = NULL;
+	guint i;
+	g_assert_true(ls_recipe_set_scaffold_source(recipe, source, &error));
+	g_assert_true(ls_recipe_set_scaffold_source(recipe, ls_recipe_get_scaffold_source(recipe), &error));
+	for (i = 0; i < G_N_ELEMENTS(invalid); i++) {
+		g_assert_false(ls_recipe_set_scaffold_source(recipe, invalid[i], &error));
+		g_assert_nonnull(error);
+		g_clear_error(&error);
+		g_assert_cmpstr(ls_recipe_get_scaffold_source(recipe), ==, source);
+	}
+	rendered = ls_scaffold_step_render_recipe(recipe, NULL, context, &error);
+	g_assert_cmpstr(rendered, ==, source);
+	g_clear_pointer(&rendered, g_free);
+	g_assert_true(ls_context_apply(context,
+		"{\"files\":[{\"path\":\"Makefile\",\"content\":\"Approved seed\"}]}", &error));
+	rendered = ls_scaffold_step_render_recipe(recipe, NULL, context, &error);
+	g_assert_cmpstr(rendered, ==, "{\"files\":[]}");
+	g_assert_true(ls_recipe_set_scaffold_source(recipe, NULL, &error));
+	g_assert_null(ls_recipe_get_scaffold_source(recipe));
+	g_assert_no_error(error);
 }
 
 /* Bad metadata fails parsing before any workspace or provider is available. */
@@ -348,6 +410,7 @@ main(int argc, char **argv){
 	g_test_add_func("/package/roundtrip", roundtrip);
 	g_test_add_func("/package/metadata-invalid", metadata_invalid);
 	g_test_add_func("/package/resume", resume_package);
+	g_test_add_func("/package/native-snapshot", native_snapshot);
 	for (i = 0; i < G_N_ELEMENTS(skus); i++) {
 		g_autofree gchar *name = g_strdup_printf("/package/acceptance/%s", skus[i]);
 		g_test_add_data_func(name, skus[i], sku_acceptance);

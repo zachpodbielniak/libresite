@@ -7,6 +7,7 @@ struct _LsRecipe {
 	GObject parent_instance;
 	JsonNode *root;
 	gchar *source;
+	gchar *scaffold_source;
 	gint timeout;
 	gboolean unlimited;
 };
@@ -17,6 +18,7 @@ ls_recipe_finalize(GObject *object){
 	LsRecipe *self = LS_RECIPE(object);
 	g_clear_pointer(&self->root, json_node_unref);
 	g_free(self->source);
+	g_free(self->scaffold_source);
 	G_OBJECT_CLASS(ls_recipe_parent_class)->finalize(object);
 }
 static void
@@ -581,4 +583,36 @@ ls_recipe_from_form(const gchar *json, GError **error){
 	/* JSON is a YAML subset; use the one recipe boundary for schema checks. */
 	encoded = ls_json_encode(node);
 	return ls_recipe_new(encoded, error);
+}
+/* Preserve a validated native bundle independently of mutable embedded data.
+ * This is an input pin, not an execution override: it participates in resume. */
+gboolean
+ls_recipe_set_scaffold_source(LsRecipe *self, const gchar *bundle, GError **error){
+	g_autoptr(LsContext) context = ls_context_new();
+	g_autoptr(JsonNode) node = NULL;
+	gchar *copy;
+	if (bundle != NULL) {
+		node = ls_json_parse(bundle, error);
+		if (node == NULL)
+			return FALSE;
+		if (!JSON_NODE_HOLDS_OBJECT(node) ||
+			!ls_object_keys(json_node_get_object(node), "|files|", error)) {
+			if (error != NULL && *error == NULL)
+				g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID,
+					"Archived scaffold must be a files bundle");
+			return FALSE;
+		}
+		if (!ls_context_apply(context, bundle, error))
+			return FALSE;
+	}
+	copy = g_strdup(bundle);
+	g_free(self->scaffold_source);
+	self->scaffold_source = copy;
+	return TRUE;
+}
+
+/* Return exact bytes: reserialization must not change checkpoint identity. */
+const gchar *
+ls_recipe_get_scaffold_source(LsRecipe *self){
+	return self->scaffold_source;
 }

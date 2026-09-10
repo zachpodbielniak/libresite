@@ -428,7 +428,7 @@ main(int argc, char **argv){
 					preview_context = ls_recipe_create_context(recipe, &error);
 				if (preview_context == NULL)
 					goto fail;
-				bundle = ls_scaffold_step_render(node != NULL ? json_node_get_object(node) : NULL,
+				bundle = ls_scaffold_step_render_recipe(recipe, node != NULL ? json_node_get_object(node) : NULL,
 					preview_context, &error);
 				if (bundle == NULL || !ls_context_apply(preview_context, bundle, &error))
 					goto fail;

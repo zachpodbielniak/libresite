@@ -495,7 +495,11 @@ run_pipeline(
 		JsonObject *step = json_array_get_object_element(steps, i);
 		if (g_str_equal(ls_string(step, "type"), "scaffold")) {
 			g_autoptr(LsContext) empty = ls_context_new();
-			scaffold = ls_scaffold_step_render(NULL, empty, error);
+			/* A sold package retains exact native bytes as well as its catalog.
+			 * Unsold recipes keep the existing embedded-template fingerprint. */
+			scaffold = ls_recipe_get_scaffold_source(recipe) != NULL
+				? g_strdup(ls_recipe_get_scaffold_source(recipe))
+				: ls_scaffold_step_render(NULL, empty, error);
 			if (scaffold == NULL)
 				goto out;
 			break;

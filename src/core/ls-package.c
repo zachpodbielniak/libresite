@@ -1,12 +1,26 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
 #include "core/ls-package.h"
+#include "steps/ls-step.h"
 #include <errno.h>
 #include <glib/gstdio.h>
 #include <string.h>
 
 /* These fixed names are never supplied by a manifest. Keep cleanup bounded to
  * our private staging directory, even when publication fails. */
-static const gchar *package_files[] = {"recipe.yaml", "prompts.yaml", "package.yaml"};
+static const gchar *package_files[] = {"recipe.yaml", "prompts.yaml", "package.yaml", "scaffold.json"};
+
+/* Native templates are additional inputs only for recipes selecting scaffold. */
+static gboolean
+uses_scaffold(LsRecipe *recipe){
+	JsonArray *steps = ls_recipe_get_steps(recipe);
+	guint i;
+	for (i = 0; i < json_array_get_length(steps); i++) {
+		JsonObject *step = json_array_get_object_element(steps, i);
+		if (g_str_equal(ls_string(step, "type"), "scaffold"))
+			return TRUE;
+	}
+	return FALSE;
+}
 
 /* A package is a snapshot, not a pointer to mutable installed data. */
 gboolean
@@ -16,9 +30,10 @@ ls_package_save(
 	JsonObject *root = ls_recipe_get_root(recipe);
 	JsonObject *metadata;
 	g_autofree gchar *recipe_digest = NULL, *manifest = NULL;
+	g_autofree gchar *scaffold = NULL, *scaffold_digest = NULL, *native_pin = NULL;
 	g_autofree gchar *absolute = NULL, *staging = NULL;
 	g_autoptr(GFile) source = NULL, target = NULL;
-	const gchar *texts[3];
+	const gchar *texts[4];
 	gboolean okay = FALSE;
 	guint i;
 	if (!json_object_has_member(root, "package") || directory == NULL || *directory == '\0') {
@@ -27,18 +42,31 @@ ls_package_save(
 		return FALSE;
 	}
 	metadata = json_object_get_object_member(root, "package");
+	if (uses_scaffold(recipe)) {
+		g_autoptr(LsContext) empty = ls_context_new();
+		/* Re-sealing an archived recipe must retain its old native inputs too. */
+		scaffold = ls_recipe_get_scaffold_source(recipe) != NULL
+			? g_strdup(ls_recipe_get_scaffold_source(recipe))
+			: ls_scaffold_step_render(NULL, empty, error);
+		if (scaffold == NULL)
+			return FALSE;
+		scaffold_digest = g_compute_checksum_for_string(G_CHECKSUM_SHA256, scaffold, -1);
+		native_pin = g_strdup_printf("scaffold_sha256: '%s'\n", scaffold_digest);
+	}
 	recipe_digest = g_compute_checksum_for_string(G_CHECKSUM_SHA256,
 		ls_recipe_get_source(recipe), -1);
 	/* Metadata tokens were restricted by recipe validation; quoted YAML scalar
 	 * values prevent numeric releases or digest prefixes from changing types. */
 	manifest = g_strdup_printf(
 		"version: 1\nsku: '%s'\nrelease: '%s'\nkind: '%s'\n"
-		"recipe_sha256: '%s'\ncatalog_sha256: '%s'\n",
+		"recipe_sha256: '%s'\ncatalog_sha256: '%s'\n%s",
 		ls_string(metadata, "sku"), ls_string(metadata, "release"),
-		ls_string(metadata, "kind"), recipe_digest, ls_prompts_get_digest(prompts));
+		ls_string(metadata, "kind"), recipe_digest, ls_prompts_get_digest(prompts),
+		native_pin != NULL ? native_pin : "");
 	texts[0] = ls_recipe_get_source(recipe);
 	texts[1] = ls_prompts_get_source(prompts);
 	texts[2] = manifest;
+	texts[3] = scaffold;
 	absolute = g_canonicalize_filename(directory, NULL);
 	staging = g_strconcat(absolute, ".seal-XXXXXX", NULL);
 	if (g_mkdtemp_full(staging, 0700) == NULL) {
@@ -48,6 +76,8 @@ ls_package_save(
 	}
 	for (i = 0; i < G_N_ELEMENTS(package_files); i++) {
 		g_autofree gchar *path = g_build_filename(staging, package_files[i], NULL);
+		if (texts[i] == NULL)
+			continue;
 		if (!g_file_set_contents_full(path, texts[i], -1,
 			G_FILE_SET_CONTENTS_CONSISTENT | G_FILE_SET_CONTENTS_DURABLE, 0600, error))
 			goto out;
@@ -93,6 +123,7 @@ ls_package_load(
 	const gchar *directory, LsRecipe **recipe, LsPrompts **prompts, GError **error
 ){
 	g_autofree gchar *recipe_text = NULL, *catalog_text = NULL, *manifest_text = NULL;
+	g_autofree gchar *scaffold = NULL;
 	g_autoptr(JsonNode) manifest = NULL;
 	g_autoptr(LsRecipe) parsed_recipe = NULL;
 	g_autoptr(LsPrompts) parsed_prompts = NULL;
@@ -108,7 +139,7 @@ ls_package_load(
 		g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID, "Package directory is required");
 		return FALSE;
 	}
-	for (i = 0; i < G_N_ELEMENTS(package_files); i++) {
+	for (i = 0; i < G_N_ELEMENTS(texts); i++) {
 		g_autofree gchar *path = g_build_filename(directory, package_files[i], NULL);
 		*texts[i] = ls_read_text(path, error);
 		if (*texts[i] == NULL)
@@ -120,7 +151,7 @@ ls_package_load(
 	if (!JSON_NODE_HOLDS_OBJECT(manifest))
 		goto invalid;
 	object = json_node_get_object(manifest);
-	if (!ls_object_keys(object, "|version|sku|release|kind|recipe_sha256|catalog_sha256|", error))
+	if (!ls_object_keys(object, "|version|sku|release|kind|recipe_sha256|catalog_sha256|scaffold_sha256|", error))
 		return FALSE;
 	version = json_object_get_member(object, "version");
 	if (version == NULL || json_node_get_value_type(version) != G_TYPE_INT64 ||
@@ -135,6 +166,16 @@ ls_package_load(
 	parsed_prompts = ls_prompts_new_from_yaml(catalog_text, error);
 	if (parsed_prompts == NULL)
 		return FALSE;
+	if (uses_scaffold(parsed_recipe)) {
+		g_autofree gchar *path = g_build_filename(directory, "scaffold.json", NULL);
+		/* Missing native pins must not fall back to a newer embedded scaffold. */
+		scaffold = ls_read_text(path, error);
+		if (scaffold == NULL ||
+			!check_digest(scaffold, ls_string(object, "scaffold_sha256"), "scaffold", error) ||
+			!ls_recipe_set_scaffold_source(parsed_recipe, scaffold, error))
+			return FALSE;
+	} else if (json_object_has_member(object, "scaffold_sha256"))
+		goto invalid;
 	if (!json_object_has_member(ls_recipe_get_root(parsed_recipe), "package"))
 		goto invalid;
 	metadata = json_object_get_object_member(ls_recipe_get_root(parsed_recipe), "package");

@@ -7,6 +7,8 @@
 #+version: 1
 
 * Purpose and scope
+
+Sold packages archive the complete native file bundle as =scaffold.json= with a =scaffold_sha256= manifest pin. Loading =--package DIR= uses these saved template bytes and their path inventory for previews, generation and checkpoint identity, preserving explicit seeds. Missing or modified archived templates never fall back to current embedded defaults. Ordinary recipes without a native snapshot retain the existing embedded-template fingerprint; see [[file:packages.org][sold package pinning]].
 The native =scaffold= module emits reusable static-site files without calling a provider. It runs before the product/design stages in bundled static recipes and the default structured-form pipeline. Model stages receive those files as current project context and spend their output on distinctive design, content and working interactions. The scaffold is deliberately unstyled: later stages integrate utility pages into the chosen visual system.
 
 The only supported profile is =static=, also the default. Application and revision recipes do not acquire this step automatically. A static Makefile cannot infer a C server's targets, database bootstrap or framework routes. Add this step to a custom static pipeline explicitly; existing custom pipelines retain their behavior.

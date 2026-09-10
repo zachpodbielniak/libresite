@@ -91,4 +91,15 @@ gboolean ls_scaffold_step_check_options(JsonObject *options, GError **error);
  * Returns: (transfer full) (nullable): a JSON file bundle, or NULL on error
  */
 gchar *ls_scaffold_step_render(JsonObject *options, LsContext *context, GError **error);
+/**
+ * ls_scaffold_step_render_recipe:
+ * @recipe: recipe with an optional archived native snapshot
+ * @options: (nullable): static scaffold settings
+ * @context: existing artifacts; matching paths are preserved
+ * @error: return location for an error
+ * Returns: (transfer full) (nullable): missing archived or default native files
+ */
+gchar *ls_scaffold_step_render_recipe(
+	LsRecipe *recipe, JsonObject *options, LsContext *context, GError **error
+);
 G_END_DECLS

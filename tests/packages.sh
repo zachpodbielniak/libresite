@@ -15,6 +15,14 @@ do
 	"$binary" -r "$root/recipes/$sku.yaml" --seal-package "$test_dir/$sku"
 	cmp "$root/recipes/$sku.yaml" "$test_dir/$sku/recipe.yaml"
 	cmp "$root/data/prompts.yaml" "$test_dir/$sku/prompts.yaml"
+	if [[ "$sku" == application ]]
+	then
+		[[ ! -e "$test_dir/$sku/scaffold.json" ]]
+	else
+		[[ -s "$test_dir/$sku/scaffold.json" ]]
+		"$binary" --package "$test_dir/$sku" --preview scaffold > "$test_dir/scaffold-preview"
+		cmp <(printf '%s\n' "$(< "$test_dir/$sku/scaffold.json")") "$test_dir/scaffold-preview"
+	fi
 	(cd /tmp && "$binary" --package "$test_dir/$sku" --validate)
 	(cd /tmp && "$binary" --package "$test_dir/$sku" --preview design) > "$test_dir/preview"
 	rg -Fq 'FLAGSHIP QUALITY DEFAULT' "$test_dir/preview"
@@ -47,6 +55,20 @@ then
 fi
 rg -Fq 'catalog SHA-256 mismatch' "$test_dir/error"
 [[ ! -e "$test_dir/site.libresite-work" ]]
+# Missing native inputs are an error, never a fallback to installed templates.
+mv "$test_dir/studio/scaffold.json" "$test_dir/saved-scaffold"
+if "$binary" --package "$test_dir/studio" -o "$test_dir/native-site" > "$test_dir/error" 2>&1
+then
+	exit 1
+fi
+[[ ! -e "$test_dir/native-site.libresite-work" ]]
+mv "$test_dir/saved-scaffold" "$test_dir/studio/scaffold.json"
+# Simulate an intact older archive with different native template contents.
+printf '%s' '{"files":[{"path":"Makefile","content":"Archived native template 2026"}]}' > "$test_dir/studio/scaffold.json"
+read -r native_digest _ < <(sha256sum "$test_dir/studio/scaffold.json")
+sed -i "s/^scaffold_sha256:.*/scaffold_sha256: '$native_digest'/" "$test_dir/studio/package.yaml"
+"$binary" --package "$test_dir/studio" --preview scaffold > "$test_dir/native-preview"
+rg -Fq 'Archived native template 2026' "$test_dir/native-preview"
 # A caller cannot relabel a different stack as the supported application SKU.
 for stack in react tailwind
 do

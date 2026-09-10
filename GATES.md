@@ -7,7 +7,7 @@ Scope: Ship six fixed-scope vertical packages, retain the C application SKU, rai
   EXPECT: PACKAGES VERIFIED
   EVIDENCE: pending
 
-- [ ] G2: Sealed recipes and catalogs round-trip without fingerprint drift and reject tampering; old packages resume after catalog changes.
+- [ ] G2: Sealed recipes, catalogs and native templates round-trip without fingerprint drift and reject tampering; old packages resume after default changes.
   CHECK: build/release/test-packages
   EXPECT: End of package tests
   EVIDENCE: pending
