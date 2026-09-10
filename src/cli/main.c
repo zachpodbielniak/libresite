@@ -151,6 +151,8 @@ load_plugins(LsPipeline *pipeline, gchar **paths, GError **error){
 int
 main(int argc, char **argv){
 	g_autofree gchar *recipe_path = NULL, *output = NULL, *catalog = NULL, *preview = NULL;
+	g_autofree gchar *form_path = NULL;
+	gboolean emit_yaml = FALSE;
 	g_auto(GStrv) plugins = NULL;
 	gint64 max_prompt_bytes = 0;
 	gint timeout = -1;
@@ -165,6 +167,10 @@ main(int argc, char **argv){
 	g_autoptr(LsPipeline) pipeline = NULL;
 	g_autofree gchar *yaml = NULL;
 	GOptionEntry entries[] = {
+		{"from-form", 0, 0, G_OPTION_ARG_FILENAME, &form_path,
+		 "Validate structured JSON form data and emit a YAML recipe", "FILE"},
+		{"emit-yaml", 0, 0, G_OPTION_ARG_NONE, &emit_yaml,
+		 "Emit the validated recipe as YAML without generation", NULL},
 		{"unlimited", 0, 0, G_OPTION_ARG_NONE, &unlimited,
 		 "Disable provider time and requested output budgets for this run", NULL},
 		{"timeout", 0, 0, G_OPTION_ARG_INT, &timeout,
@@ -226,7 +232,8 @@ main(int argc, char **argv){
 	g_option_context_add_main_entries(options, entries, NULL);
 	g_option_context_set_description(
 		options,
-		"Examples:\n  libresite -r recipes/landing.yaml --validate\n  libresite -r "
+		"Examples:\n  libresite --from-form form.json > site.yaml\n"
+		"  libresite -r site.yaml --emit-yaml\n  libresite -r recipes/landing.yaml --validate\n  libresite -r "
 		"recipes/landing.yaml --plan\n  libresite -r recipes/landing.yaml --preview design\n  "
 		"libresite -r recipes/landing.yaml -o ./my-site\n  libresite -r recipes/landing.yaml -o "
 		"./my-site --resume\n\nProviders: codex, claude-code, grok-build, cursor, "
@@ -258,17 +265,26 @@ main(int argc, char **argv){
 		g_print("brief\ndesign\nfrontend\nbackend\ndatabase\nreview\ngenerate\nvalidate\n");
 		return 0;
 	}
-	if ((guint)validate + (guint)plan + (guint)(preview != NULL) > 1) {
+	if (form_path != NULL) {
+		if (recipe_path != NULL || output != NULL || resume || validate || plan || preview != NULL) {
+			g_set_error_literal(&error, LS_ERROR, LS_ERROR_INVALID,
+				"--from-form emits YAML; do not combine with --recipe or generation/inspection modes");
+			goto fail;
+		}
+		emit_yaml = TRUE;
+	}
+	if ((guint)validate + (guint)plan + (guint)(preview != NULL) + (guint)emit_yaml > 1 ||
+		(emit_yaml && (output != NULL || resume))) {
 		g_set_error_literal(
-			&error, LS_ERROR, LS_ERROR_INVALID, "Choose one of --validate, --plan or --preview"
+			&error, LS_ERROR, LS_ERROR_INVALID, "Choose one of --validate, --plan, --preview or --emit-yaml"
 		);
 		goto fail;
 	}
-	if (recipe_path == NULL) {
+	if (recipe_path == NULL && form_path == NULL) {
 		g_set_error_literal(&error, LS_ERROR, LS_ERROR_INVALID, "--recipe is required; see --help");
 		goto fail;
 	}
-	yaml = ls_read_text(recipe_path, &error);
+	yaml = ls_read_text(form_path != NULL ? form_path : recipe_path, &error);
 	if (yaml == NULL)
 		goto fail;
 	if (timeout < -1 || timeout > 86400) {
@@ -276,7 +292,7 @@ main(int argc, char **argv){
 			"--timeout must be between 0 and 86400 seconds");
 		goto fail;
 	}
-	recipe = ls_recipe_new(yaml, &error);
+	recipe = form_path != NULL ? ls_recipe_from_form(yaml, &error) : ls_recipe_new(yaml, &error);
 	if (recipe != NULL) {
 		ls_recipe_set_timeout(recipe, timeout);
 		ls_recipe_set_unlimited(recipe, unlimited);
@@ -295,6 +311,16 @@ main(int argc, char **argv){
 	pipeline = ls_pipeline_new(LS_PROVIDER(provider), prompts);
 	if (!load_plugins(pipeline, plugins, &error) || !ls_pipeline_validate(pipeline, recipe, &error))
 		goto fail;
+	if (emit_yaml) {
+		g_autofree gchar *emitted = ls_recipe_to_yaml(recipe, &error);
+		if (emitted == NULL)
+			goto fail;
+		if (fputs(emitted, stdout) == EOF || fflush(stdout) == EOF) {
+			g_set_error_literal(&error, LS_ERROR, LS_ERROR_INVALID, "Cannot write YAML to stdout");
+			goto fail;
+		}
+		return 0;
+	}
 	if (validate) {
 		g_print("Recipe valid\n");
 		return 0;

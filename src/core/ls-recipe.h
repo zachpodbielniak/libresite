@@ -12,6 +12,26 @@ G_DECLARE_FINAL_TYPE(LsRecipe, ls_recipe, LS, RECIPE, GObject)
  */
 LsRecipe *ls_recipe_new(const gchar *yaml, GError **error);
 /**
+ * ls_recipe_from_form:
+ * @json: UTF-8 JSON form object with name, structured site and optional ai/pipeline
+ * @error: return location for an error
+ *
+ * Supplies version 1 and a static-site pipeline when omitted. No provider calls.
+ * Catalog and module validation still require ls_pipeline_validate().
+ * Returns: (transfer full) (nullable): validated recipe independent of input data
+ */
+LsRecipe *ls_recipe_from_form(const gchar *json, GError **error);
+/**
+ * ls_recipe_to_yaml:
+ * @self: validated recipe
+ * @error: return location for an error
+ *
+ * Preserves string types and exact text, including copy locks. Does not emit
+ * execution-only overrides or modify the recipe or its checkpoint identity.
+ * Returns: (transfer full) (nullable): YAML text, freed with g_free()
+ */
+gchar *ls_recipe_to_yaml(LsRecipe *self, GError **error);
+/**
  * ls_recipe_set_timeout:
  * @self: recipe
  * @seconds: -1 to use recipe values, 0 for unlimited, otherwise 1..86400 seconds
