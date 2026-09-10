@@ -102,4 +102,20 @@ gchar *ls_scaffold_step_render(JsonObject *options, LsContext *context, GError *
 gchar *ls_scaffold_step_render_recipe(
 	LsRecipe *recipe, JsonObject *options, LsContext *context, GError **error
 );
+#define LS_TYPE_GATE_STEP (ls_gate_step_get_type())
+G_DECLARE_FINAL_TYPE(LsGateStep, ls_gate_step, LS, GATE_STEP, LsStep)
+/**
+ * ls_gate_step_check_options:
+ * @options: (nullable) (transfer none): gate options
+ * @error: return location for an error
+ * Returns: whether native gate options are valid
+ */
+gboolean ls_gate_step_check_options(JsonObject *options, GError **error);
+/**
+ * ls_gate_step_preview:
+ * @options: (nullable): gate options
+ * @error: return location for an error
+ * Returns: (transfer full) (nullable): human-readable gate description
+ */
+gchar *ls_gate_step_preview(JsonObject *options, GError **error);
 G_END_DECLS

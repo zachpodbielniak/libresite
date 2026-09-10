@@ -162,7 +162,9 @@ main(int argc, char **argv){
 	gint timeout = -1;
 	gboolean unlimited = FALSE;
 	gboolean validate = FALSE, plan = FALSE, resume = FALSE, license = FALSE, version = FALSE,
-			 list = FALSE, debug = FALSE;
+			 list = FALSE, debug = FALSE, approve_all = FALSE;
+	g_auto(GStrv) approvals = NULL;
+	g_autofree gchar *qa_path = NULL;
 	g_autoptr(GOptionContext) options = NULL;
 	g_autoptr(GError) error = NULL;
 	g_autoptr(LsRecipe) recipe = NULL;
@@ -185,6 +187,12 @@ main(int argc, char **argv){
 		 "YAML provider/model rate card for --price-usage", "FILE"},
 		{"revise", 0, 0, G_OPTION_ARG_FILENAME, &project,
 		 "Load an existing text project; site.brief describes the changes", "DIR"},
+		{"qa", 0, 0, G_OPTION_ARG_FILENAME, &qa_path,
+		 "Inspect a published project tree; does not run native validate or execute code", "DIR"},
+		{"approve", 0, 0, G_OPTION_ARG_STRING_ARRAY, &approvals,
+		 "Approve a native gate step id (repeatable)", "STEP-ID"},
+		{"approve-all", 0, 0, G_OPTION_ARG_NONE, &approve_all,
+		 "Approve every native gate for this unattended run", NULL},
 
 
 		{"from-form", 0, 0, G_OPTION_ARG_FILENAME, &form_path,
@@ -261,10 +269,12 @@ main(int argc, char **argv){
 		"  libresite -r site.yaml --emit-yaml\n  libresite -r recipes/landing.yaml --validate\n  libresite -r "
 		"recipes/landing.yaml --plan\n  libresite -r recipes/landing.yaml --preview design\n  "
 		"libresite -r recipes/landing.yaml -o ./my-site\n  libresite -r recipes/landing.yaml -o "
-		"./my-site --resume\n  libresite -r recipes/revision.yaml --revise ./my-site "
+		"./my-site --resume --approve design-gate\n  libresite --qa ./my-site\n  "
+		"libresite -r recipes/revision.yaml --revise ./my-site "
 		"-o ./my-site-v2\n\nProviders: codex, claude-code, grok-build, cursor, "
 		"antigravity.\nGeneration uses your installed and authenticated provider CLI.\nGenerated "
-		"code is published as files; no build, deployment or hosting is automatic."
+		"code is published as files; no build, deployment or hosting is automatic.\n"
+		"--qa inspects a published tree and does not execute generated tests."
 	);
 	if (!g_option_context_parse(options, &argc, &argv, &error))
 		goto fail;
@@ -274,6 +284,31 @@ main(int argc, char **argv){
 		);
 		goto fail;
 	}
+	if (qa_path != NULL) {
+		g_autofree gchar *report = NULL;
+		if (recipe_path != NULL || package_path != NULL || seal_path != NULL ||
+			form_path != NULL || output != NULL || project != NULL || resume ||
+			validate || plan || preview != NULL || emit_yaml || license || version || list ||
+			plugins != NULL || catalog != NULL || debug || unlimited || timeout != -1 ||
+			max_prompt_bytes != 0 || usage_path != NULL || rates_path != NULL ||
+			approvals != NULL || approve_all) {
+			g_set_error_literal(&error, LS_ERROR, LS_ERROR_INVALID,
+				"Use --qa DIR without generation, inspection or pricing options");
+			goto fail;
+		}
+		if (!ls_qa_check(qa_path, &report, NULL, &error)) {
+			if (error != NULL)
+				goto fail;
+			if (report != NULL)
+				fputs(report, stdout);
+			return 1;
+		}
+		if (report != NULL && (fputs(report, stdout) == EOF || fflush(stdout) == EOF)) {
+			g_set_error_literal(&error, LS_ERROR, LS_ERROR_INVALID, "Cannot write QA report");
+			goto fail;
+		}
+		return 0;
+	}
 	if (usage_path != NULL || rates_path != NULL) {
 		g_autofree gchar *usage_text = NULL, *rates_text = NULL, *priced = NULL;
 		if (usage_path == NULL || rates_path == NULL || recipe_path != NULL ||
@@ -281,7 +316,7 @@ main(int argc, char **argv){
 			form_path != NULL || output != NULL || project != NULL || resume ||
 			validate || plan || preview != NULL || emit_yaml || license || version || list ||
 			plugins != NULL || catalog != NULL || debug || unlimited || timeout != -1 ||
-			max_prompt_bytes != 0) {
+			max_prompt_bytes != 0 || approvals != NULL || approve_all) {
 			g_set_error_literal(&error, LS_ERROR, LS_ERROR_INVALID,
 				"Use --price-usage FILE --rates FILE without generation or inspection options");
 			goto fail;
@@ -315,7 +350,7 @@ main(int argc, char **argv){
 		return 0;
 	}
 	if (list) {
-		g_print("brief\ndesign\nfrontend\nbackend\ndatabase\nreview\ngenerate\nvalidate\nscaffold\n");
+		g_print("brief\ndesign\nfrontend\nbackend\ndatabase\nreview\ngenerate\nvalidate\nscaffold\ngate\n");
 		return 0;
 	}
 	if (form_path != NULL) {
@@ -365,8 +400,12 @@ main(int argc, char **argv){
 		prompts = recipe != NULL ? ls_prompts_new(catalog, &error) : NULL;
 	}
 	if (recipe != NULL) {
+		guint i;
 		ls_recipe_set_timeout(recipe, timeout);
 		ls_recipe_set_unlimited(recipe, unlimited);
+		ls_recipe_set_approve_all(recipe, approve_all);
+		for (i = 0; approvals != NULL && approvals[i] != NULL; i++)
+			ls_recipe_approve(recipe, approvals[i]);
 	}
 	if (prompts == NULL)
 		goto fail;
@@ -418,7 +457,8 @@ main(int argc, char **argv){
 			JsonObject *step = json_array_get_object_element(steps, i);
 			g_autoptr(JsonObject) settings = ls_recipe_resolve_ai(recipe, step);
 			gboolean native = g_str_equal(ls_string(step, "type"), "validate") ||
-				g_str_equal(ls_string(step, "type"), "scaffold");
+				g_str_equal(ls_string(step, "type"), "scaffold") ||
+				g_str_equal(ls_string(step, "type"), "gate");
 			/* Preview deterministic predecessors without running AI stages. This
 			 * is the same bundle the native step commits during execution. */
 			if (preview != NULL && g_str_equal(ls_string(step, "type"), "scaffold")) {
@@ -437,6 +477,17 @@ main(int argc, char **argv){
 					return 0;
 				}
 				continue;
+			}
+			if (preview != NULL && g_str_equal(ls_string(step, "type"), "gate") &&
+				g_str_equal(preview, ls_string(step, "id"))) {
+				JsonNode *node = json_object_get_member(step, "options");
+				g_autofree gchar *text = ls_gate_step_preview(
+					node != NULL && JSON_NODE_HOLDS_OBJECT(node) ? json_node_get_object(node) : NULL,
+					&error);
+				if (text == NULL)
+					goto fail;
+				g_print("%s", text);
+				return 0;
 			}
 			if (preview != NULL && g_str_equal(preview, ls_string(step, "id"))) {
 				g_autofree gchar *text = NULL;

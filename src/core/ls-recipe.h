@@ -97,6 +97,29 @@ void ls_recipe_set_timeout(LsRecipe *self, gint seconds);
  */
 void ls_recipe_set_unlimited(LsRecipe *self, gboolean unlimited);
 /**
+ * ls_recipe_approve:
+ * @self: recipe
+ * @step_id: gate step id
+ *
+ * Execution-only approval for a native gate. Does not change recipe identity.
+ */
+void ls_recipe_approve(LsRecipe *self, const gchar *step_id);
+/**
+ * ls_recipe_set_approve_all:
+ * @self: recipe
+ * @approve_all: whether every gate is approved for this run
+ *
+ * Unattended generation override. Does not change checkpoint identity.
+ */
+void ls_recipe_set_approve_all(LsRecipe *self, gboolean approve_all);
+/**
+ * ls_recipe_is_approved:
+ * @self: recipe
+ * @step_id: gate step id
+ * Returns: whether @step_id may pass a native gate
+ */
+gboolean ls_recipe_is_approved(LsRecipe *self, const gchar *step_id);
+/**
  * ls_recipe_get_root:
  * @self: a recipe
  * Returns: (transfer none): immutable recipe object; do not modify

@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-10T18:07:19-04:00
+#+updated: 2026-09-10T18:40:00-04:00
 #+version: 0.1.0
 
 * Guides
@@ -24,6 +24,7 @@
 - [[file:building.org][Building and installation]]
 - [[file:operations.org][Operations and recovery]]
 - [[file:testing.org][Tests and validation limits]]
+- [[file:qa.org][Published-tree QA runner]]
 
 - [[file:robustness-review.org][Robustness review and verification scope]]
 

@@ -126,8 +126,7 @@ check_content(JsonObject *check, LsContext *context, GError **error){
 		g_set_error(error, LS_ERROR, LS_ERROR_INVALID, "Checked artifact is missing: %s", path);
 		return FALSE;
 	}
-	content = ls_artifact_get_content(artifact);
-	size = strlen(content);
+	size = ls_artifact_get_size(artifact);
 	if ((json_object_has_member(check, "min_bytes") &&
 		size < (gsize)json_object_get_int_member(check, "min_bytes")) ||
 		(json_object_has_member(check, "max_bytes") &&
@@ -136,6 +135,13 @@ check_content(JsonObject *check, LsContext *context, GError **error){
 			"Artifact '%s' has %" G_GSIZE_FORMAT " bytes, outside its configured byte bounds", path, size);
 		return FALSE;
 	}
+	if (ls_artifact_is_binary(artifact) &&
+		(json_object_has_member(check, "contains") || json_object_has_member(check, "excludes"))) {
+		g_set_error(error, LS_ERROR, LS_ERROR_INVALID,
+			"Artifact '%s' is binary; contains/excludes apply to UTF-8 text", path);
+		return FALSE;
+	}
+	content = ls_artifact_get_content(artifact);
 	for (i = 0; i < G_N_ELEMENTS(predicates); i++) {
 		JsonArray *strings;
 		if (!json_object_has_member(check, predicates[i]))
@@ -184,7 +190,9 @@ execute(
 		if (g_cancellable_set_error_if_cancelled(cancellable, error))
 			return FALSE;
 		artifact = ls_context_lookup(context, path);
-		if (artifact == NULL || !has_text(ls_artifact_get_content(artifact))) {
+		if (artifact == NULL ||
+			(ls_artifact_is_binary(artifact) ? ls_artifact_get_size(artifact) == 0
+				: !has_text(ls_artifact_get_content(artifact)))) {
 			g_set_error(error, LS_ERROR, LS_ERROR_INVALID,
 				"Required artifact is missing or empty: %s", path);
 			return FALSE;

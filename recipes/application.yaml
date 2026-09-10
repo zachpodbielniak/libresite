@@ -37,6 +37,11 @@ pipeline:
       type: brief
     - id: design
       type: design
+    - id: design-gate
+      type: gate
+      options:
+        message: Review docs/product.org and docs/design.org before implementing the application.
+        review: [docs/product.org, docs/design.org]
     - id: database
       type: database
     - id: backend

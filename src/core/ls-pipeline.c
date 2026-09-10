@@ -125,6 +125,7 @@ ls_pipeline_new(LsProvider *provider, LsPrompts *prompts){
 		ls_pipeline_register(self, names[i], LS_TYPE_GENERATE_STEP, NULL);
 	ls_pipeline_register(self, "validate", LS_TYPE_VALIDATE_STEP, NULL);
 	ls_pipeline_register(self, "scaffold", LS_TYPE_SCAFFOLD_STEP, NULL);
+	ls_pipeline_register(self, "gate", LS_TYPE_GATE_STEP, NULL);
 	return self;
 }
 /* Registration is instance-local, avoiding global initialization ordering. */
@@ -169,13 +170,17 @@ ls_pipeline_validate_context(LsPipeline *self, LsRecipe *recipe,
 				ls_prompts_render(self->prompts, recipe, config, context, error);
 			if (rendered == NULL)
 				return FALSE;
-		} else if (type == LS_TYPE_VALIDATE_STEP || type == LS_TYPE_SCAFFOLD_STEP) {
+		} else if (type == LS_TYPE_VALIDATE_STEP || type == LS_TYPE_SCAFFOLD_STEP ||
+			type == LS_TYPE_GATE_STEP) {
 			JsonNode *node = json_object_get_member(config, "options");
 			JsonObject *options = node != NULL && JSON_NODE_HOLDS_OBJECT(node)
 				? json_node_get_object(node) : NULL;
-			if (!(type == LS_TYPE_VALIDATE_STEP
+			gboolean okay = type == LS_TYPE_VALIDATE_STEP
 				? ls_validate_step_check_options(options, error)
-				: ls_scaffold_step_check_options(options, error))) {
+				: type == LS_TYPE_SCAFFOLD_STEP
+					? ls_scaffold_step_check_options(options, error)
+					: ls_gate_step_check_options(options, error);
+			if (!okay) {
 				g_prefix_error(error, "Step '%s': ", ls_string(config, "id"));
 				return FALSE;
 			}
@@ -206,9 +211,10 @@ save_checkpoint(
 	JsonArray *usage, gboolean usage_complete, GError **error
 ){
 	g_autofree gchar *text = checkpoint_text(context, fingerprint, next, usage, usage_complete);
-	if (strlen(text) > LS_MAX_DOCUMENT) {
+	if (strlen(text) > (gsize)LS_MAX_PROJECT * 2) {
 		g_set_error_literal(
-			error, LS_ERROR, LS_ERROR_LIMIT, "Checkpoint exceeds 16 MiB; split the recipe"
+			error, LS_ERROR, LS_ERROR_LIMIT,
+			"Checkpoint exceeds 128 MiB encoded size; split the recipe or reduce binary assets"
 		);
 		return FALSE;
 	}
@@ -365,7 +371,8 @@ initialize_repository(const gchar *directory, LsContext *context,
 		"*.o\n*.a\n*.so\n*.so.*\n*.log\n*.sqlite\n*.sqlite3\n"
 		"*.sqlite-*\n*.sqlite3-*\n*.db\n*.db-*\n*~\n*.swp\n"
 		"# Always retain the repository ignore policy\n!/.gitignore\n";
-	const gchar *original = existing != NULL ? ls_artifact_get_content(existing) : "";
+	const gchar *original = existing != NULL && !ls_artifact_is_binary(existing)
+		? ls_artifact_get_content(existing) : "";
 	g_autofree gchar *contents = g_str_has_suffix(original, defaults)
 		? g_strdup(original) : g_strconcat(original, defaults, NULL);
 	const gchar *init[] = {"init", "--quiet", "--initial-branch=master", "--template=", NULL};
@@ -378,6 +385,99 @@ initialize_repository(const gchar *directory, LsContext *context,
 	return run_git(directory, init, cancellable, error) &&
 		run_git(directory, add, cancellable, error) &&
 		run_git(directory, commit, cancellable, error);
+}
+
+/* Drop a previous failed review export so the next stop uses a stable path. */
+static gboolean
+remove_tree(const gchar *path, GError **error){
+	g_autoptr(GFile) file = g_file_new_for_path(path);
+	g_autoptr(GFileEnumerator) enumerator = NULL;
+	g_autoptr(GError) local_error = NULL;
+	if (!g_file_test(path, G_FILE_TEST_EXISTS))
+		return TRUE;
+	enumerator = g_file_enumerate_children(file, "standard::name,standard::type",
+		G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS, NULL, &local_error);
+	if (enumerator != NULL) {
+		GFileInfo *info;
+		while ((info = g_file_enumerator_next_file(enumerator, NULL, NULL)) != NULL) {
+			g_autoptr(GFile) child = g_file_get_child(file, g_file_info_get_name(info));
+			g_autofree gchar *child_path = g_file_get_path(child);
+			if (g_file_info_get_file_type(info) == G_FILE_TYPE_DIRECTORY) {
+				if (!remove_tree(child_path, error)) {
+					g_object_unref(info);
+					return FALSE;
+				}
+			} else if (!g_file_delete(child, NULL, error)) {
+				g_object_unref(info);
+				return FALSE;
+			}
+			g_object_unref(info);
+		}
+	} else if (!g_error_matches(local_error, G_IO_ERROR, G_IO_ERROR_NOT_DIRECTORY)) {
+		g_propagate_error(error, g_steal_pointer(&local_error));
+		return FALSE;
+	}
+	return g_file_delete(file, NULL, error);
+}
+
+/* Write inspectable design files when a gate stops the run. The project itself
+ * is unchanged; this is workspace output for the human reviewer. */
+static gboolean
+export_review(const gchar *work, const gchar *id, LsContext *context,
+	JsonObject *config, GError **error){
+	g_autofree gchar *parent = g_build_filename(work, "review", NULL);
+	g_autofree gchar *directory = g_build_filename(parent, id, NULL);
+	JsonNode *node = json_object_get_member(config, "options");
+	JsonObject *options = node != NULL && JSON_NODE_HOLDS_OBJECT(node)
+		? json_node_get_object(node) : NULL;
+	g_autoptr(LsContext) selected = NULL;
+	if (g_mkdir_with_parents(parent, 0700) != 0) {
+		g_set_error(error, G_IO_ERROR, g_io_error_from_errno(errno),
+			"Cannot create review directory: %s", g_strerror(errno));
+		return FALSE;
+	}
+	if (!remove_tree(directory, error))
+		return FALSE;
+	if (options != NULL && json_object_has_member(options, "review")) {
+		JsonArray *review = json_object_get_array_member(options, "review");
+		g_autoptr(JsonBuilder) builder = json_builder_new();
+		g_autoptr(JsonNode) root = NULL;
+		g_autofree gchar *bundle = NULL;
+		guint i;
+		selected = ls_context_new();
+		json_builder_begin_object(builder);
+		json_builder_set_member_name(builder, "files");
+		json_builder_begin_array(builder);
+		for (i = 0; i < json_array_get_length(review); i++) {
+			const gchar *path = json_array_get_string_element(review, i);
+			const LsArtifact *artifact = ls_context_lookup(context, path);
+			gsize size;
+			const guint8 *data;
+			if (artifact == NULL)
+				continue;
+			data = ls_artifact_get_data(artifact, &size);
+			json_builder_begin_object(builder);
+			json_builder_set_member_name(builder, "path");
+			json_builder_add_string_value(builder, path);
+			json_builder_set_member_name(builder, "content");
+			if (ls_artifact_is_binary(artifact)) {
+				g_autofree gchar *encoded = g_base64_encode(data, size);
+				json_builder_add_string_value(builder, encoded);
+				json_builder_set_member_name(builder, "encoding");
+				json_builder_add_string_value(builder, "base64");
+			} else
+				json_builder_add_string_value(builder, ls_artifact_get_content(artifact));
+			json_builder_end_object(builder);
+		}
+		json_builder_end_array(builder);
+		json_builder_end_object(builder);
+		root = json_builder_get_root(builder);
+		bundle = ls_json_encode(root);
+		if (!ls_context_apply(selected, bundle, error))
+			return FALSE;
+		return ls_context_export(selected, directory, NULL, error);
+	}
+	return ls_context_export(context, directory, NULL, error);
 }
 
 /* Lock one workspace through publication. All generated code remains inert;
@@ -555,6 +655,13 @@ run_pipeline(
 		json_array_add_object_element(usage, g_steal_pointer(&record));
 		if (!executed) {
 			g_autoptr(GError) save_error = NULL;
+			if (type == LS_TYPE_GATE_STEP) {
+				g_autoptr(GError) review_error = NULL;
+				if (!export_review(work, id, context, config, &review_error) &&
+					error != NULL && *error != NULL)
+					g_prefix_error(error, "%s; ", review_error != NULL
+						? review_error->message : "review export failed");
+			}
 			/* Failed output is never checkpointed; consumed work still is. */
 			if (!ls_context_restore(context, before, &save_error) ||
 				!save_checkpoint(checkpoint, context, fingerprint, i, usage, usage_complete, &save_error)) {

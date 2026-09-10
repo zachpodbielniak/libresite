@@ -10,6 +10,8 @@ struct _LsRecipe {
 	gchar *scaffold_source;
 	gint timeout;
 	gboolean unlimited;
+	GHashTable *approvals;
+	gboolean approve_all;
 };
 G_DEFINE_TYPE(LsRecipe, ls_recipe, G_TYPE_OBJECT)
 /* Recipe owns the complete parsed tree, including every borrowed step. */
@@ -19,6 +21,7 @@ ls_recipe_finalize(GObject *object){
 	g_clear_pointer(&self->root, json_node_unref);
 	g_free(self->source);
 	g_free(self->scaffold_source);
+	g_clear_pointer(&self->approvals, g_hash_table_unref);
 	G_OBJECT_CLASS(ls_recipe_parent_class)->finalize(object);
 }
 static void
@@ -28,6 +31,7 @@ ls_recipe_class_init(LsRecipeClass *klass){
 static void
 ls_recipe_init(LsRecipe *self){
 	self->timeout = -1;
+	self->approvals = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 }
 /* Test node types before using JSON-GLib's typed accessors. */
 static gboolean
@@ -503,6 +507,27 @@ ls_recipe_set_unlimited(LsRecipe *self, gboolean unlimited){
 	self->unlimited = unlimited;
 }
 
+/* Gate approvals are CLI/library run flags, never recipe or catalog bytes. */
+void
+ls_recipe_approve(LsRecipe *self, const gchar *step_id){
+	g_return_if_fail(LS_IS_RECIPE(self));
+	g_return_if_fail(step_id != NULL && *step_id != '\0');
+	g_hash_table_add(self->approvals, g_strdup(step_id));
+}
+
+void
+ls_recipe_set_approve_all(LsRecipe *self, gboolean approve_all){
+	g_return_if_fail(LS_IS_RECIPE(self));
+	self->approve_all = approve_all;
+}
+
+gboolean
+ls_recipe_is_approved(LsRecipe *self, const gchar *step_id){
+	g_return_val_if_fail(LS_IS_RECIPE(self), FALSE);
+	g_return_val_if_fail(step_id != NULL, FALSE);
+	return self->approve_all || g_hash_table_contains(self->approvals, step_id);
+}
+
 /* Quote strings explicitly: prices, phone numbers, copy and null-like words
  * must not turn into booleans/numbers when another YAML reader opens the form. */
 static void
@@ -569,6 +594,11 @@ ls_recipe_from_form(const gchar *json, GError **error){
 			"  - {id: scaffold, type: scaffold}\n"
 			"  - {id: product, type: brief}\n"
 			"  - {id: design, type: design}\n"
+			"  - id: design-gate\n"
+			"    type: gate\n"
+			"    options:\n"
+			"      message: Review docs/product.org and docs/design.org before implementing the frontend.\n"
+			"      review: [docs/product.org, docs/design.org]\n"
 			"  - {id: frontend, type: frontend}\n"
 			"  - {id: review, type: review}\n"
 			"  - id: acceptance\n"

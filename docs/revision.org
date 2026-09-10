@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, revision, operations
 #+created: 2026-09-10T17:21:00-04:00
-#+updated: 2026-09-10T17:21:00-04:00
+#+updated: 2026-09-10T18:40:00-04:00
 #+version: 0.1.0
 
 * Load, revise, publish
@@ -36,15 +36,15 @@ The fingerprint includes the parsed recipe, exact prompt catalog, revision mode 
 
 * Supported source files and limits
 
-The artifact protocol supports regular UTF-8 text files, including SVG and empty files. Imports preserve contents and whether any execute bit was set. Exported files use private permissions: =0600= for ordinary files and =0700= for executable files. Other permission bits, owners, extended attributes and timestamps are not preserved. Empty directories are not artifacts and are omitted. Imports reject symbolic links, FIFOs and other special files, unsafe artifact paths, invalid UTF-8, embedded NUL bytes and binary assets. Errors abort the import before a provider call or output workspace creation; unsupported files are never silently discarded.
+The artifact protocol supports regular UTF-8 text files, including SVG and empty files, and binary assets such as PNG, WebP, ICO and font files. Imports preserve contents and whether any execute bit was set. Exported files use private permissions: =0600= for ordinary files and =0700= for executable files. Other permission bits, owners, extended attributes and timestamps are not preserved. Empty directories are not artifacts and are omitted. Imports reject symbolic links, FIFOs and other special files, and unsafe artifact paths. Invalid UTF-8 and embedded NUL bytes are stored as binary with =encoding: base64= in snapshots. Errors abort the import before a provider call or output workspace creation; unsupported files are never silently discarded.
 
-At every depth, =.git=, =.libresite= and names ending in =.libresite-work= are excluded. All other files are imported, including untracked and Git-ignored files: =.gitignore= does not select input. Choose a source-only directory containing the files you intend to send to the provider; remove local credentials, databases, binary assets, dependency trees and build output from that input copy. The existing text-only protocol cannot revise a mixed binary project directly.
+At every depth, =.git=, =.libresite= and names ending in =.libresite-work= are excluded. All other files are imported, including untracked and Git-ignored files: =.gitignore= does not select input. Choose a source-only directory containing the files you intend to send to the provider; remove local credentials, databases, dependency trees and build output from that input copy. Binary identity assets may be imported; they appear in the path manifest and are inlined only when =options.context= names them.
 
-Limits are 16 MiB per file, 64 MiB total text, 4096 files, 8192 visited filesystem entries and the existing safe-path limits. Checkpoints must also fit their 16 MiB serialized-document limit, including JSON escaping. Imports use descriptor-relative opens without following child symlinks and honor cancellation between reads. =--max-prompt-bytes= also applies to imported contexts; exceeding the configured cap is an explicit error, never truncation.
+Limits are 16 MiB per file, 64 MiB total decoded project, 4096 files, 8192 visited filesystem entries and the existing safe-path limits. Encoded checkpoints may reach 128 MiB. Imports use descriptor-relative opens without following child symlinks and honor cancellation between reads. =--max-prompt-bytes= also applies to imported contexts; exceeding the configured cap is an explicit error, never truncation.
 
 * Incremental response protocol
 
-Responses still require =files=, even for deletion-only operations. Optional =delete= names individual existing file paths. An empty =files= array with =delete= is valid. Deletions must be unique, safe, present in the current context, and absent from the replacement list. To rename, return the new file with complete contents and delete its old path in the same bundle. Directories are not deletion targets: name every affected file. File/directory conflicts are checked after all removals and replacements, allowing a file to replace a directory when every conflicting child is removed.
+Responses still require =files=, even for deletion-only or rename-only operations. Optional =delete= names individual existing file paths. Optional =rename= moves unique existing files onto unused paths, including swaps. An empty =files= array with =delete= or =rename= is valid. Directories are not deletion or rename targets: name every affected file. File/directory conflicts are checked after all removals, renames and replacements, allowing a file to replace a directory when every conflicting child is removed.
 
 A file object accepts optional boolean =executable=. Omission preserves an existing file's executable intent and defaults to false for new files. The entire response is validated against a private candidate, including immediately following native acceptance checks, before any operation changes the live context. Failed deletion, unsafe path, duplicate operation, resource-limit violation or failed acceptance leaves the original project intact. Checkpoints contain full snapshots with no pending deletion operations.
 

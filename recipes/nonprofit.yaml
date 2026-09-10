@@ -64,6 +64,13 @@ pipeline:
       type: validate
       options:
         required: [docs/product.org, docs/design.org, docs/acceptance.org]
+    - id: design-gate
+      type: gate
+      options:
+        message: >-
+          Review docs/product.org and docs/design.org before implementing the frontend.
+          Resume with --approve design-gate when the direction is accepted.
+        review: [docs/product.org, docs/design.org]
     - id: foundation
       type: generate
       prompt: foundation

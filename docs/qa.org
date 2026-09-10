@@ -1,0 +1,35 @@
+#+title: Published-tree QA runner
+#+description: Separate structural inspection of a generated project, not in-process validate
+#+authors: Zach Podbielniak
+#+categories: libresite, quality, testing
+#+created: 2026-09-10T18:40:00-04:00
+#+updated: 2026-09-10T18:40:00-04:00
+#+version: 0.1.0
+
+* Boundary
+
+Native =validate= stays an in-process literal check: required non-whitespace text (or nonempty binary bytes), exact =contains=/=excludes= strings and inclusive byte bounds. It never parses HTML, never audits accessibility or SEO semantics, and never compiles or executes generated code.
+
+=libresite --qa DIR= is a separate runner that consumes a *published* tree. It does not read checkpoints, does not call a provider, and does not run =tests/check.sh= or any generated program. Use it after generation, or on any directory that looks like an exported site.
+
+#+begin_src bash
+libresite --qa ./my-site
+#+end_src
+
+Library callers use =ls_qa_check()=. A readable tree with no structural findings returns true and a report. Import failures (symlinks, special files, empty directories) are errors. Findings are not errors: the function returns false and still fills the report.
+
+* What it checks
+
+- Regular files only, using the same import exclusions as revision (=.git=, =.libresite=, =*.libresite-work=)
+- HTML documents: =<!doctype html=, =lang=, =<title=, viewport meta, charset
+- Local =href=/=src= targets on common tags, plus =url()= in CSS and =og:image= content when present
+- Binary assets (PNG, fonts, ICO and similar) are counted and must exist when referenced
+- Missing HTML documents are a finding
+
+External =http(s)=, =mailto=, =tel=, =data= and fragment-only references are ignored. Relative paths that escape the project are findings.
+
+* What it does not check
+
+HTML validity beyond those tokens, WCAG/ARIA conformance, ranking SEO, TypeScript/C compilation, HTTP, or browser rendering. Those belong to the generated project's own tests and a human pass. Native validate remains the recipe-time acceptance gate.
+
+A successful QA report always states that it is not an a11y, SEO, compile or browser audit.

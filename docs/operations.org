@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, operations
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-10T18:07:19-04:00
+#+updated: 2026-09-10T18:40:00-04:00
 #+version: 0.1.0
 
 * Commands
@@ -18,9 +18,13 @@ Changing a bundled recipe's budget values changes its fingerprint. For the activ
 ./build/debug/libresite -r ./example-site.libresite-work/recipe-before-unlimited.yaml -o ./example-site --resume --debug --unlimited
 #+end_src
 
-=--help= / =-h= provides examples. =--version= prints the release and =--license= prints the preserved license. =--list-modules= lists the eight built-in names. =--recipe FILE= / =-r FILE= selects the YAML recipe. =--output DIR= / =-o DIR= selects a new directory for generation; its parent must already exist.
+=--help= / =-h= provides examples. =--version= prints the release and =--license= prints the preserved license. =--list-modules= lists the ten built-in names, including =gate=. =--recipe FILE= / =-r FILE= selects the YAML recipe. =--output DIR= / =-o DIR= selects a new directory for generation; its parent must already exist.
 
-=--validate= checks local schema, AI settings, registered module names, prompt/style resolution and native validation options without calling providers or creating output. =--plan= prints tab-separated index, id, type, provider and model; the display index starts at one. =--preview STEP-ID= shows the system and task prompt with the recipe's seed artifacts (empty when omitted), without simulating earlier steps. These three modes are mutually exclusive. Native validate steps have no AI prompt to preview. All positional arguments are errors.
+=--validate= checks local schema, AI settings, registered module names, prompt/style resolution and native validation options without calling providers or creating output. =--plan= prints tab-separated index, id, type, provider and model; the display index starts at one. =--preview STEP-ID= shows the system and task prompt with the recipe's seed artifacts (empty when omitted), without simulating earlier steps. Native =gate= previews print the review message instead of a model prompt. These three modes are mutually exclusive. Native validate steps have no AI prompt to preview. All positional arguments are errors.
+
+=--approve STEP-ID= may be repeated. =--approve-all= passes every native gate for an unattended run. Approvals are execution-only and do not change checkpoint identity. A rejected gate writes inspectable files under =OUTPUT.libresite-work/review/STEP-ID/= and leaves the previous checkpoint intact. Resume with the same output plus =--approve=.
+
+=--qa DIR= inspects a published project tree and cannot be combined with generation or inspection flags. See [[file:qa.org][the QA runner]]. Native =validate= remains the in-process literal check.
 
 =--prompts FILE= replaces the embedded catalog. =--plugin FILE= loads a native module and may be repeated. =--resume= permits reuse of an existing matching private workspace. Recipe and catalog paths are resolved from the CLI's working directory. There is no server process, deployment action or generated build execution inside this command.
 
@@ -28,7 +32,7 @@ Changing a bundled recipe's budget values changes its fingerprint. For the activ
 
 Authenticate each requested CLI using its own normal account setup before invoking a recipe. ai-glib reads provider-specific executable overrides: =CODEX_PATH=, =CLAUDE_CODE_PATH=, =GROK_PATH=, =CURSOR_AGENT_PATH= (or =CURSOR_PATH=), and =AGY_PATH=. These are useful for explicit installations and offline protocol tests. Model/effort settings are opaque identifiers interpreted by the adapter and installed CLI.
 
-Every generation call creates a fresh temporary working directory, disables session persistence unless =--debug= is set, and sends the current project in the prompt. Permission bypass is enabled for every CLI adapter so the worker thread cannot stall on an approval prompt. Codex therefore uses =--dangerously-bypass-approvals-and-sandbox= rather than a read-only sandbox: Codex 0.153 =exec= does not accept =--ask-for-approval=, and read-only plus never-ask still waits for sandbox-escalation approval on the same stdin used for the prompt. Other CLI flags and defaults belong to ai-glib and the installed provider. A working directory is not a security sandbox. Use an external isolation boundary when stronger confinement is required.
+Every generation call creates a fresh temporary working directory, disables session persistence unless =--debug= is set, and sends a focused project payload (complete manifest plus selected file contents) in the prompt. Permission bypass is enabled for every CLI adapter so the worker thread cannot stall on an approval prompt. Codex therefore uses =--dangerously-bypass-approvals-and-sandbox= rather than a read-only sandbox: Codex 0.153 =exec= does not accept =--ask-for-approval=, and read-only plus never-ask still waits for sandbox-escalation approval on the same stdin used for the prompt. Other CLI flags and defaults belong to ai-glib and the installed provider. A working directory is not a security sandbox. Use an external isolation boundary when stronger confinement is required.
 
 Empty temporary provider directories are removed. Directories in which a third-party CLI created files are deliberately retained rather than recursively deleting unknown files. No global CLI configuration or credentials are modified by libresite.
 
@@ -46,7 +50,7 @@ Diagnostic metadata does not dump prompts, generated file contents or environmen
 
 * Checkpoints and publication
 
-During generation, =OUTPUT.libresite-work/= is a private, owner-only directory. =lock= provides advisory process exclusion. =checkpoint.json= holds format version, the recipe/catalog fingerprint, next step index and all successful file contents. It also includes per-step usage and accounting completeness, and is replaced consistently and durably before execution and after each successful or failed step. See [[file:usage.org][usage accounting and pricing]]. Logs/progress go to stderr; redirect or tee stderr for a persistent human-readable run log. Checkpoint records and final metadata are structured machine records, not secrets storage.
+During generation, =OUTPUT.libresite-work/= is a private, owner-only directory. =lock= provides advisory process exclusion. =checkpoint.json= holds format version, the recipe/catalog fingerprint, next step index and all successful file contents, with binary files as base64. Encoded checkpoints may reach 128 MiB. It also includes per-step usage and accounting completeness, and is replaced consistently and durably before execution and after each successful or failed step. See [[file:usage.org][usage accounting and pricing]]. Logs/progress go to stderr; redirect or tee stderr for a persistent human-readable run log. Checkpoint records and final metadata are structured machine records, not secrets storage.
 
 A failure leaves the workspace available for inspection and resume. Re-run the same recipe and catalog with the same =--output= and =--resume=. If the recipe changes semantically or the catalog bytes change, resume fails instead of mixing incompatible generation. Comments/formatting changes in a recipe normally preserve its parsed fingerprint; mapping-order changes can alter it. Changing native plugin code/resources is not fingerprinted; start a new output for that case.
 

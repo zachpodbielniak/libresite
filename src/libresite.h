@@ -11,4 +11,5 @@
 #include "providers/ls-ai-provider.h"
 #include "steps/ls-step.h"
 #include "core/ls-usage.h"
+#include "core/ls-qa.h"
 #define LS_VERSION "0.1.0"

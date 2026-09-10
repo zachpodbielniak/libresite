@@ -12,12 +12,13 @@ G_DECLARE_FINAL_TYPE(LsContext, ls_context, LS, CONTEXT, GObject)
 LsContext *ls_context_new(void);
 /**
  * ls_context_import:
- * @directory: source directory containing UTF-8 regular files
+ * @directory: source directory containing regular files
  * @cancellable: (nullable): cancellation token
  * @error: return location for an error
  *
  * Ignores .git, .libresite and *.libresite-work entries. Rejects symlinks,
- * special files, invalid paths, binary data and projects exceeding limits.
+ * special files, invalid paths and projects exceeding limits. UTF-8 text and
+ * binary assets are imported; JSON snapshots encode binary files as base64.
  * Returns: (transfer full) (nullable): complete revision context
  */
 LsContext *ls_context_import(const gchar *directory, GCancellable *cancellable, GError **error);
@@ -38,12 +39,14 @@ gboolean ls_context_restore(LsContext *self, const gchar *snapshot, GError **err
 /**
  * ls_context_apply:
  * @self: an artifact store
- * @response: JSON object with files, optional delete path array and optional summary
+ * @response: JSON object with files, optional delete/rename and optional summary
  * @error: return location for an error
  *
  * Validates the whole bundle before changing the store. Existing files are replaced;
- * omitted files survive. Deletions must name unique existing files and cannot
- * overlap replacements. File/directory conflicts are checked after all operations.
+ * omitted files survive. Deletions must name unique existing files. Renames move
+ * unique existing files onto absent paths. Operations cannot overlap except that a
+ * write may recreate a renamed-from path. File/directory conflicts are checked
+ * after all operations.
  * Returns: whether every artifact was accepted
  */
 gboolean ls_context_apply(LsContext *self, const gchar *response, GError **error);
@@ -53,6 +56,19 @@ gboolean ls_context_apply(LsContext *self, const gchar *response, GError **error
  * Returns: (transfer full): canonical JSON file bundle, sorted by path
  */
 gchar *ls_context_snapshot(LsContext *self);
+/**
+ * ls_context_prompt_bundle:
+ * @self: an artifact store
+ * @step: (nullable): generation step; options.files and options.context focus inlining
+ * @error: return location for an error
+ *
+ * Builds the model-facing project payload: a complete path manifest plus selected
+ * UTF-8 file contents. Binary files stay in the manifest unless options.context
+ * names them. A focused step inlines its files list, contract docs and context
+ * globs instead of every text file.
+ * Returns: (transfer full) (nullable): JSON object with manifest and files
+ */
+gchar *ls_context_prompt_bundle(LsContext *self, JsonObject *step, GError **error);
 /**
  * ls_context_export:
  * @self: an artifact store

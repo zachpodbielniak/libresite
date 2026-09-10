@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, reference
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-10T18:07:19-04:00
+#+updated: 2026-09-10T18:40:00-04:00
 #+version: 0.1.0
 
 * Contract
@@ -62,7 +62,7 @@ pipeline:
 
 * Seed artifacts
 
-Supply client copy, logo SVG, brand YAML and approved legal text through =seed_artifacts= before generation. Each entry contains exactly a safe relative output =path= and literal string =content=. Content is included verbatim in the initial artifact context; no host files are read and no source-path or command expansion occurs. Embed existing text using YAML literal blocks. Omitted seeds and an empty sequence both start with an empty project.
+Supply client copy, logo SVG, brand YAML, approved legal text and binary identity assets through =seed_artifacts= before generation. Each entry contains a safe relative output =path=, literal string =content=, and optional =encoding: base64=. Content is included verbatim in the initial artifact context; no host files are read and no source-path or command expansion occurs. Embed existing text using YAML literal blocks. Omitted seeds and an empty sequence both start with an empty project.
 
 #+begin_src yaml
 seed_artifacts:
@@ -84,7 +84,7 @@ seed_artifacts:
       Insert the client's approved legal text here before generation.
 #+end_src
 
-Seed validation uses the same transaction, path, type, duplicate, file/directory conflict and resource-limit checks as provider bundles. The entire recipe, including seeds, remains subject to the 16 MiB YAML document limit. Invalid seeds fail recipe loading before provider calls or workspace creation. Seeds must be UTF-8 text, including SVG; binary assets are not supported. Quote scalar-looking contents such as ='123'= or use literal blocks to retain their string type.
+Seed validation uses the same transaction, path, type, duplicate, file/directory conflict and resource-limit checks as provider bundles. The entire recipe, including seeds, remains subject to the 16 MiB YAML document limit. Invalid seeds fail recipe loading before provider calls or workspace creation. Seeds are UTF-8 text by default, including SVG. Binary seeds use =encoding: base64= on the same =path= / =content= mapping. Quote scalar-looking contents such as ='123'= or use literal blocks to retain their string type.
 
 Seeds populate =CURRENT PROJECT= in =--preview= and preflight, and are saved in checkpoint zero before the first pipeline step, including a native step. CLI previews also apply preceding native scaffold steps in memory; they do not simulate earlier AI generation steps. Seeds remain in subsequent prompts and exports unless a step replaces their exact paths. They are initial inputs, not immutable or protected files: use step instructions and native literal-content checks for preservation requirements. Only supply content intended to be sent to the selected AI provider and included in the output project.
 
@@ -105,11 +105,13 @@ Built-in AI module names are =brief=, =design=, =frontend=, =backend=, =database
 
 The native =scaffold= module emits static boilerplate without a model call. Its only option is =profile: static= (the default). It preserves existing paths and applies missing templates as one transaction. See [[file:scaffold.org][scaffold reference]] for the file inventory, contact contract, installed previews and checkpoint identity. Bundled static recipes require the scaffold artifacts in final acceptance.
 
-The native =validate= module calls no provider. It requires =options.required=, a nonempty sequence of unique safe relative file paths, and checks every named artifact for non-whitespace text. Optional =options.checks= adds literal-content and byte-size predicates as described below. These checks do not prove HTML correctness, accessibility, compilation or working application behavior. Unknown native validation options fail before any AI calls. Add semantic checks as separate registered steps when needed.
+The native =validate= module calls no provider. It requires =options.required=, a nonempty sequence of unique safe relative file paths, and checks every named artifact for non-whitespace text (or nonempty bytes for binary files). Optional =options.checks= adds literal-content and byte-size predicates as described below. =contains=/=excludes= apply only to UTF-8 text. These checks do not prove HTML correctness, accessibility, compilation or working application behavior. Unknown native validation options fail before any AI calls. Add semantic checks as separate registered steps when needed. After publication, =libresite --qa DIR= inspects the exported tree; see [[file:qa.org][the QA runner]].
+
+The native =gate= module also calls no provider. It stops the pipeline until =--approve STEP-ID= or =--approve-all= is supplied on a later resume. Optional =options.message= is the review prompt. Optional =options.review= lists unique existing files exported to =OUTPUT.libresite-work/review/STEP-ID/= when the gate fires. Approvals are execution-only and do not change checkpoint identity. Bundled recipes place =design-gate= between design/planning-check and implementation so a rejected direction cannot burn a frontend. Unattended runs use =--approve-all=.
 
 Generated sites must include =AGENTS.md= so a later coding agent can maintain and troubleshoot the output. Bundled recipes require that path in the final =validate= step. The file is Markdown on purpose: it is an agent instruction file, not project documentation. Project docs remain Org. For a loopback application, =AGENTS.md= and =README.org= must document both =127.0.0.1= and =localhost= as accepted Host/Origin names on the listening port.
 
-For a generation step, =options= is open-ended task data understood by the model; it is not an executable instruction language. For a plugin, its author defines and validates =options=. A native plugin can use the same artifact store as built-in generation.
+For a generation step, =options= is open-ended task data understood by the model; it is not an executable instruction language. Two keys are also engine-enforced for prompt size: =files=, when it is a sequence of strings, and =context=, a sequence of 1..4096 unique nonempty glob strings. When either is present, the model receives a complete path manifest plus UTF-8 contents only for those paths, =docs/=, =config/=, =AGENTS.md= and =README.org=. Binary files stay in the manifest unless =context= names them. Stages without those keys still inline every UTF-8 file and keep binaries as manifest entries. For a plugin, its author defines and validates =options=. A native plugin can use the same artifact store as built-in generation.
 
 * SEO output contracts
 
@@ -139,12 +141,14 @@ Every generation prompt includes the recipe's native validation contracts, inclu
 Provider results are JSON because they carry exact file contents that may themselves contain YAML, markup or source code. This is a transport format, while user-authored recipes and prompts remain YAML.
 
 #+begin_example
-{"files":[{"path":"index.html","content":"<!doctype html>..."}],"summary":"Implemented the homepage"}
+{"files":[{"path":"index.html","content":"<!doctype html>..."},{"path":"assets/og.png","content":"...base64...","encoding":"base64"}],"delete":["obsolete.css"],"rename":[{"from":"old.html","to":"about.html"}],"summary":"Implemented the homepage"}
 #+end_example
 
-Only =files= and optional string =summary= are allowed. Every file contains exactly =path= and =content=. Full replacement text is required; omitted files remain unchanged. A bundle is validated completely before applying any replacements. Duplicate paths, traversal, absolute paths, backslashes, colons, control characters, reserved =.git= / =.libresite= path components and file/directory conflicts are errors. File content is UTF-8. Binary assets should be supplied outside this protocol; generated vector artwork can be SVG text. The current version has no file deletion operation.
+=files= is required (and may be empty). Optional =summary= is a string. Optional =delete= is an array of unique existing file paths. Optional =rename= is an array of =from=/=to= objects. A bundle is validated completely before applying any operation. Duplicate paths, traversal, absolute paths, backslashes, colons, control characters, reserved =.git= / =.libresite= path components and file/directory conflicts are errors.
 
-Duplicate JSON members, embedded NUL escapes and JSON nesting beyond 32 collections are also rejected. Empty bundles are permitted for no-change review steps, but a complete pipeline that produces no files fails. Each file is limited to 16 MiB; the project to 64 MiB and 4096 files. The smaller prompt and checkpoint limits described in [[file:operations.org][operations.org]] usually constrain practical project size first.
+UTF-8 files omit =encoding= or use =utf8=. Binary files (PNG, WebP, JPEG, ICO, WOFF/WOFF2/TTF/OTF and similar) MUST set =encoding: base64= with standard base64 content. Prefer SVG for original illustrations when no raster or font file is required. File objects may include boolean =executable=; omission preserves an existing file's setting. Omitted paths always survive. A write may recreate a renamed-from path; it cannot target a delete path or a rename destination.
+
+Duplicate JSON members, embedded NUL escapes and JSON nesting beyond 32 collections are also rejected. Empty bundles are permitted for no-change review steps, but a complete pipeline that produces no files fails. Each file is limited to 16 MiB decoded; the project to 64 MiB and 4096 files. Encoded checkpoints may reach 128 MiB. Prompt size is controlled with focused context rather than silent truncation; see [[file:operations.org][operations.org]].
 
 * Deterministic artifact checks
 
@@ -175,4 +179,4 @@ Quoted and block YAML scalars preserve string types: ='1'= is a string and is re
 
 With CLI =--revise DIR=, =site.brief= describes the changes to the imported project. No additional YAML source-path key is needed. Use =type: generate= with =prompt: revision= for a focused edit stage, then native acceptance checks appropriate to the existing application. All generation stages receive the revision contract. See [[file:revision.org][revision.org]] and =recipes/revision.yaml=.
 
-The response object additionally permits =delete=, an array of unique existing file paths. Keep =files= present, even when empty. Deletions and replacements cannot name the same path, and the whole transaction must satisfy path, size and structural constraints. File objects may include boolean =executable=; omission preserves an existing file's executable intent. Checkpoint snapshots contain final files rather than operations.
+Keep =files= present, even when empty. =delete= and =rename= are first-class operations for every generation stage, not only revision. Deletions, rename sources/destinations and written paths cannot overlap except that a write may recreate a renamed-from path. File objects may include =encoding= and boolean =executable=. Checkpoint snapshots contain final files rather than operations.

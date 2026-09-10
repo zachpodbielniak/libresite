@@ -228,6 +228,153 @@ artifact_delete(void){
 	g_assert_null(ls_context_lookup(context, "index.html"));
 }
 
+/* Raster/font payloads round-trip as base64 and never become UTF-8 C strings. */
+static void
+artifact_binary(void){
+	const guint8 png[] = {0x89, 'P', 'N', 'G', 0x0d, 0x0a, 0x1a, 0x0a, 0, 1, 2, 3};
+	g_autoptr(LsContext) context = ls_context_new();
+	g_autoptr(GError) error = NULL;
+	g_autofree gchar *encoded = g_base64_encode(png, sizeof(png));
+	g_autofree gchar *payload = g_strdup_printf(
+		"{\"files\":[{\"path\":\"assets/og.png\",\"content\":\"%s\",\"encoding\":\"base64\"}]}",
+		encoded);
+	g_autofree gchar *snapshot = NULL;
+	g_autofree gchar *temp = g_dir_make_tmp("libresite-binary-XXXXXX", NULL);
+	g_autofree gchar *exported = g_build_filename(temp, "site", NULL);
+	g_autofree gchar *path = g_build_filename(exported, "assets", "og.png", NULL);
+	g_autofree gchar *bytes = NULL;
+	gsize size = 0;
+	const LsArtifact *artifact;
+	g_assert_true(ls_context_apply(context, payload, &error));
+	g_assert_no_error(error);
+	artifact = ls_context_lookup(context, "assets/og.png");
+	g_assert_true(ls_artifact_is_binary(artifact));
+	g_assert_null(ls_artifact_get_content(artifact));
+	g_assert_cmpuint(ls_artifact_get_size(artifact), ==, sizeof(png));
+	snapshot = ls_context_snapshot(context);
+	g_assert_nonnull(strstr(snapshot, "\"encoding\":\"base64\""));
+	g_assert_true(ls_context_restore(context, snapshot, &error));
+	g_assert_true(ls_artifact_is_binary(ls_context_lookup(context, "assets/og.png")));
+	g_assert_true(ls_context_export(context, exported, NULL, &error));
+	g_assert_true(g_file_get_contents(path, &bytes, &size, &error));
+	g_assert_cmpuint(size, ==, sizeof(png));
+	g_assert_cmpint(memcmp(bytes, png, sizeof(png)), ==, 0);
+	remove_tree(temp);
+}
+
+/* Rename is transactional, including swaps, and can recreate the old path. */
+static void
+artifact_rename(void){
+	g_autoptr(LsContext) context = ls_context_new();
+	g_autoptr(GError) error = NULL;
+	g_assert_true(ls_context_apply(context, bundle, NULL));
+	g_assert_true(ls_context_apply(context,
+		"{\"files\":[],\"rename\":[{\"from\":\"index.html\",\"to\":\"home.html\"}]}", &error));
+	g_assert_no_error(error);
+	g_assert_null(ls_context_lookup(context, "index.html"));
+	g_assert_nonnull(ls_context_lookup(context, "home.html"));
+	g_assert_true(ls_context_apply(context,
+		"{\"files\":[],\"rename\":[{\"from\":\"home.html\",\"to\":\"index.html\"},"
+		"{\"from\":\"docs/build.org\",\"to\":\"docs/build.org.bak\"}]}", &error));
+	g_assert_nonnull(ls_context_lookup(context, "index.html"));
+	g_assert_nonnull(ls_context_lookup(context, "docs/build.org.bak"));
+	g_assert_true(ls_context_apply(context,
+		"{\"files\":[{\"path\":\"index.html\",\"content\":\"replaced\"}],"
+		"\"rename\":[{\"from\":\"docs/build.org.bak\",\"to\":\"notes.org\"}]}", &error));
+	g_assert_cmpstr(ls_artifact_get_content(ls_context_lookup(context, "index.html")), ==, "replaced");
+	g_assert_nonnull(ls_context_lookup(context, "notes.org"));
+}
+
+/* Implementation stages with options.files must not dump the whole project. */
+static void
+prompt_focus(void){
+	g_autoptr(LsContext) context = ls_context_new();
+	g_autoptr(JsonParser) parser = json_parser_new();
+	g_autoptr(JsonNode) step_node = NULL;
+	g_autofree gchar *payload = NULL;
+	JsonObject *step;
+	g_assert_true(ls_context_apply(context,
+		"{\"files\":[{\"path\":\"index.html\",\"content\":\"HOME\"},"
+		"{\"path\":\"journal.html\",\"content\":\"JOURNAL SECRET\"},"
+		"{\"path\":\"docs/design.org\",\"content\":\"DESIGN CONTRACT\"}]}",
+		NULL));
+	g_assert_true(json_parser_load_from_data(parser,
+		"{\"id\":\"foundation\",\"type\":\"generate\",\"options\":{\"files\":[\"index.html\"]}}",
+		-1, NULL));
+	step_node = json_parser_steal_root(parser);
+	step = json_node_get_object(step_node);
+	payload = ls_context_prompt_bundle(context, step, NULL);
+	g_assert_null(strstr(payload, "JOURNAL SECRET"));
+	g_assert_nonnull(strstr(payload, "HOME"));
+	g_assert_nonnull(strstr(payload, "DESIGN CONTRACT"));
+	g_assert_nonnull(strstr(payload, "journal.html"));
+}
+
+/* A gate checkpoints the previous step and refuses to continue until approved. */
+static void
+pipeline_gate(void){
+	g_autoptr(LsRecipe) recipe = ls_recipe_new(
+		"version: 1\nname: gated\nsite:\n  brief: Build a small site\n"
+		"pipeline:\n  steps:\n    - {id: first, type: frontend}\n"
+		"    - id: design-gate\n      type: gate\n      options:\n"
+		"        {message: Stop here, review: [index.html]}\n"
+		"    - {id: second, type: review}\n"
+		"    - id: verify\n      type: validate\n      options:\n"
+		"        required: [index.html, docs/build.org]\n",
+		NULL);
+	g_autoptr(LsPrompts) prompts = ls_prompts_new(NULL, NULL);
+	g_autoptr(GObject) provider = g_object_new(fixture_provider_get_type(), NULL);
+	g_autoptr(LsPipeline) pipeline = ls_pipeline_new(LS_PROVIDER(provider), prompts);
+	g_autoptr(GError) error = NULL;
+	g_autofree gchar *temp = g_dir_make_tmp("libresite-gate-XXXXXX", NULL);
+	g_autofree gchar *output = g_build_filename(temp, "site", NULL);
+	g_autofree gchar *review = g_build_filename(temp, "site.libresite-work", "review",
+		"design-gate", "index.html", NULL);
+	g_assert_false(ls_pipeline_run(pipeline, recipe, output, FALSE, NULL, &error));
+	g_assert_error(error, LS_ERROR, LS_ERROR_CONFLICT);
+	g_assert_true(g_file_test(review, G_FILE_TEST_IS_REGULAR));
+	g_assert_false(g_file_test(output, G_FILE_TEST_EXISTS));
+	g_clear_error(&error);
+	ls_recipe_approve(recipe, "design-gate");
+	g_assert_true(ls_pipeline_run(pipeline, recipe, output, TRUE, NULL, &error));
+	g_assert_no_error(error);
+	g_assert_true(g_file_test(output, G_FILE_TEST_IS_DIR));
+	remove_tree(temp);
+}
+
+static void
+qa_runner(void){
+	g_autofree gchar *temp = g_dir_make_tmp("libresite-qa-XXXXXX", NULL);
+	g_autofree gchar *index = g_build_filename(temp, "index.html", NULL);
+	g_autofree gchar *style = g_build_filename(temp, "styles.css", NULL);
+	g_autofree gchar *png = g_build_filename(temp, "og.png", NULL);
+	g_autofree gchar *report = NULL;
+	g_autoptr(GError) error = NULL;
+	const guint8 bytes[] = {0x89, 'P', 'N', 'G'};
+	g_assert_true(g_file_set_contents(index,
+		"<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
+		"<meta name=\"viewport\" content=\"width=device-width\">"
+		"<title>Hi</title><link rel=\"icon\" href=\"og.png\"></head>"
+		"<body><a href=\"missing.html\">x</a></body></html>", -1, NULL));
+	g_assert_true(g_file_set_contents(style, "body{background:url(og.png)}", -1, NULL));
+	g_assert_false(ls_qa_check(temp, &report, NULL, &error));
+	g_assert_no_error(error);
+	g_assert_nonnull(strstr(report, "missing.html"));
+	g_free(report);
+	report = NULL;
+	g_assert_true(g_file_set_contents(png, (const gchar *)bytes, sizeof(bytes), NULL));
+	g_assert_true(g_file_set_contents(index,
+		"<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">"
+		"<meta name=\"viewport\" content=\"width=device-width\">"
+		"<title>Hi</title><link rel=\"icon\" href=\"og.png\"></head>"
+		"<body><h1>Hi</h1></body></html>", -1, NULL));
+	g_assert_true(ls_qa_check(temp, &report, NULL, &error));
+	g_assert_no_error(error);
+	g_assert_nonnull(strstr(report, "OK structural"));
+	g_assert_nonnull(strstr(report, "binary"));
+	remove_tree(temp);
+}
+
 /* Import rejects unsupported entries explicitly instead of losing source data.
  * Metadata exclusion has a positive control containing deliberately invalid data. */
 static void
@@ -255,14 +402,24 @@ import_case(gconstpointer data){
 	if (g_str_equal(mode, "cancel"))
 		g_cancellable_cancel(cancellable);
 	context = ls_context_import(temp, cancellable, &error);
-	if (g_str_equal(mode, "success")) {
+	if (g_str_equal(mode, "success") || g_str_equal(mode, "binary") || g_str_equal(mode, "utf8")) {
+		const LsArtifact *artifact;
 		g_assert_no_error(error);
 		g_assert_nonnull(context);
 		g_assert_true(ls_context_is_revision(context));
-		g_assert_cmpstr(ls_artifact_get_content(ls_context_lookup(context, "source.txt")),
-			==, "text sentinel");
-		g_assert_true(ls_artifact_get_executable(ls_context_lookup(context, "source.txt")));
+		artifact = ls_context_lookup(context, "source.txt");
+		g_assert_nonnull(artifact);
 		g_assert_null(ls_context_lookup(context, ".git"));
+		if (g_str_equal(mode, "success")) {
+			g_assert_cmpstr(ls_artifact_get_content(artifact), ==, "text sentinel");
+			g_assert_true(ls_artifact_get_executable(artifact));
+			g_assert_false(ls_artifact_is_binary(artifact));
+		} else {
+			g_assert_true(ls_artifact_is_binary(artifact));
+			g_assert_null(ls_artifact_get_content(artifact));
+			g_assert_cmpuint(ls_artifact_get_size(artifact), ==,
+				g_str_equal(mode, "binary") ? 12 : 1);
+		}
 	} else {
 		g_assert_null(context);
 		g_assert_nonnull(error);
@@ -947,8 +1104,13 @@ application_stack_artifacts(void){
 	}
 	for (i = 0; i + 1 < json_array_get_length(steps); i++) {
 		g_autoptr(GError) error = NULL;
-		g_autofree gchar *rendered = ls_prompts_render(prompts, recipe,
-			json_array_get_object_element(steps, i), empty, &error);
+		g_autofree gchar *rendered = NULL;
+		JsonObject *step = json_array_get_object_element(steps, i);
+		const gchar *type = ls_string(step, "type");
+		if (g_str_equal(type, "validate") || g_str_equal(type, "scaffold") ||
+			g_str_equal(type, "gate"))
+			continue;
+		rendered = ls_prompts_render(prompts, recipe, step, empty, &error);
 		g_assert_no_error(error);
 		g_assert_nonnull(strstr(rendered, "yaml_node_to_json_node"));
 		g_assert_nonnull(strstr(rendered, "htmx_router_post"));
@@ -1284,7 +1446,12 @@ main(int argc, char **argv){
 		"{\"files\":[{\"path\":\"docs\",\"content\":\"a\"}]}",
 		"{\"files\":[{\"path\":\"a\",\"content\":\"a\"},{\"path\":\"a/b\",\"content\":\"b\"}]}",
 		"{\"files\":[],\"commands\":[\"evil\"]}",
-		"{\"files\":[],\"summary\":false}"
+		"{\"files\":[],\"summary\":false}",
+		"{\"files\":[],\"rename\":null}",
+		"{\"files\":[],\"rename\":[{\"from\":\"index.html\",\"to\":\"index.html\"}]}",
+		"{\"files\":[],\"rename\":[{\"from\":\"missing.html\",\"to\":\"other.html\"}]}",
+		"{\"files\":[],\"rename\":[{\"from\":\"index.html\",\"to\":\"docs/build.org\"}]}",
+		"{\"files\":[{\"path\":\"home.html\",\"content\":\"x\"}],\"rename\":[{\"from\":\"index.html\",\"to\":\"home.html\"}]}"
 	};
 	const gchar *modes[] = {
 		"success", "resume", "corrupt", "changed", "cancel", "existing", "symlink", "lock"
@@ -1306,6 +1473,11 @@ main(int argc, char **argv){
 		g_test_add_data_func(name, revisions[i], revision_case);
 	}
 	g_test_add_func("/artifact/delete", artifact_delete);
+	g_test_add_func("/artifact/binary", artifact_binary);
+	g_test_add_func("/artifact/rename", artifact_rename);
+	g_test_add_func("/prompt/focus", prompt_focus);
+	g_test_add_func("/pipeline/gate", pipeline_gate);
+	g_test_add_func("/qa/structural", qa_runner);
 	g_test_add_func("/recipe/valid", valid_recipe);
 	g_test_add_func("/recipe/invalid-seeds", seed_invalid);
 	g_test_add_data_func("/pipeline/seeds-initial-resume", GUINT_TO_POINTER(1), seed_pipeline);

@@ -42,6 +42,7 @@ tests test: all $(OUTDIR)/test-libresite $(OUTDIR)/test-contracts $(OUTDIR)/test
 	bash tests/revision.sh $(CLI)
 	bash tests/usage.sh $(CLI)
 	bash tests/scaffold.sh $(CLI)
+	bash tests/qa.sh $(CLI)
 # Optional probes compile against pinned generation libraries without making
 # database/client development packages mandatory for the builder itself.
 stack-tests:

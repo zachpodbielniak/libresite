@@ -61,9 +61,13 @@ fi
 rg -q 'must not overlap' "$test_dir/error"
 test ! -e "$test_dir/collision.libresite-work/lock"
 test ! -e "$test_dir/collision.libresite-work/checkpoint.json"
-# Existing destinations, nested outputs, missing sources and binary input fail
-# without provider calls. The successful fixture above is the positive control.
-for mode in existing nested alias missing binary
+# Binary assets import and publish; omitted paths survive the fixture bundle.
+printf '\0PNG' > "$test_dir/source/image.png"
+"$binary" -r "$root/recipes/revision.yaml" --revise "$test_dir/source" -o "$test_dir/with-png"
+cmp "$test_dir/source/image.png" "$test_dir/with-png/image.png"
+# Existing destinations, nested outputs and missing sources fail without
+# provider calls. The successful fixture above is the positive control.
+for mode in existing nested alias missing
 do
 	project="$test_dir/source"
 	output="$test_dir/rejected-$mode"
@@ -72,7 +76,6 @@ do
 		nested) output="$test_dir/source/child" ;;
 		alias) ln -s "$test_dir/source" "$test_dir/alias"; output="$test_dir/alias/child" ;;
 		missing) project="$test_dir/missing" ;;
-		binary) printf '\0' > "$test_dir/source/image.png" ;;
 	esac
 	printf '%s\n' 'no provider call' > "$test_dir/input"
 	if "$binary" -r "$root/recipes/revision.yaml" --revise "$project" -o "$output" > "$test_dir/error" 2>&1

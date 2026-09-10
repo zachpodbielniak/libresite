@@ -3,14 +3,14 @@
 #+authors: Zach Podbielniak
 #+categories: development, websites, ai, glib
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-10T18:07:19-04:00
+#+updated: 2026-09-10T18:40:00-04:00
 #+version: 0.1.0
 
 * Build a site from a recipe
 
 Libresite turns a YAML recipe into a website project in a new output directory. A pipeline can define the product, establish its design, implement a frontend, backend and database, review the result, and check required artifacts. Every AI step can use a different provider, model, effort level, timeout and retry limit. The generated project includes its own build/run documentation; libresite does not host, deploy or execute generated code.
 
-The implementation is a reusable GLib/GObject library plus a CLI, with the =config.mk= / =rules.mk= / =Makefile= layout used by ai-glib and clawtilla. Extend it with a native =LsStep= subclass or an alternative =LsProvider= transport. Nine built-in step names cover the common workflows; arbitrary module options and prompt overrides support additional tasks without changing the recipe grammar.
+The implementation is a reusable GLib/GObject library plus a CLI, with the =config.mk= / =rules.mk= / =Makefile= layout used by ai-glib and clawtilla. Extend it with a native =LsStep= subclass or an alternative =LsProvider= transport. Ten built-in step names cover the common workflows, including a native design =gate=; arbitrary module options and prompt overrides support additional tasks without changing the recipe grammar.
 
 Bundled static recipes start with a native =scaffold= step: a Makefile, 404 page, privacy/terms draft shells, contact-form contract and =AGENTS.md= are emitted without a model call. Existing seed artifacts win; subsequent model steps focus on design and integration. See [[file:docs/scaffold.org][native scaffolding]] for the exact files, preview behavior and static-only scope.
 
@@ -40,7 +40,10 @@ make tests
 ./build/release/libresite -r recipes/landing.yaml --validate
 ./build/release/libresite -r recipes/landing.yaml --plan
 ./build/release/libresite -r recipes/landing.yaml --preview design
+./build/release/libresite -r recipes/landing.yaml --preview design-gate
 ./build/release/libresite -r recipes/landing.yaml -o ./my-site
+./build/release/libresite -r recipes/landing.yaml -o ./my-site --resume --approve design-gate
+./build/release/libresite --qa ./my-site
 #+end_src
 
 Generation requires Git (Fedora =git-core=) and an installed and authenticated CLI for the chosen provider: =codex=, =claude=, =grok=, =cursor-agent= or =agy=. Libresite uses ai-glib's adapters and provider-native defaults; it does not store API credentials. AI generation uses your provider account. The offline test suite does not make real model calls.
@@ -51,7 +54,7 @@ Open a generated static =index.html= directly, or follow the output's =README.or
 
 ** Revise an existing project
 
-Use =--revise DIR= with a change recipe whose =site.brief= describes the requested edits. Existing files enter the pipeline as context; omitted files survive and explicit deletions are transactional. The source stays unchanged and the new output receives its own =feat: revise existing project= commit. The input supports regular UTF-8 text and executable intent; binary files and symlinks are rejected. See [[file:docs/revision.org][revision.org]] for input selection, limits and source-bound resume.
+Use =--revise DIR= with a change recipe whose =site.brief= describes the requested edits. Existing files enter the pipeline as context; omitted files survive and explicit deletions are transactional. The source stays unchanged and the new output receives its own =feat: revise existing project= commit. The input supports regular UTF-8 text, binary assets (PNG, WebP, ICO, fonts) and executable intent; symlinks and special files are rejected. See [[file:docs/revision.org][revision.org]] for input selection, limits and source-bound resume.
 
 #+begin_src bash
 ./build/release/libresite -r recipes/revision.yaml --revise ./my-site --preview revision
@@ -61,7 +64,7 @@ Use =--revise DIR= with a change recipe whose =site.brief= describes the request
 
 ** Supply initial artifacts
 
-To start with client copy, logo SVG, brand YAML or approved legal text, add a top-level =seed_artifacts= sequence of =path= / =content= mappings to the recipe. These exact UTF-8 files populate previews and the initial checkpoint before any step runs. See [[file:docs/recipe-format.org::*Seed artifacts][seed artifact syntax and resume semantics]].
+To start with client copy, logo SVG, brand YAML, approved legal text or binary assets, add a top-level =seed_artifacts= sequence of =path= / =content= mappings to the recipe. UTF-8 is the default; binary seeds set =encoding: base64=. These files populate previews and the initial checkpoint before any step runs. See [[file:docs/recipe-format.org::*Seed artifacts][seed artifact syntax and resume semantics]].
 
 ** Resume interrupted generation
 
@@ -69,7 +72,7 @@ To start with client copy, logo SVG, brand YAML or approved legal text, add a to
 ./build/release/libresite -r recipes/landing.yaml -o ./my-site --resume
 #+end_src
 
-Successful steps are saved under =my-site.libresite-work/checkpoint.json=. Resume restores their files and starts at the next step. The parsed recipe and exact prompt catalog must match. Existing output directories are never overwritten. The output's parent directory must already exist. Concurrent runs targeting the same workspace are rejected.
+Successful steps are saved under =my-site.libresite-work/checkpoint.json=. Resume restores their files and starts at the next step. Bundled recipes stop at =design-gate= until you inspect =OUTPUT.libresite-work/review/design-gate/= and resume with =--approve design-gate= (or =--approve-all= for unattended runs). The parsed recipe and exact prompt catalog must match. Existing output directories are never overwritten. The output's parent directory must already exist. Concurrent runs targeting the same workspace are rejected. After publication, =--qa DIR= inspects HTML structure and local asset references without executing generated code; native =validate= remains the in-process literal check.
 
 Stderr reports attempt numbers, per-attempt timeouts, retry reasons and a waiting heartbeat every 30 seconds. Accepted artifacts advance only after successful steps; accounting also updates before execution and on failure; =timeout: 900= with =retries: 1= can spend 30 minutes on one step before failing.
 
@@ -155,6 +158,7 @@ Repository skills live in [[file:skills/libresite-landing/SKILL.md][skills/libre
 - [[file:docs/operations.org][CLI, checkpoints, limits and troubleshooting]]
 - [[file:docs/revision.org][Existing-project revisions and incremental file operations]]
 - [[file:docs/testing.org][Verification and its limits]]
+- [[file:docs/qa.org][Published-tree QA runner]]
 - [[file:docs/robustness-review.org][Robustness review and deterministic acceptance]]
 
 * Step usage and job pricing

@@ -3,14 +3,14 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, development
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-10T18:07:19-04:00
+#+updated: 2026-09-10T18:40:00-04:00
 #+version: 0.1.0
 
 * Components
 
 | Directory | Responsibility |
 |-----------+----------------|
-| src/core | Recipe validation, prompt catalog, artifact context and pipeline |
+| src/core | Recipe validation, prompt catalog, artifact context, pipeline and published-tree QA |
 | src/interfaces | LsProvider transport interface |
 | src/model | Immutable boxed LsArtifact |
 | src/providers | ai-glib CLI transport adapter |
@@ -24,7 +24,7 @@ The public umbrella header is =libresite.h=. The build emits a static archive, a
 
 * Lifecycle
 
-=LsRecipe= parses and validates YAML before output creation. =LsPipeline= resolves registered types and catalog names before any provider call. Each generation step builds a fresh merged settings object and sends the current project plus the stage contract to =LsProvider=. A complete provider bundle is applied transactionally to =LsContext=. A durable checkpoint is written before the step is considered complete. After every step succeeds, the context is exported into a fresh directory within the private workspace, metadata is added, and a same-filesystem GFile move publishes the output without replacing an existing destination.
+=LsRecipe= parses and validates YAML before output creation. =LsPipeline= resolves registered types and catalog names before any provider call. Each generation step builds a fresh merged settings object and sends a focused project payload plus the stage contract to =LsProvider=. The payload always includes a path/size/encoding/SHA-256 manifest. UTF-8 contents are inlined for the whole project unless the step names =options.files= or =options.context=, in which case only those paths plus contract documents are inlined. Binary files stay in the manifest unless =context= names them. A complete provider bundle is applied transactionally to =LsContext=. A durable checkpoint is written before the step is considered complete. After every step succeeds, the context is exported into a fresh directory within the private workspace, metadata is added, and a same-filesystem GFile move publishes the output without replacing an existing destination.
 
 =ls_recipe_set_timeout()= supplies an execution-only deadline override before a run; merged settings reflect it but the parsed recipe tree stays immutable. Both provider configuration and rendered =AI SETTINGS= use the same merged values. This lets =--timeout= recover an existing checkpoint without changing the intended project or catalog.
 
@@ -118,7 +118,7 @@ CLI plugin registration follows the same result/error rule. A failing registrati
 
 * Revision lifecycle
 
-=ls_pipeline_revise()= imports an existing source into a revision context before creating its output workspace. =ls_pipeline_validate_context()= validates prompts against imported files. The source snapshot and executable intent join the recipe/catalog checkpoint fingerprint; =ls_context_restore()= replaces the full checkpoint state instead of merging it into source files. =ls_context_apply()= accepts transactional =delete= operations and optional file =executable= booleans. =LsArtifact= remains immutable, with =ls_artifact_new_full()= and =ls_artifact_get_executable()= exposing executable intent. Publication creates a fresh standalone repository, preserving the source. See [[file:revision.org][revision.org]] for source limits, exclusions, prompt scope and recovery.
+=ls_pipeline_revise()= imports an existing source into a revision context before creating its output workspace. =ls_pipeline_validate_context()= validates prompts against imported files. The source snapshot and executable intent join the recipe/catalog checkpoint fingerprint; =ls_context_restore()= replaces the full checkpoint state instead of merging it into source files. =ls_context_apply()= accepts transactional =delete= and =rename= operations, optional file =executable= booleans and optional =encoding: base64= for binary artifacts. =LsArtifact= remains immutable, with =ls_artifact_new_bytes()=, =ls_artifact_is_binary()= and =ls_artifact_get_executable()= exposing storage intent. Native =gate= steps stop before implementation until =ls_recipe_approve()=; =ls_qa_check()= inspects a published tree without executing generated code. Publication creates a fresh standalone repository, preserving the source. See [[file:revision.org][revision.org]] for source limits, exclusions, prompt scope and recovery.
 
 * Usage accounting
 

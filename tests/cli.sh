@@ -62,7 +62,7 @@ do
 	# A valid recipe alone does not establish that its prompt keys exist.
 	while IFS=$'\t' read -r _ step module _ _
 	do
-		if [[ "$module" != validate && "$module" != scaffold ]]
+		if [[ "$module" != validate && "$module" != scaffold && "$module" != gate ]]
 		then
 			"$binary" --recipe "$recipe" --preview "$step" > "$test_dir/preview"
 			rg -q 'CURRENT PROJECT' "$test_dir/preview"

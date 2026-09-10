@@ -22,13 +22,14 @@ binary="$test_dir/usr/bin/libresite"
 
 (cd /tmp && bash "$root/tests/usage.sh" "$binary")
 (cd /tmp && bash "$root/tests/revision.sh" "$binary")
+(cd /tmp && bash "$root/tests/qa.sh" "$binary")
 for recipe in "$root"/recipes/*.yaml
 do
 	(cd /tmp && "$binary" --recipe "$recipe" --validate)
 	(cd /tmp && "$binary" --recipe "$recipe" --plan) > "$test_dir/plan"
 	while IFS=$'\t' read -r _ step module _ _
 	do
-		if [[ "$module" != validate && "$module" != scaffold ]]
+		if [[ "$module" != validate && "$module" != scaffold && "$module" != gate ]]
 		then
 			(cd /tmp && "$binary" --recipe "$recipe" --preview "$step") > "$test_dir/preview"
 			rg -q 'CURRENT PROJECT' "$test_dir/preview"
