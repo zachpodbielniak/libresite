@@ -39,6 +39,10 @@ do
 			# Every recipe/stage inherits the shared device contract, even
 			# when its brief does not explicitly request responsive output.
 			rg -q 'MOBILE AND DESKTOP DEFAULTS' "$test_dir/preview"
+			# Accessibility is shared by every stage, including backend HTML
+			# and custom generate stages, without an opt-in recipe field.
+			rg -q 'ACCESSIBILITY AND ARIA DEFAULTS' "$test_dir/preview"
+			rg -q 'Native artifact validation does not certify ARIA compliance' "$test_dir/preview"
 		fi
 	done < "$test_dir/plan"
 done
@@ -102,6 +106,8 @@ YAML
 			# Codex inlines system instructions in stdin; other adapters
 			# may carry them in argv or temporary prompt files instead.
 			rg -q 'MOBILE AND DESKTOP DEFAULTS' "$test_dir/input"
+			rg -q 'ACCESSIBILITY AND ARIA DEFAULTS' "$test_dir/input"
+			rg -q 'manual keyboard and screen-reader checks' "$test_dir/input"
 			rg -q '360x800 and 390x844' "$test_dir/input"
 			rg -q '1366x768 laptop and 1440x900 desktop' "$test_dir/input"
 			rg -qx -- '--ephemeral' "$test_dir/args"

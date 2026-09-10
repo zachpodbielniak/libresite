@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, testing
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-10T14:41:00-04:00
+#+updated: 2026-09-10T15:48:31-04:00
 #+version: 0.1.0
 
 * Generated Git repository checks
@@ -34,6 +34,12 @@ Progress regression coverage forces a provider deadline and verifies that the re
 Debug tests verify that Codex defaults to =--ephemeral=, that =--debug= removes that flag even when resuming a non-debug checkpoint, and that diagnostics include request sizes, retained working directory, parsed fixture session ID, response metadata and timeout error codes. They check that diagnostic metadata stays on stderr without dumping fixture contents. Actual provider session file creation requires a live provider and is not simulated as evidence of live tracing.
 
 CLI integration tests use actual =LsAiProvider= and ai-glib adapters with controlled executable fixtures for Codex, Claude Code, Grok Build, Cursor and Antigravity. They check file publication, model forwarding, unattended permission-bypass flags, output conflict handling, nonzero subprocess exit, resume, process deadlines and actual SIGTERM cancellation. No provider credentials, model calls or network access are required. Fixtures emit provider-specific envelopes; Antigravity success status is uppercase =SUCCESS=. Codex argv must include =--dangerously-bypass-approvals-and-sandbox= and must not include =--sandbox=.
+
+* Accessibility contract coverage
+
+CLI previews assert the shared accessibility/ARIA contract for every generative step of every bundled recipe, and the controlled Codex transport checks that it reaches provider stdin. Installed previews run outside the checkout and compare embedded versus installed replacement catalogs for all five styles using a generic =generate= stage. They check native semantics, accessible names, valid roles and relationships, ID references, state synchronization, hidden-focus rules, keyboard/focus handling, dynamic announcements, runnable browser audits and manual screen-reader procedures. These tests detect missing prompt delivery; fixture markup is not an accessibility-compliant reference site.
+
+For an actual generated project, execute its browser audit across routes and interactive states, then perform the documented keyboard and screen-reader checks and repair findings. Missing test dependencies and unexecuted checks must be explicit. Neither prompt assertions, source-level native validation nor automated browser scans alone establish conformance. See [[file:prompts.org::*Accessibility and ARIA defaults][the generation contract]] for scope and replacement-catalog limits.
 
 * What passing tests do not prove
 

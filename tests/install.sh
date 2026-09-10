@@ -29,6 +29,7 @@ do
 			(cd /tmp && "$binary" --recipe "$recipe" --preview "$step") > "$test_dir/preview"
 			rg -q 'CURRENT PROJECT' "$test_dir/preview"
 			rg -q 'MOBILE AND DESKTOP DEFAULTS' "$test_dir/preview"
+			rg -q 'ACCESSIBILITY AND ARIA DEFAULTS' "$test_dir/preview"
 		fi
 	done < "$test_dir/plan"
 done
@@ -53,6 +54,19 @@ YAML
 	rg -q 'MOBILE AND DESKTOP DEFAULTS' "$test_dir/embedded"
 	rg -q '360x800 and 390x844' "$test_dir/embedded"
 	rg -q '1366x768 laptop and 1440x900 desktop' "$test_dir/embedded"
+	# Check the substantive contract, not just its heading, in every style
+	# through both installed GResource and replacement-catalog paths.
+	for contract in 'WAI-ARIA 1.2' 'Prefer native HTML controls' \
+		'accessible name' 'valid non-abstract roles' 'required parent/child role relationships' \
+		'IDs unique' 'all ARIA ID references' 'synchronized with actual behavior' \
+		'aria-hidden="true"' 'Tab/Shift+Tab' 'focus restoration' \
+		'HTMX or other DOM replacements' 'status/live regions' \
+		'runnable automated accessibility checks' 'failure exit status' \
+		'manual keyboard and screen-reader checks' 'unexecuted' \
+		'Native artifact validation does not certify ARIA compliance'
+	do
+		rg -Fq "$contract" "$test_dir/embedded"
+	done
 done
 
 # Installed stack selection must use embedded data from outside the checkout.
