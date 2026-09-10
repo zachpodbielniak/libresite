@@ -18,6 +18,7 @@ then
 	exit 1
 fi
 binary="$test_dir/usr/bin/libresite"
+(cd /tmp && bash "$root/tests/usage.sh" "$binary")
 (cd /tmp && bash "$root/tests/revision.sh" "$binary")
 for recipe in "$root"/recipes/*.yaml
 do
@@ -245,6 +246,10 @@ int main(void)
 {
 	g_autoptr(LsContext) context = ls_context_new();
 	g_autoptr(GError) error = NULL;
+	g_autoptr(JsonArray) records = json_array_new();
+	/* Resolve the accounting API from installed headers and shared library. */
+	if (!ls_usage_validate(records, &error))
+		return 1;
 	/* Resolve the new public validator from the installed shared library. */
 	if (context == NULL || ls_validate_step_check_options(NULL, &error))
 		return 1;

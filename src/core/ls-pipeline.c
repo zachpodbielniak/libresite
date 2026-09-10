@@ -1,4 +1,5 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
+#include "core/ls-usage.h"
 #include "core/ls-pipeline.h"
 #include <glib/gstdio.h>
 #include <sys/file.h>
@@ -182,7 +183,8 @@ ls_pipeline_validate_context(LsPipeline *self, LsRecipe *recipe,
 /* The checkpoint contains the entire last successful project; failed stage
  * output never becomes input on resume. Fingerprints bind recipe and catalog. */
 static gchar *
-checkpoint_text(LsContext *context, const gchar *fingerprint, guint next){
+checkpoint_text(LsContext *context, const gchar *fingerprint, guint next,
+	JsonArray *usage, gboolean usage_complete){
 	g_autoptr(JsonParser) parser = json_parser_new();
 	g_autofree gchar *snapshot = ls_context_snapshot(context);
 	JsonObject *object;
@@ -191,13 +193,16 @@ checkpoint_text(LsContext *context, const gchar *fingerprint, guint next){
 	json_object_set_string_member(object, "fingerprint", fingerprint);
 	json_object_set_int_member(object, "next", next);
 	json_object_set_int_member(object, "version", 1);
+	json_object_set_array_member(object, "usage", json_array_ref(usage));
+	json_object_set_boolean_member(object, "usage_complete", usage_complete);
 	return ls_json_encode(json_parser_get_root(parser));
 }
 static gboolean
 save_checkpoint(
-	const gchar *path, LsContext *context, const gchar *fingerprint, guint next, GError **error
+	const gchar *path, LsContext *context, const gchar *fingerprint, guint next,
+	JsonArray *usage, gboolean usage_complete, GError **error
 ){
-	g_autofree gchar *text = checkpoint_text(context, fingerprint, next);
+	g_autofree gchar *text = checkpoint_text(context, fingerprint, next, usage, usage_complete);
 	if (strlen(text) > LS_MAX_DOCUMENT) {
 		g_set_error_literal(
 			error, LS_ERROR, LS_ERROR_LIMIT, "Checkpoint exceeds 16 MiB; split the recipe"
@@ -215,6 +220,8 @@ load_checkpoint(
 	guint count,
 	LsContext *context,
 	guint *next,
+	JsonArray **usage,
+	gboolean *usage_complete,
 	GError **error
 ){
 	g_autofree gchar *text = ls_read_text(path, error);
@@ -232,7 +239,7 @@ load_checkpoint(
 	if (!JSON_NODE_HOLDS_OBJECT(node))
 		goto invalid;
 	object = json_node_get_object(node);
-	if (!ls_object_keys(object, "|version|fingerprint|next|files|", error))
+	if (!ls_object_keys(object, "|version|fingerprint|next|files|usage|usage_complete|", error))
 		return FALSE;
 	if (g_strcmp0(ls_string(object, "fingerprint"), fingerprint) != 0)
 		goto invalid;
@@ -246,6 +253,25 @@ load_checkpoint(
 	index = json_node_get_int(node);
 	if (index < 0 || index > count)
 		goto invalid;
+	/* Old checkpoints remain resumable, but their missing history cannot be priced. */
+	node = json_object_get_member(object, "usage");
+	if (node != NULL) {
+		JsonNode *complete = json_object_get_member(object, "usage_complete");
+		if (!JSON_NODE_HOLDS_ARRAY(node) || complete == NULL ||
+			json_node_get_value_type(complete) != G_TYPE_BOOLEAN)
+			goto invalid;
+		if (!ls_usage_validate(json_node_get_array(node), error))
+			return FALSE;
+		g_clear_pointer(usage, json_array_unref);
+		*usage = json_array_ref(json_node_get_array(node));
+		*usage_complete = json_node_get_boolean(complete);
+	} else {
+		if (json_object_has_member(object, "usage_complete"))
+			goto invalid;
+		*usage_complete = FALSE;
+	}
+	json_object_remove_member(object, "usage");
+	json_object_remove_member(object, "usage_complete");
 	json_object_remove_member(object, "fingerprint");
 	json_object_remove_member(object, "next");
 	json_object_remove_member(object, "version");
@@ -375,6 +401,8 @@ run_pipeline(
 	guint next = 0, i;
 	gint lock_fd = -1;
 	gboolean success = FALSE;
+	g_autoptr(JsonArray) usage = json_array_new();
+	gboolean usage_complete = TRUE;
 	if (self->running) {
 		g_set_error_literal(error, LS_ERROR, LS_ERROR_CONFLICT, "Pipeline is already running");
 		return FALSE;
@@ -470,7 +498,7 @@ run_pipeline(
 			goto out;
 		}
 		if (!load_checkpoint(
-				checkpoint, fingerprint, json_array_get_length(steps), context, &next, error
+				checkpoint, fingerprint, json_array_get_length(steps), context, &next, &usage, &usage_complete, error
 			))
 			goto out;
 	} else {
@@ -480,7 +508,7 @@ run_pipeline(
 			g_clear_object(&context);
 			context = ls_recipe_create_context(recipe, error);
 		}
-		if (context == NULL || !save_checkpoint(checkpoint, context, fingerprint, 0, error))
+		if (context == NULL || !save_checkpoint(checkpoint, context, fingerprint, 0, usage, usage_complete, error))
 			goto out;
 	}
 	for (i = next; i < json_array_get_length(steps); i++) {
@@ -492,18 +520,33 @@ run_pipeline(
 		StepProgress progress = {self, id, i};
 		gulong handler = g_signal_connect(step, "progress", G_CALLBACK(forward_progress), &progress);
 		gboolean executed;
+		g_autofree gchar *before = ls_context_snapshot(context);
+		g_autoptr(JsonObject) record = NULL;
+		/* A crash during execution leaves an explicit accounting gap. */
+		if (!save_checkpoint(checkpoint, context, fingerprint, i, usage, FALSE, error))
+			goto out;
 		g_signal_emit(self, signals[0], 0, id, i);
 		executed = ls_step_execute(
 				step, recipe, config, self->prompts, context, self->provider, cancellable, error
 			);
 		g_signal_handler_disconnect(step, handler);
+		record = ls_step_dup_usage(step);
+		json_array_add_object_element(usage, g_steal_pointer(&record));
 		if (!executed) {
+			g_autoptr(GError) save_error = NULL;
+			/* Failed output is never checkpointed; consumed work still is. */
+			if (!ls_context_restore(context, before, &save_error) ||
+				!save_checkpoint(checkpoint, context, fingerprint, i, usage, usage_complete, &save_error)) {
+				if (error != NULL && *error != NULL)
+					g_prefix_error(error, "Usage could not be persisted (%s): ", save_error->message);
+			}
+
 			if (error != NULL && *error != NULL)
 				g_prefix_error(error, "Step '%s': ", id);
 			goto out;
 		}
-		if (g_cancellable_set_error_if_cancelled(cancellable, error) ||
-			!save_checkpoint(checkpoint, context, fingerprint, i + 1, error))
+		if (!save_checkpoint(checkpoint, context, fingerprint, i + 1, usage, usage_complete, error) ||
+			g_cancellable_set_error_if_cancelled(cancellable, error))
 			goto out;
 		g_signal_emit(self, signals[1], 0, id, i);
 	}
@@ -537,7 +580,8 @@ run_pipeline(
 			);
 			goto out;
 		}
-		if (!save_checkpoint(metadata, context, fingerprint, json_array_get_length(steps), error))
+		if (!save_checkpoint(metadata, context, fingerprint, json_array_get_length(steps),
+			usage, usage_complete, error))
 			goto out;
 	}
 	if (!initialize_repository(export_path, context, cancellable, error))

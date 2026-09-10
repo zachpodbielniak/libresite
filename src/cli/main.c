@@ -97,7 +97,7 @@ heartbeat(gpointer data){
 	g_mutex_lock(&progress->mutex);
 	if (progress->id != NULL) {
 		g_autofree gchar *message = g_strdup_printf(
-			"still waiting (%" G_GINT64_FORMAT "s); %s; checkpoint unchanged until step succeeds",
+			"still waiting (%" G_GINT64_FORMAT "s); %s; accepted artifacts unchanged until step succeeds",
 			(g_get_monotonic_time() - progress->since) / G_USEC_PER_SEC,
 			progress->message);
 		print_progress(progress->id, progress->index, message);
@@ -170,8 +170,13 @@ main(int argc, char **argv){
 	g_autoptr(LsPipeline) pipeline = NULL;
 	g_autofree gchar *yaml = NULL;
 	g_autofree gchar *project = NULL;
+	g_autofree gchar *usage_path = NULL, *rates_path = NULL;
 	g_autoptr(LsContext) preview_context = NULL;
 	GOptionEntry entries[] = {
+		{"price-usage", 0, 0, G_OPTION_ARG_FILENAME, &usage_path,
+		 "Price checkpoint or run usage as JSON using --rates", "FILE"},
+		{"rates", 0, 0, G_OPTION_ARG_FILENAME, &rates_path,
+		 "YAML provider/model rate card for --price-usage", "FILE"},
 		{"revise", 0, 0, G_OPTION_ARG_FILENAME, &project,
 		 "Load an existing text project; site.brief describes the changes", "DIR"},
 
@@ -241,7 +246,7 @@ main(int argc, char **argv){
 	g_option_context_add_main_entries(options, entries, NULL);
 	g_option_context_set_description(
 		options,
-		"Examples:\n  libresite --from-form form.json > site.yaml\n"
+		"Examples:\n  libresite --price-usage my-site/.libresite/run.json --rates rates.yaml\n  libresite --from-form form.json > site.yaml\n"
 		"  libresite -r site.yaml --emit-yaml\n  libresite -r recipes/landing.yaml --validate\n  libresite -r "
 		"recipes/landing.yaml --plan\n  libresite -r recipes/landing.yaml --preview design\n  "
 		"libresite -r recipes/landing.yaml -o ./my-site\n  libresite -r recipes/landing.yaml -o "
@@ -257,6 +262,32 @@ main(int argc, char **argv){
 			&error, LS_ERROR, LS_ERROR_INVALID, "Unexpected positional argument; use --recipe FILE"
 		);
 		goto fail;
+	}
+	if (usage_path != NULL || rates_path != NULL) {
+		g_autofree gchar *usage_text = NULL, *rates_text = NULL, *priced = NULL;
+		if (usage_path == NULL || rates_path == NULL || recipe_path != NULL ||
+			form_path != NULL || output != NULL || project != NULL || resume ||
+			validate || plan || preview != NULL || emit_yaml || license || version || list ||
+			plugins != NULL || catalog != NULL || debug || unlimited || timeout != -1 ||
+			max_prompt_bytes != 0) {
+			g_set_error_literal(&error, LS_ERROR, LS_ERROR_INVALID,
+				"Use --price-usage FILE --rates FILE without generation or inspection options");
+			goto fail;
+		}
+		usage_text = ls_read_text(usage_path, &error);
+		if (usage_text == NULL)
+			goto fail;
+		rates_text = ls_read_text(rates_path, &error);
+		if (rates_text == NULL)
+			goto fail;
+		priced = ls_usage_price(usage_text, rates_text, &error);
+		if (priced == NULL)
+			goto fail;
+		if (puts(priced) == EOF || fflush(stdout) == EOF) {
+			g_set_error_literal(&error, LS_ERROR, LS_ERROR_INVALID, "Cannot write price report");
+			goto fail;
+		}
+		return 0;
 	}
 	if (license) {
 		g_autoptr(GBytes) bytes = g_resource_lookup_data(

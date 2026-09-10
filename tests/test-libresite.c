@@ -498,6 +498,8 @@ seed_pipeline(gconstpointer data){
 	json_object_remove_member(object, "next");
 	json_object_remove_member(object, "version");
 	json_object_remove_member(object, "fingerprint");
+	json_object_remove_member(object, "usage");
+	json_object_remove_member(object, "usage_complete");
 	g_clear_pointer(&saved, g_free);
 	saved = ls_json_encode(saved_node);
 	g_assert_true(ls_context_apply(restored, saved, &error));
@@ -589,6 +591,22 @@ retry_step(void){
 	);
 	g_assert_no_error(error);
 	g_assert_cmpuint(fixture->calls, ==, 2);
+	{
+		g_autoptr(JsonObject) usage = ls_step_dup_usage(step);
+		gint64 expected = (gint64)strlen(ls_prompts_get_system(prompts)) * 2 +
+			(gint64)strlen((const gchar *)g_ptr_array_index(fixture->prompts, 0)) +
+			(gint64)strlen((const gchar *)g_ptr_array_index(fixture->prompts, 1));
+		g_assert_cmpint(json_object_get_int_member(usage, "attempts"), ==, 2);
+		g_assert_cmpint(json_object_get_int_member(usage, "retries"), ==, 1);
+		g_assert_cmpint(json_object_get_int_member(usage, "bytes_in"), ==, expected);
+		g_assert_cmpint(json_object_get_int_member(usage, "bytes_out"), ==,
+			(gint64)strlen("not JSON") + (gint64)strlen(bundle));
+		g_assert_true(json_object_get_boolean_member(usage, "success"));
+		json_object_set_int_member(usage, "attempts", 900);
+		g_clear_pointer(&usage, json_object_unref);
+		usage = ls_step_dup_usage(step);
+		g_assert_cmpint(json_object_get_int_member(usage, "attempts"), ==, 2);
+	}
 	g_assert_nonnull(ls_context_lookup(context, "index.html"));
 }
 /* A valid JSON bundle can still violate the output contract. Reject it before
@@ -1029,6 +1047,153 @@ catalog_override(void){
 	remove_tree(temp);
 }
 
+/* Accounting survives failed work and resume, and each retry contributes bytes. */
+static void
+usage_resume(gconstpointer data){
+	guint mode = GPOINTER_TO_UINT(data);
+	gboolean legacy = mode == 1;
+	g_autoptr(GObject) provider = g_object_new(fixture_provider_get_type(), NULL);
+	FixtureProvider *fixture = (FixtureProvider *)provider;
+	g_autoptr(LsPrompts) prompts = ls_prompts_new(NULL, NULL);
+	g_autoptr(LsRecipe) recipe = ls_recipe_new(recipe_text, NULL);
+	g_autoptr(LsPipeline) pipeline = ls_pipeline_new(LS_PROVIDER(provider), prompts);
+	g_autofree gchar *temp = g_dir_make_tmp("libresite-usage-XXXXXX", NULL);
+	g_autofree gchar *output = g_build_filename(temp, "site", NULL);
+	g_autofree gchar *checkpoint = g_strconcat(output, ".libresite-work/checkpoint.json", NULL);
+	g_autofree gchar *metadata = g_build_filename(output, ".libresite", "run.json", NULL);
+	g_autofree gchar *text = NULL;
+	g_autoptr(JsonNode) parsed = NULL;
+	g_autoptr(GError) error = NULL;
+	JsonObject *root, *record;
+	JsonArray *records;
+	fixture->fail_at = 2;
+	g_assert_false(ls_pipeline_run(pipeline, recipe, output, FALSE, NULL, &error));
+	g_assert_error(error, LS_ERROR, LS_ERROR_PROVIDER);
+	g_clear_error(&error);
+	text = ls_read_text(checkpoint, &error);
+	parsed = ls_json_parse(text, &error);
+	g_assert_no_error(error);
+	root = json_node_get_object(parsed);
+	records = json_object_get_array_member(root, "usage");
+	g_assert_true(ls_usage_validate(records, &error));
+	g_assert_cmpuint(json_array_get_length(records), ==, 2);
+	g_assert_cmpint(json_object_get_int_member(root, "next"), ==, 1);
+	record = json_array_get_object_element(records, 1);
+	g_assert_false(json_object_get_boolean_member(record, "success"));
+	g_assert_cmpstr(ls_string(record, "provider"), ==, "claude-code");
+	g_assert_cmpstr(ls_string(record, "model"), ==, "second-model");
+	g_assert_cmpint(json_object_get_int_member(record, "bytes_out"), ==, 0);
+	g_assert_cmpint(json_object_get_int_member(record, "bytes_in"), ==,
+		(gint64)strlen(ls_prompts_get_system(prompts)) +
+		(gint64)strlen((const gchar *)g_ptr_array_index(fixture->prompts, 1)));
+	if (mode != 0) {
+		if (legacy) {
+			json_object_remove_member(root, "usage");
+			json_object_remove_member(root, "usage_complete");
+		} else {
+			/* Simulate a crash leaving the in-flight accounting marker. */
+			json_object_set_boolean_member(root, "usage_complete", FALSE);
+		}
+		g_clear_pointer(&text, g_free);
+		text = ls_json_encode(parsed);
+		g_assert_true(g_file_set_contents(checkpoint, text, -1, &error));
+	}
+	g_assert_true(ls_pipeline_run(pipeline, recipe, output, TRUE, NULL, &error));
+	g_assert_no_error(error);
+	g_assert_cmpuint(fixture->calls, ==, 3);
+	g_clear_pointer(&text, g_free);
+	g_clear_pointer(&parsed, json_node_unref);
+	text = ls_read_text(metadata, &error);
+	parsed = ls_json_parse(text, &error);
+	g_assert_no_error(error);
+	root = json_node_get_object(parsed);
+	records = json_object_get_array_member(root, "usage");
+	g_assert_true(ls_usage_validate(records, &error));
+	g_assert_cmpuint(json_array_get_length(records), ==, legacy ? 2 : 4);
+	g_assert_cmpint(json_object_get_boolean_member(root, "usage_complete"), ==, mode == 0);
+	record = json_array_get_object_element(records, json_array_get_length(records) - 1);
+	g_assert_cmpstr(ls_string(record, "provider"), ==, "native");
+	g_assert_cmpint(json_object_get_int_member(record, "attempts"), ==, 0);
+	g_assert_cmpint(json_object_get_int_member(record, "bytes_out"), ==, 0);
+	g_assert_true(json_object_get_boolean_member(record, "success"));
+	remove_tree(temp);
+}
+
+/* Independently computed byte/time prices include failures, with strict errors. */
+static void
+usage_pricing(void){
+	const gchar *usage = "{\"version\":1,\"usage_complete\":true,\"usage\":["
+		"{\"step\":\"x\",\"provider\":\"codex\",\"model\":\"m\",\"success\":false,"
+		"\"attempts\":2,\"retries\":1,\"bytes_in\":1000000,\"bytes_out\":2000000,\"elapsed_us\":500000}]}";
+	const gchar *rates = "version: 1\ncurrency: USD\nrates:\n"
+		"- {provider: codex, model: m, per_million_input_bytes: 2, per_million_output_bytes: 3, per_second: 4}\n";
+	const gchar *invalid_rates[] = {
+		"version: 1\ncurrency: USD\nrates: []",
+		"version: 1\ncurrency: USD\nrates: [false]",
+		"version: 1\ncurrency: USD\nrates: [{provider: codex, model: m}]",
+		"version: 1\ncurrency: USD\nrates: [{provider: codex, model: m, per_million_input_bytes: -1, per_million_output_bytes: 0, per_second: 0}]",
+		"version: 1\ncurrency: USD\nrates: [{provider: codex, model: m, per_million_input_bytes: '2', per_million_output_bytes: 0, per_second: 0}]",
+		"version: 1\ncurrency: USD\nrates: [{provider: codex, model: m, per_million_input_bytes: 1e308, per_million_output_bytes: 1e308, per_second: 0}]"
+	};
+	g_autoptr(GError) error = NULL;
+	g_autofree gchar *priced = ls_usage_price(usage, rates, &error);
+	g_autoptr(JsonNode) parsed = NULL;
+	g_autoptr(JsonNode) changed = ls_json_parse(usage, NULL);
+	g_autofree gchar *duplicate = g_strconcat(rates,
+		"- {provider: codex, model: m, per_million_input_bytes: 0, per_million_output_bytes: 0, per_second: 0}\n", NULL);
+	JsonObject *root = json_node_get_object(changed);
+	guint i;
+	g_assert_no_error(error);
+	g_assert_nonnull(priced);
+	parsed = ls_json_parse(priced, &error);
+	g_assert_no_error(error);
+	g_assert_cmpfloat(json_object_get_double_member(json_node_get_object(parsed), "total"), ==, 10.0);
+	{
+		JsonArray *records = json_object_get_array_member(root, "usage");
+		g_autofree gchar *text = NULL;
+		/* Repeated executions of the same step must both be charged exactly once. */
+		json_array_add_element(records, json_node_copy(json_array_get_element(records, 0)));
+		text = ls_json_encode(changed);
+		g_clear_pointer(&priced, g_free);
+		g_clear_pointer(&parsed, json_node_unref);
+		priced = ls_usage_price(text, rates, &error);
+		g_assert_no_error(error);
+		parsed = ls_json_parse(priced, &error);
+		g_assert_no_error(error);
+		g_assert_cmpfloat(json_object_get_double_member(json_node_get_object(parsed), "total"), ==, 20.0);
+		json_array_remove_element(records, 1);
+	}
+	g_clear_pointer(&priced, g_free);
+	priced = ls_usage_price(usage, duplicate, &error);
+	g_assert_null(priced);
+	g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+	g_clear_error(&error);
+	for (i = 0; i < G_N_ELEMENTS(invalid_rates); i++) {
+		priced = ls_usage_price(usage, invalid_rates[i], &error);
+		g_assert_null(priced);
+		g_assert_nonnull(error);
+		g_clear_error(&error);
+	}
+	/* Legacy/crashed history and malformed counters never silently become free. */
+	for (i = 0; i < 3; i++) {
+		g_autofree gchar *text = NULL;
+		if (i == 0)
+			json_object_set_boolean_member(root, "usage_complete", FALSE);
+		else if (i == 1)
+			json_object_remove_member(root, "usage_complete");
+		else {
+			JsonObject *record = json_array_get_object_element(json_object_get_array_member(root, "usage"), 0);
+			json_object_set_boolean_member(root, "usage_complete", TRUE);
+			json_object_set_int_member(record, "retries", 4);
+		}
+		text = ls_json_encode(changed);
+		priced = ls_usage_price(text, rates, &error);
+		g_assert_null(priced);
+		g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+		g_clear_error(&error);
+	}
+}
+
 /* Test-data tables keep edge cases explicit and independently reported. */
 int
 main(int argc, char **argv){
@@ -1106,6 +1271,10 @@ main(int argc, char **argv){
 	const gchar *revisions[] = {"resume", "changed", "mode-changed", "brief-changed", "nested"};
 	guint i;
 	g_test_init(&argc, &argv, NULL);
+	g_test_add_data_func("/usage/resume", GINT_TO_POINTER(0), usage_resume);
+	g_test_add_data_func("/usage/legacy", GINT_TO_POINTER(1), usage_resume);
+	g_test_add_data_func("/usage/interrupted", GINT_TO_POINTER(2), usage_resume);
+	g_test_add_func("/usage/pricing", usage_pricing);
 	for (i = 0; i < G_N_ELEMENTS(imports); i++) {
 		g_autofree gchar *name = g_strdup_printf("/revision/import/%s", imports[i]);
 		g_test_add_data_func(name, imports[i], import_case);

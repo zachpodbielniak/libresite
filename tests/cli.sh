@@ -265,8 +265,16 @@ kill -TERM "$run_pid"
 run_status=0
 wait "$run_pid" || run_status=$?
 test "$run_status" -eq 130
-rg -q 'still waiting .*attempt 1/1; provider codex; timeout 60s; checkpoint unchanged' "$test_dir/wait.log"
-cmp "$test_dir/checkpoint-before" "$test_dir/wait.libresite-work/checkpoint.json"
+rg -q 'still waiting .*attempt 1/1; provider codex; timeout 60s; accepted artifacts unchanged' "$test_dir/wait.log"
+# Cancellation changes accounting, while accepted files and next step stay put.
+for checkpoint in "$test_dir/checkpoint-before" "$test_dir/wait.libresite-work/checkpoint.json"
+do
+	rg -q '"files":\[\]' "$checkpoint"
+	rg -q '"next":0[,}]' "$checkpoint"
+done
+rg -q '"usage_complete":true' "$test_dir/wait.libresite-work/checkpoint.json"
+rg -q '"success":false' "$test_dir/wait.libresite-work/checkpoint.json"
+rg -q '"attempts":1[,}]' "$test_dir/wait.libresite-work/checkpoint.json"
 test ! -e "$test_dir/wait"
 export LS_TEST_SLEEP=0
 printf '%s\n' 'CLI VERIFIED (five subprocess adapters, failures, resume, deadline, cancellation)'

@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, operations
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-10T17:17:06-04:00
+#+updated: 2026-09-10T17:47:00-04:00
 #+version: 0.1.0
 
 * Commands
@@ -44,7 +44,7 @@ Diagnostic metadata does not dump prompts, generated file contents or environmen
 
 * Checkpoints and publication
 
-During generation, =OUTPUT.libresite-work/= is a private, owner-only directory. =lock= provides advisory process exclusion. =checkpoint.json= holds format version, the recipe/catalog fingerprint, next step index and all successful file contents. It is replaced consistently and durably after each successful step. Logs/progress go to stderr; redirect or tee stderr for a persistent human-readable run log. Checkpoint records and final metadata are structured machine records, not secrets storage.
+During generation, =OUTPUT.libresite-work/= is a private, owner-only directory. =lock= provides advisory process exclusion. =checkpoint.json= holds format version, the recipe/catalog fingerprint, next step index and all successful file contents. It also includes per-step usage and accounting completeness, and is replaced consistently and durably before execution and after each successful or failed step. See [[file:usage.org][usage accounting and pricing]]. Logs/progress go to stderr; redirect or tee stderr for a persistent human-readable run log. Checkpoint records and final metadata are structured machine records, not secrets storage.
 
 A failure leaves the workspace available for inspection and resume. Re-run the same recipe and catalog with the same =--output= and =--resume=. If the recipe changes semantically or the catalog bytes change, resume fails instead of mixing incompatible generation. Comments/formatting changes in a recipe normally preserve its parsed fingerprint; mapping-order changes can alter it. Changing native plugin code/resources is not fingerprinted; start a new output for that case.
 
@@ -52,7 +52,7 @@ After the last step succeeds, files are exported to a fresh UUID-named directory
 
 Step progress lines include local wall-clock time with a numeric timezone offset, for example =[2026-09-09T14:32:05-0400] [1] brief: started=. Each start and checkpoint event captures its own timestamp. These lines remain on stderr so stdout can be used for plans and prompt previews.
 
-Generation reports each attempt number, total attempts, provider and per-attempt timeout. A rejected attempt reports its error before retrying. Every 30 seconds the CLI prints elapsed waiting time and the latest status; this is a liveness indication from libresite, not provider token progress. The checkpoint remains unchanged until the entire step succeeds. For example, =timeout: 900= with =retries: 1= permits two 15-minute provider calls for a single step. A fresh provider process partway through a long step can therefore be a retry rather than a hung timeout. Rebuild and restart with =--resume= to use new progress reporting; an already running process keeps its previous behavior.
+Generation reports each attempt number, total attempts, provider and per-attempt timeout. A rejected attempt reports its error before retrying. Every 30 seconds the CLI prints elapsed waiting time and the latest status; this is a liveness indication from libresite, not provider token progress. Accepted artifact contents remain unchanged until the entire step succeeds; usage accounting also records failed executions. For example, =timeout: 900= with =retries: 1= permits two 15-minute provider calls for a single step. A fresh provider process partway through a long step can therefore be a retry rather than a hung timeout. Rebuild and restart with =--resume= to use new progress reporting; an already running process keeps its previous behavior.
 
 
 * Generated repository publication

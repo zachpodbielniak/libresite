@@ -5,7 +5,20 @@ G_DEFINE_INTERFACE(LsProvider, ls_provider, G_TYPE_OBJECT)
 /* Implementations supply the single transport operation. */
 static void
 ls_provider_default_init(LsProviderInterface *iface){
-	(void)iface;
+	/**
+	 * LsProvider::usage:
+	 * @self: the emitting provider
+	 * @provider: (nullable): requested provider identity
+	 * @model: (nullable): requested model, NULL for the provider default
+	 * @bytes_in: system plus task UTF-8 bytes passed to the transport
+	 * @bytes_out: UTF-8 bytes returned by the transport, zero for NULL
+	 *
+	 * Emitted synchronously after dispatch, before error/cancellation
+	 * normalization. This signal contains metadata only.
+	 */
+	g_signal_new("usage", G_TYPE_FROM_INTERFACE(iface), G_SIGNAL_RUN_LAST,
+		0, NULL, NULL, NULL, G_TYPE_NONE, 4, G_TYPE_STRING, G_TYPE_STRING,
+		G_TYPE_INT64, G_TYPE_INT64);
 }
 /* Keep cancellation behavior identical for production and injected transports. */
 gchar *
@@ -31,6 +44,11 @@ ls_provider_generate(
 		return NULL;
 	}
 	response = iface->generate(self, settings, system, prompt, cancellable, &local_error);
+	/* Measure the transport boundary before rejecting errors or cancellation.
+	 * Failed calls still consumed input; returned malformed bundles count too. */
+	g_signal_emit_by_name(self, "usage", ls_string(settings, "provider"),
+		ls_string(settings, "model"), (gint64)strlen(system) + (gint64)strlen(prompt),
+		response != NULL ? (gint64)strlen(response) : (gint64)0);
 	/* ai-glib adapters may use their own cancellation domain. Normalize at
 	 * the interface boundary so all consumers see the same GIO contract. */
 	if (g_cancellable_is_cancelled(cancellable)) {

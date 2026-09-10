@@ -47,6 +47,15 @@ gboolean ls_step_execute(
 	GCancellable *cancellable,
 	GError **error
 );
+/**
+ * ls_step_dup_usage:
+ * @self: a step
+ *
+ * Returns an independent record of the last execution, including failed calls.
+ * See docs/usage.org for field units and accounting limits.
+ * Returns: (transfer full) (nullable): usage object, or NULL before execution
+ */
+JsonObject *ls_step_dup_usage(LsStep *self);
 #define LS_TYPE_GENERATE_STEP (ls_generate_step_get_type())
 G_DECLARE_FINAL_TYPE(LsGenerateStep, ls_generate_step, LS, GENERATE_STEP, LsStep)
 #define LS_TYPE_VALIDATE_STEP (ls_validate_step_get_type())

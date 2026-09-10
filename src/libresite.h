@@ -9,4 +9,5 @@
 #include "interfaces/ls-provider.h"
 #include "providers/ls-ai-provider.h"
 #include "steps/ls-step.h"
+#include "core/ls-usage.h"
 #define LS_VERSION "0.1.0"
