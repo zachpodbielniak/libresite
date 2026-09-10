@@ -12,6 +12,8 @@ Use =--revise DIR= to load an existing text project. In revision mode, the recip
 
 Start from =recipes/revision.yaml=, copy it to your own recipe, and replace its brief and acceptance requirements. The sample uses one generation stage with =prompt: revision= followed by a native check requiring =index.html=. Change that check for a project with a different entry point, and add concrete content predicates for the requested behavior. A source project does not need Libresite metadata or a Git repository.
 
+Optional =seed_artifacts= explicitly overlay matching imported paths before the initial checkpoint and appear in previews. This lets a change recipe supply approved replacement copy or new text assets directly. Omitted source paths survive. Seeds are never reapplied over completed checkpoint edits on resume, and the fingerprint still covers the original source even where a seed replaces it.
+
 #+begin_src bash
 libresite -r change.yaml --revise ./my-site --validate
 libresite -r change.yaml --revise ./my-site --preview revision

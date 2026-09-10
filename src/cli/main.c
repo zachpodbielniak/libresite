@@ -307,6 +307,7 @@ main(int argc, char **argv){
 	if (project != NULL && (validate || plan || preview != NULL)) {
 		preview_context = ls_context_import(project, NULL, &error);
 		if (preview_context == NULL ||
+			!ls_recipe_seed_context(recipe, preview_context, &error) ||
 			!ls_pipeline_validate_context(pipeline, recipe, preview_context, &error))
 			goto fail;
 	}
@@ -323,7 +324,9 @@ main(int argc, char **argv){
 			if (preview != NULL && g_str_equal(preview, ls_string(step, "id"))) {
 				g_autofree gchar *text = NULL;
 				if (preview_context == NULL)
-					preview_context = ls_context_new();
+					preview_context = ls_recipe_create_context(recipe, &error);
+				if (preview_context == NULL)
+					goto fail;
 				text = ls_prompts_render(prompts, recipe, step, preview_context, &error);
 				if (text == NULL)
 					goto fail;

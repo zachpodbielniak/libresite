@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, testing
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-10T15:50:40-04:00
+#+updated: 2026-09-10T17:17:06-04:00
 #+version: 0.1.0
 
 * Generated Git repository checks
@@ -11,6 +11,8 @@
 The offline CLI fixtures verify that each adapter publishes a clean committed repository. The installed native plugin test verifies the requested repository root, =master= branch, one Conventional Commit, preserved ignore rules, tracked source/lock/example files, and excluded secrets, metadata and build output. It also exercises conflicting inherited Git repository pointers, signing/hooks/template/exclude configuration, and failures during init/add/commit, missing Git, and cancellation during Git publication followed by checkpoint resume. These checks exercise real Git with controlled artifacts; they do not establish live AI design quality or generated application build/browser correctness.
 
 * Run checks
+
+Seed regressions reject malformed entries, unsafe/reserved paths, duplicates and file/directory conflicts during recipe parsing. Transport fixtures inspect first and subsequent prompts, checkpoint zero, exported text, seed identity changes and resume after accepted replacements. CLI checks cover seeded previews outside the checkout and preflight prompt limits; the installed native workflow checks seed availability before any plugin executes. These are offline orchestration checks, not evidence that a live model preserves approved copy or legal text.
 
 Bundled live-testing recipes disable provider time/output budgets. Offline fixtures keep short deadlines deliberately to test timeout handling. The recovery regression resumes a finite-deadline checkpoint with =--unlimited= and verifies that it overrides a conflicting finite CLI deadline, returns a delayed fixture successfully, and renders both budgets as unlimited. SIGTERM cancellation is exercised with =--timeout 0=.
 
@@ -80,3 +82,8 @@ The install test renders the installed application recipe from =/tmp= and compar
 * Revision verification
 
 The GTest suite exercises import rejection (binary/invalid UTF-8, symlinks, FIFOs, empty projects, cancellation), metadata exclusion, executable preservation, atomic deletions and file/directory transitions. Pipeline fixtures cover source-preserving publication, interrupted revision, deletion survival after resume, changed source contents/mode/brief and nested destination rejection. =tests/revision.sh= runs the CLI against a controlled provider, checks imported previews and preserved files, revises a generated output again, and rejects existing/nested/aliased outputs, missing sources and binary input before another provider call. =tests/install.sh= repeats revision CLI coverage with the installed binary outside the checkout. No live model edit or generated-code execution is claimed.
+
+
+* Client copy-lock regression coverage
+
+The contract suite checks approved sentences and a separate telephone URI through YAML and the native validator. Negative cases change one display digit, rewrite a word, change punctuation, omit the sentence or change only the call destination. Injected provider tests reject a wrong number, verify corrective retry feedback, and confirm that exhausted attempts leave no published output or rejected artifact in the checkpoint; resume publishes the corrected copy. Install checks exercise the copy-lock prompt in embedded and replacement catalogs and preflight the fictional plumber recipe. These are offline source-contract tests, not live provider, rendered-page or telephone-routing evidence. See [[file:copy-lock.org][copy-lock delivery review]].

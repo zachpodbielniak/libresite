@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, design, prompts
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-10T15:50:40-04:00
+#+updated: 2026-09-10T17:17:06-04:00
 #+version: 0.1.0
 
 * One maintained prompt catalog
@@ -22,7 +22,7 @@ The =PIPELINE ACCEPTANCE= section additionally supplies every native validation 
 
 The recipe's =instructions= and =options= appear inside step data rather than interpolating code or shell expressions. Project files are explicitly untrusted task data. A retry appends at most 512 bytes of error detail and asks for a corrected file bundle. The builder validates the response rather than assuming prompt instructions were obeyed.
 
-=--preview ID= prints the exact system and task framing with an empty project context. It is a preflight preview, not a replay of a later step after generation. =--plan= prints resolved settings. Checkpoints bind the exact catalog digest; changing even a catalog comment invalidates resume to make prompt revisions explicit.
+=--preview ID= prints the exact system and task framing with the recipe's seed artifact context (empty when omitted). It is a preflight preview, not a replay of a later step after generation. =--plan= prints resolved settings. Checkpoints bind the exact catalog digest; changing even a catalog comment invalidates resume to make prompt revisions explicit.
 
 * Design profiles
 

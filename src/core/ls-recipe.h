@@ -2,6 +2,7 @@
 #pragma once
 #include "core/ls-util.h"
 G_BEGIN_DECLS
+typedef struct _LsContext LsContext;
 #define LS_TYPE_RECIPE (ls_recipe_get_type())
 G_DECLARE_FINAL_TYPE(LsRecipe, ls_recipe, LS, RECIPE, GObject)
 /**
@@ -11,6 +12,28 @@ G_DECLARE_FINAL_TYPE(LsRecipe, ls_recipe, LS, RECIPE, GObject)
  * Returns: (transfer full) (nullable): validated recipe
  */
 LsRecipe *ls_recipe_new(const gchar *yaml, GError **error);
+/**
+ * ls_recipe_create_context:
+ * @self: validated recipe
+ * @error: return location for an error
+ *
+ * Create initial artifacts from the optional seed_artifacts sequence. Use only
+ * for fresh runs or previews; resume must restore the checkpoint instead.
+ *
+ * Returns: (transfer full) (nullable): independently owned initial context
+ */
+LsContext *ls_recipe_create_context(LsRecipe *self, GError **error);
+/**
+ * ls_recipe_seed_context:
+ * @self: validated recipe
+ * @context: initial artifact context, optionally imported for revision
+ * @error: return location for an error
+ *
+ * Apply explicit seed artifacts as one transaction, replacing matching paths.
+ * Call only before a fresh run or preview; never overlay a resumed checkpoint.
+ * Returns: whether every seed artifact was applied
+ */
+gboolean ls_recipe_seed_context(LsRecipe *self, LsContext *context, GError **error);
 /**
  * ls_recipe_set_timeout:
  * @self: recipe
