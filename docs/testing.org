@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, testing
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-10T15:50:40-04:00
+#+updated: 2026-09-10T17:16:00-04:00
 #+version: 0.1.0
 
 * Generated Git repository checks
@@ -76,3 +76,7 @@ The =/seo/= GTest cases load each bundled recipe's actual final validator, requi
 The install test renders the installed application recipe from =/tmp= and compares embedded versus explicitly loaded installed catalogs, including real YAML/HTMX/ORM symbols, GitLab dependency URLs and SQL deliverables. See [[file:c-application.org][the C application guide]] for the separate generated application's SQLite, configuration, HTTP and optional provider test requirements. No live generation, application compiler invocation, browser session or external database call is part of these default builder tests.
 
 =make stack-tests= is an additional opt-in real-library conformance probe after initializing =deps/yaml-glib=, =deps/htmx-glib= and =deps/orm-glib=. It compiles against the pinned archives and checks YAML integer versus quoted-string typing, HTMX callback routing and escaping, SQLite first-file creation, parameter injection resistance, constraint failures, transaction commit/rollback and persistence after reopening. It neither generates an application nor opens an HTTP listener. It requires the generated C stack's SQLite build packages and leaves dependency build artifacts in their normal submodule build directories. This verifies the API subset supplied in prompts; it does not certify generated application's SQL, browser behavior or optional network databases.
+
+* Client copy-lock regression coverage
+
+The contract suite checks approved sentences and a separate telephone URI through YAML and the native validator. Negative cases change one display digit, rewrite a word, change punctuation, omit the sentence or change only the call destination. Injected provider tests reject a wrong number, verify corrective retry feedback, and confirm that exhausted attempts leave no published output or rejected artifact in the checkpoint; resume publishes the corrected copy. Install checks exercise the copy-lock prompt in embedded and replacement catalogs and preflight the fictional plumber recipe. These are offline source-contract tests, not live provider, rendered-page or telephone-routing evidence. See [[file:copy-lock.org][copy-lock delivery review]].

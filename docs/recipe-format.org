@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, reference
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-10T15:50:40-04:00
+#+updated: 2026-09-10T17:16:00-04:00
 #+version: 0.1.0
 
 * Contract
@@ -111,6 +111,8 @@ Only =files= and optional string =summary= are allowed. Every file contains exac
 Duplicate JSON members, embedded NUL escapes and JSON nesting beyond 32 collections are also rejected. Empty bundles are permitted for no-change review steps, but a complete pipeline that produces no files fails. Each file is limited to 16 MiB; the project to 64 MiB and 4096 files. The smaller prompt and checkpoint limits described in [[file:operations.org][operations.org]] usually constrain practical project size first.
 
 * Deterministic artifact checks
+
+Client-supplied sentences and phone numbers should be copy-locked with =contains= rules on their intended artifacts; see [[file:copy-lock.org][copy-lock authoring, retry behavior and delivery review]] and [[file:../recipes/copy-locked-landing.yaml][the complete example]].
 
 Native =validate= steps accept optional =options.checks= alongside the mandatory =required= array. Required files must contain at least one non-whitespace Unicode character. All path lists reject duplicates. Each check applies to one exact safe relative path; the file must exist even if it is not listed in =required=.
 

@@ -3,12 +3,13 @@
 #+authors: Zach Podbielniak
 #+categories: libresite
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-10T15:50:40-04:00
+#+updated: 2026-09-10T17:16:00-04:00
 #+version: 0.1.0
 
 * Guides
 
 - [[file:recipe-format.org][Recipe reference]]
+- [[file:copy-lock.org][Lock approved client sentences and contact details]]
 - [[file:architecture.org][Architecture and extension API]]
 - [[file:prompts.org][Prompt catalog, accessibility/ARIA, font and mobile/desktop defaults, and design provenance]]
 - [[file:seo.org][SEO defaults, private routes and production preparation]]
