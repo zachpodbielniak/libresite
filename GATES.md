@@ -1,23 +1,23 @@
-# Gates: revision mode
+# Gates: native static scaffold
 
-OWNS: src/** data/prompts.yaml recipes/revision.yaml tests/** docs/** README.org skills/** Makefile GATES.md
+OWNS: src/** data/** recipes/** tests/** docs/** skills/** README.org Makefile rules.mk AGENTS.md GATES.md
 
-Scope: Import an existing text project, apply a change brief incrementally, publish a new output, and merge Conventional Commits into master.
+Scope: Add a deterministic scaffold module, integrate static recipes and previews, verify preservation and offline execution, and merge Conventional Commits into master.
 
-- [x] G1: Offline revision, failure, resume and regression tests pass without compiler warnings in release and debug builds.
+- [x] G1: Release/debug regression checks and scaffold behavior pass without compiler warnings.
   CHECK: bash tests/verify.sh
   EXPECT: LIBRESITE VERIFIED
-  EVIDENCE: exit=0; shell=/bin/sh; cwd=/var/home/zach/source/projects/libresite/trees/feat-revision-mode; path=604a669fb015/14 entries; EXPECT=matched; output-sha256=fc4b5ff5db53a0fb3a396d0c9fd726b735fc1ac20a0e9dda79ae2f57d102d551; output-bytes=19
+  EVIDENCE: exit=0; shell=/bin/sh; cwd=/var/home/zach/source/projects/libresite/trees/feat-native-scaffold; path=ae84c92d8d99/14 entries; EXPECT=matched; output-sha256=fc4b5ff5db53a0fb3a396d0c9fd726b735fc1ac20a0e9dda79ae2f57d102d551; output-bytes=19
 
-- [x] G2: Installed CLI and public API work outside the checkout.
+- [x] G2: Installed native scaffold works outside the checkout alongside public API and plugin tests.
   CHECK: bash tests/install.sh
   EXPECT: INSTALL VERIFIED
-  EVIDENCE: exit=0; shell=/bin/sh; cwd=/var/home/zach/source/projects/libresite/trees/feat-revision-mode; path=604a669fb015/14 entries; EXPECT=matched; output-sha256=d115bf745910eeb033780fd360d3a46275cfda5b0cbd76acf663d36ec38f5988; output-bytes=1802
+  EVIDENCE: exit=0; shell=/bin/sh; cwd=/var/home/zach/source/projects/libresite/trees/feat-native-scaffold; path=ae84c92d8d99/14 entries; EXPECT=matched; output-sha256=962a7b8536fddef5fd27f1283102c6f00cfbac170d4798956db5155368fad8c5; output-bytes=2817
 
-- [x] G3: Ownership changes pass address and undefined behavior sanitizers.
+- [x] G3: Scaffold ownership and cancellation pass sanitizer checks.
   CHECK: make DEBUG=1 ASAN=1 UBSAN=1 tests
   EXPECT: CLI VERIFIED
-  EVIDENCE: exit=0; shell=/bin/sh; cwd=/var/home/zach/source/projects/libresite/trees/feat-revision-mode; path=604a669fb015/14 entries; EXPECT=matched; output-sha256=8f8709b389d397c657265531cd67c360a917264c5371d2cae99668dc92ef9ae3; output-bytes=86080
+  EVIDENCE: exit=0; shell=/bin/sh; cwd=/var/home/zach/source/projects/libresite/trees/feat-native-scaffold; path=ae84c92d8d99/14 entries; EXPECT=matched; output-sha256=673eddcdbed5bc9560271ecb3527b1f5a6bba81964c5870111ab15f7e3b7cc4d; output-bytes=87933
 
-- [x] G4: Documentation matches the implementation and Conventional Commits are merged into master.
-  EVIDENCE: Reviewed source import, transactional file operations, source-bound resume, executable intent, seed overlays, CLI mode compatibility and docs/revision.org against the final combined tree. G1-G3 passed after integrating master 112452e. Master was fast-forwarded to verified commit 428ad2f; git status was clean and git diff --check passed. Implementation commit 90f67d4 and integration/test commits use Conventional Commit subjects. Tests used controlled providers only; no live model or generated application execution is claimed.
+- [x] G4: Documentation, templates and final Conventional Commit merge match the requested scope.
+  EVIDENCE: Reviewed native template emission, unchanged seed paths, closed options, cancellation and atomic conflicts, static recipe acceptance, installed previews and template-bound checkpoint identity against docs/scaffold.org. Release/debug verification, installed execution and ASan/UBSan passed; generated Makefile checks included a missing-file negative control. Feature commit 2148793 uses a Conventional Commit subject and master was fast-forwarded to it from 8017a93. No live model, browser, contact delivery or legal review was performed.
