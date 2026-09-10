@@ -12,12 +12,12 @@ Scope: Import an existing text project, apply a change brief incrementally, publ
 - [x] G2: Installed CLI and public API work outside the checkout.
   CHECK: bash tests/install.sh
   EXPECT: INSTALL VERIFIED
-  EVIDENCE: exit=0; shell=/bin/sh; cwd=/var/home/zach/source/projects/libresite/trees/feat-revision-mode; path=604a669fb015/14 entries; EXPECT=matched; output-sha256=248c490ad91d9b9ad242da08fa186cc25a39ccf59e2dea2fb9c1da30ad30e4e4; output-bytes=1789
+  EVIDENCE: exit=0; shell=/bin/sh; cwd=/var/home/zach/source/projects/libresite/trees/feat-revision-mode; path=604a669fb015/14 entries; EXPECT=matched; output-sha256=d115bf745910eeb033780fd360d3a46275cfda5b0cbd76acf663d36ec38f5988; output-bytes=1802
 
 - [x] G3: Ownership changes pass address and undefined behavior sanitizers.
   CHECK: make DEBUG=1 ASAN=1 UBSAN=1 tests
   EXPECT: CLI VERIFIED
-  EVIDENCE: exit=0; shell=/bin/sh; cwd=/var/home/zach/source/projects/libresite/trees/feat-revision-mode; path=604a669fb015/14 entries; EXPECT=matched; output-sha256=4836d659f7e74c19722c75f0ceb4391e5217e4ce313a6a352a008de086693c9c; output-bytes=85960
+  EVIDENCE: exit=0; shell=/bin/sh; cwd=/var/home/zach/source/projects/libresite/trees/feat-revision-mode; path=604a669fb015/14 entries; EXPECT=matched; output-sha256=8f8709b389d397c657265531cd67c360a917264c5371d2cae99668dc92ef9ae3; output-bytes=86080
 
 - [ ] G4: Documentation matches the implementation and Conventional Commits are merged into master.
   EVIDENCE: pending
