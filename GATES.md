@@ -25,8 +25,8 @@ Scope: Ship six fixed-scope vertical packages, retain the C application SKU, rai
 - [x] G5: The shared catalog sets flagship expectations for every recipe; SKU scope and pinning limits are documented.
   EVIDENCE: Reviewed data/prompts.yaml shared defaults and docs/packages.org scope, exclusions, native-check limits and archived-generator requirements.
 
-- [ ] G6: Conventional Commits are merged to master with a clean tracked worktree.
-  EVIDENCE: pending
+- [x] G6: Conventional Commits are merged to master with a clean tracked worktree.
+  EVIDENCE: master fast-forwarded to 39b5a08; both tracked working trees were clean, and source/tests/recipes/data/build rules exactly matched tested eded4d9. Conventional feature, fix, integration and verification commits are retained.
 
 - [x] G7: Package ownership and recovery paths pass ASan and UBSan regression tests.
   CHECK: make DEBUG=1 ASAN=1 UBSAN=1 tests
