@@ -1,0 +1,68 @@
+#+title: Step usage and job pricing
+#+description: Durable accounting records and explicit byte/time pricing without stderr parsing
+#+authors: Zach Podbielniak
+#+categories: libresite, operations, accounting
+#+created: 2026-09-10T17:45:00-04:00
+#+updated: 2026-09-10T17:47:00-04:00
+#+version: 0.1.0
+
+* Read structured records
+
+Every executed pipeline step appends an object to =usage= in =OUTPUT.libresite-work/checkpoint.json=. On publication the same history appears in =OUTPUT/.libresite/run.json=. This metadata is private and ignored by the generated Git repository. No prompts, response bodies or diagnostics are added to usage records. Existing artifact metadata remains in the same document.
+
+| Field | Meaning |
+|-------+---------|
+| step | Recipe step identifier |
+| provider | Provider selected at the transport boundary; =native= for an execution without provider calls |
+| model | Requested model identifier, =(provider default)= when omitted, =(none)= for native work |
+| elapsed_us | Monotonic wall time in microseconds for the execution, including prompt preparation, calls, retries and validation; excludes checkpoint/export/Git work |
+| attempts | Calls actually dispatched through =ls_provider_generate()= |
+| retries | Additional calls after the first within this execution; zero when attempts is zero |
+| bytes_in | Sum of UTF-8 system and task prompt bytes passed to each transport call, including corrective retry prompts |
+| bytes_out | Sum of returned UTF-8 response bytes, including malformed/rejected responses |
+| success | Whether the step execution succeeded; artifact checkpoint/publication may still fail afterward |
+
+Byte counts measure the libresite transport interface, not network traffic or tokens. CLI framing, provider-side tool calls, internal retries, cached tokens and partial output discarded inside an adapter are not visible here. A NULL transport response contributes zero returned bytes, not a claim that the provider generated nothing. A returned response accompanied by an error or cancellation still contributes its bytes. Model identifiers reflect requested settings, not independent verification of the provider's actual model selection.
+
+The =LsStep= public API offers =ls_step_dup_usage()= after success or failure; the caller owns its independent =JsonObject=. Provider implementations retain their existing =generate= vfunc. The wrapper emits =LsProvider::usage= synchronously with provider, model, input bytes and output bytes after each dispatched call. Steps collect this signal while executing. Do not share a provider concurrently between executions. Custom steps must route calls through the supplied provider wrapper for those calls to be counted. Multiple provider/model identities within one execution become =(mixed)= and cannot be priced as one identity. For custom steps, =retries= means additional calls and may represent distinct subrequests.
+
+* Failure and resume
+
+Normal failure and cancellation save the consumed usage with the previous successful artifact snapshot and unchanged next-step index. Resuming appends a fresh execution record for the failed step; it retains earlier failed records and skips completed steps. Repeated step identifiers are intentional and all records contribute to pricing. Native validation steps also receive records with zero provider bytes.
+
+Before execution, the durable checkpoint marks =usage_complete: false=. After the execution's record is saved it restores the previous completeness value. A process crash, forced kill or failed accounting write can therefore leave an explicit accounting gap. Resume still works but pricing refuses incomplete history. Legacy checkpoints without usage remain resumable and carry =usage_complete: false= into their final metadata. No missing history is reconstructed from stderr or guessed as zero.
+
+Checkpoints still save accepted artifacts only. The file has the existing 16 MiB limit, now including usage. This is a local accounting record, not a tamper-proof billing ledger. Preserve metadata and the rate card with any quote or invoice derived from them.
+
+* Price a job
+
+Supply your own byte/time rates in YAML. These are job-pricing rates in the declared currency, not built-in provider token prices. The following values are illustrative. Every used provider/model pair, including native steps and explicit provider defaults, needs an exact entry; deliberate free work uses explicit zeros. Duplicate identities, unknown keys, negative/nonfinite rates, missing rates and incomplete usage are errors.
+
+#+begin_src yaml
+version: 1
+currency: USD
+rates:
+  - provider: codex
+    model: example-model
+    per_million_input_bytes: 2
+    per_million_output_bytes: 3
+    per_second: 0
+  - provider: native
+    model: '(none)'
+    per_million_input_bytes: 0
+    per_million_output_bytes: 0
+    per_second: 0
+#+end_src
+
+#+begin_src bash
+libresite --price-usage ./my-site/.libresite/run.json --rates rates.yaml
+libresite --price-usage ./my-site.libresite-work/checkpoint.json --rates rates.yaml
+#+end_src
+
+The command operates offline and emits JSON on stdout: =currency=, =total=, =steps= with each original =usage= record and its =amount=, and the exact parsed =rate_card=. It cannot be combined with generation/inspection options. The library equivalent is =ls_usage_price(usage_json, rates_yaml, error)=.
+
+Each execution amount is =bytes_in / 1000000 * per_million_input_bytes + bytes_out / 1000000 * per_million_output_bytes + elapsed_us / 1000000 * per_second=. All execution amounts, including failures, are summed once. Retries are already included in byte and elapsed totals; do not multiply again. Reports use floating-point estimates without currency rounding; apply the desired invoicing rounding policy at the billing boundary. Provider invoices based on tokens or subscriptions cannot be inferred from byte counts.
+
+* Verification
+
+Offline GTest coverage measures exact prompt/response bytes across a rejected response and retry, failed-call accounting, mixed-provider resume, native steps, legacy history, and independently calculated byte/time pricing. Rate-card tests reject missing, duplicate, negative, mistyped and overflowing rates. =tests/usage.sh= exercises the CLI against a fixed record with stderr empty, including from an installed binary outside the checkout. Existing cancellation, extension, revision and publication tests continue to run; no real provider accounts are used.

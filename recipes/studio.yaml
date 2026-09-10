@@ -15,7 +15,7 @@ site:
   backend: none
   database: none
   requirements: >-
-    Eight flat HTML routes with relative links, consistent navigation and contextual onward journeys: index.html, work.html, work-atlas.html, work-common.html, approach.html, journal.html, start.html, 404.html. Use warm paper, near-black ink and a decisive vermilion accent with accessible text/surface pairs; pair a confident system sans display with a readable system serif for longform and monospace for useful technical annotations. Create a recognizable original contour/grid illustration language: a large cartographic composition for Atlas and a contrasting modular archive composition for Common. No fake screenshots. Combine a bold typographic opening, full-width art, asymmetric project rows and quiet editorial reading; no repeated generic card grid. All pages use a skip link, visible focus, current-page navigation, responsive layouts and a consistent footer. Keep the header usable without JavaScript. No tracking, remote services, signup or pretend form submission. Motion is optional progressive enhancement, never required to see content. Preserve completeness over ornamental complexity.
+    Ten flat HTML routes (eight content/recovery pages plus two shared utility drafts) with relative links, consistent navigation and contextual onward journeys: index.html, work.html, work-atlas.html, work-common.html, approach.html, journal.html, start.html, 404.html, privacy.html, terms.html. Integrate the privacy and terms draft shells into the visual system while preserving noindex and honest missing-input wording. Use warm paper, near-black ink and a decisive vermilion accent with accessible text/surface pairs; pair a confident system sans display with a readable system serif for longform and monospace for useful technical annotations. Create a recognizable original contour/grid illustration language: a large cartographic composition for Atlas and a contrasting modular archive composition for Common. No fake screenshots. Combine a bold typographic opening, full-width art, asymmetric project rows and quiet editorial reading; no repeated generic card grid. All pages use a skip link, visible focus, current-page navigation, responsive layouts and a consistent footer. Keep the header usable without JavaScript. No tracking, remote services, signup or pretend form submission. Motion is optional progressive enhancement, never required to see content. Preserve completeness over ornamental complexity.
 ai:
   provider: codex
   timeout: 0
@@ -23,6 +23,9 @@ ai:
   max_tokens: 0
 pipeline:
   steps:
+    - id: scaffold
+      type: scaffold
+      options: {profile: static}
     - id: brief
       type: brief
       instructions: >-
@@ -108,6 +111,11 @@ pipeline:
           - tests/check.sh
           - README.org
           - AGENTS.md
+          - Makefile
+          - privacy.html
+          - terms.html
+          - docs/contact.org
+          - tests/scaffold.sh
           - docs/product.org
           - docs/design.org
           - docs/testing.org
@@ -139,3 +147,7 @@ pipeline:
             contains: ['<main', 'href="index.html"']
           - path: docs/acceptance.org
             contains: ['#+title:', '360', '768', '1440']
+          - path: privacy.html
+            contains: ['<main', 'noindex']
+          - path: terms.html
+            contains: ['<main', 'noindex']

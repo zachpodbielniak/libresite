@@ -2,5 +2,12 @@
   <gresource prefix="/org/libresite">
     <file>prompts.yaml</file>
     <file>LICENSE</file>
+    <file>scaffold/Makefile</file>
+    <file>scaffold/404.html</file>
+    <file>scaffold/privacy.html</file>
+    <file>scaffold/terms.html</file>
+    <file>scaffold/AGENTS.md</file>
+    <file>scaffold/docs/contact.org</file>
+    <file>scaffold/tests/scaffold.sh</file>
   </gresource>
 </gresources>

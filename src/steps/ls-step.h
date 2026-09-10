@@ -47,6 +47,15 @@ gboolean ls_step_execute(
 	GCancellable *cancellable,
 	GError **error
 );
+/**
+ * ls_step_dup_usage:
+ * @self: a step
+ *
+ * Returns an independent record of the last execution, including failed calls.
+ * See docs/usage.org for field units and accounting limits.
+ * Returns: (transfer full) (nullable): usage object, or NULL before execution
+ */
+JsonObject *ls_step_dup_usage(LsStep *self);
 #define LS_TYPE_GENERATE_STEP (ls_generate_step_get_type())
 G_DECLARE_FINAL_TYPE(LsGenerateStep, ls_generate_step, LS, GENERATE_STEP, LsStep)
 #define LS_TYPE_VALIDATE_STEP (ls_validate_step_get_type())
@@ -62,4 +71,24 @@ G_DECLARE_FINAL_TYPE(LsValidateStep, ls_validate_step, LS, VALIDATE_STEP, LsStep
  * Returns: whether the options have a valid schema
  */
 gboolean ls_validate_step_check_options(JsonObject *options, GError **error);
+#define LS_TYPE_SCAFFOLD_STEP (ls_scaffold_step_get_type())
+G_DECLARE_FINAL_TYPE(LsScaffoldStep, ls_scaffold_step, LS, SCAFFOLD_STEP, LsStep)
+/**
+ * ls_scaffold_step_check_options:
+ * @options: (nullable) (transfer none): options; profile defaults to static
+ * @error: return location for an error
+ * Returns: whether native scaffold options are valid
+ */
+gboolean ls_scaffold_step_check_options(JsonObject *options, GError **error);
+/**
+ * ls_scaffold_step_render:
+ * @options: (nullable) (transfer none): native scaffold options
+ * @context: (transfer none): existing project artifacts, left unchanged
+ * @error: return location for an error
+ *
+ * Renders embedded templates for absent paths only. Apply the returned bundle
+ * with ls_context_apply() to validate conflicts and commit it atomically.
+ * Returns: (transfer full) (nullable): a JSON file bundle, or NULL on error
+ */
+gchar *ls_scaffold_step_render(JsonObject *options, LsContext *context, GError **error);
 G_END_DECLS

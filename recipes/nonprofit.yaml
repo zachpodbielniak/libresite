@@ -30,6 +30,12 @@ site:
     - path: /404.html
       title: Page not found
       purpose: Provide recovery links to home and programs.
+    - path: /privacy.html
+      title: Privacy draft
+      purpose: Preserve the noindex draft until approved operator and data-handling facts are supplied.
+    - path: /terms.html
+      title: Terms draft
+      purpose: Preserve the noindex draft until reviewed service terms are supplied.
   style: editorial
   frontend: Semantic HTML, shared native CSS, minimal local JavaScript and original SVG assets. No frontend framework or package manager.
   backend: none
@@ -43,6 +49,9 @@ ai:
   max_tokens: 0
 pipeline:
   steps:
+    - id: scaffold
+      type: scaffold
+      options: {profile: static}
     - id: brief
       type: brief
       instructions: >-
@@ -96,6 +105,11 @@ pipeline:
           - assets/illustration.svg
           - README.org
           - AGENTS.md
+          - Makefile
+          - privacy.html
+          - terms.html
+          - docs/contact.org
+          - tests/scaffold.sh
           - docs/product.org
           - docs/design.org
           - docs/acceptance.org
@@ -126,3 +140,7 @@ pipeline:
             contains: ['<main', '</html>']
           - path: docs/acceptance.org
             contains: ['#+title:', '360', '768', '1440']
+          - path: privacy.html
+            contains: ['<main', 'noindex']
+          - path: terms.html
+            contains: ['<main', 'noindex']

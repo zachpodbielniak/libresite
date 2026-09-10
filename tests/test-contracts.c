@@ -394,7 +394,7 @@ structured_form(void){
 	context = ls_recipe_create_context(reloaded, &error);
 	g_assert_no_error(error);
 	rendered = ls_prompts_render(prompts, reloaded,
-		json_array_get_object_element(ls_recipe_get_steps(reloaded), 0), context, &error);
+		json_array_get_object_element(ls_recipe_get_steps(reloaded), 1), context, &error);
 	g_assert_no_error(error);
 	g_assert_nonnull(strstr(rendered, "copy_lock"));
 	g_assert_nonnull(strstr(rendered, "001234"));
@@ -447,6 +447,78 @@ structured_invalid(void){
 		g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
 	}
 }
+/* Exercise native emission directly with a transport that fails if called.
+ * Seeds, cancellation and a directory collision must never partially mutate it. */
+static void
+scaffold_contract(void){
+	g_autoptr(GError) error = NULL;
+	g_autoptr(LsRecipe) recipe = ls_recipe_new(
+		"version: 1\nname: scaffold\nsite: {brief: Static site}\n"
+		"pipeline: {steps: [{id: scaffold, type: scaffold}]}\n", &error);
+	g_autoptr(LsPrompts) prompts = ls_prompts_new(NULL, &error);
+	g_autoptr(LsProvider) provider = g_object_new(contract_provider_get_type(), NULL);
+	g_autoptr(LsStep) step = g_object_new(LS_TYPE_SCAFFOLD_STEP, NULL);
+	g_autoptr(LsContext) context = ls_context_new();
+	g_autoptr(GCancellable) cancel = g_cancellable_new();
+	g_autoptr(JsonObject) options = json_object_new();
+	g_autofree gchar *before = NULL;
+	g_autofree gchar *after = NULL;
+	JsonObject *config = json_array_get_object_element(ls_recipe_get_steps(recipe), 0);
+	const gchar *paths[] = {"Makefile", "404.html", "privacy.html", "terms.html",
+		"docs/contact.org", "AGENTS.md", "tests/scaffold.sh"};
+	guint i;
+	g_assert_no_error(error);
+	g_assert_true(ls_context_apply(context, "{\"files\":["
+		"{\"path\":\"Makefile\",\"content\":\"client build\\n\",\"executable\":true},"
+		"{\"path\":\"terms.html\",\"content\":\"Approved client terms\"}]}", &error));
+	g_assert_true(ls_step_execute(step, recipe, config, prompts, context, provider, NULL, &error));
+	g_assert_no_error(error);
+	for (i = 0; i < G_N_ELEMENTS(paths); i++)
+		g_assert_nonnull(ls_context_lookup(context, paths[i]));
+	g_assert_cmpstr(ls_artifact_get_content(ls_context_lookup(context, "Makefile")), ==, "client build\n");
+	g_assert_cmpstr(ls_artifact_get_content(ls_context_lookup(context, "terms.html")), ==, "Approved client terms");
+	before = ls_context_snapshot(context);
+	g_assert_true(ls_step_execute(step, recipe, config, prompts, context, provider, NULL, &error));
+	after = ls_context_snapshot(context);
+	g_assert_cmpstr(before, ==, after);
+	g_assert_cmpuint(((ContractProvider *)provider)->calls, ==, 0);
+
+	/* A cancelled call emits nothing even when every template is missing. */
+	g_clear_object(&context);
+	context = ls_context_new();
+	g_cancellable_cancel(cancel);
+	g_assert_false(ls_step_execute(step, recipe, config, prompts, context, provider, cancel, &error));
+	g_assert_error(error, G_IO_ERROR, G_IO_ERROR_CANCELLED);
+	g_clear_error(&error);
+	g_assert_null(ls_context_lookup(context, "Makefile"));
+	g_assert_true(ls_context_apply(context,
+		"{\"files\":[{\"path\":\"docs\",\"content\":\"client file\"}]}", &error));
+	g_clear_pointer(&before, g_free);
+	before = ls_context_snapshot(context);
+	g_assert_false(ls_step_execute(step, recipe, config, prompts, context, provider, NULL, &error));
+	g_assert_nonnull(error);
+	g_clear_error(&error);
+	g_clear_pointer(&after, g_free);
+	after = ls_context_snapshot(context);
+	g_assert_cmpstr(before, ==, after);
+
+	/* Options have a closed schema and do not coerce scalar types. */
+	g_assert_true(ls_scaffold_step_check_options(NULL, &error));
+	json_object_set_string_member(options, "profile", "static");
+	g_assert_true(ls_scaffold_step_check_options(options, &error));
+	json_object_set_string_member(options, "profile", "application");
+	g_assert_false(ls_scaffold_step_check_options(options, &error));
+	g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+	g_clear_error(&error);
+	json_object_set_boolean_member(options, "profile", TRUE);
+	g_assert_false(ls_scaffold_step_check_options(options, &error));
+	g_clear_error(&error);
+	json_object_remove_member(options, "profile");
+	json_object_set_boolean_member(options, "overwrite", TRUE);
+	g_assert_false(ls_scaffold_step_check_options(options, &error));
+	g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+}
+
 int
 main(int argc, char **argv){
 	const gchar *json[] = {
@@ -477,6 +549,7 @@ main(int argc, char **argv){
 	};
 	guint i;
 	g_test_init(&argc, &argv, NULL);
+	g_test_add_func("/contracts/scaffold", scaffold_contract);
 	g_test_add_func("/contracts/structured-form", structured_form);
 	g_test_add_func("/contracts/structured-invalid", structured_invalid);
 	g_test_add_func("/contracts/extensions", extension_contracts);

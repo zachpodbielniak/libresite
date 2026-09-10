@@ -51,7 +51,8 @@ static const gchar *recipe_text =
 	"# Archived customer inputs\nversion: 1\nname: sold-job\n"
 	"package: {sku: studio, release: '1.0.0', kind: site}\n"
 	"site: {brief: 'Keep this scope'}\nai: {retries: 0, timeout: 1}\n"
-	"pipeline:\n  steps:\n    - {id: first, type: generate}\n"
+	"pipeline:\n  steps:\n    - {id: scaffold, type: scaffold}\n"
+	"    - {id: first, type: generate}\n"
 	"    - {id: second, type: generate}\n    - id: acceptance\n"
 	"      type: validate\n      options:\n        required: [first.txt, second.txt]\n"
 	"        checks: [{path: second.txt, contains: ['Resumed second step']}]\n";
@@ -233,10 +234,12 @@ check_scope(const gchar *sku, JsonArray *required){
 	guint i, j, k;
 	for (i = 0; i < G_N_ELEMENTS(names); i++) {
 		g_auto(GStrv) expected = NULL;
+		g_autofree gchar *all_routes = NULL;
 		guint actual_count = 0;
 		if (!g_str_equal(sku, names[i]))
 			continue;
-		expected = g_strsplit(routes[i], ",", -1);
+		all_routes = g_strconcat(routes[i], ",privacy.html,terms.html", NULL);
+		expected = g_strsplit(all_routes, ",", -1);
 		for (j = 0; j < json_array_get_length(required); j++) {
 			const gchar *path = json_array_get_string_element(required, j);
 			if (g_str_has_suffix(path, ".html"))
@@ -277,6 +280,8 @@ sku_acceptance(gconstpointer data){
 	g_assert_no_error(error);
 	g_assert_true(ls_validate_step_check_options(options, &error));
 	check_scope(sku, required);
+	if (!g_str_equal(sku, "application"))
+		g_assert_cmpstr(ls_string(json_array_get_object_element(steps, 0), "type"), ==, "scaffold");
 	for (i = 0; i < json_array_get_length(required); i++) {
 		const gchar *file_path = json_array_get_string_element(required, i);
 		g_autoptr(GString) content = g_string_new("Positive native fixture\n");

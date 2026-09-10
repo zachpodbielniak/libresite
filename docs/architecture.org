@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, development
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-10T17:17:06-04:00
+#+updated: 2026-09-10T17:47:00-04:00
 #+version: 0.1.0
 
 * Components
@@ -119,3 +119,9 @@ CLI plugin registration follows the same result/error rule. A failing registrati
 * Revision lifecycle
 
 =ls_pipeline_revise()= imports an existing source into a revision context before creating its output workspace. =ls_pipeline_validate_context()= validates prompts against imported files. The source snapshot and executable intent join the recipe/catalog checkpoint fingerprint; =ls_context_restore()= replaces the full checkpoint state instead of merging it into source files. =ls_context_apply()= accepts transactional =delete= operations and optional file =executable= booleans. =LsArtifact= remains immutable, with =ls_artifact_new_full()= and =ls_artifact_get_executable()= exposing executable intent. Publication creates a fresh standalone repository, preserving the source. See [[file:revision.org][revision.org]] for source limits, exclusions, prompt scope and recovery.
+
+* Usage accounting
+
+Step execution records and explicit rate-card pricing are described in [[file:usage.org][usage.org]]. Checkpoints and run metadata include =usage= and =usage_complete=. An in-flight marker prevents pricing a history with a crash gap. Failed executions persist their usage alongside the previous accepted artifacts. Legacy checkpoints remain resumable but are not priceable.
+* Native scaffold
+=LsScaffoldStep= emits embedded static templates through the normal atomic context boundary, never the provider. Bundled static workflows run it first. Existing paths survive, template bytes participate in checkpoint identity, and CLI previews apply preceding scaffold steps in memory. See [[file:scaffold.org][native scaffold contracts and verification]].

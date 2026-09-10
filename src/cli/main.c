@@ -97,7 +97,7 @@ heartbeat(gpointer data){
 	g_mutex_lock(&progress->mutex);
 	if (progress->id != NULL) {
 		g_autofree gchar *message = g_strdup_printf(
-			"still waiting (%" G_GINT64_FORMAT "s); %s; checkpoint unchanged until step succeeds",
+			"still waiting (%" G_GINT64_FORMAT "s); %s; accepted artifacts unchanged until step succeeds",
 			(g_get_monotonic_time() - progress->since) / G_USEC_PER_SEC,
 			progress->message);
 		print_progress(progress->id, progress->index, message);
@@ -171,12 +171,18 @@ main(int argc, char **argv){
 	g_autoptr(LsPipeline) pipeline = NULL;
 	g_autofree gchar *yaml = NULL;
 	g_autofree gchar *project = NULL;
+	g_autofree gchar *usage_path = NULL, *rates_path = NULL;
 	g_autoptr(LsContext) preview_context = NULL;
 	GOptionEntry entries[] = {
 		{"package", 0, 0, G_OPTION_ARG_FILENAME, &package_path,
 		 "Load a sealed recipe and catalog, verifying both digests", "DIR"},
 		{"seal-package", 0, 0, G_OPTION_ARG_FILENAME, &seal_path,
 		 "Archive recipe and catalog as a new sold package without generation", "DIR"},
+
+		{"price-usage", 0, 0, G_OPTION_ARG_FILENAME, &usage_path,
+		 "Price checkpoint or run usage as JSON using --rates", "FILE"},
+		{"rates", 0, 0, G_OPTION_ARG_FILENAME, &rates_path,
+		 "YAML provider/model rate card for --price-usage", "FILE"},
 		{"revise", 0, 0, G_OPTION_ARG_FILENAME, &project,
 		 "Load an existing text project; site.brief describes the changes", "DIR"},
 
@@ -250,6 +256,8 @@ main(int argc, char **argv){
 		"  libresite --package ./sale-2026 -o ./client-site\n"
 		"  libresite --package ./sale-2026 -o ./client-site --resume\n"
 		"  libresite --from-form form.json > site.yaml\n"
+
+		"  libresite --price-usage my-site/.libresite/run.json --rates rates.yaml\n"
 		"  libresite -r site.yaml --emit-yaml\n  libresite -r recipes/landing.yaml --validate\n  libresite -r "
 		"recipes/landing.yaml --plan\n  libresite -r recipes/landing.yaml --preview design\n  "
 		"libresite -r recipes/landing.yaml -o ./my-site\n  libresite -r recipes/landing.yaml -o "
@@ -266,6 +274,33 @@ main(int argc, char **argv){
 		);
 		goto fail;
 	}
+	if (usage_path != NULL || rates_path != NULL) {
+		g_autofree gchar *usage_text = NULL, *rates_text = NULL, *priced = NULL;
+		if (usage_path == NULL || rates_path == NULL || recipe_path != NULL ||
+			package_path != NULL || seal_path != NULL ||
+			form_path != NULL || output != NULL || project != NULL || resume ||
+			validate || plan || preview != NULL || emit_yaml || license || version || list ||
+			plugins != NULL || catalog != NULL || debug || unlimited || timeout != -1 ||
+			max_prompt_bytes != 0) {
+			g_set_error_literal(&error, LS_ERROR, LS_ERROR_INVALID,
+				"Use --price-usage FILE --rates FILE without generation or inspection options");
+			goto fail;
+		}
+		usage_text = ls_read_text(usage_path, &error);
+		if (usage_text == NULL)
+			goto fail;
+		rates_text = ls_read_text(rates_path, &error);
+		if (rates_text == NULL)
+			goto fail;
+		priced = ls_usage_price(usage_text, rates_text, &error);
+		if (priced == NULL)
+			goto fail;
+		if (puts(priced) == EOF || fflush(stdout) == EOF) {
+			g_set_error_literal(&error, LS_ERROR, LS_ERROR_INVALID, "Cannot write price report");
+			goto fail;
+		}
+		return 0;
+	}
 	if (license) {
 		g_autoptr(GBytes) bytes = g_resource_lookup_data(
 			ls_resources_get_resource(), "/org/libresite/LICENSE", 0, &error
@@ -280,7 +315,7 @@ main(int argc, char **argv){
 		return 0;
 	}
 	if (list) {
-		g_print("brief\ndesign\nfrontend\nbackend\ndatabase\nreview\ngenerate\nvalidate\n");
+		g_print("brief\ndesign\nfrontend\nbackend\ndatabase\nreview\ngenerate\nvalidate\nscaffold\n");
 		return 0;
 	}
 	if (form_path != NULL) {
@@ -382,6 +417,27 @@ main(int argc, char **argv){
 		for (i = 0; i < json_array_get_length(steps); i++) {
 			JsonObject *step = json_array_get_object_element(steps, i);
 			g_autoptr(JsonObject) settings = ls_recipe_resolve_ai(recipe, step);
+			gboolean native = g_str_equal(ls_string(step, "type"), "validate") ||
+				g_str_equal(ls_string(step, "type"), "scaffold");
+			/* Preview deterministic predecessors without running AI stages. This
+			 * is the same bundle the native step commits during execution. */
+			if (preview != NULL && g_str_equal(ls_string(step, "type"), "scaffold")) {
+				JsonNode *node = json_object_get_member(step, "options");
+				g_autofree gchar *bundle = NULL;
+				if (preview_context == NULL)
+					preview_context = ls_recipe_create_context(recipe, &error);
+				if (preview_context == NULL)
+					goto fail;
+				bundle = ls_scaffold_step_render(node != NULL ? json_node_get_object(node) : NULL,
+					preview_context, &error);
+				if (bundle == NULL || !ls_context_apply(preview_context, bundle, &error))
+					goto fail;
+				if (g_str_equal(preview, ls_string(step, "id"))) {
+					g_print("%s\n", bundle);
+					return 0;
+				}
+				continue;
+			}
 			if (preview != NULL && g_str_equal(preview, ls_string(step, "id"))) {
 				g_autofree gchar *text = NULL;
 				if (preview_context == NULL)
@@ -400,10 +456,10 @@ main(int argc, char **argv){
 					i + 1,
 					ls_string(step, "id"),
 					ls_string(step, "type"),
-					g_str_equal(ls_string(step, "type"), "validate")
+					native
 						? "native"
 						: ls_string(settings, "provider"),
-					ls_string(settings, "model") != NULL ? ls_string(settings, "model")
+					native ? "(none)" : ls_string(settings, "model") != NULL ? ls_string(settings, "model")
 														 : "(provider default)"
 				);
 		}
