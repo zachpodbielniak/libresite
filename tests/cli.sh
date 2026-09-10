@@ -30,8 +30,12 @@ for text in 'Approved client copy' '<svg/>' 'color: blue' 'Approved legal text'
 do
 	rg -Fq "$text" "$test_dir/seeds-preview"
 done
+sed '/^seed_artifacts:/,/^pipeline:/{ /^pipeline:/!d; }' "$test_dir/seeds.yaml" > "$test_dir/unseeded.yaml"
+"$binary" -r "$test_dir/unseeded.yaml" --preview first > "$test_dir/unseeded-preview"
+seed_limit=$(wc -c < "$test_dir/unseeded-preview")
+"$binary" -r "$test_dir/unseeded.yaml" --validate --max-prompt-bytes "$seed_limit"
 if "$binary" -r "$test_dir/seeds.yaml" -o "$test_dir/seed-output" \
-	--max-prompt-bytes 1 > "$test_dir/seed-limit" 2>&1
+	--max-prompt-bytes "$seed_limit" > "$test_dir/seed-limit" 2>&1
 then
 	exit 1
 fi
