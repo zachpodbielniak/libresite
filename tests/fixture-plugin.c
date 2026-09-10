@@ -31,7 +31,13 @@ seed_execute(
 	return ls_context_apply(
 		context,
 		"{\"files\":[{\"path\":\"index.html\",\"content\":\"<!doctype "
-		"html><title>Plugin</title><h1>Native module</h1>\"}]}",
+		"html><title>Plugin</title><h1>Native module</h1>\"},"
+		"{\"path\":\".gitignore\",\"content\":\"/custom-cache/\\n\"},"
+		"{\"path\":\".env\",\"content\":\"FIXTURE_SECRET=example\"},"
+		"{\"path\":\".env.example\",\"content\":\"FIXTURE_SECRET=\"},"
+		"{\"path\":\"build/output.o\",\"content\":\"fixture\"},"
+		"{\"path\":\"custom-cache/item\",\"content\":\"fixture\"},"
+		"{\"path\":\"package-lock.json\",\"content\":\"{}\"}]}",
 		error
 	);
 }

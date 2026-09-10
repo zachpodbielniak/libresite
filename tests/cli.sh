@@ -84,6 +84,9 @@ YAML
 	"$binary" -r "$test_dir/recipe.yaml" -o "$test_dir/$provider"
 	rg -q 'Offline site' "$test_dir/$provider/index.html"
 	test -f "$test_dir/$provider/.libresite/run.json"
+	test -f "$test_dir/$provider/.gitignore"
+	test "$(git -C "$test_dir/$provider" log -1 --format=%s)" = 'chore: initial generated project'
+	test -z "$(git -C "$test_dir/$provider" status --porcelain)"
 	rg -q 'fixture-model' "$test_dir/args"
 	# Unattended adapters must skip approval prompts; otherwise Codex exec
 	# waits forever for sandbox-escalation on a non-TTY stdin.

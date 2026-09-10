@@ -280,6 +280,91 @@ invalid:
 	);
 	return FALSE;
 }
+/* Run Git without inherited repository pointers, user hooks, filters or signing.
+ * Cancellation must reap the child before the private export is abandoned. */
+static gboolean
+run_git(const gchar *directory, const gchar *const *arguments,
+	GCancellable *cancellable, GError **error){
+	g_autoptr(GSubprocessLauncher) launcher = g_subprocess_launcher_new(
+		G_SUBPROCESS_FLAGS_STDOUT_SILENCE | G_SUBPROCESS_FLAGS_STDERR_PIPE);
+	g_autoptr(GSubprocess) process = NULL;
+	g_auto(GStrv) environment = g_get_environ();
+	g_autoptr(GPtrArray) argv = g_ptr_array_new();
+	g_autofree gchar *diagnostic = NULL;
+	guint i;
+	if (g_cancellable_set_error_if_cancelled(cancellable, error))
+		return FALSE;
+	g_subprocess_launcher_set_cwd(launcher, directory);
+	for (i = 0; environment[i] != NULL; i++) {
+		if (g_str_has_prefix(environment[i], "GIT_")) {
+			g_autofree gchar *name = g_strndup(environment[i],
+				(gsize)(strchr(environment[i], '=') - environment[i]));
+			g_subprocess_launcher_unsetenv(launcher, name);
+		}
+	}
+	g_subprocess_launcher_setenv(launcher, "GIT_CONFIG_NOSYSTEM", "1", TRUE);
+	g_subprocess_launcher_setenv(launcher, "GIT_CONFIG_GLOBAL", "/dev/null", TRUE);
+	g_subprocess_launcher_setenv(launcher, "GIT_ATTR_NOSYSTEM", "1", TRUE);
+	g_ptr_array_add(argv, (gpointer)"git");
+	g_ptr_array_add(argv, (gpointer)"-c");
+	g_ptr_array_add(argv, (gpointer)"core.hooksPath=/dev/null");
+	g_ptr_array_add(argv, (gpointer)"-c");
+	g_ptr_array_add(argv, (gpointer)"core.attributesFile=/dev/null");
+	g_ptr_array_add(argv, (gpointer)"-c");
+	g_ptr_array_add(argv, (gpointer)"core.excludesFile=/dev/null");
+	g_ptr_array_add(argv, (gpointer)"-c");
+	g_ptr_array_add(argv, (gpointer)"user.name=Libresite");
+	g_ptr_array_add(argv, (gpointer)"-c");
+	g_ptr_array_add(argv, (gpointer)"user.email=libresite@localhost");
+	for (i = 0; arguments[i] != NULL; i++)
+		g_ptr_array_add(argv, (gpointer)arguments[i]);
+	g_ptr_array_add(argv, NULL);
+	process = g_subprocess_launcher_spawnv(launcher, (const gchar *const *)argv->pdata, error);
+	if (process == NULL) {
+		g_prefix_error(error, "Cannot run git %s: ", arguments[0]);
+		return FALSE;
+	}
+	if (!g_subprocess_communicate_utf8(process, NULL, cancellable, NULL, &diagnostic, error)) {
+		g_subprocess_force_exit(process);
+		g_subprocess_wait(process, NULL, NULL);
+		return FALSE;
+	}
+	if (!g_subprocess_get_successful(process)) {
+		g_set_error(error, LS_ERROR, LS_ERROR_CONFLICT, "git %s failed: %s",
+			arguments[0], diagnostic != NULL ? diagnostic : "no diagnostic");
+		return FALSE;
+	}
+	return TRUE;
+}
+
+/* Preserve project-specific ignore rules and append baseline local-file rules.
+ * Keep generated sources and lockfiles eligible for the initial snapshot. */
+static gboolean
+initialize_repository(const gchar *directory, LsContext *context,
+	GCancellable *cancellable, GError **error){
+	const LsArtifact *existing = ls_context_lookup(context, ".gitignore");
+	g_autofree gchar *path = g_build_filename(directory, ".gitignore", NULL);
+	g_autofree gchar *contents = g_strconcat(
+		existing != NULL ? ls_artifact_get_content(existing) : "",
+		"\n# Libresite: local metadata, secrets, build output and caches\n"
+		"/.libresite/\n*.libresite-work/\n"
+		".env\n.env.*\n!.env.example\n!.env.sample\n!.env.template\n"
+		"/build/\n/dist/\n/coverage/\nnode_modules/\n.venv/\nvenv/\n"
+		"__pycache__/\n*.py[cod]\n.pytest_cache/\n.next/\n.nuxt/\n"
+		"*.o\n*.a\n*.so\n*.so.*\n*.log\n*.sqlite\n*.sqlite3\n"
+		"*.sqlite-*\n*.sqlite3-*\n*.db\n*.db-*\n*~\n*.swp\n"
+		"# Always retain the repository ignore policy\n!/.gitignore\n", NULL);
+	const gchar *init[] = {"init", "--quiet", "--initial-branch=main", "--template=", NULL};
+	const gchar *add[] = {"add", "--all", "--", ".", NULL};
+	const gchar *commit[] = {"commit", "--no-gpg-sign", "--quiet",
+		"-m", "chore: initial generated project", NULL};
+	if (!g_file_set_contents(path, contents, -1, error))
+		return FALSE;
+	return run_git(directory, init, cancellable, error) &&
+		run_git(directory, add, cancellable, error) &&
+		run_git(directory, commit, cancellable, error);
+}
+
 /* Lock one workspace through publication. All generated code remains inert;
  * publication is a same-filesystem directory move with no overwrite flag. */
 gboolean
@@ -422,6 +507,8 @@ ls_pipeline_run(
 		if (!save_checkpoint(metadata, context, fingerprint, json_array_get_length(steps), error))
 			goto out;
 	}
+	if (!initialize_repository(export_path, context, cancellable, error))
+		goto out;
 	source = g_file_new_for_path(export_path);
 	destination = g_file_new_for_path(absolute);
 	if (!g_file_move(

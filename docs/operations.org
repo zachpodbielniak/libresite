@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, operations
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-09T23:10:00-04:00
+#+updated: 2026-09-10T14:12:00-04:00
 #+version: 0.1.0
 
 * Commands
@@ -53,6 +53,15 @@ After the last step succeeds, files are exported to a fresh UUID-named directory
 Step progress lines include local wall-clock time with a numeric timezone offset, for example =[2026-09-09T14:32:05-0400] [1] brief: started=. Each start and checkpoint event captures its own timestamp. These lines remain on stderr so stdout can be used for plans and prompt previews.
 
 Generation reports each attempt number, total attempts, provider and per-attempt timeout. A rejected attempt reports its error before retrying. Every 30 seconds the CLI prints elapsed waiting time and the latest status; this is a liveness indication from libresite, not provider token progress. The checkpoint remains unchanged until the entire step succeeds. For example, =timeout: 900= with =retries: 1= permits two 15-minute provider calls for a single step. A fresh provider process partway through a long step can therefore be a retry rather than a hung timeout. Rebuild and restart with =--resume= to use new progress reporting; an already running process keeps its previous behavior.
+
+
+* Generated repository publication
+
+Every successful =--output DIR= publication includes =DIR/.git= and =DIR/.gitignore=, with a single commit on =main=: =chore: initial generated project=. Git must be on =PATH= (Fedora =git-core=). The initial commit uses =Libresite <libresite@localhost>= even when no personal Git identity is configured. Subsequent commits use your normal Git configuration. Libresite neither adds a remote nor pushes the project.
+
+Existing generated ignore rules are retained. Baseline rules appended during export ignore =.libresite/= (which contains the full run checkpoint), private workspaces, =.env= and its local variants, build/distribution/coverage output, common dependency and language caches, object/shared/static libraries, logs, SQLite/database files and editor backups. Environment examples (=.env.example=, =.env.sample=, =.env.template=), dependency lockfiles and source files are eligible for tracking; project-specific ignore rules still apply. Ignored generated files remain on disk. Review stack-specific rules and secrets before sharing; this policy is not a content scanner.
+
+Initialization, staging and committing all finish inside the private export before the directory move. Git errors (including a missing executable) prevent publication and preserve completed checkpoints. Correct the error and repeat the same command with =--resume=; this reconstructs a fresh export and repository without rerunning completed model steps. Failed exports remain available for inspection under the workspace. Inherited =GIT_*= environment settings, system/global Git configuration, templates, hooks and signing cannot redirect or block the automated commit.
 
 * Cancellation and errors
 

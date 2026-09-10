@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: development, websites, ai, glib
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-09T22:30:00-04:00
+#+updated: 2026-09-10T14:12:00-04:00
 #+version: 0.1.0
 
 * Build a site from a recipe
@@ -33,7 +33,9 @@ make tests
 ./build/release/libresite -r recipes/landing.yaml -o ./my-site
 #+end_src
 
-Generation requires an installed and authenticated CLI for the chosen provider: =codex=, =claude=, =grok=, =cursor-agent= or =agy=. Libresite uses ai-glib's adapters and provider-native defaults; it does not store API credentials. AI generation uses your provider account. The offline test suite does not make real model calls.
+Generation requires Git (Fedora =git-core=) and an installed and authenticated CLI for the chosen provider: =codex=, =claude=, =grok=, =cursor-agent= or =agy=. Libresite uses ai-glib's adapters and provider-native defaults; it does not store API credentials. AI generation uses your provider account. The offline test suite does not make real model calls.
+
+The requested output directory contains a standalone Git repository on =main= with the initial Conventional Commit =chore: initial generated project=. Generated =.gitignore= rules are preserved and extended with defaults for local metadata, secrets, build output, caches and databases; source files, dependency lockfiles and environment examples remain eligible for tracking. The automated commit is attributed to =Libresite <libresite@localhost>= without changing your Git configuration. No remote is created and nothing is pushed. See [[file:docs/operations.org][operations.org]] for publication and recovery details.
 
 Open a generated static =index.html= directly, or follow the output's =README.org= and =AGENTS.md= for application build/run instructions. A loopback application must work from both =http://127.0.0.1:PORT/= and =http://localhost:PORT/=; the database file is created on first start. From cmacs, =M-x compile= can run the builder, and =C-x C-f= opens the output's org documentation or source files.
 
