@@ -44,3 +44,6 @@ pipeline:
       type: validate
       options:
         required: [index.html, services/index.html, README.org, AGENTS.md, config/seo.yaml, docs/seo.org, tests/seo.sh, robots.txt, scripts/prepare-seo.sh]
+        checks:
+          - path: index.html
+            contains: ['Software you can own.']

@@ -44,6 +44,8 @@ Every generation stage receives the structured site intact as task data. The bun
 
 Recipe validation and YAML round-trip tests prove input structure and preservation, not model compliance. Native artifact checks can assert literal source text at known paths but do not establish rendered-text equality, complete translations or functioning contacts. Generated review documentation must carry the per-page/offer/contact/brand/copy/language checklist. Browser and content review remain necessary for those output guarantees. Replacement prompt catalogs must preserve this contract themselves.
 
+For deterministic source acceptance, pair =site.copy_lock= with =pipeline.steps[].options.checks[].contains= on the intended artifact paths, as the structured example does for its homepage tagline. See [[file:copy-lock.org][literal copy checks and retries]]. The form adapter cannot infer placement or source escaping from visible strings alone and does not silently manufacture these predicates; supply the pipeline when those delivery checks are required.
+
 * Library integration and round trips
 
 =ls_recipe_from_form(const gchar *json, GError **error)= validates the bounded strict JSON transport, supplies defaults and returns an owned =LsRecipe=. =ls_recipe_to_yaml(LsRecipe *recipe, GError **error)= returns owned YAML text. Use =g_autoptr(LsRecipe)= and =g_autofree gchar *=; failures return NULL with an error. Call =ls_pipeline_validate()= against the chosen catalog/plugins before accepting platform submissions if custom styles, stacks or pipeline modules are exposed. The library constructor performs structural validation, while the CLI performs both layers.

@@ -1,0 +1,54 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+version: 1
+name: copy-locked-plumber-example
+site:
+  brief: >-
+    Build a static landing page for fictional Example Plumbing using these
+    fixture-approved sentences verbatim in visible homepage content:
+    "Call Example Plumbing at (202) 555-0147."
+    "We serve Northbridge seven days a week."
+    The confirmed fixture call destination is tel:+12025550147.
+    Keep every repeated phone number consistent. Do not invent testimonials,
+    prices, credentials or other contact details. Label this as a fictional demo.
+    Replace all fixture facts with client-approved copy before real delivery.
+  audience: Residents seeking a local plumber
+  style: editorial
+  frontend: Semantic HTML and CSS with no preview build step or remote dependencies; a local SEO preparation command produces the production directory.
+  requirements: >-
+    Provide keyboard navigation, visible focus, reduced-motion support and
+    responsive layouts. Use lang="en" and name="viewport" in index.html.
+    Include README.org and AGENTS.md with accurate preview and review commands.
+ai:
+  provider: codex
+  timeout: 0
+  max_tokens: 0
+  retries: 2
+pipeline:
+  steps:
+    - {id: brief, type: brief}
+    - {id: design, type: design}
+    - {id: frontend, type: frontend}
+    - {id: review, type: review}
+    - id: acceptance
+      type: validate
+      options:
+        required: [index.html, styles.css, README.org, AGENTS.md, config/seo.yaml, docs/seo.org, tests/seo.sh, robots.txt, scripts/prepare-seo.sh]
+        checks:
+          - path: index.html
+            contains:
+              - 'Call Example Plumbing at (202) 555-0147.'
+              - 'We serve Northbridge seven days a week.'
+              - 'href="tel:+12025550147"'
+              - 'lang="en"'
+              - 'name="viewport"'
+              - '<main'
+              - 'noindex'
+            excludes: ['TODO', 'Lorem ipsum']
+            min_bytes: 512
+            max_bytes: 131072
+          - path: styles.css
+            contains: [':focus-visible', 'prefers-reduced-motion']
+            min_bytes: 128
+            max_bytes: 131072
+          - path: README.org
+            contains: ['#+title:']
