@@ -124,6 +124,7 @@ ls_pipeline_new(LsProvider *provider, LsPrompts *prompts){
 	for (i = 0; i < G_N_ELEMENTS(names); i++)
 		ls_pipeline_register(self, names[i], LS_TYPE_GENERATE_STEP, NULL);
 	ls_pipeline_register(self, "validate", LS_TYPE_VALIDATE_STEP, NULL);
+	ls_pipeline_register(self, "scaffold", LS_TYPE_SCAFFOLD_STEP, NULL);
 	return self;
 }
 /* Registration is instance-local, avoiding global initialization ordering. */
@@ -168,11 +169,13 @@ ls_pipeline_validate_context(LsPipeline *self, LsRecipe *recipe,
 				ls_prompts_render(self->prompts, recipe, config, context, error);
 			if (rendered == NULL)
 				return FALSE;
-		} else if (type == LS_TYPE_VALIDATE_STEP) {
+		} else if (type == LS_TYPE_VALIDATE_STEP || type == LS_TYPE_SCAFFOLD_STEP) {
 			JsonNode *node = json_object_get_member(config, "options");
 			JsonObject *options = node != NULL && JSON_NODE_HOLDS_OBJECT(node)
 				? json_node_get_object(node) : NULL;
-			if (!ls_validate_step_check_options(options, error)) {
+			if (!(type == LS_TYPE_VALIDATE_STEP
+				? ls_validate_step_check_options(options, error)
+				: ls_scaffold_step_check_options(options, error))) {
 				g_prefix_error(error, "Step '%s': ", ls_string(config, "id"));
 				return FALSE;
 			}
@@ -394,6 +397,7 @@ run_pipeline(
 	g_autofree gchar *recipe_json = NULL, *fingerprint_input = NULL, *fingerprint = NULL;
 	g_autofree gchar *export_path = NULL, *uuid = NULL;
 	g_autofree gchar *initial = NULL;
+	g_autofree gchar *scaffold = NULL;
 	g_autoptr(JsonNode) recipe_node = json_node_new(JSON_NODE_OBJECT);
 	g_autoptr(GFile) source = NULL, destination = NULL;
 	JsonArray *steps = ls_recipe_get_steps(recipe);
@@ -485,9 +489,22 @@ run_pipeline(
 	}
 	json_node_set_object(recipe_node, ls_recipe_get_root(recipe));
 	recipe_json = ls_json_encode(recipe_node);
+	/* Template bytes are native inputs too: upgrading them must invalidate a
+	 * partially completed scaffold recipe, including with custom catalogs. */
+	for (i = 0; i < json_array_get_length(steps); i++) {
+		JsonObject *step = json_array_get_object_element(steps, i);
+		if (g_str_equal(ls_string(step, "type"), "scaffold")) {
+			g_autoptr(LsContext) empty = ls_context_new();
+			scaffold = ls_scaffold_step_render(NULL, empty, error);
+			if (scaffold == NULL)
+				goto out;
+			break;
+		}
+	}
 	fingerprint_input = g_strconcat(
 		"libresite-checkpoint-v1\n", recipe_json, "\n", ls_prompts_get_digest(self->prompts),
-		project != NULL ? "\nrevision-v1\n" : "", initial != NULL ? initial : "", NULL
+		project != NULL ? "\nrevision-v1\n" : "", initial != NULL ? initial : "",
+		scaffold != NULL ? "\nscaffold-v1\n" : "", scaffold != NULL ? scaffold : "", NULL
 	);
 	fingerprint = g_compute_checksum_for_string(G_CHECKSUM_SHA256, fingerprint_input, -1);
 	if (resume && g_lstat(checkpoint, &info) == 0) {

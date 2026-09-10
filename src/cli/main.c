@@ -303,7 +303,7 @@ main(int argc, char **argv){
 		return 0;
 	}
 	if (list) {
-		g_print("brief\ndesign\nfrontend\nbackend\ndatabase\nreview\ngenerate\nvalidate\n");
+		g_print("brief\ndesign\nfrontend\nbackend\ndatabase\nreview\ngenerate\nvalidate\nscaffold\n");
 		return 0;
 	}
 	if (form_path != NULL) {
@@ -383,6 +383,27 @@ main(int argc, char **argv){
 		for (i = 0; i < json_array_get_length(steps); i++) {
 			JsonObject *step = json_array_get_object_element(steps, i);
 			g_autoptr(JsonObject) settings = ls_recipe_resolve_ai(recipe, step);
+			gboolean native = g_str_equal(ls_string(step, "type"), "validate") ||
+				g_str_equal(ls_string(step, "type"), "scaffold");
+			/* Preview deterministic predecessors without running AI stages. This
+			 * is the same bundle the native step commits during execution. */
+			if (preview != NULL && g_str_equal(ls_string(step, "type"), "scaffold")) {
+				JsonNode *node = json_object_get_member(step, "options");
+				g_autofree gchar *bundle = NULL;
+				if (preview_context == NULL)
+					preview_context = ls_recipe_create_context(recipe, &error);
+				if (preview_context == NULL)
+					goto fail;
+				bundle = ls_scaffold_step_render(node != NULL ? json_node_get_object(node) : NULL,
+					preview_context, &error);
+				if (bundle == NULL || !ls_context_apply(preview_context, bundle, &error))
+					goto fail;
+				if (g_str_equal(preview, ls_string(step, "id"))) {
+					g_print("%s\n", bundle);
+					return 0;
+				}
+				continue;
+			}
 			if (preview != NULL && g_str_equal(preview, ls_string(step, "id"))) {
 				g_autofree gchar *text = NULL;
 				if (preview_context == NULL)
@@ -401,10 +422,10 @@ main(int argc, char **argv){
 					i + 1,
 					ls_string(step, "id"),
 					ls_string(step, "type"),
-					g_str_equal(ls_string(step, "type"), "validate")
+					native
 						? "native"
 						: ls_string(settings, "provider"),
-					ls_string(settings, "model") != NULL ? ls_string(settings, "model")
+					native ? "(none)" : ls_string(settings, "model") != NULL ? ls_string(settings, "model")
 														 : "(provider default)"
 				);
 		}

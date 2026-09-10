@@ -83,7 +83,7 @@ seed_artifacts:
 
 Seed validation uses the same transaction, path, type, duplicate, file/directory conflict and resource-limit checks as provider bundles. The entire recipe, including seeds, remains subject to the 16 MiB YAML document limit. Invalid seeds fail recipe loading before provider calls or workspace creation. Seeds must be UTF-8 text, including SVG; binary assets are not supported. Quote scalar-looking contents such as ='123'= or use literal blocks to retain their string type.
 
-Seeds populate =CURRENT PROJECT= in =--preview= and preflight, and are saved in checkpoint zero before the first pipeline step, including a native step. A preview contains seeds only; it does not simulate earlier generation steps. Seeds remain in subsequent prompts and exports unless a step replaces their exact paths. They are initial inputs, not immutable or protected files: use step instructions and native literal-content checks for preservation requirements. Only supply content intended to be sent to the selected AI provider and included in the output project.
+Seeds populate =CURRENT PROJECT= in =--preview= and preflight, and are saved in checkpoint zero before the first pipeline step, including a native step. CLI previews also apply preceding native scaffold steps in memory; they do not simulate earlier AI generation steps. Seeds remain in subsequent prompts and exports unless a step replaces their exact paths. They are initial inputs, not immutable or protected files: use step instructions and native literal-content checks for preservation requirements. Only supply content intended to be sent to the selected AI provider and included in the output project.
 
 Resume restores the accepted checkpoint without reapplying seeds, preserving later replacements. Seed paths and content are part of recipe identity; changing them invalidates a saved checkpoint. Recipes without =seed_artifacts= retain their existing checkpoint identity. Embedders can call =ls_recipe_create_context()= for a seeded preview or initial context when executing steps directly.
 
@@ -99,6 +99,8 @@ Resume restores the accepted checkpoint without reapplying seeds, preserving lat
 | options | no | mapping | Module-specific data; passed intact to the module and generation prompt |
 
 Built-in AI module names are =brief=, =design=, =frontend=, =backend=, =database=, =review= and =generate=. These all use =LsGenerateStep= with different centralized stage contracts. =generate= is the general-purpose extension for instructions that need no custom C implementation. A custom =prompt= can reuse any catalog stage or a stage added to a replacement catalog.
+
+The native =scaffold= module emits static boilerplate without a model call. Its only option is =profile: static= (the default). It preserves existing paths and applies missing templates as one transaction. See [[file:scaffold.org][scaffold reference]] for the file inventory, contact contract, installed previews and checkpoint identity. Bundled static recipes require the scaffold artifacts in final acceptance.
 
 The native =validate= module calls no provider. It requires =options.required=, a nonempty sequence of unique safe relative file paths, and checks every named artifact for non-whitespace text. Optional =options.checks= adds literal-content and byte-size predicates as described below. These checks do not prove HTML correctness, accessibility, compilation or working application behavior. Unknown native validation options fail before any AI calls. Add semantic checks as separate registered steps when needed.
 

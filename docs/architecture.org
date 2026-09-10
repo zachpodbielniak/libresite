@@ -121,3 +121,5 @@ CLI plugin registration follows the same result/error rule. A failing registrati
 * Usage accounting
 
 Step execution records and explicit rate-card pricing are described in [[file:usage.org][usage.org]]. Checkpoints and run metadata include =usage= and =usage_complete=. An in-flight marker prevents pricing a history with a crash gap. Failed executions persist their usage alongside the previous accepted artifacts. Legacy checkpoints remain resumable but are not priceable.
+* Native scaffold
+=LsScaffoldStep= emits embedded static templates through the normal atomic context boundary, never the provider. Bundled static workflows run it first. Existing paths survive, template bytes participate in checkpoint identity, and CLI previews apply preceding scaffold steps in memory. See [[file:scaffold.org][native scaffold contracts and verification]].

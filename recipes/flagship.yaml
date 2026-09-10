@@ -19,6 +19,9 @@ ai:
   max_tokens: 0
 pipeline:
   steps:
+    - id: scaffold
+      type: scaffold
+      options: {profile: static}
     - id: brief
       type: brief
       instructions: >-
@@ -104,6 +107,11 @@ pipeline:
           - tests/check.sh
           - README.org
           - AGENTS.md
+          - Makefile
+          - privacy.html
+          - terms.html
+          - docs/contact.org
+          - tests/scaffold.sh
           - docs/product.org
           - docs/design.org
           - docs/testing.org

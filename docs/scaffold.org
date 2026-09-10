@@ -1,0 +1,66 @@
+#+title: Native static scaffold
+#+description: Deterministic boilerplate before model-generated design
+#+authors: Zach Podbielniak
+#+categories: libresite, generation
+#+created: 2026-09-10T00:00:00+00:00
+#+updated: 2026-09-10T00:00:00+00:00
+#+version: 1
+
+* Purpose and scope
+The native =scaffold= module emits reusable static-site files without calling a provider. It runs before the product/design stages in bundled static recipes and the default structured-form pipeline. Model stages receive those files as current project context and spend their output on distinctive design, content and working interactions. The scaffold is deliberately unstyled: later stages integrate utility pages into the chosen visual system.
+
+The only supported profile is =static=, also the default. Application and revision recipes do not acquire this step automatically. A static Makefile cannot infer a C server's targets, database bootstrap or framework routes. Add this step to a custom static pipeline explicitly; existing custom pipelines retain their behavior.
+
+#+begin_src yaml
+pipeline:
+  steps:
+    - id: scaffold
+      type: scaffold
+      options: {profile: static}
+    - {id: design, type: design}
+    - {id: frontend, type: frontend}
+    - id: acceptance
+      type: validate
+      options:
+        required: [index.html, Makefile, 404.html, privacy.html, terms.html, docs/contact.org, AGENTS.md]
+#+end_src
+
+=options= may be omitted or empty. Unknown keys and profiles, including non-string profiles, fail preflight before output workspace creation or provider use. AI settings do not apply to native execution. Put refinements in subsequent generation stages or supply exact files through =seed_artifacts=.
+
+* Emitted files
+| Path | Contract |
+|------+----------|
+| =Makefile= | Static all/tests/test, clean, help and license targets; no compiler or package manager |
+| =tests/scaffold.sh= | Anchored, ShellCheck-clean presence check; fails for missing/empty required files |
+| =404.html= | Semantic, noindex recovery page; root-relative home link for nested missing URLs |
+| =privacy.html= | Clearly marked noindex draft requiring actual operator/data-handling facts |
+| =terms.html= | Clearly marked noindex draft requiring reviewed operator/service terms |
+| =docs/contact.org= | Optional same-origin POST contract, field bounds, responses, failure and accessibility behavior |
+| =AGENTS.md= | Preserve boilerplate, integrate unique design, extend real commands and report tests honestly |
+
+The legal pages are shells, not jurisdiction-specific advice or completed policies. They assert no invented retention, analytics, liability or service facts. Keep them noindex and out of public sitemaps until reviewed. Supplied legal text at the exact emitted paths is preserved. The model may adapt layout and language but must not replace missing facts with invented policies.
+
+The contact document implements no endpoint and adds no form. A brief excluding contact forms continues to exclude them. Enabling submission requires a configured backend and real delivery or durable acceptance; a static page must not simulate a successful send. The contract specifies POST /contact, name/email/message bounds, HTML redirect and optional JSON acceptance responses, errors, CSRF/origin/rate-limit handling and keyboard/no-JavaScript tests. Adapt an actual backend explicitly rather than silently assuming a service exists.
+
+The 404 home link assumes root hosting. A subpath deployment must replace it with the configured base path. A static host must serve this file with status 404; opening the file is not an HTTP routing test. Generated Makefile tests only establish file presence; later generation must add project-specific tests without claiming browser execution. Fedora packages for those baseline checks are =make=, =bash= and =coreutils=; the builder's existing development dependencies are unchanged.
+
+* Preservation, failure and resume
+Each exact existing path is left byte-for-byte unchanged, including executable intent. Repeated scaffolding is a no-op when all paths exist. A seed Makefile remains its owner's build contract, so adding the scaffold check to an existing build remains a project integration task. Existing files are not silently repaired or replaced, even if empty.
+
+The renderer builds one JSON bundle and =ls_context_apply()= validates every new file before mutation. Directory/file conflicts and project limits reject the complete step; cancellation before commit leaves the context unchanged. Templates use fixed revision metadata rather than wall-clock timestamps so output remains deterministic.
+
+Normal checkpoint rules apply after the native step. Template bytes join the recipe/catalog fingerprint for recipes containing scaffold, including replacement prompt catalogs; a changed template invalidates resume rather than mixing old and new boilerplate. Seeds are not reapplied on resume. No template is executed by Libresite during generation or publication.
+
+* Inspection and embedding
+#+begin_src bash
+libresite -r recipes/landing.yaml --plan
+libresite -r recipes/landing.yaml --preview scaffold
+libresite -r recipes/landing.yaml --preview design
+#+end_src
+
+=--list-modules= includes scaffold. =--plan= reports native with no model. Scaffold preview emits the missing-file JSON bundle; later CLI previews apply preceding scaffold steps to an in-memory context before rendering. They do not execute earlier AI or plugin steps and therefore cannot predict their changes. No preview exports files or calls a provider.
+
+Templates live in =data/scaffold/= and are embedded through GResource, so the installed binary works outside the checkout. =--prompts= replaces runtime design instructions, not native templates. Embedders can instantiate =LS_TYPE_SCAFFOLD_STEP= or use =ls_scaffold_step_render()= followed by =ls_context_apply()=. The renderer leaves the input context untouched; application performs transactional conflict and limit validation. =ls_scaffold_step_check_options()= exposes the same schema check used by pipeline preflight.
+
+* Verification
+=make tests= covers zero transport calls, seed preservation, idempotence, cancellation, atomic conflict rejection, invalid options, CLI previews and generated Makefile positive/negative checks. =bash tests/install.sh= repeats native generation from an installed binary outside the checkout and exercises checkpoint recovery after Git publication failures. Fixtures establish native emission and orchestration, not live model design quality, browser behavior, legal review or contact delivery.

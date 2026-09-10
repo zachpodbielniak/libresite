@@ -36,6 +36,9 @@ ai:
   max_tokens: 0
 pipeline:
   steps:
+    - id: scaffold
+      type: scaffold
+      options: {profile: static}
     - {id: product, type: brief}
     - {id: design, type: design}
     - {id: frontend, type: frontend}
@@ -43,7 +46,7 @@ pipeline:
     - id: acceptance
       type: validate
       options:
-        required: [index.html, services/index.html, README.org, AGENTS.md, config/seo.yaml, docs/seo.org, tests/seo.sh, robots.txt, scripts/prepare-seo.sh]
+        required: [index.html, 404.html, services/index.html, README.org, AGENTS.md, Makefile, privacy.html, terms.html, docs/contact.org, tests/scaffold.sh, config/seo.yaml, docs/seo.org, tests/seo.sh, robots.txt, scripts/prepare-seo.sh]
         checks:
           - path: index.html
             contains: ['Software you can own.']

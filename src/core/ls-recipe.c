@@ -516,6 +516,7 @@ ls_recipe_from_form(const gchar *json, GError **error){
 		/* Static-site defaults can be replaced with the normal pipeline field. */
 		defaults = ls_yaml_parse(
 			"steps:\n"
+			"  - {id: scaffold, type: scaffold}\n"
 			"  - {id: product, type: brief}\n"
 			"  - {id: design, type: design}\n"
 			"  - {id: frontend, type: frontend}\n"
@@ -523,7 +524,7 @@ ls_recipe_from_form(const gchar *json, GError **error){
 			"  - id: acceptance\n"
 			"    type: validate\n"
 			"    options:\n"
-			"      required: [index.html, README.org, AGENTS.md, config/seo.yaml, docs/seo.org, tests/seo.sh, robots.txt, scripts/prepare-seo.sh]\n",
+			"      required: [index.html, README.org, AGENTS.md, Makefile, 404.html, privacy.html, terms.html, docs/contact.org, tests/scaffold.sh, config/seo.yaml, docs/seo.org, tests/seo.sh, robots.txt, scripts/prepare-seo.sh]\n",
 			error);
 		if (defaults == NULL)
 			return NULL;
