@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, design, prompts
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-10T14:41:00-04:00
+#+updated: 2026-09-10T15:50:40-04:00
 #+version: 0.1.0
 
 * One maintained prompt catalog
@@ -55,6 +55,12 @@ Generated project documentation and =AGENTS.md= carry a responsive acceptance ma
 For each route and main workflow, check navigation, readable content, media sizing, touch/keyboard/pointer access, focus visibility, error/loading/empty/success states and unintended overflow. Include runnable responsive checks when suitable project tooling exists. The model may inspect supplied source but cannot execute browser tools under the generation protocol; checks without supplied execution evidence must remain marked unexecuted. Native =validate= still checks artifact presence only. Offline CLI/provider/install checks prove delivery of these instructions, not the responsiveness of a live generated site.
 
 A =--prompts= catalog replaces the bundled catalog completely: maintain this contract in custom catalogs to retain the defaults. Existing generated projects are not retroactively changed. Catalog edits change the checkpoint digest, so an interrupted run needs its original catalog to resume; use a fresh output for generation with the new defaults.
+
+* SEO defaults
+
+The shared =SEO DEFAULTS= contract supplies public-page metadata, canonical URL configuration, truthful JSON-LD, social previews, sitemap/robots consistency, crawlable initial HTML and performance guidance to every generation stage and style. Brief/design plan route intent and public/private status; frontend/backend/foundation/pages implement metadata and discovery; interactions preserve crawlable navigation; review/polish repair inconsistencies. Generated projects include =config/seo.yaml=, =docs/seo.org= and =tests/seo.sh=; static sites also include =robots.txt= and a safe local =scripts/prepare-seo.sh= command. Bundled final validators enforce these required text artifacts. See [[file:seo.org][the SEO guide]] for modes, deliverables, source references and testing limits.
+
+A missing deployment URL produces a noindex preview without invented absolute URLs; private applications retain their privacy and loopback access controls. Public output must use a validated real HTTPS base URL and preserve subpath hosting. The model supplies executable tests and honest documentation but cannot claim to have executed them. Native validation does not prove SEO semantics or search rankings. Custom catalogs replace this contract, and custom recipes/plugins remain responsible for their own artifact acceptance.
 
 * Imported reference snapshots
 

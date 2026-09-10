@@ -9,7 +9,7 @@ site:
     through an in-page navigation link. Use original local SVG artwork.
   audience: Technical founders evaluating a small independent studio
   style: editorial
-  frontend: Semantic HTML and CSS with no build step or remote dependencies
+  frontend: Semantic HTML and CSS with no preview build step or remote dependencies; a local SEO preparation command produces the production directory.
   requirements: >-
     Provide keyboard navigation, visible focus, reduced-motion support and
     responsive layouts. Use lang="en" and name="viewport" in index.html.
@@ -28,10 +28,10 @@ pipeline:
     - id: acceptance
       type: validate
       options:
-        required: [index.html, styles.css, README.org, AGENTS.md]
+        required: [index.html, styles.css, README.org, AGENTS.md, config/seo.yaml, docs/seo.org, tests/seo.sh, robots.txt, scripts/prepare-seo.sh]
         checks:
           - path: index.html
-            contains: ['lang="en"', 'name="viewport"', '<main', '</html>']
+            contains: ['lang="en"', 'name="viewport"', '<main', '</html>', '<title>', 'name="description"', 'property="og:title"', 'name="twitter:card"', 'noindex']
             excludes: ['TODO', 'Lorem ipsum']
             min_bytes: 512
             max_bytes: 131072

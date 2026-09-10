@@ -29,6 +29,7 @@ do
 			(cd /tmp && "$binary" --recipe "$recipe" --preview "$step") > "$test_dir/preview"
 			rg -q 'CURRENT PROJECT' "$test_dir/preview"
 			rg -q 'MOBILE AND DESKTOP DEFAULTS' "$test_dir/preview"
+			rg -q 'SEO DEFAULTS' "$test_dir/preview"
 		fi
 	done < "$test_dir/plan"
 done
@@ -51,6 +52,12 @@ YAML
 		--prompts "$test_dir/usr/share/libresite/data/prompts.yaml" --preview site) > "$test_dir/catalog"
 	cmp "$test_dir/embedded" "$test_dir/catalog"
 	rg -q 'MOBILE AND DESKTOP DEFAULTS' "$test_dir/embedded"
+	# All styles inherit SEO in generic generate stages, with no recipe opt-in.
+	for contract in 'SEO DEFAULTS' 'config/seo.yaml' 'docs/seo.org' 'tests/seo.sh' \
+		'scripts/prepare-seo.sh' 'noindex' 'JSON-LD' 'hreflang' 'sitemap.xml'
+	do
+		rg -Fq "$contract" "$test_dir/embedded"
+	done
 	rg -q '360x800 and 390x844' "$test_dir/embedded"
 	rg -q '1366x768 laptop and 1440x900 desktop' "$test_dir/embedded"
 done

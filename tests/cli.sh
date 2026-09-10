@@ -39,6 +39,9 @@ do
 			# Every recipe/stage inherits the shared device contract, even
 			# when its brief does not explicitly request responsive output.
 			rg -q 'MOBILE AND DESKTOP DEFAULTS' "$test_dir/preview"
+			rg -q 'SEO DEFAULTS' "$test_dir/preview"
+			rg -q 'config/seo.yaml' "$test_dir/preview"
+			rg -q 'tests/seo.sh' "$test_dir/preview"
 		fi
 	done < "$test_dir/plan"
 done
@@ -102,6 +105,9 @@ YAML
 			# Codex inlines system instructions in stdin; other adapters
 			# may carry them in argv or temporary prompt files instead.
 			rg -q 'MOBILE AND DESKTOP DEFAULTS' "$test_dir/input"
+			rg -q 'SEO DEFAULTS' "$test_dir/input"
+			rg -q 'sitemap.xml' "$test_dir/input"
+			rg -q 'noindex' "$test_dir/input"
 			rg -q '360x800 and 390x844' "$test_dir/input"
 			rg -q '1366x768 laptop and 1440x900 desktop' "$test_dir/input"
 			rg -qx -- '--ephemeral' "$test_dir/args"

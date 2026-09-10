@@ -27,4 +27,4 @@ pipeline:
     - id: acceptance
       type: validate
       options:
-        required: [index.html, styles.css, 404.html, README.org, AGENTS.md, docs/product.org, docs/design.org, docs/review.org]
+        required: [index.html, styles.css, 404.html, README.org, AGENTS.md, docs/product.org, docs/design.org, docs/review.org, config/seo.yaml, docs/seo.org, tests/seo.sh, robots.txt, scripts/prepare-seo.sh]
