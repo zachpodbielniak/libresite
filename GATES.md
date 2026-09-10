@@ -1,23 +1,23 @@
-# Gates: revision mode
+# Gates: step usage and job pricing
 
-OWNS: src/** data/prompts.yaml recipes/revision.yaml tests/** docs/** README.org skills/** Makefile GATES.md
+OWNS: src/** tests/** docs/** README.org Makefile GATES.md
 
-Scope: Import an existing text project, apply a change brief incrementally, publish a new output, and merge Conventional Commits into master.
+Scope: Persist structured usage for each executed step, price records using explicit rates, and merge verified Conventional Commits into master.
 
-- [x] G1: Offline revision, failure, resume and regression tests pass without compiler warnings in release and debug builds.
+- [x] G1: Offline usage, pricing, resume and regression checks pass in release and debug with zero warnings.
   CHECK: bash tests/verify.sh
   EXPECT: LIBRESITE VERIFIED
-  EVIDENCE: exit=0; shell=/bin/sh; cwd=/var/home/zach/source/projects/libresite/trees/feat-revision-mode; path=604a669fb015/14 entries; EXPECT=matched; output-sha256=fc4b5ff5db53a0fb3a396d0c9fd726b735fc1ac20a0e9dda79ae2f57d102d551; output-bytes=19
+  EVIDENCE: exit=0; shell=/bin/sh; cwd=/var/home/zach/source/projects/libresite/trees/feat-step-usage; path=8c5cae66fb0a/14 entries; EXPECT=matched; output-sha256=fc4b5ff5db53a0fb3a396d0c9fd726b735fc1ac20a0e9dda79ae2f57d102d551; output-bytes=19
 
-- [x] G2: Installed CLI and public API work outside the checkout.
+- [x] G2: Installed public API and CLI work outside the checkout.
   CHECK: bash tests/install.sh
   EXPECT: INSTALL VERIFIED
-  EVIDENCE: exit=0; shell=/bin/sh; cwd=/var/home/zach/source/projects/libresite/trees/feat-revision-mode; path=604a669fb015/14 entries; EXPECT=matched; output-sha256=d115bf745910eeb033780fd360d3a46275cfda5b0cbd76acf663d36ec38f5988; output-bytes=1802
+  EVIDENCE: exit=0; shell=/bin/sh; cwd=/var/home/zach/source/projects/libresite/trees/feat-step-usage; path=8c5cae66fb0a/14 entries; EXPECT=matched; output-sha256=6b6fd0ef6574f04c3a4e81c87b5ff65f75d1e163acd5c4a1bcafb9eaca0c9347; output-bytes=1817
 
-- [x] G3: Ownership changes pass address and undefined behavior sanitizers.
+- [x] G3: Usage ownership and failure paths pass sanitizers.
   CHECK: make DEBUG=1 ASAN=1 UBSAN=1 tests
   EXPECT: CLI VERIFIED
-  EVIDENCE: exit=0; shell=/bin/sh; cwd=/var/home/zach/source/projects/libresite/trees/feat-revision-mode; path=604a669fb015/14 entries; EXPECT=matched; output-sha256=8f8709b389d397c657265531cd67c360a917264c5371d2cae99668dc92ef9ae3; output-bytes=86080
+  EVIDENCE: exit=0; shell=/bin/sh; cwd=/var/home/zach/source/projects/libresite/trees/feat-step-usage; path=8c5cae66fb0a/14 entries; EXPECT=matched; output-sha256=0a4f3cb0c0cc8782724ddcfd409c0831db6d5052fc52657bd59d85c979f85eaa; output-bytes=87020
 
-- [x] G4: Documentation matches the implementation and Conventional Commits are merged into master.
-  EVIDENCE: Reviewed source import, transactional file operations, source-bound resume, executable intent, seed overlays, CLI mode compatibility and docs/revision.org against the final combined tree. G1-G3 passed after integrating master 112452e. Master was fast-forwarded to verified commit 428ad2f; git status was clean and git diff --check passed. Implementation commit 90f67d4 and integration/test commits use Conventional Commit subjects. Tests used controlled providers only; no live model or generated application execution is claimed.
+- [ ] G4: Documented accounting semantics match code and verified Conventional Commits are merged into master.
+  EVIDENCE: pending
