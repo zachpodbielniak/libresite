@@ -1,20 +1,18 @@
-# Gates: libresite bootstrap
+# Gates: premium prompts and flagship recipe
 
-OWNS: src/**, tests/**, data/**, recipes/**, docs/**, skills/**, Makefile, config.mk, rules.mk, README.org, AGENTS.md
+OWNS: data/prompts.yaml, recipes/flagship.yaml, docs/**, README.org, tests/cli.sh, tests/install.sh, tests/fixtures/provider.sh, GATES.md
 
-Scope: A GNU89 GLib site builder with extensible recipe steps, five CLI providers, centralized design prompts, resumable generation, tests and documentation.
+Scope: Actionable design and delivery contracts, a complete multi-page recipe, and documented, tested CLI preflight. Fixture tests do not establish live visual quality.
 
-- [x] G1: Release and debug builds and edge-case/end-to-end tests pass without compiler warnings.
-  CHECK: bash tests/verify.sh
+- [x] G1: Release/debug builds and all offline tests pass with zero compiler warnings, including every flagship generation stage preview.
+  CHECK: DEPS=system bash tests/verify.sh
   EXPECT: LIBRESITE VERIFIED
-  EVIDENCE: exit=0; shell=/bin/bash; cwd=/var/home/zach/source/projects/libresite/trees/bootstrap; path=9914968ff619/14 entries; EXPECT=matched; output-sha256=fc4b5ff5db53a0fb3a396d0c9fd726b735fc1ac20a0e9dda79ae2f57d102d551; output-bytes=19
+  EVIDENCE: exit=0; shell=/bin/sh; cwd=/var/home/zach/source/projects/libresite/trees/premium-prompts; path=35c4b50b4f40/14 entries; EXPECT=matched; output-sha256=fc4b5ff5db53a0fb3a396d0c9fd726b735fc1ac20a0e9dda79ae2f57d102d551; output-bytes=19
 
-- [x] G2: Shipped recipes validate and installed binaries find embedded prompts outside the source tree.
-  CHECK: bash tests/install.sh
+- [x] G2: Installed CLI resolves every flagship stage outside the checkout and public plugin/consumer checks pass.
+  CHECK: DEPS=system bash tests/install.sh
   EXPECT: INSTALL VERIFIED
-  EVIDENCE: exit=0; shell=/bin/bash; cwd=/var/home/zach/source/projects/libresite/trees/bootstrap; path=9914968ff619/14 entries; EXPECT=matched; output-sha256=a8509f5f841d4061ef7862a4756d80e993610383d183ad55319ac0e6ff224da1; output-bytes=193
+  EVIDENCE: exit=0; shell=/bin/sh; cwd=/var/home/zach/source/projects/libresite/trees/premium-prompts; path=35c4b50b4f40/14 entries; EXPECT=matched; output-sha256=8be8e32735ecaa54b1c1490e9c8dca8bd5efddaeec8ac242280c2909545b5d0d; output-bytes=207
 
-- [x] G3: Public extension contracts, recipe fields, prompts, design provenance, CLI usage and two agent skills are documented against implementation.
-  EVIDENCE: Manual review 2026-09-09: compared CLI options, recipe/catalog parsers, provider adapter, module registry, signals and limits with README.org, docs/*.org, AGENTS.md and both validated SKILL.md files; seven design snapshots retained and curated in one runtime catalog. Existing LICENSE SHA-256 f92fb007c28d977b974ecd4c81f2b6581f1b480abb8d7b27d96f41db405ff9ec preserved.
-
-Acceptance-fix verification: 68 GTest cases passed in warning-free release/debug and ASan/UBSan builds; all five offline adapter integrations and installed plugin checks passed. The saved landing site was recovered by renaming assets/site.css to styles.css and updating references; its native acceptance and inspected source-check script passed without further AI calls. Original checkpoint/catalog retained under build/recovery-stylesheet.lNWWSC/.
+- [x] G3: Manual review confirms coherent routes, exact phase acceptance paths, usable local workflows, bounded project scope and honest documentation of runtime verification limits.
+  EVIDENCE: Reviewed 2026-09-09 against the CLI plan: eight AI stages, six native checks, eight routes and twenty final required artifacts. Phase deliverables match following required paths. All routes have defined content and onward journeys; local export, reset and no-JavaScript behavior are specified. The review preflight measures 14425 bytes with empty context; the 55000-byte artifact target is explicitly advisory. README and docs distinguish source/native checks from unexecuted live generation and browser evaluation. System-dependency release/debug, all 68 GTests, five provider fixtures, ShellCheck and installed extension checks passed.

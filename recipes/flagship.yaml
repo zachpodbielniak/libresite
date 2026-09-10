@@ -1,0 +1,110 @@
+# Complete editorial site delivered in checkpointed batches.
+# Each AI step can override ai.provider, ai.model and ai.effort.
+version: 1
+name: fieldwork-studio
+site:
+  brief: >-
+    Create FIELDWORK, an illustrative independent open-source systems and interface studio. Build a complete, distinctive eight-page editorial website. The central idea is "Make the complex feel clear": show how careful engineering and visual communication turn difficult systems into understandable tools. Let visitors explore two substantive concept case studies, understand the approach, read an opinionated journal article and prepare a downloadable project brief. FIELDWORK and its projects are fictional demonstrations; disclose this in the shared footer and on the case studies. Do not invent clients, employees, testimonials, awards, business metrics, contact addresses or live services.
+  audience: Technical founders, independent maintainers and design-minded engineers who value ownership, clarity and enduring software.
+  style: editorial
+  frontend: Semantic HTML, one shared styles.css, one small site.js, original local SVG artwork. No framework, package manager, CDN or external font request.
+  backend: none
+  database: none
+  requirements: >-
+    Eight flat HTML routes with relative links, consistent navigation and contextual onward journeys: index.html, work.html, work-atlas.html, work-common.html, approach.html, journal.html, start.html, 404.html. Use warm paper, near-black ink and a decisive vermilion accent with accessible text/surface pairs; pair a confident system sans display with a readable system serif for longform and monospace for useful technical annotations. Create a recognizable original contour/grid illustration language: a large cartographic composition for Atlas and a contrasting modular archive composition for Common. No fake screenshots. Combine a bold typographic opening, full-width art, asymmetric project rows and quiet editorial reading; no repeated generic card grid. All pages use a skip link, visible focus, current-page navigation, responsive layouts and a consistent footer. Keep the header usable without JavaScript. No tracking, remote services, signup or pretend form submission. Motion is optional progressive enhancement, never required to see content. Target total final file contents below 55000 UTF-8 bytes including docs/tests; this is advisory, not a validator option. Product/design docs together below 6500 bytes, SVGs together below 4500 bytes and shared CSS below 10000 bytes. Preserve completeness over ornamental complexity.
+ai:
+  provider: codex
+  timeout: 900
+  retries: 2
+  max_tokens: 24000
+pipeline:
+  steps:
+    - id: brief
+      type: brief
+      instructions: >-
+        Write a concise route/content/interaction contract, maximum 2500 bytes. Atlas is a concept offline field-notes tool: discuss information hierarchy, disconnected use and legible field conditions without claiming it is shipped. Common is a concept community archive: discuss discovery, metadata and contributor clarity without implying a real dataset or service. Each case study needs roughly 300 words with problem, constraints, decisions, tradeoff and proposed next validation. Home introduces the thesis and selected work; work indexes both projects; approach explains discover/map/build/maintain through concrete deliverables; journal is a complete roughly 500-word essay "Clarity is a systems property" with three practical examples. Start helps visitors prepare a brief locally, with no submission. Plan portable file links and source/browser verification.
+    - id: design
+      type: design
+      instructions: >-
+        Specify an implementable visual system under 4000 bytes: exact CSS tokens, fluid typography, readable line lengths, route compositions, shared header/footer markup, focus/error/success states and 44px touch targets where practical. Make the opening a confident typographic statement integrated with contour artwork, not a default text-left/image-right split. Use scale and alignment for a memorable first screen with action labels "Explore the work" and "Prepare a brief". Avoid microscopic annotations and decorative eyebrow repetition. Define stable hooks for work filters and brief export. Define mobile and no-JavaScript defaults before animation. Interior pages deserve the same care as home.
+    - id: planning-check
+      type: validate
+      options:
+        required: [docs/product.org, docs/design.org]
+    - id: foundation
+      type: generate
+      prompt: foundation
+      options:
+        files: [index.html, styles.css, assets/atlas.svg, assets/common.svg, assets/mark.svg]
+      instructions: >-
+        Implement the fully written home and shared system, aiming for 16000 bytes total new files. Create strong original vector compositions with generous negative space and meaningful diagrammatic structure. Give project previews different arrangements with a shared grammar. Home contains thesis, selected work, a short approach passage, a journal excerpt linking to journal.html and a clear next action. Art remains legible at small sizes. Build shared page/form/filter/longform classes now; keep static navigation working. Reserve enhanced controls for the interactions stage.
+    - id: foundation-check
+      type: validate
+      options:
+        required: [index.html, styles.css, assets/atlas.svg, assets/common.svg, assets/mark.svg]
+    - id: case-studies
+      type: generate
+      prompt: pages
+      options:
+        files: [work.html, work-atlas.html, work-common.html]
+      instructions: >-
+        Deliver the complete project index and both case studies, aiming for 12000 bytes total. Index initially shows both projects with filter hooks for All, Tools and Culture. Atlas belongs to Tools, Common to Culture. Filter controls stay hidden until successfully initialized later. Provide a polite result count and empty state. Case studies use supplied art, descriptive captions, technical detail and explicit concept-project labels. Include related-work navigation and a link to prepare a brief. Do not imply the proposed tools can be downloaded or used.
+    - id: case-studies-check
+      type: validate
+      options:
+        required: [work.html, work-atlas.html, work-common.html]
+    - id: editorial-pages
+      type: generate
+      prompt: pages
+      options:
+        files: [approach.html, journal.html, start.html, 404.html]
+      instructions: >-
+        Deliver all four pages, aiming for 12000 bytes total. Approach explains deliverables, collaboration boundaries and maintenance handoff. Journal is a full article with in-page contents and onward links, not a teaser list. Start contains a local worksheet: project name, problem, audience, type (site/tool/archive), scope and constraints. Label every field; project name and problem are required with sensible length limits. No email or personal data required. Include a readable copy-by-hand fallback without JavaScript. Hide enhanced export controls until ready; prevent default form navigation or accidental GET submission even without JavaScript. State "Nothing is sent. Your brief stays in this page until you download it." The 404 page provides recovery links and shares the identity. Static hosting must be configured separately to serve it for unknown URLs.
+    - id: editorial-check
+      type: validate
+      options:
+        required: [approach.html, journal.html, start.html, 404.html]
+    - id: interactions
+      type: generate
+      prompt: interactions
+      options:
+        files: [site.js, tests/check.sh, docs/testing.org, README.org]
+      instructions: >-
+        Wire relevant HTML pages to shared deferred site.js, updating markup as needed. Implement category filtering and reset, visible pressed state and polite result count; retain both projects without JS. Implement local brief validation, selectable plain-text preview and a real fieldwork-brief.txt download using Blob/object URLs. Preserve line breaks and use textContent, never user-controlled innerHTML. No localStorage, network requests or clipboard permission. Reset clears preview and feedback. Repeated downloads work; free object URLs without racing downloads. Handle Unicode and whitespace-only required fields; associate errors with fields. Provide a ShellCheck-clean Bash source check for required files, local route/asset references using a documented convention, and script inclusion. It must fail on broken references, not just print success; do not claim it is a browser test. Document steps and expected results for filtering/reset, invalid/valid/repeated export, no JS, keyboard, reduced motion, 360/768/1440px, 200 percent zoom and offline loading. README.org explains python3 -m http.server and static 404 hosting limits. Aim for 6500 bytes in new script/tests/docs and total project below 55000 bytes.
+    - id: interaction-check
+      type: validate
+      options:
+        required: [site.js, tests/check.sh, docs/testing.org, README.org]
+    - id: polish
+      type: generate
+      prompt: polish
+      instructions: >-
+        Review all eight pages as one authored experience. Strengthen the weakest composition and the journey from home to case study to brief download. Eliminate generic scaffolding, inconsistent shared markup and dead hooks. Check art dimensions, text wrapping, mobile ordering, focus and reduced motion from source. Keep docs/polish.org under 1200 bytes and respect total project budget; do not rewrite every file for cosmetic churn.
+    - id: review
+      type: review
+      instructions: >-
+        Audit all required paths and local links, shared assets, filter/export behavior, no-JavaScript fallbacks and the generated source test. Fix defects in full. Check illustrative-work disclosures and no action claims to contact anyone. Keep docs/review.org under 1500 bytes; separate source-established findings from unexecuted browser tests. Do not report AAA accessibility certification or verified visual quality. Preserve context headroom.
+    - id: acceptance
+      type: validate
+      options:
+        required:
+          - index.html
+          - work.html
+          - work-atlas.html
+          - work-common.html
+          - approach.html
+          - journal.html
+          - start.html
+          - 404.html
+          - styles.css
+          - site.js
+          - assets/atlas.svg
+          - assets/common.svg
+          - assets/mark.svg
+          - tests/check.sh
+          - README.org
+          - docs/product.org
+          - docs/design.org
+          - docs/testing.org
+          - docs/polish.org
+          - docs/review.org

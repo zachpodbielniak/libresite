@@ -7,10 +7,9 @@ case "${1-}" in
 	--license) printf '%s\n' 'AGPL-3.0-or-later'; exit 0 ;;
 esac
 printf '%s\n' "$@" > "${LS_TEST_ARGS:?}"
-if [[ ${LS_TEST_PROVIDER:?} == codex || ${LS_TEST_PROVIDER} == antigravity ]]
-then
-	cat > "${LS_TEST_INPUT:?}"
-fi
+# Drain stdin for every adapter. Some ai-glib versions pass prompts in argv,
+# others pipe them; exiting early races long writes and causes EPIPE.
+cat > "${LS_TEST_INPUT:?}"
 if [[ ${LS_TEST_FAIL:-0} == 1 ]]
 then
 	printf '%s\n' 'fixture failure' >&2

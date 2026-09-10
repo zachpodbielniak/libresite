@@ -19,6 +19,16 @@ for recipe in "$root"/recipes/*.yaml
 do
 	"$binary" --recipe "$recipe" --validate
 	"$binary" --recipe "$recipe" --plan > "$test_dir/plan"
+	# Resolve every catalog stage, including custom generate/prompt pairs.
+	# A valid recipe alone does not establish that its prompt keys exist.
+	while IFS=$'\t' read -r _ step module _ _
+	do
+		if [[ "$module" != validate ]]
+		then
+			"$binary" --recipe "$recipe" --preview "$step" > "$test_dir/preview"
+			rg -q 'CURRENT PROJECT' "$test_dir/preview"
+		fi
+	done < "$test_dir/plan"
 done
 "$binary" --recipe "$root/recipes/landing.yaml" --preview design > "$test_dir/preview"
 rg -q 'DESIGN DIRECTION' "$test_dir/preview"

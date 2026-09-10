@@ -21,6 +21,15 @@ binary="$test_dir/usr/bin/libresite"
 for recipe in "$root"/recipes/*.yaml
 do
 	(cd /tmp && "$binary" --recipe "$recipe" --validate)
+	(cd /tmp && "$binary" --recipe "$recipe" --plan) > "$test_dir/plan"
+	while IFS=$'\t' read -r _ step module _ _
+	do
+		if [[ "$module" != validate ]]
+		then
+			(cd /tmp && "$binary" --recipe "$recipe" --preview "$step") > "$test_dir/preview"
+			rg -q 'CURRENT PROJECT' "$test_dir/preview"
+		fi
+	done < "$test_dir/plan"
 done
 (cd /tmp && "$binary" --recipe "$root/recipes/landing.yaml" --preview design) > "$test_dir/preview"
 rg -q 'RESPONSE PROTOCOL' "$test_dir/preview"

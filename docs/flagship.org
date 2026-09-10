@@ -1,0 +1,78 @@
+#+title: FIELDWORK flagship site
+#+description: Generate and evaluate a complete eight-page editorial studio example
+#+authors: Zach Podbielniak
+#+categories: libresite, examples, design
+#+created: 2026-09-09T20:00:00-04:00
+#+updated: 2026-09-09T20:00:00-04:00
+#+version: 0.1.0
+
+* What this example demonstrates
+
+[[file:../recipes/flagship.yaml][flagship.yaml]] asks libresite to generate FIELDWORK, a fictional open-source systems and interface studio, as a complete static website. It exercises shared visual design, interior pages, original local artwork, progressive interactions, staged artifact checks and final review. The output belongs in your chosen directory; this repository ships the repeatable recipe, not a hand-built substitute for generator output.
+
+The direction is an editorial identity built from warm paper, near-black ink, vermilion accents, contrasting system typography and a recognizable contour/grid artwork family. Atlas and Common are explicitly illustrative projects. Case studies describe decisions and tradeoffs instead of fabricating clients or results. The prompts call for eight distinct compositions that share a visual system and a useful visitor journey.
+
+* Pages and working journeys
+
+| Route | Purpose | Required onward action |
+|-------+---------+------------------------|
+| index.html | Establish the studio thesis, selected work, approach and journal | Explore work or prepare a brief |
+| work.html | Index both concept projects with All/Tools/Culture filters | Open a case study; reset filters |
+| work-atlas.html | Offline field-notes concept, constraints and design decisions | Related project or brief |
+| work-common.html | Community archive concept, metadata and discovery decisions | Related project or brief |
+| approach.html | Discover/map/build/maintain and concrete deliverables | Prepare a brief |
+| journal.html | Full essay: Clarity is a systems property | In-page contents and contextual next step |
+| start.html | Local project worksheet with validation and text export | Preview, download and reset a real brief |
+| 404.html | Useful recovery page | Return home or explore work |
+
+The export is deliberately local. Nothing is sent, no contact details are invented, and there is no account, server, analytics or storage dependency. It should preserve Unicode and line breaks, reject whitespace-only required fields, allow repeated downloads and provide selectable text as a fallback. Without JavaScript, navigation, article content, both projects and a readable worksheet remain available. Static hosting needs its own unknown-route configuration to use 404.html.
+
+* Run and inspect
+
+Use a configured provider account; generation invokes it eight times before retries. The recipe defaults to Codex with a 900-second deadline per call and two additional attempts on failure. Set =ai.provider= globally or add =ai= overrides under any generation step; =model= and =effort= remain provider-specific. Native checks make no AI calls.
+
+#+begin_src bash
+make -j4
+./build/release/libresite -r recipes/flagship.yaml --validate
+./build/release/libresite -r recipes/flagship.yaml --plan
+./build/release/libresite -r recipes/flagship.yaml --preview foundation
+./build/release/libresite -r recipes/flagship.yaml --preview interactions
+./build/release/libresite -r recipes/flagship.yaml -o ./fieldwork-site
+#+end_src
+
+After reading the generated README.org, docs/testing.org and tests/check.sh:
+
+#+begin_src bash
+bash ./fieldwork-site/tests/check.sh
+python3 -m http.server 8000 --bind 127.0.0.1 --directory ./fieldwork-site
+#+end_src
+
+Open =http://127.0.0.1:8000=. Generated code is not executed by libresite. Read the generated script before running it. Python is only a convenient local HTTP preview server, not a build dependency or generated backend. Fedora package =python3= supplies it. The builder packages are listed in [[file:building.org][building.org]].
+
+* Stages, contracts and size
+
+Brief and design establish compact route and component contracts. Foundation creates the reference home, shared styles and art. Two page batches add case studies and editorial/workflow pages. Interactions connects controls and supplies source tests. Polish refines the weakest dimension; review repairs remaining source defects. Native checks follow planning, foundation, each page batch, interactions and final review. A generation step must satisfy the immediately following checks before it can be checkpointed.
+
+The recipe's =options.files= lists primary deliverables as model guidance, not a write sandbox. An interactions step must also update earlier HTML to attach its script. Future-page links can exist during foundation; the final project must resolve them all.
+
+The target is under 55000 bytes of final file contents, with compact planning docs, shared assets and small scripts. This leaves headroom under the 100000-byte system-plus-task ceiling, including JSON escaping. It is an advisory budget, not a guaranteed bound. More stages do not shrink accumulated context. If the provider produces oversized files, narrow the content/asset scope for a fresh run rather than silently removing artifacts from a checkpoint.
+
+Use =--resume= with exactly the same recipe and catalog after interruption. Prompt changes, including this catalog upgrade, invalidate old checkpoints. Start a fresh output for the upgraded prompts. Existing outputs are never overwritten.
+
+* Acceptance beyond file presence
+
+Native acceptance proves that twenty named artifacts exist and are nonempty. CLI and installation tests prove that the recipe and its selected prompt stages resolve. Neither establishes that a live model followed the art direction or that generated interactions work. The generated source script also has a narrower scope than a browser test.
+
+Before considering the generated site ready, carry out the generated browser procedure and record observations:
+
+| Area | Procedure | Passing observation |
+|------+-----------+---------------------|
+| Journey | Home to work, both case studies, approach, journal, brief and recovery | Every route and asset loads; navigation remains consistent |
+| Filters | Select each category, then All/reset | Matching projects, selected state and count agree; both return |
+| Export | Blank/whitespace input, Unicode text, repeated valid downloads, then reset | Useful associated errors; accurate text file each time; no network request; clean reset |
+| Keyboard | Traverse navigation and every control with Tab/Enter/Space | Visible focus, logical order, operable controls and no trap |
+| Resilience | Disable JavaScript, enable reduced motion, disconnect network after local assets load | Readable content and navigation; no hidden essential content or remote dependency |
+| Responsive | Inspect 360/768/1440px, 1366x768 opening and 200 percent zoom | No clipped copy, horizontal overflow or inaccessible action |
+| Visual editing | Compare home, case study and longform pages together | Shared tokens and artwork language; varied purposeful composition; no generic repeated scaffolding |
+
+Review color contrast and heading/landmark structure as well. “Triple-A quality” here describes an ambitious design target; it is not a claim of WCAG AAA conformance, a browser audit or a live-model evaluation. Record actual evidence and fix the weakest dimension before adding effects.

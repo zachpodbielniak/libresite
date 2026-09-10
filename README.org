@@ -48,10 +48,26 @@ Successful steps are saved under =my-site.libresite-work/checkpoint.json=. Resum
 | Recipe | Result |
 |--------+--------|
 | [[file:recipes/landing.yaml][landing.yaml]] | Editorial static studio site with product/design/review documents |
+| [[file:recipes/flagship.yaml][flagship.yaml]] | FIELDWORK: eight-page studio, two case studies, journal, work filters and local project-brief export |
 | [[file:recipes/application.yaml][application.yaml]] | Local reading-list application with a GNU89/GLib backend and SQLite |
 | [[file:recipes/mixed-providers.yaml][mixed-providers.yaml]] | Static portfolio demonstrating all five CLI adapters and step-specific models |
 
 Change =site.brief=, the requested stack, and the design profile. Built-in profiles are =editorial=, =minimalist=, =industrial=, =cinematic= and =application=. Provider model identifiers are passed through to ai-glib; example model aliases are examples, not a promise of account availability.
+
+** Generate the flagship site
+
+For the fuller example, use a fresh output directory:
+
+#+begin_src bash
+./build/release/libresite -r recipes/flagship.yaml --plan
+./build/release/libresite -r recipes/flagship.yaml --preview foundation
+./build/release/libresite -r recipes/flagship.yaml -o ./fieldwork-site
+# Inspect the generated test script before executing generated code.
+bash ./fieldwork-site/tests/check.sh
+python3 -m http.server 8000 --bind 127.0.0.1 --directory ./fieldwork-site
+#+end_src
+
+Visit =http://127.0.0.1:8000=. The [[file:docs/flagship.org][flagship guide]] describes the routes, staged generation, local-only interactions and browser acceptance procedure. This recipe makes eight AI calls before retries; budget more time than for the landing example. Prompts specify the visual standard; offline tests cannot certify the generated design.
 
 ** Edit prompts in one place
 
@@ -72,6 +88,7 @@ Repository skills live in [[file:skills/libresite-landing/SKILL.md][skills/libre
 - [[file:docs/recipe-format.org][Recipe schema and per-step settings]]
 - [[file:docs/architecture.org][Architecture, ownership, signals and extension contracts]]
 - [[file:docs/prompts.org][Prompt organization and design provenance]]
+- [[file:docs/flagship.org][Full multi-page example and quality checks]]
 - [[file:docs/building.org][Build, install and dependency modes]]
 - [[file:docs/operations.org][CLI, checkpoints, limits and troubleshooting]]
 - [[file:docs/testing.org][Verification and its limits]]
