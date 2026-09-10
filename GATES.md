@@ -31,3 +31,6 @@ Scope: Lift text-only/SVG-only artifacts, add rename, focus stage context, stop 
   CHECK: make DEPS=system DEBUG=1 ASAN=1 UBSAN=1 tests
   EXPECT: tests pass
   EVIDENCE: exit=0; 115 GTests plus packages/cli/revision/usage/scaffold/qa under ASan/UBSan
+
+- [x] G7: Conventional Commits are merged to master with a clean tracked worktree.
+  EVIDENCE: master fast-forwarded to 0cc906d; feat/engine-limits worktree remains at that commit. verify.sh, install.sh and ASan/UBSan tests passed before the merge.
