@@ -36,6 +36,9 @@ do
 		then
 			"$binary" --recipe "$recipe" --preview "$step" > "$test_dir/preview"
 			rg -q 'CURRENT PROJECT' "$test_dir/preview"
+			# Every recipe/stage inherits the shared device contract, even
+			# when its brief does not explicitly request responsive output.
+			rg -q 'MOBILE AND DESKTOP DEFAULTS' "$test_dir/preview"
 		fi
 	done < "$test_dir/plan"
 done
@@ -92,6 +95,11 @@ YAML
 	# waits forever for sandbox-escalation on a non-TTY stdin.
 	case "$provider" in
 		codex)
+			# Codex inlines system instructions in stdin; other adapters
+			# may carry them in argv or temporary prompt files instead.
+			rg -q 'MOBILE AND DESKTOP DEFAULTS' "$test_dir/input"
+			rg -q '360x800 and 390x844' "$test_dir/input"
+			rg -q '1366x768 laptop and 1440x900 desktop' "$test_dir/input"
 			rg -qx -- '--ephemeral' "$test_dir/args"
 			rg -qx -- '--dangerously-bypass-approvals-and-sandbox' "$test_dir/args"
 			if rg -qx -- '--sandbox' "$test_dir/args"

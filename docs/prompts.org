@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, design, prompts
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-10T12:00:00-04:00
+#+updated: 2026-09-10T14:39:18-04:00
 #+version: 0.1.0
 
 * One maintained prompt catalog
@@ -33,6 +33,26 @@ The recipe's =instructions= and =options= appear inside step data rather than in
 | application | Repeated-use application workflows | Stable navigation, legible data, consistent actions and complete UI states |
 
 These are directions, not rigid templates. The audience and requirements take precedence. Accessibility, working controls and responsive behavior are shared across all profiles. A low-motion product should never inherit a gratuitous animation mandate from a cinematic reference.
+
+* Mobile and desktop defaults
+
+The bundled catalog makes mobile and desktop first-class design targets for every generated site and application, without a recipe switch. The shared system contract reaches every generative stage and all five styles, including custom =generate= stages and backend-rendered HTML. Brief/design stages plan both layouts, frontend/foundation/pages implement them, interactions preserve touch/keyboard/pointer access, and review/polish check the entire route and state surface. Desktop gets intentional columns, navigation and information density; mobile retains the same content, destinations and capabilities.
+
+Implementation guidance requires a device-width viewport with zoom enabled, mobile-first CSS, content-driven breakpoints, fluid type/spacing/media, bounded reading measures and logical reading/focus order. Navigation, forms, tables, dialogs and sticky controls must remain reachable. Standalone controls have at least 44 by 44 CSS pixels of target area; inline text links remain readable and distinguishable. Wide tables/code may use labeled keyboard-accessible local scrolling; page overflow, hidden content and hover-only actions are defects.
+
+Generated project documentation and =AGENTS.md= carry a responsive acceptance matrix with expected results and manual browser procedures:
+
+| Target | CSS viewport |
+|--------+--------------|
+| Phone | 360x800 and 390x844 |
+| Tablet | 768x1024 |
+| Laptop | 1366x768 |
+| Desktop | 1440x900 |
+| Additional checks | Intermediate widths, phone landscape and 200 percent browser zoom |
+
+For each route and main workflow, check navigation, readable content, media sizing, touch/keyboard/pointer access, focus visibility, error/loading/empty/success states and unintended overflow. Include runnable responsive checks when suitable project tooling exists. The model may inspect supplied source but cannot execute browser tools under the generation protocol; checks without supplied execution evidence must remain marked unexecuted. Native =validate= still checks artifact presence only. Offline CLI/provider/install checks prove delivery of these instructions, not the responsiveness of a live generated site.
+
+A =--prompts= catalog replaces the bundled catalog completely: maintain this contract in custom catalogs to retain the defaults. Existing generated projects are not retroactively changed. Catalog edits change the checkpoint digest, so an interrupted run needs its original catalog to resume; use a fresh output for generation with the new defaults.
 
 * Imported reference snapshots
 

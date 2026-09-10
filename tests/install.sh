@@ -28,11 +28,32 @@ do
 		then
 			(cd /tmp && "$binary" --recipe "$recipe" --preview "$step") > "$test_dir/preview"
 			rg -q 'CURRENT PROJECT' "$test_dir/preview"
+			rg -q 'MOBILE AND DESKTOP DEFAULTS' "$test_dir/preview"
 		fi
 	done < "$test_dir/plan"
 done
 (cd /tmp && "$binary" --recipe "$root/recipes/landing.yaml" --preview design) > "$test_dir/preview"
 rg -q 'RESPONSE PROTOCOL' "$test_dir/preview"
+# The shipped catalog must match the embedded defaults outside the checkout,
+# including styles absent from bundled recipes and the generic generate stage.
+for style in editorial minimalist industrial cinematic application
+do
+	cat > "$test_dir/responsive.yaml" <<YAML
+version: 1
+name: responsive-defaults
+site: {brief: Build a complete site, style: $style}
+pipeline:
+  steps:
+    - {id: site, type: generate}
+YAML
+	(cd /tmp && "$binary" -r "$test_dir/responsive.yaml" --preview site) > "$test_dir/embedded"
+	(cd /tmp && "$binary" -r "$test_dir/responsive.yaml" \
+		--prompts "$test_dir/usr/share/libresite/data/prompts.yaml" --preview site) > "$test_dir/catalog"
+	cmp "$test_dir/embedded" "$test_dir/catalog"
+	rg -q 'MOBILE AND DESKTOP DEFAULTS' "$test_dir/embedded"
+	rg -q '360x800 and 390x844' "$test_dir/embedded"
+	rg -q '1366x768 laptop and 1440x900 desktop' "$test_dir/embedded"
+done
 # Compile an external plugin using only installed public headers. This checks
 # the real library extension boundary rather than internal registration calls.
 read -r -a flags <<< "$(pkg-config --cflags --libs gio-2.0 gobject-2.0 json-glib-1.0 gmodule-2.0)"
