@@ -7,7 +7,8 @@ site:
   frontend: Semantic HTML and CSS with local SVG assets.
 ai:
   provider: codex
-  timeout: 600
+  timeout: 0
+  max_tokens: 0
   retries: 1
 pipeline:
   steps:

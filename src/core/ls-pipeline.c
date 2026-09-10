@@ -15,7 +15,20 @@ struct _LsPipeline {
 	gboolean running;
 };
 G_DEFINE_TYPE(LsPipeline, ls_pipeline, G_TYPE_OBJECT)
-static guint signals[4];
+static guint signals[5];
+/* The forwarding data lives for the synchronous execution of one step. */
+typedef struct {
+	LsPipeline *pipeline;
+	const gchar *id;
+	guint index;
+} StepProgress;
+static void
+forward_progress(LsStep *step, const gchar *message, gpointer data){
+	StepProgress *progress = (StepProgress *)data;
+	(void)step;
+	g_signal_emit(progress->pipeline, signals[4], 0,
+		progress->id, progress->index, message);
+}
 /* Hold providers/catalogs for the pipeline lifetime; callbacks borrow self. */
 static void
 ls_pipeline_finalize(GObject *object){
@@ -28,6 +41,18 @@ ls_pipeline_finalize(GObject *object){
 static void
 ls_pipeline_class_init(LsPipelineClass *klass){
 	G_OBJECT_CLASS(klass)->finalize = ls_pipeline_finalize;
+	/**
+	 * LsPipeline::step-progress:
+	 * @self: the pipeline
+	 * @id: (transfer none): step ID
+	 * @index: zero-based step index
+	 * @message: (transfer none): attempt or retry status
+	 *
+	 * Forwarded on the calling thread; copy strings to retain them.
+	 */
+	signals[4] = g_signal_new("step-progress", G_TYPE_FROM_CLASS(klass),
+		G_SIGNAL_RUN_LAST, 0, NULL, NULL, NULL, G_TYPE_NONE, 3,
+		G_TYPE_STRING, G_TYPE_UINT, G_TYPE_STRING);
 	signals[0] = g_signal_new(
 		"step-started",
 		G_TYPE_FROM_CLASS(klass),
@@ -346,10 +371,15 @@ ls_pipeline_run(
 		GType type =
 			(GType)GPOINTER_TO_SIZE(g_hash_table_lookup(self->types, ls_string(config, "type")));
 		g_autoptr(LsStep) step = g_object_new(type, NULL);
+		StepProgress progress = {self, id, i};
+		gulong handler = g_signal_connect(step, "progress", G_CALLBACK(forward_progress), &progress);
+		gboolean executed;
 		g_signal_emit(self, signals[0], 0, id, i);
-		if (!ls_step_execute(
+		executed = ls_step_execute(
 				step, recipe, config, self->prompts, context, self->provider, cancellable, error
-			)) {
+			);
+		g_signal_handler_disconnect(step, handler);
+		if (!executed) {
 			if (error != NULL && *error != NULL)
 				g_prefix_error(error, "Step '%s': ", id);
 			goto out;

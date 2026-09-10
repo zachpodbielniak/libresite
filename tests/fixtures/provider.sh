@@ -7,6 +7,10 @@ case "${1-}" in
 	--license) printf '%s\n' 'AGPL-3.0-or-later'; exit 0 ;;
 esac
 printf '%s\n' "$@" > "${LS_TEST_ARGS:?}"
+if [[ -n ${LS_TEST_CWD:-} ]]
+then
+	pwd > "$LS_TEST_CWD"
+fi
 # Drain stdin for every adapter. Some ai-glib versions pass prompts in argv,
 # others pipe them; exiting early races long writes and causes EPIPE.
 cat > "${LS_TEST_INPUT:?}"
@@ -17,7 +21,7 @@ then
 fi
 if [[ ${LS_TEST_SLEEP:-0} == 1 ]]
 then
-	sleep 5
+	sleep "${LS_TEST_SLEEP_SECONDS:-5}"
 fi
 # Escape the file bundle for a JSON string, without requiring another language.
 bundle='{"files":[{"path":"index.html","content":"<!doctype html><html lang=\"en\"><title>Fixture</title><main><h1>Offline site</h1></main></html>"}]}'
@@ -25,6 +29,7 @@ escaped=${bundle//\\/\\\\}
 escaped=${escaped//\"/\\\"}
 if [[ ${LS_TEST_PROVIDER} == codex ]]
 then
+	printf '%s\n' '{"type":"thread.started","thread_id":"fixture-session"}'
 	printf '{"type":"item.completed","item":{"id":"a","type":"agent_message","text":"%s"}}\n' "$escaped"
 	printf '%s\n' '{"type":"turn.completed","usage":{"input_tokens":1,"output_tokens":1}}'
 else

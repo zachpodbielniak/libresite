@@ -11,9 +11,9 @@ site:
   requirements: Local assets, keyboard navigation, reduced motion, no tracking, no build-time package manager.
 ai:
   provider: codex
-  timeout: 600
+  timeout: 0
   retries: 1
-  max_tokens: 16384
+  max_tokens: 0
 pipeline:
   steps:
     - id: brief

@@ -12,6 +12,24 @@ G_DECLARE_FINAL_TYPE(LsRecipe, ls_recipe, LS, RECIPE, GObject)
  */
 LsRecipe *ls_recipe_new(const gchar *yaml, GError **error);
 /**
+ * ls_recipe_set_timeout:
+ * @self: recipe
+ * @seconds: -1 to use recipe values, 0 for unlimited, otherwise 1..86400 seconds
+ *
+ * Set an execution-only deadline override before running. The parsed recipe
+ * and checkpoint fingerprint remain unchanged. Do not mutate during a run.
+ */
+void ls_recipe_set_timeout(LsRecipe *self, gint seconds);
+/**
+ * ls_recipe_set_unlimited:
+ * @self: recipe
+ * @unlimited: whether to disable provider time and requested output budgets
+ *
+ * Configure before execution. Takes precedence over timeout overrides and
+ * leaves the parsed recipe unchanged for checkpoint compatibility.
+ */
+void ls_recipe_set_unlimited(LsRecipe *self, gboolean unlimited);
+/**
  * ls_recipe_get_root:
  * @self: a recipe
  * Returns: (transfer none): immutable recipe object; do not modify

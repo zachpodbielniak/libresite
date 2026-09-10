@@ -26,6 +26,8 @@ The public umbrella header is =libresite.h=. The build emits a static archive, a
 
 =LsRecipe= parses and validates YAML before output creation. =LsPipeline= resolves registered types and catalog names before any provider call. Each generation step builds a fresh merged settings object and sends the current project plus the stage contract to =LsProvider=. A complete provider bundle is applied transactionally to =LsContext=. A durable checkpoint is written before the step is considered complete. After every step succeeds, the context is exported into a fresh directory within the private workspace, metadata is added, and a same-filesystem GFile move publishes the output without replacing an existing destination.
 
+=ls_recipe_set_timeout()= supplies an execution-only deadline override before a run; merged settings reflect it but the parsed recipe tree stays immutable. Both provider configuration and rendered =AI SETTINGS= use the same merged values. This lets =--timeout= recover an existing checkpoint without changing the intended project or catalog.
+
 The checkpoint is the source of truth on resume. Partially exported directories do not become input, and failed model output is never reused. Matching fingerprints bind the parsed recipe, prompt catalog and checkpoint format. The fingerprint detects configuration drift, not a malicious user who can rewrite the checkpoint. Workspace ownership/mode checks and an advisory exclusive lock protect normal concurrent use.
 
 * GLib ownership and threading
@@ -40,10 +42,13 @@ Pipeline operations are synchronous and intended for a worker thread. Do not cal
 |--------+-----------+--------|
 | step-started | id string, index unsigned | Before step execution |
 | step-completed | id string, index unsigned | After durable checkpoint write |
+| step-progress | id string, index unsigned, message string | Attempt settings and retry reasons, forwarded from LsStep::progress |
 | artifact-written | LsArtifact boxed value | After successful directory publication, once per final artifact |
 | completed | output path string | After successful directory publication |
 
 Indices are zero-based. Resume emits signals only for steps actually run. The callback arguments are borrowed; copy an artifact or duplicate strings to retain them. Failures return through =GError= rather than a second competing completion channel. The CLI prints progress and errors to stderr.
+
+=LsStep::progress= carries a borrowed human-readable message on the executing thread. Custom steps can emit it to describe work without implying artifact acceptance. The pipeline connects it only during execution and forwards it as =step-progress=. The CLI copies the current status under a mutex for its main-context 30-second heartbeat; its timer and signal handlers are removed after the worker joins.
 
 * Implement a new module
 
@@ -88,6 +93,8 @@ Plugins are explicitly selected native code and run with the caller's privileges
 * Implement another provider
 
 Implement =LsProviderInterface.generate=. Return an owned UTF-8 JSON file-bundle string or NULL with an error. The interface receives merged settings and separate system/task prompts. The pipeline is independent of ai-glib beyond =LsAiProvider=; a test transport, local model server or another API implementation can be injected without changing recipe, checkpoint or artifact code. The current CLI selects =LsAiProvider=; applications embedding the library may inject any provider object.
+
+Configure =ls_ai_provider_set_debug()= before generation to opt into provider-native session persistence and metadata diagnostics. The CLI exposes this as =--debug=; it is transport configuration rather than recipe state and does not affect checkpoint fingerprints. Do not change the setting concurrently with a provider call.
 
 * Dependency roles
 

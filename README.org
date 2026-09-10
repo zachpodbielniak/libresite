@@ -14,6 +14,8 @@ The implementation is a reusable GLib/GObject library plus a CLI, with the =conf
 
 * Getting started
 
+The bundled recipes use =timeout: 0= and =max_tokens: 0= for unlimited testing. =--unlimited= also disables both budgets for an existing recipe without changing its checkpoint identity. =--timeout 0= disables only the deadline. Provider/model limits still apply. The flagship recipe has no advisory generated-file byte budgets.
+
 ** Build requirements
 
 Fedora packages for the builder: =gcc=, =make=, =pkgconf-pkg-config=, =glib2-devel=, =json-glib-devel=, =libsoup3-devel=, =libyaml-devel=, =libxml2-devel= and =libdex-devel=. Testing also uses =ShellCheck=, =ripgrep= and =coreutils=. The default builds the pinned dependencies from =deps/=; a recursive submodule checkout is the documented first step, and =bundled-deps= initializes missing nested ai-glib gitlinks if you skip it. Alternatively, =DEPS=system= uses compatible installed =ai-glib-1.0= and =yaml-glib-1.0= development builds. See [[file:docs/building.org][building.org]] for details.
@@ -42,6 +44,12 @@ Open a generated static =index.html= directly, or follow the output's =README.or
 #+end_src
 
 Successful steps are saved under =my-site.libresite-work/checkpoint.json=. Resume restores their files and starts at the next step. The parsed recipe and exact prompt catalog must match. Existing output directories are never overwritten. The output's parent directory must already exist. Concurrent runs targeting the same workspace are rejected.
+
+Stderr reports attempt numbers, per-attempt timeouts, retry reasons and a waiting heartbeat every 30 seconds. Checkpoints change only after successful steps; =timeout: 900= with =retries: 1= can spend 30 minutes on one step before failing.
+
+Add =--debug= to enable provider session persistence (including Codex JSONL rollouts) and diagnostic metadata on stderr. The logged provider working directory identifies the session while it runs. Debug can be enabled when resuming an existing checkpoint; see [[file:docs/operations.org][debug tracing]].
+
+For a large response killed by the recipe's deadline, resume with =--timeout 3600= to allow up to an hour per attempt without changing the recipe or checkpoint. The timeout is total elapsed time, not idle time. An unchanged Codex session JSONL does not prove a stall: response tokens can still be arriving before a completed item is recorded. Resolved AI settings, including the output budget, are now included in the model prompt; Codex's adapter does not enforce =max_tokens= as a native CLI limit.
 
 Prompt size is unlimited by default. Use =--max-prompt-bytes BYTES= only when you want a local cap; =0= disables it. Runs stopped by the former 100000-byte limit can resume with the rebuilt binary and their original recipe/catalog. Provider token windows still apply. Changing this CLI cap does not invalidate a checkpoint.
 

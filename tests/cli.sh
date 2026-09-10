@@ -12,6 +12,15 @@ test_dir=$(mktemp -d)
 trap 'rm -rf -- "$test_dir"' EXIT
 "$binary" --help > "$test_dir/help"
 rg -q 'Examples:' "$test_dir/help"
+rg -q -- '--debug' "$test_dir/help"
+rg -q -- '--timeout' "$test_dir/help"
+for deadline in -2 86401 invalid
+do
+	if "$binary" -r "$root/recipes/application.yaml" --validate --timeout "$deadline" > /dev/null 2>&1
+	then
+		exit 1
+	fi
+done
 "$binary" --license > "$test_dir/license"
 cmp "$root/LICENSE" "$test_dir/license"
 "$binary" --version | rg -q 'libresite 0.1.0'
@@ -52,6 +61,7 @@ fi
 export CODEX_PATH="$root/tests/fixtures/provider.sh"
 export CLAUDE_CODE_PATH="$CODEX_PATH" CURSOR_AGENT_PATH="$CODEX_PATH" GROK_PATH="$CODEX_PATH" AGY_PATH="$CODEX_PATH"
 export LS_TEST_ARGS="$test_dir/args" LS_TEST_INPUT="$test_dir/input"
+export LS_TEST_CWD="$test_dir/cwd"
 for provider in codex claude-code cursor grok-build antigravity
 do
 	export LS_TEST_PROVIDER="$provider"
@@ -73,6 +83,7 @@ YAML
 	# waits forever for sandbox-escalation on a non-TTY stdin.
 	case "$provider" in
 		codex)
+			rg -qx -- '--ephemeral' "$test_dir/args"
 			rg -qx -- '--dangerously-bypass-approvals-and-sandbox' "$test_dir/args"
 			if rg -qx -- '--sandbox' "$test_dir/args"
 			then
@@ -109,16 +120,60 @@ fi
 test ! -e "$test_dir/failure"
 test -f "$test_dir/failure.libresite-work/checkpoint.json"
 export LS_TEST_FAIL=0
-"$binary" -r "$test_dir/failure.yaml" -o "$test_dir/failure" --resume --max-prompt-bytes 262144
+"$binary" -r "$test_dir/failure.yaml" -o "$test_dir/failure" --resume --debug --timeout 10 --max-prompt-bytes 262144 > "$test_dir/debug.out" 2> "$test_dir/debug.log"
+rg -q 'attempt 1/1; provider codex; timeout 10s' "$test_dir/debug.log"
+rg -q 'AI SETTINGS' "$test_dir/input"
+rg -q '"timeout":10' "$test_dir/input"
+rg -q '"max_tokens":16384' "$test_dir/input"
+# Debug can be enabled when resuming a non-debug checkpoint. Provider-native
+# persistence is enabled without changing the recipe or selecting resume argv.
+if rg -qx -- '--ephemeral' "$test_dir/args"
+then
+	exit 1
+fi
+rg -q 'persistence=enabled cwd=' "$test_dir/debug.log"
+rg -q 'system_bytes=[0-9]+ prompt_bytes=[0-9]+' "$test_dir/debug.log"
+rg -q 'elapsed_ms=[0-9]+ result=response session=fixture-session' "$test_dir/debug.log"
+rg -q 'response_bytes=[0-9]+ stop_reason=' "$test_dir/debug.log"
+if rg -q 'CURRENT PROJECT|Offline site|debug:' "$test_dir/debug.out" || rg -q 'CURRENT PROJECT|Offline site' "$test_dir/debug.log"
+then
+	exit 1
+fi
+# The fixture creates no files; debug deliberately retains its private cwd.
+debug_cwd=$(< "$test_dir/cwd")
+test -d "$debug_cwd"
+rmdir -- "$debug_cwd"
 # ai-glib enforces process deadlines; cancellation must not masquerade as success.
 export LS_TEST_SLEEP=1
-if "$binary" -r "$test_dir/failure.yaml" -o "$test_dir/timeout" > "$test_dir/timeout.log" 2>&1
+if "$binary" --debug -r "$test_dir/failure.yaml" -o "$test_dir/timeout" > "$test_dir/timeout.log" 2>&1
 then
 	exit 1
 fi
 test ! -e "$test_dir/timeout"
+rg -q 'result=failed session=.*error_domain=ai-glib-error-quark error_code=' "$test_dir/timeout.log"
+debug_cwd=$(< "$test_dir/cwd")
+rmdir -- "$debug_cwd"
+# A longer execution-only deadline allows a previously timed-out checkpoint
+# to finish, without editing its recipe or weakening output validation.
+export LS_TEST_SLEEP_SECONDS=3
+"$binary" --unlimited --timeout 1 -r "$test_dir/failure.yaml" -o "$test_dir/timeout" --resume > "$test_dir/recovered.log" 2>&1
+test -f "$test_dir/timeout/index.html"
+rg -q '"timeout":"unlimited"' "$test_dir/input"
+rg -q '"max_tokens":"unlimited; provider limits apply"' "$test_dir/input"
+export LS_TEST_SLEEP_SECONDS=5
+rg -q 'attempt 1/1; provider codex; timeout 2s' "$test_dir/timeout.log"
+# A deadline gets exactly the configured retry, with the reason visible.
+sed 's/retries: 0/retries: 1/' "$test_dir/failure.yaml" > "$test_dir/retry.yaml"
+if "$binary" -r "$test_dir/retry.yaml" -o "$test_dir/retry" > "$test_dir/retry.log" 2>&1
+then
+	exit 1
+fi
+rg -q 'attempt 1 failed: .*did not complete within 2000 ms.*; retrying' "$test_dir/retry.log"
+rg -q 'attempt 2/2; provider codex; timeout 2s' "$test_dir/retry.log"
+test "$(rg -c '; provider codex;' "$test_dir/retry.log")" -eq 2
+test ! -e "$test_dir/retry"
 # Send a real signal while the CLI's worker is waiting for its subprocess.
-"$binary" -r "$test_dir/failure.yaml" -o "$test_dir/cancel" > "$test_dir/cancel.log" 2>&1 &
+"$binary" --timeout 0 -r "$test_dir/failure.yaml" -o "$test_dir/cancel" > "$test_dir/cancel.log" 2>&1 &
 run_pid=$!
 sleep 0.2
 kill -TERM "$run_pid"
@@ -126,5 +181,29 @@ run_status=0
 wait "$run_pid" || run_status=$?
 test "$run_status" -eq 130
 test ! -e "$test_dir/cancel"
+# Exercise the actual main-context heartbeat while the worker is blocked.
+# The checkpoint must stay byte-identical during a wait and after cancellation.
+sed 's/timeout: 2/timeout: 60/' "$test_dir/failure.yaml" > "$test_dir/wait.yaml"
+export LS_TEST_SLEEP_SECONDS=60
+"$binary" -r "$test_dir/wait.yaml" -o "$test_dir/wait" > "$test_dir/wait.log" 2>&1 &
+run_pid=$!
+for ((poll = 0; poll < 100; poll++))
+do
+	[[ -f "$test_dir/wait.libresite-work/checkpoint.json" ]] && break
+	sleep 0.1
+done
+cp "$test_dir/wait.libresite-work/checkpoint.json" "$test_dir/checkpoint-before"
+for ((poll = 0; poll < 350; poll++))
+do
+	rg -q 'still waiting' "$test_dir/wait.log" && break
+	sleep 0.1
+done
+kill -TERM "$run_pid"
+run_status=0
+wait "$run_pid" || run_status=$?
+test "$run_status" -eq 130
+rg -q 'still waiting .*attempt 1/1; provider codex; timeout 60s; checkpoint unchanged' "$test_dir/wait.log"
+cmp "$test_dir/checkpoint-before" "$test_dir/wait.libresite-work/checkpoint.json"
+test ! -e "$test_dir/wait"
 export LS_TEST_SLEEP=0
 printf '%s\n' 'CLI VERIFIED (five subprocess adapters, failures, resume, deadline, cancellation)'

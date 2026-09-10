@@ -4,6 +4,8 @@
 struct _LsRecipe {
 	GObject parent_instance;
 	JsonNode *root;
+	gint timeout;
+	gboolean unlimited;
 };
 G_DEFINE_TYPE(LsRecipe, ls_recipe, G_TYPE_OBJECT)
 /* Recipe owns the complete parsed tree, including every borrowed step. */
@@ -19,7 +21,7 @@ ls_recipe_class_init(LsRecipeClass *klass){
 }
 static void
 ls_recipe_init(LsRecipe *self){
-	(void)self;
+	self->timeout = -1;
 }
 /* Test node types before using JSON-GLib's typed accessors. */
 static gboolean
@@ -62,8 +64,8 @@ validate_ai(JsonObject *ai, GError **error){
 				goto invalid_number;
 			value = json_node_get_int(node);
 			if ((g_str_equal(key, "retries") && (value < 0 || value > 5)) ||
-				(g_str_equal(key, "timeout") && (value < 1 || value > 86400)) ||
-				(g_str_equal(key, "max_tokens") && (value < 256 || value > 131072)))
+				(g_str_equal(key, "timeout") && (value < 0 || value > 86400)) ||
+				(g_str_equal(key, "max_tokens") && value != 0 && (value < 256 || value > 131072)))
 				goto invalid_number;
 		} else if (!text_member(ai, key, TRUE, error))
 			return FALSE;
@@ -81,8 +83,8 @@ invalid_number:
 		error,
 		LS_ERROR,
 		LS_ERROR_INVALID,
-		"AI settings require integer timeout 1..86400 seconds, retries 0..5 and max_tokens "
-		"256..131072"
+		"AI settings require integer timeout 0..86400 seconds, retries 0..5 and max_tokens "
+		"0 or 256..131072 (0 means unlimited)"
 	);
 	return FALSE;
 }
@@ -213,5 +215,24 @@ ls_recipe_resolve_ai(LsRecipe *self, JsonObject *step){
 				json_node_copy(json_object_get_member(sources[i], (const gchar *)item->data))
 			);
 	}
+	if (self->timeout >= 0)
+		json_object_set_int_member(result, "timeout", self->timeout);
+	if (self->unlimited) {
+		json_object_set_int_member(result, "timeout", 0);
+		json_object_set_int_member(result, "max_tokens", 0);
+	}
 	return result;
+}
+/* Execution overrides must never mutate the fingerprinted YAML tree. */
+void
+ls_recipe_set_timeout(LsRecipe *self, gint seconds){
+	g_return_if_fail(LS_IS_RECIPE(self));
+	g_return_if_fail(seconds >= -1 && seconds <= 86400);
+	self->timeout = seconds;
+}
+/* Testing budgets are execution settings and leave saved recipe identity intact. */
+void
+ls_recipe_set_unlimited(LsRecipe *self, gboolean unlimited){
+	g_return_if_fail(LS_IS_RECIPE(self));
+	self->unlimited = unlimited;
 }

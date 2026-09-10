@@ -53,13 +53,20 @@ execute(
 	g_autofree gchar *snapshot = ls_context_snapshot(context);
 	gint64 retries = json_object_get_int_member(settings, "retries");
 	gint64 attempt;
-	(void)self;
 	if (prompt == NULL)
 		return FALSE;
 	for (attempt = 0; attempt <= retries; attempt++) {
 		g_autoptr(GError) local_error = NULL;
 		g_autoptr(LsContext) candidate = ls_context_new();
-		g_autofree gchar *response = ls_provider_generate(
+		g_autofree gchar *response = NULL;
+		g_autofree gchar *status = g_strdup_printf(
+			"attempt %" G_GINT64_FORMAT "/%" G_GINT64_FORMAT
+			"; provider %s; timeout %" G_GINT64_FORMAT "s%s",
+			attempt + 1, retries + 1, ls_string(settings, "provider"),
+			json_object_get_int_member(settings, "timeout"),
+			json_object_get_int_member(settings, "timeout") == 0 ? " (unlimited)" : "");
+		g_signal_emit_by_name(self, "progress", status);
+		response = ls_provider_generate(
 			provider,
 			settings,
 			ls_prompts_get_system(prompts),
@@ -86,6 +93,11 @@ execute(
 			return FALSE;
 		}
 		g_free(retry_prompt);
+		/* Surface the actual rejection before starting another paid request. */
+		g_free(status);
+		status = g_strdup_printf("attempt %" G_GINT64_FORMAT
+			" failed: %.512s; retrying", attempt + 1, local_error->message);
+		g_signal_emit_by_name(self, "progress", status);
 		retry_prompt = g_strdup_printf(
 			"%s\nPREVIOUS ATTEMPT REJECTED\n%.512s\nReturn a corrected complete JSON file bundle, "
 			"without markdown fences.\n",

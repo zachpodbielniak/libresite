@@ -3,7 +3,16 @@
 G_DEFINE_ABSTRACT_TYPE(LsStep, ls_step, G_TYPE_OBJECT)
 static void
 ls_step_class_init(LsStepClass *klass){
-	(void)klass;
+	/**
+	 * LsStep::progress:
+	 * @self: the emitting step
+	 * @message: (transfer none): human-readable attempt or retry status
+	 *
+	 * Emitted synchronously on the executing thread. Does not imply that
+	 * artifacts have been accepted or checkpointed.
+	 */
+	g_signal_new("progress", G_TYPE_FROM_CLASS(klass), G_SIGNAL_RUN_LAST,
+		0, NULL, NULL, NULL, G_TYPE_NONE, 1, G_TYPE_STRING);
 }
 static void
 ls_step_init(LsStep *self){

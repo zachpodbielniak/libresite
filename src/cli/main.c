@@ -16,6 +16,14 @@ typedef struct {
 	gboolean okay;
 	GError *error;
 } Run;
+/* Worker signals and the main-context heartbeat share only this locked state. */
+typedef struct {
+	GMutex mutex;
+	gchar *id;
+	gchar *message;
+	guint index;
+	gint64 since;
+} Progress;
 static gboolean
 quit_loop(gpointer data){
 	g_main_loop_quit((GMainLoop *)data);
@@ -45,15 +53,54 @@ print_progress(const gchar *id, guint index, const gchar *message){
 }
 static void
 step_started(LsPipeline *pipeline, const gchar *id, guint index, gpointer data){
+	Progress *progress = (Progress *)data;
 	(void)pipeline;
-	(void)data;
+	g_mutex_lock(&progress->mutex);
+	g_free(progress->id);
+	g_free(progress->message);
+	progress->id = g_strdup(id);
+	progress->message = g_strdup("executing step");
+	progress->index = index;
+	progress->since = g_get_monotonic_time();
 	print_progress(id, index, "started");
+	g_mutex_unlock(&progress->mutex);
 }
 static void
 step_completed(LsPipeline *pipeline, const gchar *id, guint index, gpointer data){
+	Progress *progress = (Progress *)data;
 	(void)pipeline;
-	(void)data;
+	g_mutex_lock(&progress->mutex);
+	g_clear_pointer(&progress->id, g_free);
 	print_progress(id, index, "checkpoint saved");
+	g_mutex_unlock(&progress->mutex);
+}
+/* Reset elapsed time at each attempt or retry, without touching checkpoints. */
+static void
+step_progress(LsPipeline *pipeline, const gchar *id, guint index,
+	const gchar *message, gpointer data){
+	Progress *progress = (Progress *)data;
+	(void)pipeline;
+	g_mutex_lock(&progress->mutex);
+	g_free(progress->message);
+	progress->message = g_strdup(message);
+	progress->since = g_get_monotonic_time();
+	print_progress(id, index, message);
+	g_mutex_unlock(&progress->mutex);
+}
+/* This is elapsed waiting time, not a claim that the provider is making progress. */
+static gboolean
+heartbeat(gpointer data){
+	Progress *progress = (Progress *)data;
+	g_mutex_lock(&progress->mutex);
+	if (progress->id != NULL) {
+		g_autofree gchar *message = g_strdup_printf(
+			"still waiting (%" G_GINT64_FORMAT "s); %s; checkpoint unchanged until step succeeds",
+			(g_get_monotonic_time() - progress->since) / G_USEC_PER_SEC,
+			progress->message);
+		print_progress(progress->id, progress->index, message);
+	}
+	g_mutex_unlock(&progress->mutex);
+	return G_SOURCE_CONTINUE;
 }
 /* GModule extensions are explicit user-supplied native code; keep modules
  * resident because their registered GTypes outlive the entrypoint call. */
@@ -100,8 +147,10 @@ main(int argc, char **argv){
 	g_autofree gchar *recipe_path = NULL, *output = NULL, *catalog = NULL, *preview = NULL;
 	g_auto(GStrv) plugins = NULL;
 	gint64 max_prompt_bytes = 0;
+	gint timeout = -1;
+	gboolean unlimited = FALSE;
 	gboolean validate = FALSE, plan = FALSE, resume = FALSE, license = FALSE, version = FALSE,
-			 list = FALSE;
+			 list = FALSE, debug = FALSE;
 	g_autoptr(GOptionContext) options = NULL;
 	g_autoptr(GError) error = NULL;
 	g_autoptr(LsRecipe) recipe = NULL;
@@ -110,6 +159,12 @@ main(int argc, char **argv){
 	g_autoptr(LsPipeline) pipeline = NULL;
 	g_autofree gchar *yaml = NULL;
 	GOptionEntry entries[] = {
+		{"unlimited", 0, 0, G_OPTION_ARG_NONE, &unlimited,
+		 "Disable provider time and requested output budgets for this run", NULL},
+		{"timeout", 0, 0, G_OPTION_ARG_INT, &timeout,
+		 "Override each attempt deadline (0 = unlimited, omitted = recipe)", "SECONDS"},
+		{"debug", 0, 0, G_OPTION_ARG_NONE, &debug,
+		 "Persist provider sessions and log diagnostic metadata to stderr", NULL},
 		{"recipe", 'r', 0, G_OPTION_ARG_FILENAME, &recipe_path, "YAML recipe", "FILE"},
 		{"max-prompt-bytes", 0, 0, G_OPTION_ARG_INT64, &max_prompt_bytes,
 		 "System plus task byte limit (0 = unlimited, the default)", "BYTES"},
@@ -210,7 +265,16 @@ main(int argc, char **argv){
 	yaml = ls_read_text(recipe_path, &error);
 	if (yaml == NULL)
 		goto fail;
+	if (timeout < -1 || timeout > 86400) {
+		g_set_error_literal(&error, LS_ERROR, LS_ERROR_INVALID,
+			"--timeout must be between 0 and 86400 seconds");
+		goto fail;
+	}
 	recipe = ls_recipe_new(yaml, &error);
+	if (recipe != NULL) {
+		ls_recipe_set_timeout(recipe, timeout);
+		ls_recipe_set_unlimited(recipe, unlimited);
+	}
 	prompts = recipe != NULL ? ls_prompts_new(catalog, &error) : NULL;
 	if (prompts == NULL)
 		goto fail;
@@ -221,6 +285,7 @@ main(int argc, char **argv){
 	}
 	ls_prompts_set_max_bytes(prompts, (gsize)max_prompt_bytes);
 	provider = ls_ai_provider_new();
+	ls_ai_provider_set_debug(provider, debug);
 	pipeline = ls_pipeline_new(LS_PROVIDER(provider), prompts);
 	if (!load_plugins(pipeline, plugins, &error) || !ls_pipeline_validate(pipeline, recipe, &error))
 		goto fail;
@@ -270,14 +335,24 @@ main(int argc, char **argv){
 		g_autoptr(GMainLoop) loop = g_main_loop_new(NULL, FALSE);
 		g_autoptr(GCancellable) cancellable = g_cancellable_new();
 		Run run = {loop, pipeline, recipe, cancellable, output, resume, FALSE, NULL};
+		Progress progress = {0};
+		guint pulse;
 		guint interrupt = g_unix_signal_add(SIGINT, cancel_run, cancellable);
 		guint terminate = g_unix_signal_add(SIGTERM, cancel_run, cancellable);
 		GThread *thread;
-		g_signal_connect(pipeline, "step-started", G_CALLBACK(step_started), NULL);
-		g_signal_connect(pipeline, "step-completed", G_CALLBACK(step_completed), NULL);
+		g_mutex_init(&progress.mutex);
+		g_signal_connect(pipeline, "step-started", G_CALLBACK(step_started), &progress);
+		g_signal_connect(pipeline, "step-completed", G_CALLBACK(step_completed), &progress);
+		g_signal_connect(pipeline, "step-progress", G_CALLBACK(step_progress), &progress);
+		pulse = g_timeout_add_seconds(30, heartbeat, &progress);
 		thread = g_thread_new("libresite-run", run_thread, &run);
 		g_main_loop_run(loop);
 		g_thread_join(thread);
+		g_source_remove(pulse);
+		g_signal_handlers_disconnect_by_data(pipeline, &progress);
+		g_free(progress.id);
+		g_free(progress.message);
+		g_mutex_clear(&progress.mutex);
 		g_source_remove(interrupt);
 		g_source_remove(terminate);
 		if (!run.okay) {

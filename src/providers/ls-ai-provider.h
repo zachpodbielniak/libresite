@@ -9,4 +9,13 @@ G_DECLARE_FINAL_TYPE(LsAiProvider, ls_ai_provider, LS, AI_PROVIDER, GObject)
  * Returns: (transfer full): ai-glib CLI transport
  */
 LsAiProvider *ls_ai_provider_new(void);
+/**
+ * ls_ai_provider_set_debug:
+ * @self: ai-glib transport
+ * @enabled: whether to persist provider sessions and print diagnostics
+ *
+ * Configure before generation; do not change this while a call is running.
+ * Sessions are stored by the provider CLI and may contain project contents.
+ */
+void ls_ai_provider_set_debug(LsAiProvider *self, gboolean enabled);
 G_END_DECLS

@@ -8,6 +8,8 @@
 
 * Run checks
 
+Bundled live-testing recipes disable provider time/output budgets. Offline fixtures keep short deadlines deliberately to test timeout handling. The recovery regression resumes a finite-deadline checkpoint with =--unlimited= and verifies that it overrides a conflicting finite CLI deadline, returns a delayed fixture successfully, and renders both budgets as unlimited. SIGTERM cancellation is exercised with =--timeout 0=.
+
 #+begin_src bash
 make tests
 bash tests/verify.sh
@@ -23,6 +25,10 @@ GTest covers valid recipes, wrong types, unknown keys, duplicate YAML keys, docu
 
 The injected provider replaces only model transport; the real recipe parser, prompt renderer, step engine, artifact store, checkpointing and filesystem publication run end to end. This avoids vacuous tests that merely assert that a mock was called.
 
+Progress regression coverage forces a provider deadline and verifies that the retry reason and exactly two attempt announcements reach CLI stderr. A separate blocked-provider run waits for the real 30-second heartbeat, cancels with SIGTERM, and compares checkpoint bytes before and after waiting/cancellation. Each CLI suite therefore takes at least 30 seconds and exercises the worker/main-context boundary without a live account.
+
+Debug tests verify that Codex defaults to =--ephemeral=, that =--debug= removes that flag even when resuming a non-debug checkpoint, and that diagnostics include request sizes, retained working directory, parsed fixture session ID, response metadata and timeout error codes. They check that diagnostic metadata stays on stderr without dumping fixture contents. Actual provider session file creation requires a live provider and is not simulated as evidence of live tracing.
+
 CLI integration tests use actual =LsAiProvider= and ai-glib adapters with controlled executable fixtures for Codex, Claude Code, Grok Build, Cursor and Antigravity. They check file publication, model forwarding, unattended permission-bypass flags, output conflict handling, nonzero subprocess exit, resume, process deadlines and actual SIGTERM cancellation. No provider credentials, model calls or network access are required. Fixtures emit provider-specific envelopes; Antigravity success status is uppercase =SUCCESS=. Codex argv must include =--dangerously-bypass-approvals-and-sandbox= and must not include =--sandbox=.
 
 * What passing tests do not prove
@@ -34,5 +40,7 @@ Fixture success establishes the builder's deterministic behavior and its use of 
 The generated site's =validate= stage checks artifact existence and nonempty text. It is not a compiler, browser, HTML validator or accessibility checker. For a live acceptance run, create a new output with an authenticated provider, read its README and review report, compile/test its application, inspect narrow and wide viewports, follow the main workflow and verify keyboard/error states. Record actual evidence separately from model claims.
 
 * Adding tests
+
+Deadline recovery tests first time out a controlled provider under the recipe's two-second limit, then resume that exact checkpoint with a ten-second execution override and a three-second response. Success proves the override reaches the transport and does not invalidate existing work. Prompt assertions verify the resolved timeout and output budget are visible to the model. Negative CLI checks reject invalid deadlines. These tests do not establish a live model's generation time or output quality.
 
 Add new cases when they measure a real failure boundary. A new native step needs successful output plus invalid configuration, failure and cancellation cases. A new artifact operation needs transaction and path-conflict cases. A new provider should have a fixture exercising its real subprocess protocol and a documented optional live check. Keep tests offline by default and never silently skip required dependencies. Never lower warnings to make a test pass.

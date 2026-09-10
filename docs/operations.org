@@ -8,6 +8,14 @@
 
 * Commands
 
+=--unlimited= disables provider time and requested output budgets, overriding recipe values and =--timeout=. It is execution-only, so an unchanged old recipe can resume its checkpoint with unlimited budgets. Bundled recipes explicitly set =timeout: 0= and =max_tokens: 0= for testing. Prompt-size limits remain opt-in. Cancellation and finite retry counts still work; this setting does not bypass artifact validation. Provider-native model limits remain outside libresite's control.
+
+Changing a bundled recipe's budget values changes its fingerprint. For the active Reading Room workspace, the original recipe was preserved as =example-site.libresite-work/recipe-before-unlimited.yaml=. Resume that checkpoint with:
+
+#+begin_src bash
+./build/debug/libresite -r ./example-site.libresite-work/recipe-before-unlimited.yaml -o ./example-site --resume --debug --unlimited
+#+end_src
+
 =--help= / =-h= provides examples. =--version= prints the release and =--license= prints the preserved license. =--list-modules= lists the eight built-in names. =--recipe FILE= / =-r FILE= selects the YAML recipe. =--output DIR= / =-o DIR= selects a new directory for generation; its parent must already exist.
 
 =--validate= checks local schema, AI settings, registered module names, prompt/style resolution and native validation options without calling providers or creating output. =--plan= prints tab-separated index, id, type, provider and model; the display index starts at one. =--preview STEP-ID= shows the system and task prompt with an empty project. These three modes are mutually exclusive. Native validate steps have no AI prompt to preview. All positional arguments are errors.
@@ -18,9 +26,21 @@
 
 Authenticate each requested CLI using its own normal account setup before invoking a recipe. ai-glib reads provider-specific executable overrides: =CODEX_PATH=, =CLAUDE_CODE_PATH=, =GROK_PATH=, =CURSOR_AGENT_PATH= (or =CURSOR_PATH=), and =AGY_PATH=. These are useful for explicit installations and offline protocol tests. Model/effort settings are opaque identifiers interpreted by the adapter and installed CLI.
 
-Every generation call creates a fresh temporary working directory, disables session persistence, and sends the current project in the prompt. Permission bypass is enabled for every CLI adapter so the worker thread cannot stall on an approval prompt. Codex therefore uses =--dangerously-bypass-approvals-and-sandbox= rather than a read-only sandbox: Codex 0.153 =exec= does not accept =--ask-for-approval=, and read-only plus never-ask still waits for sandbox-escalation approval on the same stdin used for the prompt. Other CLI flags and defaults belong to ai-glib and the installed provider. A working directory is not a security sandbox. Use an external isolation boundary when stronger confinement is required.
+Every generation call creates a fresh temporary working directory, disables session persistence unless =--debug= is set, and sends the current project in the prompt. Permission bypass is enabled for every CLI adapter so the worker thread cannot stall on an approval prompt. Codex therefore uses =--dangerously-bypass-approvals-and-sandbox= rather than a read-only sandbox: Codex 0.153 =exec= does not accept =--ask-for-approval=, and read-only plus never-ask still waits for sandbox-escalation approval on the same stdin used for the prompt. Other CLI flags and defaults belong to ai-glib and the installed provider. A working directory is not a security sandbox. Use an external isolation boundary when stronger confinement is required.
 
 Empty temporary provider directories are removed. Directories in which a third-party CLI created files are deliberately retained rather than recursively deleting unknown files. No global CLI configuration or credentials are modified by libresite.
+
+* Debug tracing
+
+Add =--debug= to generation or resume to enable provider-native session persistence and timestamped diagnostic metadata on stderr. For Codex this removes =--ephemeral=, allowing its normal session JSONL files to be written. Each attempt still starts a fresh provider session; libresite resume restores its own checkpoint, not a previous Codex conversation. The debug flag is independent of =DEBUG=1= compilation and does not change checkpoint fingerprints.
+
+#+begin_src bash
+./build/debug/libresite -r recipes/application.yaml -o ./example-site --resume --debug 2> ./libresite-debug.log
+#+end_src
+
+Before calling the provider, diagnostics report provider, requested model/effort (or provider defaults), timeout, token budget, system/task byte counts and the unique temporary working directory. Debug retains that directory even when empty. Match the logged =cwd= against Codex session metadata under its configured home (normally =~/.codex/sessions/=) to locate the live rollout. After the call returns, logs report elapsed milliseconds, session ID if the adapter extracted one, error domain/code, response byte count and stop reason. Normal attempt/retry/error messages remain enabled. The synchronous adapter buffers the event stream until completion, so a timeout may have no extracted session ID; matching the recorded cwd is the tracing path during a call.
+
+Diagnostic metadata does not dump prompts, generated file contents or environment variables. Provider-persisted sessions can contain prompts and project contents. Session storage and retention belong to the installed provider; other adapters honor persistence according to their native capabilities. Debug does not globally enable dependency log domains. Remove retained temporary directories and provider sessions when finished tracing. An already running process must be stopped and restarted with =--resume --debug= to enable tracing.
 
 * Checkpoints and publication
 
@@ -32,7 +52,19 @@ After the last step succeeds, files are exported to a fresh UUID-named directory
 
 Step progress lines include local wall-clock time with a numeric timezone offset, for example =[2026-09-09T14:32:05-0400] [1] brief: started=. Each start and checkpoint event captures its own timestamp. These lines remain on stderr so stdout can be used for plans and prompt previews.
 
+Generation reports each attempt number, total attempts, provider and per-attempt timeout. A rejected attempt reports its error before retrying. Every 30 seconds the CLI prints elapsed waiting time and the latest status; this is a liveness indication from libresite, not provider token progress. The checkpoint remains unchanged until the entire step succeeds. For example, =timeout: 900= with =retries: 1= permits two 15-minute provider calls for a single step. A fresh provider process partway through a long step can therefore be a retry rather than a hung timeout. Rebuild and restart with =--resume= to use new progress reporting; an already running process keeps its previous behavior.
+
 * Cancellation and errors
+
+=--timeout SECONDS= overrides every provider attempt's total deadline for this invocation, including step-specific recipe values. Omitting the option uses recipe settings; 0 disables the deadline, and positive values through 86400 set a deadline. The internal reset value -1 also selects recipe settings. This execution-only override does not mutate the parsed recipe or checkpoint fingerprint; it can recover an existing timed-out run. For example:
+
+#+begin_src bash
+./build/debug/libresite -r recipes/application.yaml -o ./example-site --resume --debug --timeout 3600
+#+end_src
+
+Deadlines apply even while the provider is receiving response tokens. Codex rollout files record completed items, so a long unfinished response can leave JSONL unchanged despite ongoing network reads. In the September 10 investigation, a ten-second syscall sample showed 315 receives and TCP receive counters continued growing while the rollout stayed unchanged. This establishes activity in the retry, not the semantic quality or eventual success of its answer. Do not treat heartbeat or rollout modification time as a token-progress meter.
+
+The resolved =AI SETTINGS= object is sent in the task prompt so the catalog's configured-output-budget instruction has an actual value. The pinned Codex adapter ignores its =max_tokens= argument when constructing CLI arguments: for Codex the value is model guidance, not a hard output cap. Increasing the deadline allows a long response to finish but cannot guarantee model compliance or successful validation. No dependency pin, global provider configuration or completed checkpoint is changed by this recovery.
 
 SIGINT/SIGTERM cancel the run through =GCancellable=. Cancelled calls are not retried. Completed checkpoints remain available. Exit status is 0 on success, 130 for a returned cancellation error, and 1 for other failures. Provider-specific timeout failures are errors and may be retried within the configured bound. No successful output is published when a provider fails or a required artifact is missing.
 

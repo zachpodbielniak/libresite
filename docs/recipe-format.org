@@ -80,9 +80,9 @@ For a generation step, =options= is open-ended task data understood by the model
 | provider | codex | codex, claude-code, grok-build, cursor, antigravity |
 | model | provider's default | Nonempty opaque model identifier |
 | effort | provider's default | Nonempty effort identifier passed to ai-glib |
-| timeout | 600 | Integer seconds, 1 through 86400 |
+| timeout | 600 | Integer seconds, 0 through 86400; 0 disables the deadline |
 | retries | 1 | Integer additional attempts, 0 through 5 |
-| max_tokens | 16384 | Integer requested output budget, 256 through 131072 |
+| max_tokens | 16384 | 0 for unlimited, otherwise integer requested output budget 256 through 131072 |
 
 Settings are resolved independently for every step. Changing provider drops an inherited =model= and =effort= unless the step explicitly sets them; this prevents accidentally sending a Codex model to Claude. Other defaults remain inherited. An unchanged provider inherits the model and effort normally. =--plan= prints the result without contacting providers.
 
