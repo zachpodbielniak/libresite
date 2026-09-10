@@ -37,16 +37,23 @@ cancel_run(gpointer data){
 }
 /* Progress is stderr; stdout remains useful for plans and prompt inspection. */
 static void
+print_progress(const gchar *id, guint index, const gchar *message){
+	g_autoptr(GDateTime) now = g_date_time_new_now_local();
+	g_autofree gchar *timestamp = g_date_time_format(now, "%Y-%m-%dT%H:%M:%S%z");
+	/* Capture each event's local wall time and offset on the emitting thread. */
+	g_printerr("[%s] [%u] %s: %s\n", timestamp, index + 1, id, message);
+}
+static void
 step_started(LsPipeline *pipeline, const gchar *id, guint index, gpointer data){
 	(void)pipeline;
 	(void)data;
-	g_printerr("[%u] %s: started\n", index + 1, id);
+	print_progress(id, index, "started");
 }
 static void
 step_completed(LsPipeline *pipeline, const gchar *id, guint index, gpointer data){
 	(void)pipeline;
 	(void)data;
-	g_printerr("[%u] %s: checkpoint saved\n", index + 1, id);
+	print_progress(id, index, "checkpoint saved");
 }
 /* GModule extensions are explicit user-supplied native code; keep modules
  * resident because their registered GTypes outlive the entrypoint call. */

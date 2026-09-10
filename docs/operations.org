@@ -30,6 +30,8 @@ A failure leaves the workspace available for inspection and resume. Re-run the s
 
 After the last step succeeds, files are exported to a fresh UUID-named directory inside the workspace. =.libresite/run.json= records the final checkpoint. A same-filesystem move publishes the directory only when the destination is absent. Interrupted exports remain inside the private workspace and are not resumed as trusted state. Successful workspaces are removed if empty; old failed export directories can keep a workspace around for inspection. Libresite never recursively removes an existing project.
 
+Step progress lines include local wall-clock time with a numeric timezone offset, for example =[2026-09-09T14:32:05-0400] [1] brief: started=. Each start and checkpoint event captures its own timestamp. These lines remain on stderr so stdout can be used for plans and prompt previews.
+
 * Cancellation and errors
 
 SIGINT/SIGTERM cancel the run through =GCancellable=. Cancelled calls are not retried. Completed checkpoints remain available. Exit status is 0 on success, 130 for a returned cancellation error, and 1 for other failures. Provider-specific timeout failures are errors and may be retried within the configured bound. No successful output is published when a provider fails or a required artifact is missing.
