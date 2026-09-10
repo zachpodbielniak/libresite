@@ -1,0 +1,49 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+version: 1
+name: libre-atelier
+site:
+  pages:
+    - path: /
+      title: Libre Atelier
+      purpose: Introduce the studio and its engineering services.
+      sections: [Introduction, Services, Approach]
+    - path: /services/
+      title: Services
+      sections: [Systems engineering, Maintenance]
+  offers:
+    - id: systems
+      name: Systems engineering
+      description: Open-source C and GLib engineering.
+      cta_label: Explore services
+      cta_url: /services/
+  contact: {}
+  brand:
+    name: Libre Atelier
+    tagline: Software you can own.
+    tone: Precise and approachable
+    colors: Warm white, charcoal, muted green
+    fonts: Open-source sans serif from Bunny Fonts
+  copy_lock: ['Software you can own.']
+  languages:
+    default: en
+    supported: [en, fr]
+  style: editorial
+  frontend: Semantic HTML and native CSS
+  backend: none
+  database: none
+ai:
+  timeout: 0
+  max_tokens: 0
+pipeline:
+  steps:
+    - {id: product, type: brief}
+    - {id: design, type: design}
+    - {id: frontend, type: frontend}
+    - {id: review, type: review}
+    - id: acceptance
+      type: validate
+      options:
+        required: [index.html, services/index.html, README.org, AGENTS.md, config/seo.yaml, docs/seo.org, tests/seo.sh, robots.txt, scripts/prepare-seo.sh]
+        checks:
+          - path: index.html
+            contains: ['Software you can own.']

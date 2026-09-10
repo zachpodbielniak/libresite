@@ -18,6 +18,19 @@ printf '%s\n' 'Original homepage' > "$test_dir/source/index.html"
 printf '%s\n' 'User file stays byte-identical' > "$test_dir/source/keep.txt"
 printf '%s\n' '#!/usr/bin/env bash' 'exit 0' > "$test_dir/source/check.sh"
 chmod 700 "$test_dir/source/check.sh"
+# YAML emission cannot silently ignore a requested source revision.
+if "$binary" -r "$root/recipes/revision.yaml" --revise "$test_dir/source" \
+	--emit-yaml > "$test_dir/error" 2>&1
+then
+	exit 1
+fi
+rg -q 'Choose one' "$test_dir/error"
+if "$binary" --from-form "$test_dir/unused.json" --revise "$test_dir/source" \
+	> "$test_dir/error" 2>&1
+then
+	exit 1
+fi
+rg -q 'do not combine' "$test_dir/error"
 # The change brief travels through the recipe, with current source in previews.
 "$binary" -r "$root/recipes/revision.yaml" --revise "$test_dir/source" --validate
 "$binary" -r "$root/recipes/revision.yaml" --revise "$test_dir/source" --preview revision > "$test_dir/preview"

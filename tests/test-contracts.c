@@ -358,6 +358,95 @@ yaml_strings(void){
 }
 
 /* Individually reported negative cases keep preflight coverage inspectable. */
+/* Form emission must preserve exact text and types through the same parser
+ * used by generation, including punctuation and YAML-looking copy. */
+static void
+structured_form(void){
+	const gchar *form = "{\"name\":\"studio\","
+		"\"seed_artifacts\":[{\"path\":\"assets/brand.txt\",\"content\":\"supplied brand asset\"}],\"site\":{"
+		"\"pages\":[{\"path\":\"/\",\"title\":\"Home\",\"sections\":[\"Hello\"]}],"
+		"\"offers\":[{\"id\":\"one\",\"name\":\"Support\",\"price\":\"001.00\"}],"
+		"\"contact\":{\"phone\":\"001234\"},\"brand\":{\"name\":\"Oui\"},"
+		"\"copy_lock\":[\"null\",\"true\",\"001\",\" café: \\\"oui\\\"\\nline 2 \",\"A & B\"],"
+		"\"languages\":{\"default\":\"en\",\"supported\":[\"en\",\"fr-CA\"]}}}";
+	g_autoptr(GError) error = NULL;
+	g_autoptr(LsRecipe) recipe = ls_recipe_from_form(form, &error);
+	g_autoptr(LsRecipe) reloaded = NULL;
+	g_autoptr(LsPrompts) prompts = ls_prompts_new(NULL, &error);
+	g_autoptr(LsContext) context = ls_context_new();
+	g_autofree gchar *yaml = NULL;
+	g_autofree gchar *rendered = NULL;
+	JsonObject *site;
+	g_assert_no_error(error);
+	g_assert_nonnull(recipe);
+	ls_recipe_set_unlimited(recipe, TRUE);
+	yaml = ls_recipe_to_yaml(recipe, &error);
+	g_assert_no_error(error);
+	g_assert_nonnull(strstr(yaml, "pages:"));
+	reloaded = ls_recipe_new(yaml, &error);
+	g_assert_no_error(error);
+	g_assert_true(json_object_equal(ls_recipe_get_root(recipe), ls_recipe_get_root(reloaded)));
+	site = json_object_get_object_member(ls_recipe_get_root(reloaded), "site");
+	g_assert_false(json_object_has_member(site, "brief"));
+	g_assert_cmpstr(json_array_get_string_element(json_object_get_array_member(site, "copy_lock"), 3),
+		==, " café: \"oui\"\nline 2 ");
+	g_clear_object(&context);
+	context = ls_recipe_create_context(reloaded, &error);
+	g_assert_no_error(error);
+	rendered = ls_prompts_render(prompts, reloaded,
+		json_array_get_object_element(ls_recipe_get_steps(reloaded), 0), context, &error);
+	g_assert_no_error(error);
+	g_assert_nonnull(strstr(rendered, "copy_lock"));
+	g_assert_nonnull(strstr(rendered, "001234"));
+	g_assert_nonnull(strstr(rendered, "supplied brand asset"));
+	g_assert_nonnull(strstr(ls_prompts_get_system(prompts), "STRUCTURED SITE CONTRACT"));
+}
+/* Mutate one valid form at a time so every failure exercises a schema rule. */
+static void
+structured_invalid(void){
+	const gchar *mutations[] = {
+		"pages: []", "pages: null", "pages: [false]", "pages: [{path: relative, title: Home}]",
+		"pages: [{path: /../a, title: Home}]", "pages: [{path: '//host', title: Home}]",
+		"pages: [{path: /, title: Home}, {path: /, title: Again}]",
+		"pages: [{path: /, title: Home, sections: [a, a]}]",
+		"pages: [{path: /, title: Home, typo: no}]",
+		"offers: [{id: x, name: X, price: 100}]",
+		"offers: [{id: x, name: X, cta_label: Buy}]",
+		"offers: [{id: x, name: X}, {id: x, name: Y}]",
+		"offers: {}", "contact: {email: null}", "contact: {typo: x}",
+		"brand: {}", "brand: {name: true}", "copy_lock: [x, x]", "copy_lock: [false]",
+		"languages: {default: en, supported: [fr]}",
+		"languages: {default: en, supported: [en, EN]}",
+		"languages: {default: en_US, supported: [en_US]}",
+		"languages: {default: en, supported: []}", "languages: null"
+	};
+	guint i;
+	for (i = 0; i < G_N_ELEMENTS(mutations); i++) {
+		g_autoptr(GError) error = NULL;
+		g_autoptr(JsonNode) base = ls_yaml_parse(
+			"name: studio\nsite: {pages: [{path: /, title: Home}], offers: [], contact: {}, "
+			"brand: {name: Studio}, copy_lock: [], languages: {default: en, supported: [en]}}", &error);
+		g_autoptr(JsonNode) change = ls_yaml_parse(mutations[i], &error);
+		g_autoptr(GList) keys = json_object_get_members(json_node_get_object(change));
+		JsonObject *site = json_object_get_object_member(json_node_get_object(base), "site");
+		const gchar *key = (const gchar *)keys->data;
+		g_autofree gchar *encoded = NULL;
+		g_autoptr(LsRecipe) recipe = NULL;
+		json_object_set_member(site, key,
+			json_node_copy(json_object_get_member(json_node_get_object(change), key)));
+		encoded = ls_json_encode(base);
+		recipe = ls_recipe_from_form(encoded, &error);
+		g_assert_null(recipe);
+		g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+	}
+	{
+		g_autoptr(GError) error = NULL;
+		g_autoptr(LsRecipe) recipe = ls_recipe_from_form(
+			"{\"name\":\"x\",\"site\":{\"brief\":\"prose\"}}", &error);
+		g_assert_null(recipe);
+		g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+	}
+}
 int
 main(int argc, char **argv){
 	const gchar *json[] = {
@@ -388,6 +477,8 @@ main(int argc, char **argv){
 	};
 	guint i;
 	g_test_init(&argc, &argv, NULL);
+	g_test_add_func("/contracts/structured-form", structured_form);
+	g_test_add_func("/contracts/structured-invalid", structured_invalid);
 	g_test_add_func("/contracts/extensions", extension_contracts);
 	g_test_add_func("/contracts/content", content_checks);
 	g_test_add_func("/contracts/copy-lock/literals", copy_lock_checks);

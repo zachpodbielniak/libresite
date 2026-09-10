@@ -270,3 +270,21 @@ cmp "$test_dir/checkpoint-before" "$test_dir/wait.libresite-work/checkpoint.json
 test ! -e "$test_dir/wait"
 export LS_TEST_SLEEP=0
 printf '%s\n' 'CLI VERIFIED (five subprocess adapters, failures, resume, deadline, cancellation)'
+# Platform submissions emit only YAML, with no account or output directory.
+cat > "$test_dir/form.json" <<'JSON'
+{"name":"form-site","site":{"pages":[{"path":"/","title":"Home"}],"offers":[],"contact":{},"brand":{"name":"Studio"},"copy_lock":["null","A & B"],"languages":{"default":"en","supported":["en"]}}}
+JSON
+"$binary" --from-form "$test_dir/form.json" > "$test_dir/form.yaml"
+"$binary" -r "$test_dir/form.yaml" --validate
+"$binary" -r "$test_dir/form.yaml" --emit-yaml > "$test_dir/form-again.yaml"
+cmp "$test_dir/form.yaml" "$test_dir/form-again.yaml"
+"$binary" -r "$test_dir/form.yaml" --preview frontend > "$test_dir/form-prompt"
+rg -q 'STRUCTURED SITE CONTRACT' "$test_dir/form-prompt"
+rg -q 'copy_lock' "$test_dir/form-prompt"
+if "$binary" --from-form "$test_dir/form.json" -o "$test_dir/unwanted" > "$test_dir/rejected.yaml" 2>/dev/null
+then
+	exit 1
+fi
+test ! -s "$test_dir/rejected.yaml"
+test ! -e "$test_dir/unwanted"
+printf '%s\n' 'STRUCTURED FORM VERIFIED'

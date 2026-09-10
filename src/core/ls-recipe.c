@@ -2,6 +2,7 @@
 #include "core/ls-recipe.h"
 #include "core/ls-context.h"
 #include <string.h>
+#include <yaml-glib.h>
 struct _LsRecipe {
 	GObject parent_instance;
 	JsonNode *root;
@@ -89,6 +90,194 @@ invalid_number:
 	);
 	return FALSE;
 }
+/* Structured collections are bounded and reject duplicates before prompting. */
+static gboolean
+text_list(JsonObject *object, const gchar *key, guint minimum, GError **error){
+	JsonNode *node = json_object_get_member(object, key);
+	JsonArray *array;
+	g_autoptr(GHashTable) seen = g_hash_table_new(g_str_hash, g_str_equal);
+	guint i;
+	if (node == NULL || !JSON_NODE_HOLDS_ARRAY(node))
+		goto invalid;
+	array = json_node_get_array(node);
+	if (json_array_get_length(array) < minimum || json_array_get_length(array) > 4096)
+		goto invalid;
+	for (i = 0; i < json_array_get_length(array); i++) {
+		const gchar *value;
+		node = json_array_get_element(array, i);
+		if (json_node_get_value_type(node) != G_TYPE_STRING)
+			goto invalid;
+		value = json_node_get_string(node);
+		if (*value == '\0' || !g_hash_table_add(seen, (gpointer)value))
+			goto invalid;
+	}
+	return TRUE;
+invalid:
+	g_set_error(error, LS_ERROR, LS_ERROR_INVALID,
+		"'%s' must contain %u..4096 unique nonempty strings", key, minimum);
+	return FALSE;
+}
+/* Fixed mapping keys give form clients stable fields and catch spelling errors. */
+static gboolean
+text_fields(JsonObject *object, const gchar *keys, GError **error){
+	g_autoptr(GList) members = json_object_get_members(object);
+	GList *item;
+	if (!ls_object_keys(object, keys, error))
+		return FALSE;
+	for (item = members; item != NULL; item = item->next)
+		if (!text_member(object, (const gchar *)item->data, TRUE, error))
+			return FALSE;
+	return TRUE;
+}
+/* Pages use URL paths, not artifact paths: root and directory routes are valid.
+ * Reject ambiguous traversal, query, fragment and escaped route spellings. */
+static gboolean
+route_valid(const gchar *path){
+	g_auto(GStrv) parts = NULL;
+	guint i;
+	if (path[0] != '/' || strstr(path, "//") != NULL ||
+		strpbrk(path, "\\?#%") != NULL)
+		return FALSE;
+	for (i = 0; path[i] != '\0'; i++)
+		if (g_ascii_isspace(path[i]) || g_ascii_iscntrl(path[i]))
+			return FALSE;
+	parts = g_strsplit(path, "/", -1);
+	for (i = 0; parts[i] != NULL; i++)
+		if (g_str_equal(parts[i], ".") || g_str_equal(parts[i], ".."))
+			return FALSE;
+	return TRUE;
+}
+/* Page paths and offer IDs remain unique identities across generation stages. */
+static gboolean
+records(JsonObject *site, const gchar *key, gboolean pages, GError **error){
+	JsonNode *node = json_object_get_member(site, key);
+	JsonArray *array;
+	g_autoptr(GHashTable) seen = g_hash_table_new(g_str_hash, g_str_equal);
+	guint i;
+	if (!JSON_NODE_HOLDS_ARRAY(node))
+		goto invalid;
+	array = json_node_get_array(node);
+	if (json_array_get_length(array) > 128 || (pages && json_array_get_length(array) == 0))
+		goto invalid;
+	for (i = 0; i < json_array_get_length(array); i++) {
+		JsonObject *record;
+		const gchar *identity;
+		g_autoptr(GList) members = NULL;
+		GList *item;
+		node = json_array_get_element(array, i);
+		if (!JSON_NODE_HOLDS_OBJECT(node))
+			goto invalid;
+		record = json_node_get_object(node);
+		if (!ls_object_keys(record, pages ? "|path|title|purpose|sections|" :
+			"|id|name|description|price|cta_label|cta_url|", error) ||
+			!text_member(record, pages ? "path" : "id", TRUE, error) ||
+			!text_member(record, pages ? "title" : "name", TRUE, error))
+			return FALSE;
+		identity = ls_string(record, pages ? "path" : "id");
+		if ((pages && !route_valid(identity)) || !g_hash_table_add(seen, (gpointer)identity))
+			goto invalid;
+		members = json_object_get_members(record);
+		for (item = members; item != NULL; item = item->next) {
+			const gchar *field = (const gchar *)item->data;
+			if (g_str_equal(field, "sections")) {
+				if (!text_list(record, field, 1, error))
+					return FALSE;
+			} else if (!text_member(record, field, TRUE, error))
+				return FALSE;
+		}
+		if (!pages && json_object_has_member(record, "cta_label") !=
+			json_object_has_member(record, "cta_url"))
+			goto invalid;
+	}
+	return TRUE;
+invalid:
+	g_set_error(error, LS_ERROR, LS_ERROR_INVALID,
+		"Invalid site.%s: expected %s..128 records with unique %s; offer CTAs need label and URL",
+		key, pages ? "1" : "0", pages ? "absolute local paths" : "IDs");
+	return FALSE;
+}
+/* Language tags are portable ASCII subtags, not locale/encoding filenames. */
+static gboolean
+language_valid(const gchar *tag){
+	g_auto(GStrv) parts = g_strsplit(tag, "-", -1);
+	guint i, j;
+	for (i = 0; parts[i] != NULL; i++) {
+		gsize length = strlen(parts[i]);
+		if (length == 0 || length > 8 || (i == 0 && length < 2))
+			return FALSE;
+		for (j = 0; j < length; j++)
+			if (i == 0 ? !g_ascii_isalpha(parts[i][j]) : !g_ascii_isalnum(parts[i][j]))
+				return FALSE;
+	}
+	return TRUE;
+}
+/* No synthesized prose: structured facts remain in the immutable recipe tree. */
+static gboolean
+validate_site(JsonObject *site, GError **error){
+	const gchar *structured[] = {"pages", "offers", "contact", "brand", "copy_lock", "languages"};
+	g_autoptr(GList) members = json_object_get_members(site);
+	GList *item;
+	guint i;
+	if (!ls_object_keys(site,
+		"|brief|audience|style|stack|frontend|backend|database|requirements|pages|offers|contact|brand|copy_lock|languages|",
+		error))
+		return FALSE;
+	if (!json_object_has_member(site, "brief")) {
+		for (i = 0; i < G_N_ELEMENTS(structured); i++)
+			if (!json_object_has_member(site, structured[i])) {
+				g_set_error(error, LS_ERROR, LS_ERROR_INVALID,
+					"Structured site requires '%s' (legacy recipes may use brief)", structured[i]);
+				return FALSE;
+			}
+	}
+	for (item = members; item != NULL; item = item->next) {
+		const gchar *key = (const gchar *)item->data;
+		if (g_str_equal(key, "pages") || g_str_equal(key, "offers")) {
+			if (!records(site, key, g_str_equal(key, "pages"), error))
+				return FALSE;
+		} else if (g_str_equal(key, "copy_lock")) {
+			if (!text_list(site, key, 0, error))
+				return FALSE;
+		} else if (g_str_equal(key, "contact") || g_str_equal(key, "brand")) {
+			JsonObject *object;
+			if (!object_member(site, key, error))
+				return FALSE;
+			object = json_object_get_object_member(site, key);
+			if (!text_fields(object, g_str_equal(key, "contact") ?
+				"|email|phone|address|url|" : "|name|tagline|tone|colors|fonts|logo|", error) ||
+				(g_str_equal(key, "brand") && !text_member(object, "name", TRUE, error)))
+				return FALSE;
+		} else if (g_str_equal(key, "languages")) {
+			JsonObject *object;
+			JsonArray *supported;
+			gboolean found = FALSE;
+			g_autoptr(GHashTable) seen = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+			if (!object_member(site, key, error))
+				return FALSE;
+			object = json_object_get_object_member(site, key);
+			if (!ls_object_keys(object, "|default|supported|", error) ||
+				!text_member(object, "default", TRUE, error) || !text_list(object, "supported", 1, error))
+				return FALSE;
+			supported = json_object_get_array_member(object, "supported");
+			for (i = 0; i < json_array_get_length(supported); i++) {
+				const gchar *tag = json_array_get_string_element(supported, i);
+				if (!language_valid(tag) || !g_hash_table_add(seen, g_ascii_strdown(tag, -1))) {
+					g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID,
+						"languages.supported needs unique language tags (for example en, fr-CA)");
+					return FALSE;
+				}
+				found |= g_str_equal(tag, ls_string(object, "default"));
+			}
+			if (!found) {
+				g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID,
+					"languages.default must occur exactly in languages.supported");
+				return FALSE;
+			}
+		} else if (!text_member(site, key, TRUE, error))
+			return FALSE;
+	}
+	return TRUE;
+}
 /* Structural validation happens before provider creation or output writes. */
 LsRecipe *
 ls_recipe_new(const gchar *yaml, GError **error){
@@ -115,18 +304,8 @@ ls_recipe_new(const gchar *yaml, GError **error){
 		return NULL;
 	}
 	site = json_object_get_object_member(root, "site");
-	if (!ls_object_keys(
-			site, "|brief|audience|style|stack|frontend|backend|database|requirements|", error
-		) ||
-		!text_member(site, "brief", TRUE, error))
+	if (!validate_site(site, error))
 		return NULL;
-	{
-		g_autoptr(GList) members = json_object_get_members(site);
-		GList *item;
-		for (item = members; item != NULL; item = item->next)
-			if (!text_member(site, (const gchar *)item->data, TRUE, error))
-				return NULL;
-	}
 	if (json_object_has_member(root, "ai") &&
 		(!object_member(root, "ai", error) ||
 		 !validate_ai(json_object_get_object_member(root, "ai"), error)))
@@ -272,4 +451,85 @@ void
 ls_recipe_set_unlimited(LsRecipe *self, gboolean unlimited){
 	g_return_if_fail(LS_IS_RECIPE(self));
 	self->unlimited = unlimited;
+}
+
+/* Quote strings explicitly: prices, phone numbers, copy and null-like words
+ * must not turn into booleans/numbers when another YAML reader opens the form. */
+static void
+quote_strings(YamlNode *yaml, JsonNode *json){
+	if (JSON_NODE_HOLDS_OBJECT(json)) {
+		JsonObject *object = json_node_get_object(json);
+		g_autoptr(GList) members = json_object_get_members(object);
+		GList *item;
+		for (item = members; item != NULL; item = item->next) {
+			const gchar *key = (const gchar *)item->data;
+			quote_strings(yaml_mapping_get_member(yaml_node_get_mapping(yaml), key),
+				json_object_get_member(object, key));
+		}
+	} else if (JSON_NODE_HOLDS_ARRAY(json)) {
+		JsonArray *array = json_node_get_array(json);
+		guint i;
+		for (i = 0; i < json_array_get_length(array); i++)
+			quote_strings(yaml_sequence_get_element(yaml_node_get_sequence(yaml), i),
+				json_array_get_element(array, i));
+	} else if (json_node_get_value_type(json) == G_TYPE_STRING)
+		yaml_node_set_scalar_style(yaml, YAML_SCALAR_STYLE_DOUBLE_QUOTED);
+}
+/* Emission is data-only and deliberately excludes execution budget overrides. */
+gchar *
+ls_recipe_to_yaml(LsRecipe *self, GError **error){
+	g_autoptr(YamlNode) node = yaml_node_from_json_node(self->root);
+	g_autoptr(YamlGenerator) generator = yaml_generator_new();
+	quote_strings(node, self->root);
+	yaml_generator_set_root(generator, node);
+	yaml_generator_set_indent(generator, 2);
+	yaml_generator_set_unicode(generator, TRUE);
+	return yaml_generator_to_data(generator, NULL, error);
+}
+/* Form clients supply facts, not generated prose or pipeline boilerplate.
+ * JSON is the existing library transport; the durable result is YAML. */
+LsRecipe *
+ls_recipe_from_form(const gchar *json, GError **error){
+	g_autoptr(JsonNode) node = ls_json_parse(json, error);
+	g_autoptr(JsonNode) defaults = NULL;
+	g_autofree gchar *encoded = NULL;
+	JsonObject *root;
+	JsonObject *site;
+	if (node == NULL)
+		return NULL;
+	if (!JSON_NODE_HOLDS_OBJECT(node)) {
+		g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID, "Form must be an object");
+		return NULL;
+	}
+	root = json_node_get_object(node);
+	if (!ls_object_keys(root, "|name|site|ai|pipeline|seed_artifacts|", error) ||
+		!object_member(root, "site", error))
+		return NULL;
+	site = json_object_get_object_member(root, "site");
+	if (json_object_has_member(site, "brief")) {
+		g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID,
+			"Form requires structured site fields, not site.brief");
+		return NULL;
+	}
+	json_object_set_int_member(root, "version", 1);
+	if (!json_object_has_member(root, "pipeline")) {
+		/* Static-site defaults can be replaced with the normal pipeline field. */
+		defaults = ls_yaml_parse(
+			"steps:\n"
+			"  - {id: product, type: brief}\n"
+			"  - {id: design, type: design}\n"
+			"  - {id: frontend, type: frontend}\n"
+			"  - {id: review, type: review}\n"
+			"  - id: acceptance\n"
+			"    type: validate\n"
+			"    options:\n"
+			"      required: [index.html, README.org, AGENTS.md, config/seo.yaml, docs/seo.org, tests/seo.sh, robots.txt, scripts/prepare-seo.sh]\n",
+			error);
+		if (defaults == NULL)
+			return NULL;
+		json_object_set_member(root, "pipeline", g_steal_pointer(&defaults));
+	}
+	/* JSON is a YAML subset; use the one recipe boundary for schema checks. */
+	encoded = ls_json_encode(node);
+	return ls_recipe_new(encoded, error);
 }

@@ -8,7 +8,7 @@
 
 * Authoritative copy
 
-Copy client-approved sentences verbatim into =validate.options.checks[].contains= for each artifact where they must appear. This is the existing native validator, not a new =site= field or a model's self-review. Keep context in =site.brief= or =site.requirements= and let the client resolve contradictory or missing facts before generation. Do not invent a plumber's number or silently normalize a supplied display number. Lock the confirmed telephone URI separately from its display sentence.
+Copy client-approved sentences verbatim into =validate.options.checks[].contains= for each artifact where they must appear. This existing native validator enforces source literals. The [[file:structured-recipes.org][structured =site.copy_lock= field]] supplies exact visible copy to every generation stage; pair it with artifact checks for deterministic source acceptance. Keep context in structured fields or =site.requirements= (legacy =site.brief= remains supported) and let the client resolve contradictory or missing facts before generation. Do not invent a plumber's number or silently normalize a supplied display number. Lock the confirmed telephone URI separately from its display sentence.
 
 #+begin_src yaml
 - id: acceptance
