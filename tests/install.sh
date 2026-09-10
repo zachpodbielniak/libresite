@@ -32,6 +32,7 @@ do
 			rg -q 'ACCESSIBILITY AND ARIA DEFAULTS' "$test_dir/preview"
 			rg -Fq 'FONT DEFAULTS' "$test_dir/preview"
 			rg -Fq 'https://fonts.bunny.net/css' "$test_dir/preview"
+			rg -q 'SEO DEFAULTS' "$test_dir/preview"
 		fi
 	done < "$test_dir/plan"
 done
@@ -59,6 +60,12 @@ YAML
 	rg -Fq 'Explicit font and hosting choices take precedence' "$test_dir/embedded"
 	rg -Fq 'when font requests are blocked or offline' "$test_dir/embedded"
 	rg -q 'MOBILE AND DESKTOP DEFAULTS' "$test_dir/embedded"
+	# All styles inherit SEO in generic generate stages, with no recipe opt-in.
+	for contract in 'SEO DEFAULTS' 'config/seo.yaml' 'docs/seo.org' 'tests/seo.sh' \
+		'scripts/prepare-seo.sh' 'noindex' 'JSON-LD' 'hreflang' 'sitemap.xml'
+	do
+		rg -Fq "$contract" "$test_dir/embedded"
+	done
 	rg -q '360x800 and 390x844' "$test_dir/embedded"
 	rg -q '1366x768 laptop and 1440x900 desktop' "$test_dir/embedded"
 	# Check the substantive contract, not just its heading, in every style

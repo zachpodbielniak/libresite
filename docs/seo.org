@@ -1,0 +1,57 @@
+#+title: SEO generation defaults
+#+description: Public discovery, private-route protection, production URL configuration and SEO verification
+#+authors: Zach Podbielniak
+#+categories: libresite, seo, generation
+#+created: 2026-09-10T15:50:40-04:00
+#+updated: 2026-09-10T15:50:40-04:00
+#+version: 0.1.0
+
+* Scope and delivery
+
+Every AI stage using the bundled catalog receives =SEO DEFAULTS= without a recipe flag. The contract applies to all five design styles, arbitrary =generate= stages, static pages and server-rendered applications. Planning assigns each route a purpose and indexing policy; implementation supplies the metadata and configuration; review repairs inconsistencies. Runtime instructions remain centralized in =data/prompts.yaml=. No framework-specific SEO code runs in the builder.
+
+All bundled final validators require =config/seo.yaml=, =docs/seo.org= and =tests/seo.sh=. Static recipes also require =robots.txt= and =scripts/prepare-seo.sh=. These files must contain non-whitespace text before the final generation response is accepted and checkpointed. Missing or blank deliverables trigger the normal bounded corrective retry. The checked landing recipe additionally requires literal title, description, social-card and preview-noindex markers in its homepage. Those checks match its domain-free preview contract; they are not a reusable semantic HTML audit for public production output.
+
+Custom recipes inherit the prompt requirements but must declare their own final validation paths. Custom native plugins control their own artifacts. A complete =--prompts= replacement must retain equivalent SEO instructions to preserve these defaults; there is no hidden merge with the embedded catalog. Existing sites are unchanged. Catalog and recipe changes alter checkpoint identity, so use a new output directory for the new defaults and retain the original catalog/recipe to resume older work.
+
+* Configuration and deployment modes
+
+=config/seo.yaml= is an output-project configuration consumed by generated code, not a new libresite recipe schema field. Supply deployment facts in the existing =site.requirements= string, including a real HTTPS URL with any path prefix, supported languages and public/private routes. Do not add an unsupported =site.url= or =site.seo= field. The generated configuration contains =base_url=, =indexing= and =pages=; its exact route metadata fields and loader validation belong in the generated guide.
+
+| Mode | Intended use | Metadata and discovery |
+|------+--------------+------------------------|
+| preview | No real deployment URL supplied | Directly usable HTML with noindex; no guessed canonical/social URL or public sitemap |
+| public | Explicit public deployment URL | Validated HTTPS base URL feeds canonical, social, JSON-LD and sitemap URLs consistently |
+| private | Local-only or private application | Noindex and no sitemap disclosure; preserve requested authentication and loopback binding |
+
+The local Reading Room example stays private. Supplying a URL or changing a global mode cannot make a private route public. A public build/startup fails for an empty or malformed URL, credentials, query/fragment, placeholder or loopback host. Generated URLs never derive from request Host/forwarded headers or browser location. One documented path policy must handle a subdirectory deployment without losing its prefix or collapsing all canonicals to the homepage.
+
+Static source HTML remains directly previewable. =scripts/prepare-seo.sh= provides a local production-preparation entry point with documented help, license, explicit parser dependencies and safe configuration loading. It prepares a separate, previously absent deployable directory containing only public pages/runtime assets, with updated metadata and discovery files; it does not overwrite sources or deploy anything. No package manager or framework is required just for SEO. Application stacks integrate the same configuration into their existing loader and full-page rendering. The builder does not execute these generated scripts.
+
+* Public-page contract
+
+Each indexable route needs a unique useful title and description, language, meaningful initial HTML, real navigation links and one absolute canonical. The same route inventory drives Open Graph and Twitter-compatible metadata and appropriate schema.org JSON-LD. Visible content determines structured-data types and properties; no invented ratings, authors, dates, addresses, offers or search endpoints. Structured data must serialize safely even when text contains a closing script tag. Real translated equivalents may use reciprocal hreflang; fictitious translations cannot fill a checklist.
+
+Social images must exist in a supported raster format. Libresite's text bundle cannot carry raster bytes, so the generated project may supply a deterministic local FOSS rasterization command with its actual Fedora prerequisite, or omit image metadata and document the missing asset. A local SVG can be artwork but must not be advertised as a working raster social preview. Use a summary card until a suitable asset exists.
+
+Public sitemaps contain only existing canonical indexable successful routes, with escaped absolute URLs and truthful modification dates when known. Errors, redirects, private data and duplicate filter/search states are excluded. Public robots rules allow required rendering assets and advertise the sitemap. For a subpath deployment, robots.txt still requires origin-root hosting; the output guide must explain that integration without overwriting another site's rules. Preview/private output has no public sitemap or Sitemap directive. Noindex must remain observable to crawlers when used; robots.txt cannot substitute for access control.
+
+Application errors use real HTTP status codes instead of a success-status homepage fallback. Static outputs document their host's 404/redirect configuration and the limitations of generic local preview servers. Lean scripts/styles, the configured font policy with system fallbacks, intrinsic media sizes and an eagerly available primary image support performance without fabricated measurements, tracking or new runtime services.
+
+* Verification and maintenance
+
+The generated =tests/seo.sh= must perform real offline source/build or local HTTP assertions, return failure on defects and document parser dependencies. It covers route metadata uniqueness, configuration validation, canonical subpaths, structured-data parsing/escaping, local links/assets, sitemap inclusion/exclusion, robots consistency and production noindex mistakes. Negative cases include missing URLs, wrong types, duplicate metadata, orphaned/missing routes, private/error sitemap entries and malformed JSON-LD. Preview/private checks ensure no public sitemap disclosure, and applications test status/headers and complete documents versus fragments through both loopback aliases. Generated =README.org= and =AGENTS.md= link the SEO guide and provide exact commands.
+
+The builder's offline suite verifies prompt delivery through CLI previews, the actual controlled provider path, every style's installed generic stage and embedded/external catalog parity. It exercises every bundled recipe's actual final validator with a positive text control and missing, empty and whitespace-only SEO artifacts. These are orchestration and text-contract checks. They do not execute an AI-generated SEO implementation, prove semantic markup correctness, measure Core Web Vitals or establish indexing/ranking results. Generated test runs, HTTP/browser audits and social previews remain explicitly unexecuted until separately performed.
+
+* Reference basis
+
+The contract was checked against these primary references on 2026-09-10. These are maintenance references, not authorization for runtime model browsing, account access or submission.
+
+- [[https://developers.google.com/search/docs/fundamentals/get-started-developers][Google Search developer guide]]: crawlable content and page discovery.
+- [[https://developers.google.com/search/docs/crawling-indexing/javascript/javascript-seo-basics][JavaScript SEO basics]]: full-document rendering, metadata and indexing behavior.
+- [[https://developers.google.com/search/docs/crawling-indexing/consolidate-duplicate-urls][Canonical URL guidance]]: consistent canonical signals and duplicate handling.
+- [[https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap][Sitemap guidance]]: absolute URLs, encoding, limits and meaningful modification dates.
+- [[https://developers.google.com/search/docs/crawling-indexing/robots-meta-tag][Robots metadata]]: page indexing controls.
+- [[https://developers.google.com/search/docs/appearance/structured-data/sd-policies][Structured-data policies]]: truthful visible-content markup and eligibility limits.
+- [[https://ogp.me/][Open Graph protocol]]: social metadata and image properties.

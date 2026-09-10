@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, reference
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-10T14:41:00-04:00
+#+updated: 2026-09-10T15:50:40-04:00
 #+version: 0.1.0
 
 * Contract
@@ -74,6 +74,10 @@ The native =validate= module calls no provider. It requires =options.required=, 
 Generated sites must include =AGENTS.md= so a later coding agent can maintain and troubleshoot the output. Bundled recipes require that path in the final =validate= step. The file is Markdown on purpose: it is an agent instruction file, not project documentation. Project docs remain Org. For a loopback application, =AGENTS.md= and =README.org= must document both =127.0.0.1= and =localhost= as accepted Host/Origin names on the listening port.
 
 For a generation step, =options= is open-ended task data understood by the model; it is not an executable instruction language. For a plugin, its author defines and validates =options=. A native plugin can use the same artifact store as built-in generation.
+
+* SEO output contracts
+
+SEO is enabled through the shared prompt catalog, with no new recipe keys. Supply a known production HTTPS URL, language requirements and privacy constraints through =site.requirements=. Every bundled final validator requires =config/seo.yaml=, =docs/seo.org= and =tests/seo.sh=; static recipes additionally require =robots.txt= and =scripts/prepare-seo.sh=. Include these paths when authoring equivalent custom recipes. A sitemap is produced only for a configured public output, so the domain-free bundled recipes do not require a source =sitemap.xml= full of invented URLs. The checked landing's literal homepage checks apply to its noindex preview; adapt them when supplying public deployment facts. See [[file:seo.org][SEO configuration and verification limits]].
 
 * AI settings
 

@@ -109,3 +109,8 @@ pipeline:
           - docs/testing.org
           - docs/polish.org
           - docs/review.org
+          - config/seo.yaml
+          - docs/seo.org
+          - tests/seo.sh
+          - robots.txt
+          - scripts/prepare-seo.sh

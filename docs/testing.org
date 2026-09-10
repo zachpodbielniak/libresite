@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, testing
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-10T15:48:31-04:00
+#+updated: 2026-09-10T15:50:40-04:00
 #+version: 0.1.0
 
 * Generated Git repository checks
@@ -64,6 +64,10 @@ Add new cases when they measure a real failure boundary. A new native step needs
 Native validation now proves required non-whitespace text plus any configured exact-content and byte predicates. It still does not prove a generated application build, browser behavior, accessibility or live design quality.
 
 Installed plugin regression tests also reject registration success accompanied by an error and registration failure without a diagnostic. Both cases must stop local preflight and produce a useful error.
+
+* SEO generation contracts
+
+The =/seo/= GTest cases load each bundled recipe's actual final validator, require its SEO paths and check a positive literal-text fixture followed by missing, empty and whitespace-only variants of every SEO artifact. CLI previews cover each bundled generative stage, and the controlled Codex adapter confirms the shared SEO contract reaches its real subprocess input. Installed tests check every visual style with a generic =generate= stage from outside the checkout and compare embedded versus installed external catalogs. These checks do not call a live provider or execute generated SEO preparation/HTTP/browser tests. See [[file:seo.org][the SEO guide]] for generated-project acceptance responsibilities.
 
 * C application generation contracts
 

@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, design, prompts
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-10T15:48:31-04:00
+#+updated: 2026-09-10T15:50:40-04:00
 #+version: 0.1.0
 
 * One maintained prompt catalog
@@ -80,6 +80,12 @@ The shared =FONT DEFAULTS= contract selects open-source families from [[https://
 Specify a family, source or hosting policy in =site.brief= or step =instructions= to override the default; there is no new schema field. Supplied licensed fonts, self-hosting, system-only typography and offline-only requirements take precedence. A named family unavailable from Bunny Fonts must retain its requested identity with the required licensed source/setup documented, without overriding an explicit hosting restriction. The UTF-8 artifact protocol cannot carry font binaries; never fabricate local font files.
 
 System fallback stacks keep text immediately readable and workflows usable when remote fonts are blocked or offline. Generated documentation records families, source, overrides and browser checks for online font loading and offline fallback. Offline builder tests verify prompt delivery across stages/styles and installed versus external catalogs; they do not prove generated CSS, browser font loading or live model compliance. Existing output is unchanged, replacement =--prompts= catalogs own their defaults, and changed catalog fingerprints require a fresh output or the original catalog for resume.
+
+* SEO defaults
+
+The shared =SEO DEFAULTS= contract supplies public-page metadata, canonical URL configuration, truthful JSON-LD, social previews, sitemap/robots consistency, crawlable initial HTML and performance guidance to every generation stage and style. Brief/design plan route intent and public/private status; frontend/backend/foundation/pages implement metadata and discovery; interactions preserve crawlable navigation; review/polish repair inconsistencies. Generated projects include =config/seo.yaml=, =docs/seo.org= and =tests/seo.sh=; static sites also include =robots.txt= and a safe local =scripts/prepare-seo.sh= command. Bundled final validators enforce these required text artifacts. See [[file:seo.org][the SEO guide]] for modes, deliverables, source references and testing limits.
+
+A missing deployment URL produces a noindex preview without invented absolute URLs; private applications retain their privacy and loopback access controls. Public output must use a validated real HTTPS base URL and preserve subpath hosting. The model supplies executable tests and honest documentation but cannot claim to have executed them. Native validation does not prove SEO semantics or search rankings. Custom catalogs replace this contract, and custom recipes/plugins remain responsible for their own artifact acceptance.
 
 * Imported reference snapshots
 

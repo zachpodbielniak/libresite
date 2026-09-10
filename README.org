@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: development, websites, ai, glib
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-10T15:48:31-04:00
+#+updated: 2026-09-10T15:50:40-04:00
 #+version: 0.1.0
 
 * Build a site from a recipe
@@ -17,6 +17,8 @@ Mobile and desktop are first-class generation defaults for every site, applicati
 Accessibility and conforming WAI-ARIA 1.2 usage are also generation defaults across every route and state. The catalog requires native HTML semantics, correct names/roles/states, keyboard and focus behavior, and generated automated browser audits plus manual screen-reader procedures. Libresite does not execute generated code or certify conformance: see [[file:docs/prompts.org::*Accessibility and ARIA defaults][the accessibility contract and verification limits]].
 
 Generated sites use open-source fonts from Bunny Fonts by default, with system fallback stacks for offline or blocked requests. Explicit font families, sources and hosting requirements take precedence; no recipe flag is needed. See [[file:docs/prompts.org::*Font defaults][font defaults and overrides]].
+
+Search-engine optimization is also a generation default: public-route metadata, canonical URLs, structured data, social cards, sitemap/robots handling and project SEO tests. Generated projects include maintained SEO configuration and a guide; sites without a supplied production URL remain usable noindex previews, and private applications keep their data out of sitemaps. Static projects include a local production-preparation command. See [[file:docs/seo.org][SEO defaults, deployment modes and verification limits]].
 
 * Getting started
 
@@ -109,6 +111,7 @@ Repository skills live in [[file:skills/libresite-landing/SKILL.md][skills/libre
 - [[file:docs/recipe-format.org][Recipe schema and per-step settings]]
 - [[file:docs/architecture.org][Architecture, ownership, signals and extension contracts]]
 - [[file:docs/prompts.org][Prompt organization and design provenance]]
+- [[file:docs/seo.org][SEO defaults and production preparation]]
 - [[file:docs/flagship.org][Full multi-page example and quality checks]]
 - [[file:docs/c-application.org][C application stack, configuration and database providers]]
 - [[file:docs/building.org][Build, install and dependency modes]]

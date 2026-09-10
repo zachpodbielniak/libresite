@@ -646,6 +646,82 @@ application_stack_artifacts(void){
 	}
 }
 
+/* Exercise the actual bundled final validators, not a second validation schema.
+ * Sentinel text satisfies literal predicates only; it is not an SEO-valid site. */
+static void
+seo_artifacts(gconstpointer data){
+	const gchar *recipe_path = (const gchar *)data;
+	const gchar *paths[] = {
+		"config/seo.yaml", "docs/seo.org", "tests/seo.sh",
+		"robots.txt", "scripts/prepare-seo.sh"
+	};
+	g_autoptr(GError) load_error = NULL;
+	g_autofree gchar *yaml = NULL;
+	g_autoptr(LsRecipe) recipe = NULL;
+	g_autoptr(LsPrompts) prompts = ls_prompts_new(NULL, NULL);
+	g_autoptr(LsStep) validator = g_object_new(LS_TYPE_VALIDATE_STEP, NULL);
+	g_autofree gchar *padding = g_strnfill(600, ' ');
+	JsonArray *steps;
+	JsonObject *acceptance;
+	JsonArray *required;
+	guint count = g_str_has_suffix(recipe_path, "/application.yaml") ? 3 : G_N_ELEMENTS(paths);
+	guint i;
+	guint j;
+	g_assert_true(g_file_get_contents(recipe_path, &yaml, NULL, &load_error));
+	g_assert_no_error(load_error);
+	recipe = ls_recipe_new(yaml, &load_error);
+	g_assert_no_error(load_error);
+	g_assert_nonnull(recipe);
+	steps = ls_recipe_get_steps(recipe);
+	acceptance = json_array_get_object_element(steps, json_array_get_length(steps) - 1);
+	required = json_object_get_array_member(json_object_get_object_member(acceptance, "options"), "required");
+	/* Removing an SEO deliverable from a recipe must fail this test too. */
+	for (i = 0; i < count; i++) {
+		gboolean found = FALSE;
+		for (j = 0; j < json_array_get_length(required); j++)
+			found |= g_str_equal(paths[i], json_array_get_string_element(required, j));
+		g_assert_true(found);
+	}
+	/* Positive control, then missing, empty and whitespace-only SEO artifacts. */
+	for (i = 0; i <= count * 3; i++) {
+		g_autoptr(LsContext) context = ls_context_new();
+		g_autoptr(GError) error = NULL;
+		g_autoptr(GString) candidate = g_string_new("{\"files\":[");
+		gboolean first = TRUE;
+		for (j = 0; j < json_array_get_length(required); j++) {
+			const gchar *path = json_array_get_string_element(required, j);
+			gboolean affected = i > 0 && g_str_equal(path, paths[(i - 1) / 3]);
+			guint variant = i > 0 ? (i - 1) % 3 : 0;
+			if (affected && variant == 0)
+				continue;
+			g_string_append_printf(candidate, "%s{\"path\":\"%s\",\"content\":\"", first ? "" : ",", path);
+			if (!affected) {
+				/* The checked landing also requires these exact literal tokens. */
+				g_string_append(candidate,
+					"<html lang=\\\"en\\\"><title>Fixture</title>"
+					"<meta name=\\\"viewport\\\"><meta name=\\\"description\\\">"
+					"<meta property=\\\"og:title\\\"><meta name=\\\"twitter:card\\\">"
+					"<main>noindex</main></html> :focus-visible prefers-reduced-motion #+title:");
+				g_string_append(candidate, padding);
+			} else if (variant == 2) {
+				g_string_append(candidate, " \\n\\t");
+			}
+			g_string_append(candidate, "\"}");
+			first = FALSE;
+		}
+		g_string_append(candidate, "]}");
+		g_assert_true(ls_context_apply(context, candidate->str, &error));
+		g_assert_no_error(error);
+		g_assert_cmpint(ls_step_execute(validator, recipe, acceptance, prompts, context, NULL, NULL, &error), ==, i == 0);
+		if (i == 0)
+			g_assert_no_error(error);
+		else {
+			g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+			g_assert_nonnull(strstr(error->message, paths[(i - 1) / 3]));
+		}
+	}
+}
+
 /* Replacement catalogs are checked using the same path as the installed CLI. */
 static void
 catalog_override(void){
@@ -763,6 +839,11 @@ main(int argc, char **argv){
 	g_test_add_func("/prompt/stack-profiles", stack_profiles);
 	g_test_add_func("/prompt/stack-catalogs", stack_catalogs);
 	g_test_add_func("/prompt/application-stack-artifacts", application_stack_artifacts);
+	g_test_add_data_func("/seo/landing", "recipes/landing.yaml", seo_artifacts);
+	g_test_add_data_func("/seo/checked-landing", "recipes/checked-landing.yaml", seo_artifacts);
+	g_test_add_data_func("/seo/flagship", "recipes/flagship.yaml", seo_artifacts);
+	g_test_add_data_func("/seo/mixed-providers", "recipes/mixed-providers.yaml", seo_artifacts);
+	g_test_add_data_func("/seo/application", "recipes/application.yaml", seo_artifacts);
 	g_test_add_data_func("/preflight/style", "style", preflight_case);
 	g_test_add_data_func("/preflight/prompt", "prompt", preflight_case);
 	g_test_add_data_func("/preflight/type", "type", preflight_case);
