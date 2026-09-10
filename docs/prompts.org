@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, design, prompts
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-10T14:41:00-04:00
+#+updated: 2026-09-10T15:48:31-04:00
 #+version: 0.1.0
 
 * One maintained prompt catalog
@@ -55,6 +55,23 @@ Generated project documentation and =AGENTS.md= carry a responsive acceptance ma
 For each route and main workflow, check navigation, readable content, media sizing, touch/keyboard/pointer access, focus visibility, error/loading/empty/success states and unintended overflow. Include runnable responsive checks when suitable project tooling exists. The model may inspect supplied source but cannot execute browser tools under the generation protocol; checks without supplied execution evidence must remain marked unexecuted. Native =validate= still checks artifact presence only. Offline CLI/provider/install checks prove delivery of these instructions, not the responsiveness of a live generated site.
 
 A =--prompts= catalog replaces the bundled catalog completely: maintain this contract in custom catalogs to retain the defaults. Existing generated projects are not retroactively changed. Catalog edits change the checkpoint digest, so an interrupted run needs its original catalog to resume; use a fresh output for generation with the new defaults.
+
+* Accessibility and ARIA defaults
+
+The bundled catalog requires conforming WAI-ARIA 1.2 and HTML semantics for every generated site and application, across styles, stacks, routes, viewports and UI states. This shared system contract reaches all generative stages, including generic/custom stages and C/GLib server-rendered HTML. Stage-specific guidance carries acceptance criteria from brief/design through foundation/pages/frontend/backend/interactions to review/polish. It requires native controls where possible, accessible names that preserve visible labels, programmatic form/error associations, valid roles and properties, required role relationships, unique IDs and resolving ID references. ARIA must reflect actual behavior rather than decorate otherwise inaccessible markup.
+
+Keyboard behavior follows the applicable Authoring Practices widget pattern. Navigation disclosures must not acquire menu semantics without menu behavior. Focus stays logical and visible through dialogs, filtering, deletion, viewport changes and fragment replacement. Only modal dialogs contain focus and make background content inert. Hidden content must not retain focusable descendants. Dynamic feedback needs deliberate announcements, and full-page/no-JavaScript responses retain accessible labels and error relationships.
+
+Generated test documentation and =AGENTS.md= must include runnable browser accessibility audits using a version-pinned FOSS tool appropriate to the output stack, exact setup/run commands, and nonzero exit status for detected violations. Tests cover every route and relevant interactive state on phone and desktop, rather than only the initial page. Missing dependencies must fail explicitly. Manual keyboard and screen-reader procedures specify expected names, roles, states, reading order, focus and announcements; contrast, zoom and reduced-motion checks accompany them. Generated review documentation separates concrete source fixes, actual supplied execution evidence and unexecuted checks. No specific browser framework becomes a builder dependency.
+
+These are generation requirements, not a deterministic publication gate for rendered accessibility. Libresite's native =validate= checks non-whitespace artifacts and configured literal-content/byte-size predicates; it does not parse the accessibility tree, run generated browser tests or operate assistive technology. The generation protocol prohibits model tool execution. Offline regression tests prove that the catalog requirements reach every bundled stage, all five styles, provider transport and installed previews; they cannot prove model compliance or certify generated sites. A real output needs its generated audits and manual acceptance procedure executed and failures repaired before a conformance claim; automated scans alone are insufficient.
+
+Existing sites are not modified. A full =--prompts= replacement and explicitly loaded native plugins can supply different behavior; maintain this contract in replacement catalogs and plugin output. Prompt edits change the checkpoint digest, so use the old catalog to resume an old run or a fresh output with the new defaults.
+
+Authoritative references used for this contract (consulted 2026-09-10):
+
+- [[https://www.w3.org/TR/wai-aria-1.2/][WAI-ARIA 1.2 Recommendation: roles, states, properties and author requirements]]
+- [[https://www.w3.org/WAI/ARIA/apg/practices/read-me-first/][WAI-ARIA Authoring Practices: native semantics, behavior and assistive-technology testing]]
 
 * Imported reference snapshots
 
