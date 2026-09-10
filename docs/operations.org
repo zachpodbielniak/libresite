@@ -57,7 +57,7 @@ Generation reports each attempt number, total attempts, provider and per-attempt
 
 * Generated repository publication
 
-Every successful =--output DIR= publication includes =DIR/.git= and =DIR/.gitignore=, with a single commit on =main=: =chore: initial generated project=. Git must be on =PATH= (Fedora =git-core=). The initial commit uses =Libresite <libresite@localhost>= even when no personal Git identity is configured. Subsequent commits use your normal Git configuration. Libresite neither adds a remote nor pushes the project.
+Every successful =--output DIR= publication includes =DIR/.git= and =DIR/.gitignore=, with a single commit on =master=: =chore: initial generated project=. Git must be on =PATH= (Fedora =git-core=). The initial commit uses =Libresite <libresite@localhost>= even when no personal Git identity is configured. Subsequent commits use your normal Git configuration. Libresite neither adds a remote nor pushes the project.
 
 Existing generated ignore rules are retained. Baseline rules appended during export ignore =.libresite/= (which contains the full run checkpoint), private workspaces, =.env= and its local variants, build/distribution/coverage output, common dependency and language caches, object/shared/static libraries, logs, SQLite/database files and editor backups. Environment examples (=.env.example=, =.env.sample=, =.env.template=), dependency lockfiles and source files are eligible for tracking; project-specific ignore rules still apply. Ignored generated files remain on disk. Review stack-specific rules and secrets before sharing; this policy is not a content scanner.
 

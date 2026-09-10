@@ -8,7 +8,7 @@
 
 * Generated Git repository checks
 
-The offline CLI fixtures verify that each adapter publishes a clean committed repository. The installed native plugin test verifies the requested repository root, =main= branch, one Conventional Commit, preserved ignore rules, tracked source/lock/example files, and excluded secrets, metadata and build output. It also exercises conflicting inherited Git repository pointers, signing/hooks/template/exclude configuration, and failures during init/add/commit, missing Git, and cancellation during Git publication followed by checkpoint resume. These checks exercise real Git with controlled artifacts; they do not establish live AI design quality or generated application build/browser correctness.
+The offline CLI fixtures verify that each adapter publishes a clean committed repository. The installed native plugin test verifies the requested repository root, =master= branch, one Conventional Commit, preserved ignore rules, tracked source/lock/example files, and excluded secrets, metadata and build output. It also exercises conflicting inherited Git repository pointers, signing/hooks/template/exclude configuration, and failures during init/add/commit, missing Git, and cancellation during Git publication followed by checkpoint resume. These checks exercise real Git with controlled artifacts; they do not establish live AI design quality or generated application build/browser correctness.
 
 * Run checks
 

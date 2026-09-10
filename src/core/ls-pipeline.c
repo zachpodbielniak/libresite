@@ -354,7 +354,7 @@ initialize_repository(const gchar *directory, LsContext *context,
 		"*.o\n*.a\n*.so\n*.so.*\n*.log\n*.sqlite\n*.sqlite3\n"
 		"*.sqlite-*\n*.sqlite3-*\n*.db\n*.db-*\n*~\n*.swp\n"
 		"# Always retain the repository ignore policy\n!/.gitignore\n", NULL);
-	const gchar *init[] = {"init", "--quiet", "--initial-branch=main", "--template=", NULL};
+	const gchar *init[] = {"init", "--quiet", "--initial-branch=master", "--template=", NULL};
 	const gchar *add[] = {"add", "--all", "--", ".", NULL};
 	const gchar *commit[] = {"commit", "--no-gpg-sign", "--quiet",
 		"-m", "chore: initial generated project", NULL};

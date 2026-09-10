@@ -52,7 +52,7 @@ YAML
 rg -q 'Native module' "$test_dir/site/index.html"
 # The published directory is a standalone clean repository with one snapshot.
 test "$(git -C "$test_dir/site" rev-parse --show-toplevel)" = "$test_dir/site"
-test "$(git -C "$test_dir/site" branch --show-current)" = main
+test "$(git -C "$test_dir/site" branch --show-current)" = master
 test "$(git -C "$test_dir/site" rev-list --count HEAD)" -eq 1
 test "$(git -C "$test_dir/site" log -1 --format=%s)" = 'chore: initial generated project'
 test "$(git -C "$test_dir/site" log -1 --format='%an <%ae>')" = 'Libresite <libresite@localhost>'
