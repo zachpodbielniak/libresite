@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, operations
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-10T14:12:00-04:00
+#+updated: 2026-09-10T17:17:06-04:00
 #+version: 0.1.0
 
 * Commands
@@ -18,7 +18,7 @@ Changing a bundled recipe's budget values changes its fingerprint. For the activ
 
 =--help= / =-h= provides examples. =--version= prints the release and =--license= prints the preserved license. =--list-modules= lists the eight built-in names. =--recipe FILE= / =-r FILE= selects the YAML recipe. =--output DIR= / =-o DIR= selects a new directory for generation; its parent must already exist.
 
-=--validate= checks local schema, AI settings, registered module names, prompt/style resolution and native validation options without calling providers or creating output. =--plan= prints tab-separated index, id, type, provider and model; the display index starts at one. =--preview STEP-ID= shows the system and task prompt with an empty project. These three modes are mutually exclusive. Native validate steps have no AI prompt to preview. All positional arguments are errors.
+=--validate= checks local schema, AI settings, registered module names, prompt/style resolution and native validation options without calling providers or creating output. =--plan= prints tab-separated index, id, type, provider and model; the display index starts at one. =--preview STEP-ID= shows the system and task prompt with the recipe's seed artifacts (empty when omitted), without simulating earlier steps. These three modes are mutually exclusive. Native validate steps have no AI prompt to preview. All positional arguments are errors.
 
 =--prompts FILE= replaces the embedded catalog. =--plugin FILE= loads a native module and may be repeated. =--resume= permits reuse of an existing matching private workspace. Recipe and catalog paths are resolved from the CLI's working directory. There is no server process, deployment action or generated build execution inside this command.
 

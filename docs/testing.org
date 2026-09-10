@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, testing
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-10T17:16:00-04:00
+#+updated: 2026-09-10T17:17:06-04:00
 #+version: 0.1.0
 
 * Generated Git repository checks
@@ -11,6 +11,8 @@
 The offline CLI fixtures verify that each adapter publishes a clean committed repository. The installed native plugin test verifies the requested repository root, =master= branch, one Conventional Commit, preserved ignore rules, tracked source/lock/example files, and excluded secrets, metadata and build output. It also exercises conflicting inherited Git repository pointers, signing/hooks/template/exclude configuration, and failures during init/add/commit, missing Git, and cancellation during Git publication followed by checkpoint resume. These checks exercise real Git with controlled artifacts; they do not establish live AI design quality or generated application build/browser correctness.
 
 * Run checks
+
+Seed regressions reject malformed entries, unsafe/reserved paths, duplicates and file/directory conflicts during recipe parsing. Transport fixtures inspect first and subsequent prompts, checkpoint zero, exported text, seed identity changes and resume after accepted replacements. CLI checks cover seeded previews outside the checkout and preflight prompt limits; the installed native workflow checks seed availability before any plugin executes. These are offline orchestration checks, not evidence that a live model preserves approved copy or legal text.
 
 Bundled live-testing recipes disable provider time/output budgets. Offline fixtures keep short deadlines deliberately to test timeout handling. The recovery regression resumes a finite-deadline checkpoint with =--unlimited= and verifies that it overrides a conflicting finite CLI deadline, returns a delayed fixture successfully, and renders both budgets as unlimited. SIGTERM cancellation is exercised with =--timeout 0=.
 

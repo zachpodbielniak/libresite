@@ -5,6 +5,8 @@ description: Turn a concrete landing-page, studio-site or portfolio brief into a
 
 # Generate a static site with libresite
 
+Embed supplied client copy, logo SVG, brand YAML and approved legal text in top-level `seed_artifacts`, a sequence of exact `path` / `content` mappings using YAML literal blocks. Read the seed contract in `docs/recipe-format.org`. These text artifacts exist before the first step and appear in previews; no host file imports or binary assets are supported. Use instructions and native checks when content must be preserved. Changing seeds invalidates a checkpoint; resume preserves accepted replacements.
+
 Locate the libresite checkout or installed CLI. Read `docs/recipe-format.org` and `recipes/landing.yaml` from that checkout (installed copies are under `share/libresite`). Keep the user's audience, brand, supplied facts, assets, provider/model choices and output location authoritative.
 
 Create a dedicated recipe rather than modifying the shipped example. Use the structured `site.pages`, `offers`, `contact`, `brand`, `copy_lock` and `languages` fields; read `docs/structured-recipes.org`. Preserve exact locked copy and supplied brand/contact facts. Keep audience, stack and accessibility requirements in `site`. Select `editorial`, `minimalist`, `industrial` or `cinematic` based on the brief. Use the smallest complete pipeline: brief, design, frontend, review, validate. The final native check should require the real output files, including the homepage, stylesheet, README, AGENTS.md and design/review documents. AGENTS.md tells a later agent how to preview, test and troubleshoot the generated site.

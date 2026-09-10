@@ -362,7 +362,8 @@ yaml_strings(void){
  * used by generation, including punctuation and YAML-looking copy. */
 static void
 structured_form(void){
-	const gchar *form = "{\"name\":\"studio\",\"site\":{"
+	const gchar *form = "{\"name\":\"studio\","
+		"\"seed_artifacts\":[{\"path\":\"assets/brand.txt\",\"content\":\"supplied brand asset\"}],\"site\":{"
 		"\"pages\":[{\"path\":\"/\",\"title\":\"Home\",\"sections\":[\"Hello\"]}],"
 		"\"offers\":[{\"id\":\"one\",\"name\":\"Support\",\"price\":\"001.00\"}],"
 		"\"contact\":{\"phone\":\"001234\"},\"brand\":{\"name\":\"Oui\"},"
@@ -389,11 +390,15 @@ structured_form(void){
 	g_assert_false(json_object_has_member(site, "brief"));
 	g_assert_cmpstr(json_array_get_string_element(json_object_get_array_member(site, "copy_lock"), 3),
 		==, " café: \"oui\"\nline 2 ");
+	g_clear_object(&context);
+	context = ls_recipe_create_context(reloaded, &error);
+	g_assert_no_error(error);
 	rendered = ls_prompts_render(prompts, reloaded,
 		json_array_get_object_element(ls_recipe_get_steps(reloaded), 0), context, &error);
 	g_assert_no_error(error);
 	g_assert_nonnull(strstr(rendered, "copy_lock"));
 	g_assert_nonnull(strstr(rendered, "001234"));
+	g_assert_nonnull(strstr(rendered, "supplied brand asset"));
 	g_assert_nonnull(strstr(ls_prompts_get_system(prompts), "STRUCTURED SITE CONTRACT"));
 }
 /* Mutate one valid form at a time so every failure exercises a schema rule. */

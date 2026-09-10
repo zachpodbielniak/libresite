@@ -13,6 +13,7 @@ typedef struct {
 	guint malformed;
 	guint incomplete;
 	GPtrArray *models;
+	GPtrArray *prompts;
 } FixtureProvider;
 typedef struct {
 	GObjectClass parent_class;
@@ -56,6 +57,7 @@ fixture_generate(
 	g_assert_nonnull(strstr(prompt, "PIPELINE ACCEPTANCE"));
 	g_assert_nonnull(strstr(prompt, "docs/build.org"));
 	self->calls++;
+	g_ptr_array_add(self->prompts, g_strdup(prompt));
 	g_ptr_array_add(self->models, g_strdup(ls_string(settings, "model")));
 	if (self->calls == self->fail_at) {
 		g_set_error_literal(error, LS_ERROR, LS_ERROR_PROVIDER, "Simulated provider interruption");
@@ -78,6 +80,7 @@ fixture_iface_init(LsProviderInterface *iface){
 static void
 fixture_finalize(GObject *object){
 	g_ptr_array_unref(((FixtureProvider *)object)->models);
+	g_ptr_array_unref(((FixtureProvider *)object)->prompts);
 	G_OBJECT_CLASS(fixture_provider_parent_class)->finalize(object);
 }
 static void
@@ -87,6 +90,7 @@ fixture_provider_class_init(FixtureProviderClass *klass){
 static void
 fixture_provider_init(FixtureProvider *self){
 	self->models = g_ptr_array_new_with_free_func(g_free);
+	self->prompts = g_ptr_array_new_with_free_func(g_free);
 }
 /* Remove only test-owned temporary directories, without following symlinks. */
 static void
@@ -282,6 +286,119 @@ pipeline_case(gconstpointer data){
 	}
 	remove_tree(temp);
 }
+/* Real transport prompts, durable checkpoints and exports must all retain
+ * seeds, while accepted replacements survive resume without being reseeded. */
+static void
+seed_pipeline(gconstpointer data){
+	guint fail_at = GPOINTER_TO_UINT(data);
+	g_autoptr(GObject) provider = g_object_new(fixture_provider_get_type(), NULL);
+	FixtureProvider *fixture = (FixtureProvider *)provider;
+	g_autoptr(LsPrompts) prompts = ls_prompts_new(NULL, NULL);
+	g_autoptr(LsPipeline) pipeline = ls_pipeline_new(LS_PROVIDER(provider), prompts);
+	g_autofree gchar *yaml = g_strconcat(recipe_text,
+		"seed_artifacts:\n"
+		"  - {path: content/client.org, content: 'Approved client copy é'}\n"
+		"  - {path: assets/logo.svg, content: '<svg xmlns=\"http://www.w3.org/2000/svg\"/>'}\n"
+		"  - {path: brand.yaml, content: 'color: blue'}\n"
+		"  - {path: legal/terms.txt, content: 'Approved legal text'}\n"
+		"  - {path: index.html, content: 'Seed homepage'}\n", NULL);
+	g_autoptr(GError) error = NULL;
+	g_autoptr(LsRecipe) recipe = ls_recipe_new(yaml, &error);
+	g_autofree gchar *temp = g_dir_make_tmp("libresite-seeds-XXXXXX", NULL);
+	g_autofree gchar *output = g_build_filename(temp, "site", NULL);
+	g_autofree gchar *checkpoint = g_strconcat(output, ".libresite-work/checkpoint.json", NULL);
+	g_autofree gchar *saved = NULL;
+	g_autoptr(LsContext) restored = ls_context_new();
+	g_autoptr(JsonNode) saved_node = NULL;
+	JsonObject *object;
+	const gchar *paths[] = {"content/client.org", "assets/logo.svg", "brand.yaml", "legal/terms.txt"};
+	guint i;
+	g_assert_no_error(error);
+	fixture->fail_at = fail_at;
+	g_assert_false(ls_pipeline_run(pipeline, recipe, output, FALSE, NULL, &error));
+	g_assert_error(error, LS_ERROR, LS_ERROR_PROVIDER);
+	g_clear_error(&error);
+	g_assert_true(g_file_get_contents(checkpoint, &saved, NULL, &error));
+	g_assert_no_error(error);
+	saved_node = ls_json_parse(saved, &error);
+	g_assert_no_error(error);
+	object = json_node_get_object(saved_node);
+	g_assert_cmpint(json_object_get_int_member(object, "next"), ==, fail_at - 1);
+	json_object_remove_member(object, "next");
+	json_object_remove_member(object, "version");
+	json_object_remove_member(object, "fingerprint");
+	g_clear_pointer(&saved, g_free);
+	saved = ls_json_encode(saved_node);
+	g_assert_true(ls_context_apply(restored, saved, &error));
+	g_assert_no_error(error);
+	g_assert_nonnull(strstr((const gchar *)g_ptr_array_index(fixture->prompts, 0), "Seed homepage"));
+	/* A changed seed must invalidate even the initial (next == 0) checkpoint. */
+	{
+		g_autofree gchar *changed_yaml = g_strconcat(yaml,
+			"  - {path: extra.txt, content: 'Changed seed'}\n", NULL);
+		g_autoptr(LsRecipe) changed = ls_recipe_new(changed_yaml, &error);
+		g_assert_no_error(error);
+		g_assert_false(ls_pipeline_run(pipeline, changed, output, TRUE, NULL, &error));
+		g_assert_error(error, LS_ERROR, LS_ERROR_CONFLICT);
+		g_assert_cmpuint(fixture->calls, ==, fail_at);
+		g_clear_error(&error);
+	}
+	g_assert_true(ls_pipeline_run(pipeline, recipe, output, TRUE, NULL, &error));
+	g_assert_no_error(error);
+	g_assert_cmpuint(fixture->calls, ==, 3);
+	for (i = 0; i < G_N_ELEMENTS(paths); i++) {
+		const LsArtifact *seed = ls_context_lookup(restored, paths[i]);
+		g_autofree gchar *path = g_build_filename(output, paths[i], NULL);
+		g_autofree gchar *content = NULL;
+		guint j;
+		g_assert_nonnull(seed);
+		g_assert_true(g_file_get_contents(path, &content, NULL, &error));
+		g_assert_no_error(error);
+		g_assert_cmpstr(content, ==, ls_artifact_get_content(seed));
+		for (j = 0; j < fixture->prompts->len; j++)
+			g_assert_nonnull(strstr((const gchar *)g_ptr_array_index(fixture->prompts, j), paths[i]));
+	}
+	/* The final review receives the accepted homepage, including after resume. */
+	g_assert_null(strstr((const gchar *)g_ptr_array_index(fixture->prompts, 2), "Seed homepage"));
+	g_assert_nonnull(strstr((const gchar *)g_ptr_array_index(fixture->prompts, 2), "Working site"));
+	remove_tree(temp);
+}
+
+/* Malformed seed input shares the provider artifact validator; no filesystem
+ * or AI work is necessary to reject unsafe paths and conflicting bundles. */
+static void
+seed_invalid(void){
+	const gchar *values[] = {
+		"null", "{}", "text", "[null]", "[{path: a}]",
+		"[{path: a, content: 1}]", "[{path: a, content: null}]",
+		"[{path: a, content: x, source: file}]",
+		"[{path: ../escape, content: x}]", "[{path: /absolute, content: x}]",
+		"[{path: .git/config, content: x}]", "[{path: .libresite/run.json, content: x}]",
+		"[{path: a, content: x}, {path: a, content: y}]",
+		"[{path: a, content: x}, {path: a/b, content: y}]"
+	};
+	guint i;
+	for (i = 0; i < G_N_ELEMENTS(values); i++) {
+		g_autofree gchar *yaml = g_strconcat(recipe_text, "seed_artifacts: ", values[i], "\n", NULL);
+		g_autoptr(GError) error = NULL;
+		g_autoptr(LsRecipe) recipe = ls_recipe_new(yaml, &error);
+		g_assert_null(recipe);
+		g_assert_nonnull(error);
+		g_assert_nonnull(strstr(error->message, "seed_artifacts"));
+	}
+	/* Explicitly empty seeds preserve the optional field's no-op semantics. */
+	{
+		g_autofree gchar *yaml = g_strconcat(recipe_text, "seed_artifacts: []\n", NULL);
+		g_autoptr(LsRecipe) recipe = ls_recipe_new(yaml, NULL);
+		g_autoptr(LsContext) context = NULL;
+		g_autofree gchar *snapshot = NULL;
+		g_assert_nonnull(recipe);
+		context = ls_recipe_create_context(recipe, NULL);
+		snapshot = ls_context_snapshot(context);
+		g_assert_cmpstr(snapshot, ==, "{\"files\":[]}");
+	}
+}
+
 static void
 retry_step(void){
 	g_autoptr(GObject) provider = g_object_new(fixture_provider_get_type(), NULL);
@@ -809,6 +926,9 @@ main(int argc, char **argv){
 	guint i;
 	g_test_init(&argc, &argv, NULL);
 	g_test_add_func("/recipe/valid", valid_recipe);
+	g_test_add_func("/recipe/invalid-seeds", seed_invalid);
+	g_test_add_data_func("/pipeline/seeds-initial-resume", GUINT_TO_POINTER(1), seed_pipeline);
+	g_test_add_data_func("/pipeline/seeds-updated-resume", GUINT_TO_POINTER(2), seed_pipeline);
 	g_test_add_func("/recipe/provider-defaults", provider_defaults);
 	for (i = 0; i < G_N_ELEMENTS(invalid_recipes); i++) {
 		g_autofree gchar *name = g_strdup_printf("/recipe/invalid/%u", i);

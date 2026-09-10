@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
 #include "core/ls-recipe.h"
+#include "core/ls-context.h"
 #include <string.h>
 #include <yaml-glib.h>
 struct _LsRecipe {
@@ -292,7 +293,7 @@ ls_recipe_new(const gchar *yaml, GError **error){
 	if (!JSON_NODE_HOLDS_OBJECT(self->root))
 		goto invalid_structure;
 	root = json_node_get_object(self->root);
-	if (!ls_object_keys(root, "|version|name|site|ai|pipeline|", error) ||
+	if (!ls_object_keys(root, "|version|name|site|ai|pipeline|seed_artifacts|", error) ||
 		!text_member(root, "name", TRUE, error) || !object_member(root, "site", error) ||
 		!object_member(root, "pipeline", error))
 		return NULL;
@@ -342,6 +343,13 @@ ls_recipe_new(const gchar *yaml, GError **error){
 		if (json_object_has_member(step, "options") && !object_member(step, "options", error))
 			return NULL;
 	}
+	/* Reuse the artifact transaction validator, including path/size conflicts,
+	 * before callers can create a workspace or contact a provider. */
+	{
+		g_autoptr(LsContext) seeds = ls_recipe_create_context(self, error);
+		if (seeds == NULL)
+			return NULL;
+	}
 	return (LsRecipe *)g_steal_pointer(&self);
 invalid_structure:
 	g_set_error_literal(
@@ -352,6 +360,27 @@ invalid_structure:
 	);
 	return NULL;
 }
+/* Build independent initial artifacts without mutating the recipe tree. */
+LsContext *
+ls_recipe_create_context(LsRecipe *self, GError **error){
+	g_autoptr(LsContext) context = ls_context_new();
+	JsonNode *seeds = json_object_get_member(ls_recipe_get_root(self), "seed_artifacts");
+	if (seeds != NULL) {
+		g_autoptr(JsonNode) bundle = json_node_new(JSON_NODE_OBJECT);
+		g_autoptr(JsonObject) object = json_object_new();
+		g_autofree gchar *text = NULL;
+		/* Copy the node so the parsed recipe remains the checkpoint identity. */
+		json_object_set_member(object, "files", json_node_copy(seeds));
+		json_node_set_object(bundle, object);
+		text = ls_json_encode(bundle);
+		if (!ls_context_apply(context, text, error)) {
+			g_prefix_error(error, "seed_artifacts: ");
+			return NULL;
+		}
+	}
+	return (LsContext *)g_steal_pointer(&context);
+}
+
 /* Accessors expose borrowed nodes; recipes are immutable by contract. */
 JsonObject *
 ls_recipe_get_root(LsRecipe *self){
@@ -465,7 +494,7 @@ ls_recipe_from_form(const gchar *json, GError **error){
 		return NULL;
 	}
 	root = json_node_get_object(node);
-	if (!ls_object_keys(root, "|name|site|ai|pipeline|", error) ||
+	if (!ls_object_keys(root, "|name|site|ai|pipeline|seed_artifacts|", error) ||
 		!object_member(root, "site", error))
 		return NULL;
 	site = json_object_get_object_member(root, "site");

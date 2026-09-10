@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, reference
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-10T17:16:00-04:00
+#+updated: 2026-09-10T17:17:06-04:00
 #+version: 0.1.0
 
 * Contract
@@ -50,11 +50,42 @@ pipeline:
 | name | yes | nonempty string | Human-readable project identity |
 | site | yes | mapping | Product and stack brief |
 | ai | no | mapping | Default AI settings |
+| seed_artifacts | no | sequence | Initial UTF-8 files, each with exactly path and content |
 | pipeline | yes | mapping | Exactly one key, steps |
 
 =site= accepts structured =pages=, =offers=, =contact=, =brand=, =copy_lock= and =languages= plus optional =brief=, =audience=, =style=, =stack=, =frontend=, =backend=, =database= and =requirements= strings. All six structured fields are required when the legacy =brief= is absent; see [[file:structured-recipes.org][the complete field schema and form-to-YAML API]]. All present string settings must be nonempty. YAML =none= is text, while =null= is not. =style= defaults to =editorial= and must exist in the selected prompt catalog. Optional =stack= selects a named =stacks= entry in that catalog; an unknown name fails preflight. No stack profile is selected implicitly. The bundled =c-glib= profile supplies yaml-glib configuration, htmx-glib pages and orm-glib persistence with SQLite by default; see [[file:c-application.org][C applications]]. It is independent of visual style. The =frontend=, =backend= and =database= strings remain open-ended instructions, not a finite list of compiled backends. The builder emits source projects; it does not link every generated site's runtime into itself.
 
 =pipeline.steps= is an ordered sequence of 1 through 128 mappings. A step runs only after all preceding steps have succeeded and checkpointed. There is no implicit parallelism, conditional execution or hidden dependency graph.
+
+* Seed artifacts
+
+Supply client copy, logo SVG, brand YAML and approved legal text through =seed_artifacts= before generation. Each entry contains exactly a safe relative output =path= and literal string =content=. Content is included verbatim in the initial artifact context; no host files are read and no source-path or command expansion occurs. Embed existing text using YAML literal blocks. Omitted seeds and an empty sequence both start with an empty project.
+
+#+begin_src yaml
+seed_artifacts:
+  - path: content/client.org
+    content: |
+      #+title: Approved client copy
+      Independent tools for independent people.
+  - path: assets/logo.svg
+    content: |
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><path d="M4 4h8v16h16v8H4z"/></svg>
+  - path: brand.yaml
+    content: |
+      name: Example
+      colors:
+        ink: '#202020'
+        paper: '#faf8f4'
+  - path: legal/terms.txt
+    content: |
+      Insert the client's approved legal text here before generation.
+#+end_src
+
+Seed validation uses the same transaction, path, type, duplicate, file/directory conflict and resource-limit checks as provider bundles. The entire recipe, including seeds, remains subject to the 16 MiB YAML document limit. Invalid seeds fail recipe loading before provider calls or workspace creation. Seeds must be UTF-8 text, including SVG; binary assets are not supported. Quote scalar-looking contents such as ='123'= or use literal blocks to retain their string type.
+
+Seeds populate =CURRENT PROJECT= in =--preview= and preflight, and are saved in checkpoint zero before the first pipeline step, including a native step. A preview contains seeds only; it does not simulate earlier generation steps. Seeds remain in subsequent prompts and exports unless a step replaces their exact paths. They are initial inputs, not immutable or protected files: use step instructions and native literal-content checks for preservation requirements. Only supply content intended to be sent to the selected AI provider and included in the output project.
+
+Resume restores the accepted checkpoint without reapplying seeds, preserving later replacements. Seed paths and content are part of recipe identity; changing them invalidates a saved checkpoint. Recipes without =seed_artifacts= retain their existing checkpoint identity. Embedders can call =ls_recipe_create_context()= for a seeded preview or initial context when executing steps directly.
 
 * Steps
 
