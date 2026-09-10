@@ -46,9 +46,11 @@ Errors report the failed stage ID where possible. Common remedies:
 | Existing workspace | Resume matching work or choose a new output |
 | Workspace locked | Wait for the active run; do not delete its lock inode |
 | Checkpoint mismatch | Use the original recipe/catalog or start new work |
-| Missing required artifact | Refine generation instructions; the checkpoint retains earlier successful stages |
+| Missing required artifact | An AI step immediately before validation retries the incomplete proposal within its configured retry budget; resume retries that AI step after exhaustion |
 
 * Practical limits
+
+Checkpoints produced before the acceptance-retry fix may already be parked at a failing native =validate= step. Repeating =--resume= alone cannot repair such a checkpoint because native validation makes no AI calls. Preserve a backup before any manual artifact repair, and retain the original catalog through =--prompts= if its embedded version has since changed. Do not lower acceptance requirements or reset a completed-step index merely to make a run appear successful.
 
 YAML/catalog/checkpoint text: 16 MiB. YAML nesting: 32 collections. YAML events: 100,000. Recipe steps: 128. Generated file: 16 MiB. Project: 4096 files and 64 MiB of text. Generated paths: 1024 bytes with components at most 255 bytes. System plus task prompt: 100,000 bytes before small bounded retry feedback. These are hard errors, not silent truncation.
 

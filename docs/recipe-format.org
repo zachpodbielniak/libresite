@@ -90,6 +90,8 @@ Not all CLIs implement every budget or effort knob; ai-glib translates what the 
 
 A failed provider call or invalid artifact bundle is retried up to =retries= times. Corrective feedback describes the rejected response. There is no retry after cancellation. Every attempt may consume provider usage; keep retries explicit for expensive pipelines.
 
+Every generation prompt includes the recipe's native validation contracts, including exact required filenames. A generation step immediately followed by one or more =validate= steps checks its proposed project against those contracts before accepting or checkpointing the response. Missing/empty required artifacts trigger the same bounded retry with corrective feedback. Failed candidates do not change the current project. Earlier planning steps are allowed to produce an incomplete project, and the native validation steps still run normally afterward. If attempts are exhausted, resume retries the failed AI step from the last successful checkpoint.
+
 * Artifact protocol
 
 Provider results are JSON because they carry exact file contents that may themselves contain YAML, markup or source code. This is a transport format, while user-authored recipes and prompts remain YAML.

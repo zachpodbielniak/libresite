@@ -16,6 +16,8 @@ A replacement catalog passed with =--prompts FILE= replaces the whole catalog, n
 
 For each AI step the builder sends the shared system prompt plus these task sections: the selected visual direction, selected stage contract, site data encoded as JSON, step data encoded as JSON, and the entire current project encoded as a file bundle. The model sees each previous file's full contents. This maintains continuity across provider/model switches without depending on an external CLI conversation session.
 
+The =PIPELINE ACCEPTANCE= section additionally supplies every native validation step as JSON, so product/design stages and implementation agree on the recipe's exact filenames. A final generation stage cannot be checkpointed with files that violate the immediately following native validation checks; it retries within the configured AI attempt budget.
+
 The recipe's =instructions= and =options= appear inside step data rather than interpolating code or shell expressions. Project files are explicitly untrusted task data. A retry appends at most 512 bytes of error detail and asks for a corrected file bundle. The builder validates the response rather than assuming prompt instructions were obeyed.
 
 =--preview ID= prints the exact system and task framing with an empty project context. It is a preflight preview, not a replay of a later step after generation. =--plan= prints resolved settings. Checkpoints bind the exact catalog digest; changing even a catalog comment invalidates resume to make prompt revisions explicit.

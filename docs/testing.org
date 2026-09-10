@@ -27,6 +27,8 @@ CLI integration tests use actual =LsAiProvider= and ai-glib adapters with contro
 
 * What passing tests do not prove
 
+Acceptance regression tests exercise syntactically valid provider bundles that omit required files: retry success, exhaustion with the original project intact, and no leakage of files from rejected attempts. Transport fixtures also assert that validation contracts are present in generation prompts.
+
 Fixture success establishes the builder's deterministic behavior and its use of ai-glib protocol surfaces. It does not prove that every installed CLI version accepts the same flags, that a particular account has access to an example model, or that a live model will obey a prompt. This implementation has not been evaluated by paying for live generation across all five providers.
 
 The generated site's =validate= stage checks artifact existence and nonempty text. It is not a compiler, browser, HTML validator or accessibility checker. For a live acceptance run, create a new output with an authenticated provider, read its README and review report, compile/test its application, inspect narrow and wide viewports, follow the main workflow and verify keyboard/error states. Record actual evidence separately from model claims.

@@ -11,6 +11,7 @@ typedef struct {
 	guint calls;
 	guint fail_at;
 	guint malformed;
+	guint incomplete;
 	GPtrArray *models;
 } FixtureProvider;
 typedef struct {
@@ -52,6 +53,8 @@ fixture_generate(
 	(void)cancellable;
 	g_assert_nonnull(strstr(system, "RESPONSE PROTOCOL"));
 	g_assert_nonnull(strstr(prompt, "CURRENT PROJECT"));
+	g_assert_nonnull(strstr(prompt, "PIPELINE ACCEPTANCE"));
+	g_assert_nonnull(strstr(prompt, "docs/build.org"));
 	self->calls++;
 	g_ptr_array_add(self->models, g_strdup(ls_string(settings, "model")));
 	if (self->calls == self->fail_at) {
@@ -61,6 +64,10 @@ fixture_generate(
 	if (self->malformed > 0) {
 		self->malformed--;
 		return g_strdup("not JSON");
+	}
+	if (self->incomplete > 0) {
+		self->incomplete--;
+		return g_strdup("{\"files\":[{\"path\":\"index.html\",\"content\":\"incorrect draft\"},{\"path\":\"unwanted.txt\",\"content\":\"rejected attempt\"}]}");
 	}
 	return g_strdup(bundle);
 }
@@ -296,6 +303,37 @@ retry_step(void){
 	g_assert_cmpuint(fixture->calls, ==, 2);
 	g_assert_nonnull(ls_context_lookup(context, "index.html"));
 }
+/* A valid JSON bundle can still violate the output contract. Reject it before
+ * checkpointing, retry with feedback, and retain none of its incidental files. */
+static void
+acceptance_retry(gconstpointer data){
+	gboolean exhaust = GPOINTER_TO_INT(data);
+	g_autoptr(GObject) provider = g_object_new(fixture_provider_get_type(), NULL);
+	FixtureProvider *fixture = (FixtureProvider *)provider;
+	g_autoptr(LsPrompts) prompts = ls_prompts_new(NULL, NULL);
+	g_autoptr(LsRecipe) recipe = ls_recipe_new(recipe_text, NULL);
+	g_autoptr(LsContext) context = ls_context_new();
+	g_autoptr(LsStep) step = g_object_new(LS_TYPE_GENERATE_STEP, NULL);
+	g_autoptr(GError) error = NULL;
+	JsonObject *config = json_array_get_object_element(ls_recipe_get_steps(recipe), 1);
+	JsonObject *ai = json_object_get_object_member(config, "ai");
+	json_object_set_int_member(ai, "retries", 1);
+	fixture->incomplete = exhaust ? 2 : 1;
+	g_assert_true(ls_context_apply(context, "{\"files\":[{\"path\":\"index.html\",\"content\":\"original\"}]}", NULL));
+	if (exhaust) {
+		g_assert_false(ls_step_execute(step, recipe, config, prompts, context, LS_PROVIDER(provider), NULL, &error));
+		g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+		g_assert_nonnull(strstr(error->message, "docs/build.org"));
+		g_assert_cmpstr(ls_artifact_get_content(ls_context_lookup(context, "index.html")), ==, "original");
+	} else {
+		g_assert_true(ls_step_execute(step, recipe, config, prompts, context, LS_PROVIDER(provider), NULL, &error));
+		g_assert_no_error(error);
+		g_assert_nonnull(ls_context_lookup(context, "docs/build.org"));
+	}
+	g_assert_cmpuint(fixture->calls, ==, 2);
+	g_assert_null(ls_context_lookup(context, "unwanted.txt"));
+}
+
 static void
 prompt_limit(void){
 	g_autoptr(LsPrompts) prompts = ls_prompts_new(NULL, NULL);
@@ -484,6 +522,8 @@ main(int argc, char **argv){
 	g_test_add_func("/artifact/boxed", boxed_artifact);
 	g_test_add_func("/artifact/replace", artifact_replace);
 	g_test_add_func("/step/retry", retry_step);
+	g_test_add_data_func("/step/acceptance-retry", GINT_TO_POINTER(FALSE), acceptance_retry);
+	g_test_add_data_func("/step/acceptance-exhaustion", GINT_TO_POINTER(TRUE), acceptance_retry);
 	g_test_add_func("/prompt/limit", prompt_limit);
 	g_test_add_func("/pipeline/registry", registry);
 	g_test_add_func("/json/limits", json_limits);
