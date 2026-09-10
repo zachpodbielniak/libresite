@@ -1,0 +1,85 @@
+#+title: Sold recipe packages
+#+description: Fixed-scope vertical SKUs, default quality and archived recipe/catalog pins
+#+authors: Zach Podbielniak
+#+categories: libresite, product, operations
+#+created: 2026-09-10T17:00:00-04:00
+#+updated: 2026-09-10T17:50:00-04:00
+#+version: 1.0.0
+
+* The product contract
+
+A sold package is a particular client recipe and exact prompt catalog, frozen together before generation. A SKU identifies repeatable scope; its =release= identifies a revision of that scope. Recipe =version: 1= remains the YAML schema version, not the commercial release. Existing checkpoint fingerprints still bind the parsed recipe and exact catalog digest; no fingerprint migration or relaxation is introduced.
+
+The supported catalog starts at release =1.0.0=. All six vertical site packages use semantic HTML, native CSS and minimal local JavaScript. Each includes complete copy, original SVG identity assets, responsive interior pages, SEO configuration, accessible interactions, source checks and browser acceptance procedures. Illustrative business names and facts are examples for intake, not fabricated client proof. Replace them with approved client content before sealing a real order. Pricing and commercial terms belong in the agreement; these recipes do not invent them.
+
+| SKU / recipe | Fixed HTML pages | Included working journey |
+|--------------+------------------+--------------------------|
+| =trades= / =recipes/trades.yaml= | =index.html=, =services.html=, =service-detail.html=, =coverage.html=, =about.html=, =estimate.html=, =404.html= | Service discovery and local estimate-request worksheet with preview, text download and reset |
+| =professional-services= / =recipes/professional-services.yaml= | =index.html=, =services.html=, =engagement.html=, =approach.html=, =insights.html=, =contact.html=, =404.html= | Engagement scope, complete practical article and local project-brief export |
+| =restaurant= / =recipes/restaurant.yaml= | =index.html=, =menu.html=, =story.html=, =visit.html=, =private-dining.html=, =reservations.html=, =404.html= | Readable HTML menu with category filtering, reset and honest reservation information |
+| =nonprofit= / =recipes/nonprofit.yaml= | =index.html=, =mission.html=, =programs.html=, =impact.html=, =get-involved.html=, =support.html=, =404.html= | Mission/program exploration and local volunteer-interest export, without collecting donations |
+| =studio= / =recipes/studio.yaml= | =index.html=, =work.html=, =work-atlas.html=, =work-common.html=, =approach.html=, =journal.html=, =start.html=, =404.html= | Two disclosed concept case studies, work filters, full journal article and local project-brief export |
+| =small-saas= / =recipes/small-saas.yaml= | =index.html=, =features.html=, =pricing.html=, =docs.html=, =about.html=, =demo.html=, =404.html= | Product-marketing scope and local release-note walkthrough/export; no hosted application |
+| =application= / =recipes/application.yaml= | Server routes =/=, =/help= and an unknown-route 404 handler | Persistent single-user reading list: add, filter, mark finished and confirm deletion; help and data ownership |
+
+=recipes/landing.yaml= is the complete studio SKU entry point, with the same scope and predicates as =studio.yaml=. It is no longer a reduced single-page sales package. =flagship.yaml= remains a worked design example; =checked-landing.yaml=, =copy-locked-landing.yaml=, =structured.yaml=, =revision.yaml= and =mixed-providers.yaml= demonstrate APIs or workflows and are not independently sold SKUs. The flagship quality bar applies to all default catalog profiles, including these examples, while their declared scopes remain different.
+
+* Acceptance and exclusions
+
+The fixed source deliverables live in each recipe's final =validate.options.required=. Its =checks= enforce main landmarks and complete document boundaries for the vertical site pages, literal primary links, important disclosures and the acceptance-document viewport matrix where specified. The studio checks also require the two case-study links and local-only brief disclosure. The application checks require GNU89 build intent, the htmx/orm/yaml dependency names, SQLite/loopback configuration and both loopback hostnames in the HTTP test entry point. All checks are shown to every generation stage and run natively before publication. These are text predicates, not a browser, compiler or semantic link parser.
+
+Every sold package requires =docs/acceptance.org=, =docs/product.org=, =docs/design.org=, =docs/review.org=, =README.org=, =AGENTS.md=, =tests/check.sh=, =tests/accessibility.sh= and SEO deliverables. The shared catalog requires a route-to-check matrix and real failing checks for removed pages, broken local references and missing primary actions. The generated project must distinguish source checks from actual build, HTTP, browser and screen-reader tests, with exact commands and expected outcomes. Unexecuted checks stay labeled unexecuted. Test source is inspected before execution; libresite never runs model-generated code during generation.
+
+| Acceptance layer | Pass condition |
+|------------------+----------------|
+| Native output contract | Every required artifact is non-whitespace and every literal predicate passes; omitted deliverables prevent publication |
+| Generated source checks | Every contracted route and asset resolves, primary links have truthful destinations, and intentional missing-file/broken-link controls fail |
+| Interaction acceptance | Invalid, valid, repeated and reset actions produce the documented result; no fake booking, sending, billing or donation success |
+| Responsive acceptance | All routes work at 360, 768 and 1440px plus the shared full device matrix, intermediate widths, landscape and 200 percent zoom |
+| Accessibility and resilience | Keyboard/focus/state behavior, automated browser audits and manual screen-reader procedures pass; no-JS and offline fallbacks remain useful |
+| Human quality acceptance | A coherent visual identity, substantive route-specific content and finished interior pages meet the same bar as the opening page; remaining visual/runtime checks have evidence |
+
+No package includes hosting, deployment, payment processing, fabricated business data or arbitrary third-party integration. Local exports are useful handoffs, not contact submissions. A request for a working contact endpoint, reservations, donations, accounts, multi-tenancy or billing changes the commercial scope. Changes to the shared reusable scope require a new SKU release; client copy and configuration changes require a newly sealed client package even when the base SKU release stays the same. Preserve the original package and checkpoint rather than changing an existing sale to resume it.
+
+* Application stack boundary
+
+The application SKU stays =site.stack: c-glib=: GNU89 C/GLib, =htmx-glib= pages with HTMX progressive enhancement and normal form fallbacks, =yaml-glib= runtime configuration and =orm-glib= persistence. SQLite is the default; the recipe also includes optional PostgreSQL/MySQL bootstrap assets. Stack support is independent of visual style. It does not add ORM or server runtime dependencies to the builder.
+
+Recipe parsing rejects an =application= SKU labeled as a site, any =kind: application= package without =stack: c-glib=, and a =kind: site= package with a selected stack. The shared catalog instructs generation to record incompatible React/Tailwind requests as out of scope rather than substitute a stack. Explicit custom generators remain possible through the native plugin boundary or a different generator; they require a separate scope and deployment/runtime agreement. Arbitrary prose and user replacement catalogs are trusted instructions, not a security boundary or automatic code-compliance proof.
+
+* Seal an order before the first run
+
+Copy the appropriate recipe into the order's working files, enter approved identity/facts/copy locks and inspect the exact pages, deliverables and exclusions. Keep =package.sku=, =package.release= and =package.kind= aligned with the agreed scope. Use a complete replacement catalog only when intentionally creating a different catalog pin. This operation requires no AI account and makes no provider calls.
+
+#+begin_src bash
+libresite -r client.yaml --validate
+libresite -r client.yaml --preview design
+libresite -r client.yaml --seal-package ./order-2026-001
+libresite --package ./order-2026-001 --plan
+libresite --package ./order-2026-001 -o ./client-site
+libresite --package ./order-2026-001 -o ./client-site --resume
+#+end_src
+
+=--seal-package DIR= preflights the recipe, registered modules and selected catalog, writes into a private sibling staging directory and publishes a complete package by rename. The parent must exist. An existing destination, even an empty directory, is never overwritten. The archive contains exactly:
+
+- =recipe.yaml=: the original loaded YAML text, including comments, inline seeds and whitespace; execution-only timeout/unlimited overrides are excluded.
+- =prompts.yaml=: the exact selected catalog bytes, even when the source was the embedded GResource.
+- =package.yaml=: manifest schema version 1, =sku=, =release=, =kind=, =recipe_sha256= and =catalog_sha256=, all checked on load.
+
+The SHA-256 values cover the full corresponding UTF-8 files, not just selected YAML fields. =--package DIR= verifies both hashes before parsing either input, verifies manifest identity against recipe metadata, and uses the verified bytes without reopening source files. It never substitutes the current embedded catalog or fetches missing files. Missing, malformed, edited or mismatched inputs fail before workspace creation or provider invocation. =--package= excludes =--recipe=, =--prompts=, =--from-form= and =--seal-package=; =--seal-package= cannot also run generation, revision or inspection. Package inspection supports =--validate=, =--plan=, =--preview= and =--emit-yaml=; emitted YAML alone is not a sold archive.
+
+For library consumers use =ls_package_save()= after =ls_pipeline_validate()= and =ls_package_load()= to obtain an owned =LsRecipe=/=LsPrompts= pair. Load returns neither object on failure. =ls_recipe_get_source()=, =ls_prompts_get_source()= and =ls_prompts_new_from_yaml()= preserve the byte boundary without reliance on a future YAML serializer. Form-based integrations can emit the ordinary recipe, then add package metadata and the complete sold acceptance contract before sealing.
+
+* Resuming a 2026 job in 2027
+
+Back up the sealed directory together with =OUTPUT.libresite-work/= and the compatible libresite build/source release. Moving the package does not change its identity. Use =--package ARCHIVED-DIR -o ORIGINAL-OUTPUT --resume= after restoring both archives. Completed steps come from the checkpoint; they are not regenerated. Changing today's =data/prompts.yaml= or embedded catalog does not affect that job. A missing or modified archive is an error, never permission to resume under new instructions. Timeout, unlimited budgets and prompt byte limits remain execution-only settings.
+
+Pins preserve generation inputs and detect drift; they do not make model output deterministic or authenticate an archive against somebody who can rewrite both hashes. Archive retention is an operator responsibility. A seal does not make files physically immutable and is not a backup. Provider availability, model aliases, authentication and model behavior may change. Preserve compatible plugin binaries and their external resources separately, along with a compatible generator and toolchain; the package does not snapshot native code or remote models. Revisions additionally need the exact original imported project, since its content is independently fingerprinted. A future incompatible checkpoint implementation requires the archived compatible executable, not a promise to ignore format changes.
+
+The old =-r FILE --prompts FILE --resume= workflow remains supported for unsold recipes and existing checkpoints. It still requires those inputs to match and does not automatically preserve them. Old interrupted jobs must use their original catalog; the newly improved default intentionally has a different digest.
+
+* Verification in this repository
+
+=make tests= runs =test-packages= plus CLI archive checks. The native tests construct a valid text fixture for each SKU, remove every required deliverable in turn and corrupt each checked file to establish that acceptance fails. The CLI tests seal and reload every catalog entry, compare exact bytes, reject replacement options and unsupported application stacks, reject overwrite and fail tampered catalogs before creating output state. The resume test interrupts after one completed step, rejects a changed current catalog, relocates the archive and successfully resumes with the saved bytes without repeating that step.
+
+=bash tests/verify.sh= covers clean release/debug builds with zero warnings and ShellCheck; =bash tests/install.sh= exercises installed package workflows and public library/plugin compatibility outside the checkout. These are generator and contract tests, not live AI output or visual-quality certification.

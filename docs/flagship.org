@@ -8,6 +8,8 @@
 
 * What this example demonstrates
 
+Flagship quality is now the shared catalog default. For a sold studio package use =recipes/studio.yaml= or =recipes/landing.yaml= with the same eight-page scope and stronger final acceptance, then seal the recipe/catalog pair as described in [[file:packages.org][sold packages]]. This named example remains useful for studying staged generation; it is not a quality upgrade tier.
+
 [[file:../recipes/flagship.yaml][flagship.yaml]] asks libresite to generate FIELDWORK, a fictional open-source systems and interface studio, as a complete static website. It exercises shared visual design, interior pages, original local artwork, progressive interactions, staged artifact checks and final review. The output belongs in your chosen directory; this repository ships the repeatable recipe, not a hand-built substitute for generator output.
 
 The direction is an editorial identity built from warm paper, near-black ink, vermilion accents, contrasting system typography and a recognizable contour/grid artwork family. Atlas and Common are explicitly illustrative projects. Case studies describe decisions and tradeoffs instead of fabricating clients or results. The prompts call for eight distinct compositions that share a visual system and a useful visitor journey.
@@ -29,7 +31,7 @@ The export is deliberately local. Nothing is sent, no contact details are invent
 
 * Run and inspect
 
-Use a configured provider account; generation invokes it eight times before retries. The recipe defaults to Codex with a 900-second deadline per call and two additional attempts on failure. Set =ai.provider= globally or add =ai= overrides under any generation step; =model= and =effort= remain provider-specific. Native checks make no AI calls.
+Use a configured provider account; generation invokes it eight times before retries. The recipe defaults to Codex with no per-call deadline and two additional attempts on failure. Set =ai.provider= globally or add =ai= overrides under any generation step; =model= and =effort= remain provider-specific. Native checks make no AI calls.
 
 #+begin_src bash
 make -j4

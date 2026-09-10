@@ -6,6 +6,10 @@
 #+updated: 2026-09-10T17:17:06-04:00
 #+version: 0.1.0
 
+* Flagship quality is the default
+
+The shared =system= contract applies flagship quality to every style and stage. It requires an authored visual identity, substantive route-specific content, complete interactions and interior pages, plus =docs/acceptance.org= and failing source/browser checks with honest execution status. Scope stays fixed by the recipe; a smaller scope is not permission to lower finish quality. =landing.yaml= now carries the full studio SKU. [[file:packages.org][Sold packages]] pin the exact catalog bytes, so existing sold jobs can keep the old contract while new orders adopt improvements. Native artifact predicates and archived pins do not certify browser behavior or visual quality.
+
 * One maintained prompt catalog
 
 =data/prompts.yaml= is the only runtime prompt source. Its =system= block defines the response protocol, working boundaries and shared implementation standard. =styles= contains visual directions. =stages= contains module task contracts. The resource manifest embeds this catalog into the library and CLI, so installed binaries do not depend on a source-relative path. Changes to the catalog trigger resource regeneration and relinking.
@@ -120,7 +124,7 @@ Four additional stage keys support larger sites without new C modules:
 
 =options.files= in the flagship example is a model-facing list of primary deliverables, not a filesystem write restriction or a new reserved schema field. Integrating scripts or shared classes can require updating previously created files. Only =validate.options.required= is enforced by the native presence validator. Intermediate checks catch omitted artifacts before later calls; they do not prove link correctness, visual quality or behavior.
 
-The full current project is resent to every stage. Prompt bytes are unlimited by default. Use =--max-prompt-bytes BYTES= for an explicit cap, or =0= to disable one. Byte counts include system, task framing and JSON escaping, but are not model token counts. Provider context windows still apply. The existing catalog and flagship retain conservative size guidance for checkpoint compatibility; their historical 100000-byte framing is not the runtime default. Recipe targets are advisory and never truncate output. You can change the CLI cap and resume without altering recipe/catalog identity. Splitting stages does not remove accumulated context; never delete checkpoint artifacts merely to bypass a context error.
+The full current project is resent to every stage. Prompt bytes are unlimited by default. Use =--max-prompt-bytes BYTES= for an explicit cap, or =0= to disable one. Byte counts include system, task framing and JSON escaping, but are not model token counts. Provider context windows still apply. Older archived catalogs may retain historical 100000-byte guidance; their pinned bytes stay unchanged, while the current catalog describes the actual unlimited default. Recipe targets are advisory and never truncate output. You can change the CLI cap and resume without altering recipe/catalog identity. Splitting stages does not remove accumulated context; never delete checkpoint artifacts merely to bypass a context error.
 
 Specify the product's actual audience, content, primary action, stack and constraints in the recipe. Split large work into coherent modules and use =instructions= to target one integration boundary at a time. Models cannot infer undocumented local APIs reliably: provide the relevant API contract as recipe requirements or a stage's instructions, or implement a deterministic native module. Avoid advertising a database or service until the generated project actually implements it.
 

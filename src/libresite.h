@@ -4,6 +4,7 @@
 #include "core/ls-recipe.h"
 #include "core/ls-context.h"
 #include "core/ls-prompts.h"
+#include "core/ls-package.h"
 #include "core/ls-pipeline.h"
 #include "model/ls-artifact.h"
 #include "interfaces/ls-provider.h"

@@ -1,23 +1,34 @@
-# Gates: revision mode
+# Gates: recipe SKUs
 
-OWNS: src/** data/prompts.yaml recipes/revision.yaml tests/** docs/** README.org skills/** Makefile GATES.md
+Scope: Ship six fixed-scope vertical packages, retain the C application SKU, raise default quality, and preserve sold inputs across catalog upgrades.
 
-Scope: Import an existing text project, apply a change brief incrementally, publish a new output, and merge Conventional Commits into master.
+- [x] G1: Six vertical recipes enforce their route and handoff contracts; the application stays c-glib with htmx/orm.
+  CHECK: bash tests/packages.sh build/release/libresite
+  EXPECT: PACKAGES VERIFIED
+  EVIDENCE: exit=0; shell=/bin/sh; cwd=/var/home/zach/source/projects/libresite/trees/recipe-skus; path=16a50ccf0eab/14 entries; EXPECT=matched; output-sha256=ffde0ed7bb92c6a569ade7d09ad8b3746196164edfa75344a5c9595c7192e67d; output-bytes=1154
 
-- [x] G1: Offline revision, failure, resume and regression tests pass without compiler warnings in release and debug builds.
+- [x] G2: Sealed recipes and catalogs round-trip without fingerprint drift and reject tampering; old packages resume after catalog changes.
+  CHECK: build/release/test-packages
+  EXPECT: End of package tests
+  EVIDENCE: exit=0; shell=/bin/sh; cwd=/var/home/zach/source/projects/libresite/trees/recipe-skus; path=16a50ccf0eab/14 entries; EXPECT=matched; output-sha256=2a927b4fabfe2e4ca042999691bbe24cd514f474e0d9a047fb9ac86e99470f22; output-bytes=650
+
+- [x] G3: Release and debug builds and regression tests pass without warnings; shell checks pass.
   CHECK: bash tests/verify.sh
   EXPECT: LIBRESITE VERIFIED
-  EVIDENCE: exit=0; shell=/bin/sh; cwd=/var/home/zach/source/projects/libresite/trees/feat-revision-mode; path=604a669fb015/14 entries; EXPECT=matched; output-sha256=fc4b5ff5db53a0fb3a396d0c9fd726b735fc1ac20a0e9dda79ae2f57d102d551; output-bytes=19
+  EVIDENCE: exit=0; shell=/bin/sh; cwd=/var/home/zach/source/projects/libresite/trees/recipe-skus; path=16a50ccf0eab/14 entries; EXPECT=matched; output-sha256=fc4b5ff5db53a0fb3a396d0c9fd726b735fc1ac20a0e9dda79ae2f57d102d551; output-bytes=19
 
-- [x] G2: Installed CLI and public API work outside the checkout.
+- [x] G4: Installed CLI, public API and plugins remain usable outside the checkout.
   CHECK: bash tests/install.sh
   EXPECT: INSTALL VERIFIED
-  EVIDENCE: exit=0; shell=/bin/sh; cwd=/var/home/zach/source/projects/libresite/trees/feat-revision-mode; path=604a669fb015/14 entries; EXPECT=matched; output-sha256=d115bf745910eeb033780fd360d3a46275cfda5b0cbd76acf663d36ec38f5988; output-bytes=1802
+  EVIDENCE: exit=0; shell=/bin/sh; cwd=/var/home/zach/source/projects/libresite/trees/recipe-skus; path=16a50ccf0eab/14 entries; EXPECT=matched; output-sha256=d57d7a61350216a64a6dd511303fdb8ada62cdce6c124f795d7dd16eb9a37ffe; output-bytes=3034
 
-- [x] G3: Ownership changes pass address and undefined behavior sanitizers.
+- [x] G5: The shared catalog sets flagship expectations for every recipe; SKU scope and pinning limits are documented.
+  EVIDENCE: Reviewed data/prompts.yaml shared defaults and docs/packages.org scope, exclusions, native-check limits and archived-generator requirements.
+
+- [ ] G6: Conventional Commits are merged to master with a clean tracked worktree.
+  EVIDENCE: pending
+
+- [ ] G7: Package ownership and recovery paths pass ASan and UBSan regression tests.
   CHECK: make DEBUG=1 ASAN=1 UBSAN=1 tests
-  EXPECT: CLI VERIFIED
-  EVIDENCE: exit=0; shell=/bin/sh; cwd=/var/home/zach/source/projects/libresite/trees/feat-revision-mode; path=604a669fb015/14 entries; EXPECT=matched; output-sha256=8f8709b389d397c657265531cd67c360a917264c5371d2cae99668dc92ef9ae3; output-bytes=86080
-
-- [x] G4: Documentation matches the implementation and Conventional Commits are merged into master.
-  EVIDENCE: Reviewed source import, transactional file operations, source-bound resume, executable intent, seed overlays, CLI mode compatibility and docs/revision.org against the final combined tree. G1-G3 passed after integrating master 112452e. Master was fast-forwarded to verified commit 428ad2f; git status was clean and git diff --check passed. Implementation commit 90f67d4 and integration/test commits use Conventional Commit subjects. Tests used controlled providers only; no live model or generated application execution is claimed.
+  EXPECT: REVISION VERIFIED
+  EVIDENCE: pending

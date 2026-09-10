@@ -7,6 +7,7 @@ struct _LsPrompts {
 	GObject parent_instance;
 	JsonNode *root;
 	gchar *digest;
+	gchar *source;
 	gsize max_bytes;
 };
 G_DEFINE_TYPE(LsPrompts, ls_prompts, G_TYPE_OBJECT)
@@ -15,6 +16,7 @@ ls_prompts_finalize(GObject *object){
 	LsPrompts *self = LS_PROMPTS(object);
 	g_clear_pointer(&self->root, json_node_unref);
 	g_free(self->digest);
+	g_free(self->source);
 	G_OBJECT_CLASS(ls_prompts_parent_class)->finalize(object);
 }
 static void
@@ -33,11 +35,7 @@ ls_prompts_set_max_bytes(LsPrompts *self, gsize max_bytes){
 /* Validate every catalog entry once; typos fail even in unused profiles. */
 LsPrompts *
 ls_prompts_new(const gchar *path, GError **error){
-	g_autoptr(LsPrompts) self = g_object_new(LS_TYPE_PROMPTS, NULL);
 	g_autofree gchar *text = NULL;
-	JsonObject *root;
-	const gchar *groups[] = {"styles", "stages", "stacks"};
-	guint i;
 	if (path != NULL)
 		text = ls_read_text(path, error);
 	else {
@@ -52,6 +50,17 @@ ls_prompts_new(const gchar *path, GError **error){
 	}
 	if (text == NULL)
 		return NULL;
+	return ls_prompts_new_from_yaml(text, error);
+}
+
+/* Parse the same bytes that were verified by a package loader; never reopen a
+ * catalog between its checksum check and its use. */
+LsPrompts *
+ls_prompts_new_from_yaml(const gchar *text, GError **error){
+	g_autoptr(LsPrompts) self = g_object_new(LS_TYPE_PROMPTS, NULL);
+	JsonObject *root;
+	const gchar *groups[] = {"styles", "stages", "stacks"};
+	guint i;
 	self->root = ls_yaml_parse(text, error);
 	if (self->root == NULL)
 		return NULL;
@@ -89,6 +98,7 @@ ls_prompts_new(const gchar *path, GError **error){
 		}
 	}
 	self->digest = g_compute_checksum_for_string(G_CHECKSUM_SHA256, text, -1);
+	self->source = g_strdup(text);
 	return (LsPrompts *)g_steal_pointer(&self);
 invalid:
 	g_set_error_literal(
@@ -107,6 +117,11 @@ ls_prompts_get_system(LsPrompts *self){
 const gchar *
 ls_prompts_get_digest(LsPrompts *self){
 	return self->digest;
+}
+/* Preserve byte identity, including comments and whitespace, across releases. */
+const gchar *
+ls_prompts_get_source(LsPrompts *self){
+	return self->source;
 }
 /* Serialize task data separately from instructions. Untrusted site text cannot
  * become a template directive, and an oversized context never truncates silently. */

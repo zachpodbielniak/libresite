@@ -8,6 +8,8 @@
 
 * Commands
 
+For sold jobs, =--seal-package DIR= archives an approved =-r FILE= recipe and its selected catalog without AI calls. Generate or resume with =--package DIR -o OUTPUT [--resume]= to verify both SHA-256 pins and use the archived inputs. =--package= cannot be combined with recipe/catalog overrides. Archive retention and compatible generator/plugin versions remain operator responsibilities. See [[file:packages.org][package catalog and long-term resume]].
+
 =--unlimited= disables provider time and requested output budgets, overriding recipe values and =--timeout=. It is execution-only, so an unchanged old recipe can resume its checkpoint with unlimited budgets. Bundled recipes explicitly set =timeout: 0= and =max_tokens: 0= for testing. Prompt-size limits remain opt-in. Cancellation and finite retry counts still work; this setting does not bypass artifact validation. Provider-native model limits remain outside libresite's control.
 
 Changing a bundled recipe's budget values changes its fingerprint. For the active Reading Room workspace, the original recipe was preserved as =example-site.libresite-work/recipe-before-unlimited.yaml=. Resume that checkpoint with:

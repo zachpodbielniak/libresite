@@ -79,9 +79,26 @@ Prompt size is unlimited by default. Use =--max-prompt-bytes BYTES= only when yo
 
 ** Choose a recipe
 
+The [[file:docs/packages.org][sold package catalog]] provides =trades=, =professional-services=, =restaurant=, =nonprofit=, =studio= and =small-saas= vertical site SKUs, plus the =c-glib= application SKU. Each has a fixed page/workflow scope and native acceptance predicates. Flagship quality is the shared catalog default; =landing.yaml= now delivers the complete studio package. Small SaaS marketing and working application implementation are separate scopes.
+
+Before generating a sold order, seal its approved recipe and exact selected catalog. The archive carries SKU release metadata and SHA-256 pins, so future resume does not depend on the catalog installed that year:
+
+#+begin_src bash
+./build/release/libresite -r recipes/trades.yaml --seal-package ./order-2026-001
+./build/release/libresite --package ./order-2026-001 -o ./client-site
+./build/release/libresite --package ./order-2026-001 -o ./client-site --resume
+#+end_src
+
+Replace illustrative business facts with approved client inputs before sealing a real sale. Archive the package and checkpoint together; preserve compatible generator/plugin versions separately. Sealing pins inputs and scope, not model output or verified visual quality.
+
 | Recipe | Result |
 |--------+--------|
-| [[file:recipes/landing.yaml][landing.yaml]] | Editorial static studio site with product/design/review documents |
+| [[file:recipes/landing.yaml][landing.yaml]] / [[file:recipes/studio.yaml][studio.yaml]] | Full eight-page studio SKU with route, interaction and handoff acceptance |
+| [[file:recipes/trades.yaml][trades.yaml]] | Seven-page trades SKU and local estimate worksheet |
+| [[file:recipes/professional-services.yaml][professional-services.yaml]] | Seven-page consultancy SKU and local engagement brief |
+| [[file:recipes/restaurant.yaml][restaurant.yaml]] | Seven-page restaurant SKU with HTML menu and category filters |
+| [[file:recipes/nonprofit.yaml][nonprofit.yaml]] | Seven-page nonprofit SKU with local volunteer-interest export |
+| [[file:recipes/small-saas.yaml][small-saas.yaml]] | Seven-page SaaS marketing SKU with a local release-note walkthrough |
 | [[file:recipes/checked-landing.yaml][checked-landing.yaml]] | Static studio site with deterministic content and byte-size acceptance checks |
 | [[file:recipes/copy-locked-landing.yaml][copy-locked-landing.yaml]] | Fictional plumber example locking approved sentences and the call destination |
 | [[file:recipes/flagship.yaml][flagship.yaml]] | FIELDWORK: eight-page studio, two case studies, journal, work filters and local project-brief export |
@@ -90,7 +107,7 @@ Prompt size is unlimited by default. Use =--max-prompt-bytes BYTES= only when yo
 
 For new recipes, fill =site.pages=, =offers=, =contact=, =brand=, =copy_lock= and =languages= as shown in [[file:recipes/structured.yaml][structured.yaml]]. A platform can submit those fields with =libresite --from-form form.json > site.yaml= or use the library form/serialization API; see [[file:docs/structured-recipes.org][structured recipes and form integration]]. Legacy =site.brief= recipes remain supported. Choose the requested stack and design profile: =editorial=, =minimalist=, =industrial=, =cinematic= or =application=. Provider model identifiers are passed through to ai-glib; example model aliases are examples, not a promise of account availability.
 
-For C applications select =site.stack: c-glib= to supply pinned GitLab dependency setup, verified library API context, YAML runtime configuration, HTMX progressive enhancement, SQLite first-start initialization and optional provider bootstrap SQL. The [[file:docs/c-application.org][C application guide]] explains output artifacts, Fedora packages and verification limits. This stack profile is independent of visual style and does not add ORM/HTTP runtime dependencies to the builder.
+The application SKU requires =site.stack: c-glib= to supply pinned GitLab dependency setup, verified library API context, YAML runtime configuration, HTMX progressive enhancement, SQLite first-start initialization and optional provider bootstrap SQL. React/Tailwind requests require an explicitly selected plugin or different generator and a separate scope; they do not add stacks to the supported application SKU. The [[file:docs/c-application.org][C application guide]] explains output artifacts, Fedora packages and verification limits. This stack profile is independent of visual style and does not add ORM/HTTP runtime dependencies to the builder.
 
 ** Generate the flagship site
 
@@ -105,14 +122,14 @@ bash ./fieldwork-site/tests/check.sh
 python3 -m http.server 8000 --bind 127.0.0.1 --directory ./fieldwork-site
 #+end_src
 
-Visit =http://127.0.0.1:8000=. The [[file:docs/flagship.org][flagship guide]] describes the routes, staged generation, local-only interactions and browser acceptance procedure. This recipe makes eight AI calls before retries; budget more time than for the landing example. Prompts specify the visual standard; offline tests cannot certify the generated design.
+Visit =http://127.0.0.1:8000=. The [[file:docs/flagship.org][flagship guide]] describes the routes, staged generation, local-only interactions and browser acceptance procedure. This recipe and the default studio SKU make eight AI calls before retries. Prompts specify the shared visual standard; offline tests cannot certify the generated design.
 
 ** Edit prompts in one place
 
 [[file:data/prompts.yaml][data/prompts.yaml]] holds the shared system instructions, design profiles and stage contracts. It is embedded with GResource at build time and can be replaced without recompilation:
 
 #+begin_src bash
-./build/release/libresite -r recipes/landing.yaml --prompts data/prompts.yaml --preview frontend
+./build/release/libresite -r recipes/landing.yaml --prompts data/prompts.yaml --preview foundation
 #+end_src
 
 The design profiles distill the design skills under =~/.agents/skills/= into consistent, runnable guidance. Snapshots and provenance ship under =data/design-references/= and [[file:docs/prompts.org][prompts.org]]. The installed binary works without the source checkout or a personal skills directory.
@@ -122,6 +139,8 @@ The design profiles distill the design skills under =~/.agents/skills/= into con
 Repository skills live in [[file:skills/libresite-landing/SKILL.md][skills/libresite-landing]] and [[file:skills/libresite-application/SKILL.md][skills/libresite-application]]. They teach agents to turn a concrete brief into a validated recipe, inspect prompts and execute the pipeline. An agent can read these files directly; normal skill installation/discovery is optional.
 
 * Documentation
+
+- [[file:docs/packages.org][Sold SKU catalog, fixed scopes and archived recipe/catalog pins]]
 
 - [[file:docs/copy-lock.org][Copy-lock client sentences and contact details]]
 - [[file:docs/recipe-format.org][Recipe schema and per-step settings]]

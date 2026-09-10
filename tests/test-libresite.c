@@ -868,6 +868,37 @@ stack_catalogs(void){
 	remove_tree(temp);
 }
 
+/* Presence tests satisfy the recipe's current literal/size predicates first.
+ * Dedicated predicate tests separately prove that those checks reject defects. */
+static gchar *
+acceptance_sentinel(JsonObject *acceptance, const gchar *path){
+	JsonObject *options = json_object_get_object_member(acceptance, "options");
+	JsonNode *node = json_object_get_member(options, "checks");
+	g_autoptr(GString) text = g_string_new("Fixture");
+	g_autoptr(JsonNode) value = json_node_new(JSON_NODE_VALUE);
+	guint i, j;
+	if (node != NULL) {
+		JsonArray *checks = json_node_get_array(node);
+		for (i = 0; i < json_array_get_length(checks); i++) {
+			JsonObject *check = json_array_get_object_element(checks, i);
+			if (!g_str_equal(path, ls_string(check, "path")))
+				continue;
+			if (json_object_has_member(check, "contains")) {
+				JsonArray *contains = json_object_get_array_member(check, "contains");
+				for (j = 0; j < json_array_get_length(contains); j++)
+					g_string_append_printf(text, " %s", json_array_get_string_element(contains, j));
+			}
+			if (json_object_has_member(check, "min_bytes")) {
+				gsize minimum = (gsize)json_object_get_int_member(check, "min_bytes");
+				while (text->len < minimum)
+					g_string_append_c(text, ' ');
+			}
+		}
+	}
+	json_node_set_string(value, text->str);
+	return ls_json_encode(value);
+}
+
 /* All stages receive verified API context; the demo rejects each missing or
  * empty required file. These sentinel bundles test presence, not app quality. */
 static void
@@ -916,10 +947,12 @@ application_stack_artifacts(void){
 		gboolean first = TRUE;
 		for (j = 0; j < json_array_get_length(required); j++) {
 			gboolean affected = i > 0 && j == (i - 1) / 2;
+			g_autofree gchar *content = acceptance_sentinel(acceptance,
+				json_array_get_string_element(required, j));
 			if (affected && i % 2 == 1)
 				continue;
-			g_string_append_printf(artifact_bundle, "%s{\"path\":\"%s\",\"content\":\"%s\"}",
-				first ? "" : ",", json_array_get_string_element(required, j), affected ? "" : "sentinel");
+			g_string_append_printf(artifact_bundle, "%s{\"path\":\"%s\",\"content\":%s}",
+				first ? "" : ",", json_array_get_string_element(required, j), affected ? "\"\"" : content);
 			first = FALSE;
 		}
 		g_string_append(artifact_bundle, "]}");
@@ -948,7 +981,6 @@ seo_artifacts(gconstpointer data){
 	g_autoptr(LsRecipe) recipe = NULL;
 	g_autoptr(LsPrompts) prompts = ls_prompts_new(NULL, NULL);
 	g_autoptr(LsStep) validator = g_object_new(LS_TYPE_VALIDATE_STEP, NULL);
-	g_autofree gchar *padding = g_strnfill(600, ' ');
 	JsonArray *steps;
 	JsonObject *acceptance;
 	JsonArray *required;
@@ -978,23 +1010,13 @@ seo_artifacts(gconstpointer data){
 		gboolean first = TRUE;
 		for (j = 0; j < json_array_get_length(required); j++) {
 			const gchar *path = json_array_get_string_element(required, j);
+			g_autofree gchar *content = acceptance_sentinel(acceptance, path);
 			gboolean affected = i > 0 && g_str_equal(path, paths[(i - 1) / 3]);
 			guint variant = i > 0 ? (i - 1) % 3 : 0;
 			if (affected && variant == 0)
 				continue;
-			g_string_append_printf(candidate, "%s{\"path\":\"%s\",\"content\":\"", first ? "" : ",", path);
-			if (!affected) {
-				/* The checked landing also requires these exact literal tokens. */
-				g_string_append(candidate,
-					"<html lang=\\\"en\\\"><title>Fixture</title>"
-					"<meta name=\\\"viewport\\\"><meta name=\\\"description\\\">"
-					"<meta property=\\\"og:title\\\"><meta name=\\\"twitter:card\\\">"
-					"<main>noindex</main></html> :focus-visible prefers-reduced-motion #+title:");
-				g_string_append(candidate, padding);
-			} else if (variant == 2) {
-				g_string_append(candidate, " \\n\\t");
-			}
-			g_string_append(candidate, "\"}");
+			g_string_append_printf(candidate, "%s{\"path\":\"%s\",\"content\":%s}",
+				first ? "" : ",", path, !affected ? content : variant == 2 ? "\" \\n\\t\"" : "\"\"");
 			first = FALSE;
 		}
 		g_string_append(candidate, "]}");

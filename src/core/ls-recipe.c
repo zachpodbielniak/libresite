@@ -6,6 +6,7 @@
 struct _LsRecipe {
 	GObject parent_instance;
 	JsonNode *root;
+	gchar *source;
 	gint timeout;
 	gboolean unlimited;
 };
@@ -15,6 +16,7 @@ static void
 ls_recipe_finalize(GObject *object){
 	LsRecipe *self = LS_RECIPE(object);
 	g_clear_pointer(&self->root, json_node_unref);
+	g_free(self->source);
 	G_OBJECT_CLASS(ls_recipe_parent_class)->finalize(object);
 }
 static void
@@ -293,7 +295,7 @@ ls_recipe_new(const gchar *yaml, GError **error){
 	if (!JSON_NODE_HOLDS_OBJECT(self->root))
 		goto invalid_structure;
 	root = json_node_get_object(self->root);
-	if (!ls_object_keys(root, "|version|name|site|ai|pipeline|seed_artifacts|", error) ||
+	if (!ls_object_keys(root, "|version|name|site|ai|pipeline|seed_artifacts|package|", error) ||
 		!text_member(root, "name", TRUE, error) || !object_member(root, "site", error) ||
 		!object_member(root, "pipeline", error))
 		return NULL;
@@ -306,6 +308,32 @@ ls_recipe_new(const gchar *yaml, GError **error){
 	site = json_object_get_object_member(root, "site");
 	if (!validate_site(site, error))
 		return NULL;
+	/* Sold applications have one supported stack. Other generators belong at
+	 * the plugin boundary, not in the application SKU's support contract. */
+	if (json_object_has_member(root, "package")) {
+		JsonObject *package;
+		const gchar *kind;
+		if (!object_member(root, "package", error))
+			return NULL;
+		package = json_object_get_object_member(root, "package");
+		if (!ls_object_keys(package, "|sku|release|kind|", error) ||
+			!text_member(package, "sku", TRUE, error) ||
+			!text_member(package, "release", TRUE, error) ||
+			!text_member(package, "kind", TRUE, error))
+			return NULL;
+		kind = ls_string(package, "kind");
+		if (!g_regex_match_simple("^[a-z][a-z0-9-]{0,63}\\z", ls_string(package, "sku"), 0, 0) ||
+			!g_regex_match_simple("^[0-9]+\\.[0-9]+\\.[0-9]+\\z", ls_string(package, "release"), 0, 0) ||
+			(!g_str_equal(kind, "site") && !g_str_equal(kind, "application")) ||
+			(g_str_equal(ls_string(package, "sku"), "application") && !g_str_equal(kind, "application")) ||
+			(g_str_equal(kind, "application") && g_strcmp0(ls_string(site, "stack"), "c-glib") != 0) ||
+			(g_str_equal(kind, "site") && ls_string(site, "stack") != NULL)) {
+			g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID,
+				"package requires a lowercase SKU, numeric major.minor.patch release, and kind site "
+				"(no stack) or application (stack c-glib)");
+			return NULL;
+		}
+	}
 	if (json_object_has_member(root, "ai") &&
 		(!object_member(root, "ai", error) ||
 		 !validate_ai(json_object_get_object_member(root, "ai"), error)))
@@ -343,6 +371,20 @@ ls_recipe_new(const gchar *yaml, GError **error){
 		if (json_object_has_member(step, "options") && !object_member(step, "options", error))
 			return NULL;
 	}
+	/* A sold scope ends with actual native acceptance, not a model's review.
+	 * The pipeline validates the complete predicate schema before execution. */
+	if (json_object_has_member(root, "package")) {
+		JsonObject *last = json_array_get_object_element(steps, json_array_get_length(steps) - 1);
+		JsonObject *options = json_object_has_member(last, "options")
+			? json_object_get_object_member(last, "options") : NULL;
+		JsonNode *checks = options != NULL ? json_object_get_member(options, "checks") : NULL;
+		if (g_strcmp0(ls_string(last, "type"), "validate") != 0 || checks == NULL ||
+			!JSON_NODE_HOLDS_ARRAY(checks) || json_array_get_length(json_node_get_array(checks)) == 0) {
+			g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID,
+				"Sold package must end with native validate acceptance and nonempty checks");
+			return NULL;
+		}
+	}
 	/* Reuse the artifact transaction validator, including path/size conflicts,
 	 * before callers can create a workspace or contact a provider. */
 	{
@@ -350,6 +392,8 @@ ls_recipe_new(const gchar *yaml, GError **error){
 		if (seeds == NULL)
 			return NULL;
 	}
+	/* Retain supplied bytes instead of depending on future YAML serializers. */
+	self->source = g_strdup(yaml);
 	return (LsRecipe *)g_steal_pointer(&self);
 invalid_structure:
 	g_set_error_literal(
@@ -393,6 +437,10 @@ ls_recipe_seed_context(LsRecipe *self, LsContext *context, GError **error){
 JsonObject *
 ls_recipe_get_root(LsRecipe *self){
 	return json_node_get_object(self->root);
+}
+const gchar *
+ls_recipe_get_source(LsRecipe *self){
+	return self->source;
 }
 JsonArray *
 ls_recipe_get_steps(LsRecipe *self){

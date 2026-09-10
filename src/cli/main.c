@@ -155,6 +155,7 @@ int
 main(int argc, char **argv){
 	g_autofree gchar *recipe_path = NULL, *output = NULL, *catalog = NULL, *preview = NULL;
 	g_autofree gchar *form_path = NULL;
+	g_autofree gchar *package_path = NULL, *seal_path = NULL;
 	gboolean emit_yaml = FALSE;
 	g_auto(GStrv) plugins = NULL;
 	gint64 max_prompt_bytes = 0;
@@ -172,6 +173,10 @@ main(int argc, char **argv){
 	g_autofree gchar *project = NULL;
 	g_autoptr(LsContext) preview_context = NULL;
 	GOptionEntry entries[] = {
+		{"package", 0, 0, G_OPTION_ARG_FILENAME, &package_path,
+		 "Load a sealed recipe and catalog, verifying both digests", "DIR"},
+		{"seal-package", 0, 0, G_OPTION_ARG_FILENAME, &seal_path,
+		 "Archive recipe and catalog as a new sold package without generation", "DIR"},
 		{"revise", 0, 0, G_OPTION_ARG_FILENAME, &project,
 		 "Load an existing text project; site.brief describes the changes", "DIR"},
 
@@ -241,7 +246,10 @@ main(int argc, char **argv){
 	g_option_context_add_main_entries(options, entries, NULL);
 	g_option_context_set_description(
 		options,
-		"Examples:\n  libresite --from-form form.json > site.yaml\n"
+		"Examples:\n  libresite -r recipes/trades.yaml --seal-package ./sale-2026\n"
+		"  libresite --package ./sale-2026 -o ./client-site\n"
+		"  libresite --package ./sale-2026 -o ./client-site --resume\n"
+		"  libresite --from-form form.json > site.yaml\n"
 		"  libresite -r site.yaml --emit-yaml\n  libresite -r recipes/landing.yaml --validate\n  libresite -r "
 		"recipes/landing.yaml --plan\n  libresite -r recipes/landing.yaml --preview design\n  "
 		"libresite -r recipes/landing.yaml -o ./my-site\n  libresite -r recipes/landing.yaml -o "
@@ -277,12 +285,23 @@ main(int argc, char **argv){
 	}
 	if (form_path != NULL) {
 		if (recipe_path != NULL || output != NULL || project != NULL ||
-			resume || validate || plan || preview != NULL) {
+			package_path != NULL || seal_path != NULL || resume || validate || plan || preview != NULL) {
 			g_set_error_literal(&error, LS_ERROR, LS_ERROR_INVALID,
 				"--from-form emits YAML; do not combine with --recipe or generation/inspection modes");
 			goto fail;
 		}
 		emit_yaml = TRUE;
+	}
+	/* A sale always loads its own catalog, never today's embedded default or
+	 * a caller override. Revision sources/plugins need their own archive pins. */
+	if ((package_path != NULL && (recipe_path != NULL || catalog != NULL ||
+		form_path != NULL || seal_path != NULL)) ||
+		(seal_path != NULL && (output != NULL || project != NULL || resume ||
+		validate || plan || preview != NULL || emit_yaml))) {
+		g_set_error_literal(&error, LS_ERROR, LS_ERROR_INVALID,
+			"--package excludes --recipe/--prompts/--from-form/--seal-package; "
+			"--seal-package cannot be combined with output, revision or inspection modes");
+		goto fail;
 	}
 	if ((guint)validate + (guint)plan + (guint)(preview != NULL) + (guint)emit_yaml > 1 ||
 		(emit_yaml && (output != NULL || project != NULL || resume))) {
@@ -291,24 +310,29 @@ main(int argc, char **argv){
 		);
 		goto fail;
 	}
-	if (recipe_path == NULL && form_path == NULL) {
-		g_set_error_literal(&error, LS_ERROR, LS_ERROR_INVALID, "--recipe is required; see --help");
+	if (recipe_path == NULL && form_path == NULL && package_path == NULL) {
+		g_set_error_literal(&error, LS_ERROR, LS_ERROR_INVALID, "--recipe or --package is required; see --help");
 		goto fail;
 	}
-	yaml = ls_read_text(form_path != NULL ? form_path : recipe_path, &error);
-	if (yaml == NULL)
-		goto fail;
 	if (timeout < -1 || timeout > 86400) {
 		g_set_error_literal(&error, LS_ERROR, LS_ERROR_INVALID,
 			"--timeout must be between 0 and 86400 seconds");
 		goto fail;
 	}
-	recipe = form_path != NULL ? ls_recipe_from_form(yaml, &error) : ls_recipe_new(yaml, &error);
+	if (package_path != NULL) {
+		if (!ls_package_load(package_path, &recipe, &prompts, &error))
+			goto fail;
+	} else {
+		yaml = ls_read_text(form_path != NULL ? form_path : recipe_path, &error);
+		if (yaml == NULL)
+			goto fail;
+		recipe = form_path != NULL ? ls_recipe_from_form(yaml, &error) : ls_recipe_new(yaml, &error);
+		prompts = recipe != NULL ? ls_prompts_new(catalog, &error) : NULL;
+	}
 	if (recipe != NULL) {
 		ls_recipe_set_timeout(recipe, timeout);
 		ls_recipe_set_unlimited(recipe, unlimited);
 	}
-	prompts = recipe != NULL ? ls_prompts_new(catalog, &error) : NULL;
 	if (prompts == NULL)
 		goto fail;
 	if (max_prompt_bytes < 0 || (guint64)max_prompt_bytes > G_MAXSIZE) {
@@ -322,6 +346,12 @@ main(int argc, char **argv){
 	pipeline = ls_pipeline_new(LS_PROVIDER(provider), prompts);
 	if (!load_plugins(pipeline, plugins, &error) || !ls_pipeline_validate(pipeline, recipe, &error))
 		goto fail;
+	if (seal_path != NULL) {
+		if (!ls_package_save(seal_path, recipe, prompts, &error))
+			goto fail;
+		g_print("Sealed package: %s\nCatalog SHA-256: %s\n", seal_path, ls_prompts_get_digest(prompts));
+		return 0;
+	}
 	/* Inspection uses the same import and rendering boundaries as execution. */
 	if (project != NULL && (validate || plan || preview != NULL)) {
 		preview_context = ls_context_import(project, NULL, &error);

@@ -13,6 +13,12 @@ G_DECLARE_FINAL_TYPE(LsRecipe, ls_recipe, LS, RECIPE, GObject)
  */
 LsRecipe *ls_recipe_new(const gchar *yaml, GError **error);
 /**
+ * ls_recipe_get_source:
+ * @self: a recipe
+ * Returns: (transfer none): original YAML text, excluding execution overrides
+ */
+const gchar *ls_recipe_get_source(LsRecipe *self);
+/**
  * ls_recipe_from_form:
  * @json: UTF-8 JSON form with name, site and optional ai/pipeline/seed_artifacts
  * @error: return location for an error

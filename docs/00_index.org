@@ -8,6 +8,8 @@
 
 * Guides
 
+- [[file:packages.org][Sold SKU catalog, fixed scopes and archived recipe/catalog pins]]
+
 - [[file:revision.org][Existing-project revisions and incremental file operations]]
 
 - [[file:recipe-format.org][Recipe reference]]

@@ -13,6 +13,19 @@ G_DECLARE_FINAL_TYPE(LsPrompts, ls_prompts, LS, PROMPTS, GObject)
  */
 LsPrompts *ls_prompts_new(const gchar *path, GError **error);
 /**
+ * ls_prompts_new_from_yaml:
+ * @yaml: complete UTF-8 catalog text
+ * @error: return location for an error
+ * Returns: (transfer full) (nullable): validated catalog owning a copy of @yaml
+ */
+LsPrompts *ls_prompts_new_from_yaml(const gchar *yaml, GError **error);
+/**
+ * ls_prompts_get_source:
+ * @self: a catalog
+ * Returns: (transfer none): exact original YAML bytes used for its digest
+ */
+const gchar *ls_prompts_get_source(LsPrompts *self);
+/**
  * ls_prompts_set_max_bytes:
  * @self: a catalog
  * @max_bytes: system plus task byte limit, or zero for unlimited (the default)
