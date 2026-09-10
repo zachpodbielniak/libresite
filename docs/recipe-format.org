@@ -143,6 +143,8 @@ Duplicate JSON members, embedded NUL escapes and JSON nesting beyond 32 collecti
 
 * Deterministic artifact checks
 
+Client-supplied sentences and phone numbers should be copy-locked with =contains= rules on their intended artifacts; see [[file:copy-lock.org][copy-lock authoring, retry behavior and delivery review]] and [[file:../recipes/copy-locked-landing.yaml][the complete example]].
+
 Native =validate= steps accept optional =options.checks= alongside the mandatory =required= array. Required files must contain at least one non-whitespace Unicode character. All path lists reject duplicates. Each check applies to one exact safe relative path; the file must exist even if it is not listed in =required=.
 
 #+begin_src yaml

@@ -28,6 +28,7 @@ do
 		then
 			(cd /tmp && "$binary" --recipe "$recipe" --preview "$step") > "$test_dir/preview"
 			rg -q 'CURRENT PROJECT' "$test_dir/preview"
+			rg -Fq 'CLIENT COPY LOCK' "$test_dir/preview"
 			rg -q 'MOBILE AND DESKTOP DEFAULTS' "$test_dir/preview"
 			rg -q 'ACCESSIBILITY AND ARIA DEFAULTS' "$test_dir/preview"
 			rg -Fq 'FONT DEFAULTS' "$test_dir/preview"
@@ -54,6 +55,9 @@ YAML
 	(cd /tmp && "$binary" -r "$test_dir/responsive.yaml" \
 		--prompts "$test_dir/usr/share/libresite/data/prompts.yaml" --preview site) > "$test_dir/catalog"
 	cmp "$test_dir/embedded" "$test_dir/catalog"
+	# Installed and replacement catalogs preserve the client-copy contract.
+	rg -Fq 'CLIENT COPY LOCK' "$test_dir/embedded"
+	rg -Fq 'never only in comments, hidden elements or metadata' "$test_dir/embedded"
 	# Every style must receive the font source, override and offline contract.
 	rg -Fq 'https://fonts.bunny.net/css' "$test_dir/embedded"
 	rg -Fq 'requesting display=swap' "$test_dir/embedded"

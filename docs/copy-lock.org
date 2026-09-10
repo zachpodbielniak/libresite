@@ -1,0 +1,34 @@
+#+title: Lock client copy before generation
+#+description: Exact client sentences and contact details enforced with native contains checks
+#+authors: Zach Podbielniak
+#+categories: libresite, validation
+#+created: 2026-09-10T16:00:00-04:00
+#+updated: 2026-09-10T17:16:00-04:00
+#+version: 0.1.0
+
+* Authoritative copy
+
+Copy client-approved sentences verbatim into =validate.options.checks[].contains= for each artifact where they must appear. This is the existing native validator, not a new =site= field or a model's self-review. Keep context in =site.brief= or =site.requirements= and let the client resolve contradictory or missing facts before generation. Do not invent a plumber's number or silently normalize a supplied display number. Lock the confirmed telephone URI separately from its display sentence.
+
+#+begin_src yaml
+- id: acceptance
+  type: validate
+  options:
+    required: [index.html]
+    checks:
+      - path: index.html
+        contains:
+          - 'Call Example Plumbing at (202) 555-0147.'
+          - 'We serve Northbridge seven days a week.'
+          - 'href="tel:+12025550147"'
+#+end_src
+
+These are fictional fixture facts, not a real client's contact details. [[file:../recipes/copy-locked-landing.yaml][The complete example]] is runnable after replacing them with approved copy. Group all predicates for a path into one rule; duplicate paths are rejected. Add rules for every required page. Quote scalar strings, double embedded apostrophes in single-quoted YAML, and use =|-= for multiline literals without a trailing newline. Matching includes case, whitespace, Unicode and punctuation exactly. For markup-sensitive characters such as =&= or =<=, explicitly agree on the correctly HTML-escaped artifact literal while retaining the original visible sentence in the brief; native validation does not decode HTML entities or join text across tags.
+
+* Acceptance and retries
+
+Put the validator immediately after the last generative stage (including review) so a wrong digit or rewritten sentence rejects its isolated candidate and triggers bounded corrective retries. Include a final validator after any later stages that can change copy. All generation prompts receive the acceptance contract. Exhausted retries fail the run, leave the requested output absent and retain only the last successful checkpoint; =--resume= retries the failed generation with the same recipe and prompt catalog. Changing approved copy changes the recipe identity and requires a fresh output path.
+
+* Delivery review
+
+Native checks require every literal in each named source file. They do not prove that the sentence is visible, that all other numbers are correct, that a phone number belongs to the client, or that a click calls it. A correct string in a comment could pass. Inspect rendered sentences, all repeated contact details, actual call links, structured data and SEO configuration before delivery. Repeat this review on any prepared production output and after later edits: preparation and exported-site edits occur outside the builder's artifact checks. Preserve the approved copy and checks in generated =AGENTS.md=. Do not sell or deliver a site with an unresolved contact mismatch.

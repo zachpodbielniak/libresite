@@ -22,6 +22,23 @@ generate(LsProvider *provider, JsonObject *settings, const gchar *system,
 	(void)settings;
 	(void)system;
 	self->calls++;
+	/* Copy locks must reach the transport unchanged and reject a single wrong
+	 * digit even when the rest of the sentence and telephone URI are correct. */
+	if (self->mode >= 5) {
+		g_assert_nonnull(strstr(prompt, "Call Example Plumbing at (202) 555-0147."));
+		g_assert_nonnull(strstr(system, "CLIENT COPY LOCK"));
+		if (self->calls == 1)
+			return g_strdup("{\"files\":[{\"path\":\"index.html\",\"content\":"
+				"\"Call Example Plumbing at (202) 555-0148. href=\\\"tel:+12025550147\\\"\"},"
+				"{\"path\":\"rejected\",\"content\":\"draft\"}]}");
+		if (self->mode == 5) {
+			g_assert_nonnull(strstr(prompt, "PREVIOUS ATTEMPT REJECTED"));
+			g_assert_nonnull(strstr(prompt, "failed contains predicate 1"));
+		}
+		g_assert_null(strstr(prompt, "\"path\":\"rejected\""));
+		return g_strdup("{\"files\":[{\"path\":\"index.html\",\"content\":"
+			"\"Call Example Plumbing at (202) 555-0147. href=\\\"tel:+12025550147\\\"\"}]}");
+	}
 	if (self->mode >= 3) {
 		if (self->calls == 1)
 			return g_strdup("{\"files\":[{\"path\":\"index.html\",\"content\":\"TODO\"},{\"path\":\"rejected\",\"content\":\"draft\"}]}");
@@ -198,6 +215,44 @@ content_checks(void){
 	}
 }
 
+/* A sentence lock covers words, punctuation and digits; a separate URI lock
+ * catches a correct display number linked to the wrong destination. */
+static void
+copy_lock_checks(void){
+	const gchar *contents[] = {
+		"Call Example Plumbing at (202) 555-0147. href=\"tel:+12025550147\"",
+		"Call Example Plumbing at (202) 555-0148. href=\"tel:+12025550147\"",
+		"Phone Example Plumbing at (202) 555-0147. href=\"tel:+12025550147\"",
+		"Call Example Plumbing at (202) 555-0147! href=\"tel:+12025550147\"",
+		"Call Example Plumbing at (202) 555-0147. href=\"tel:+12025550148\"",
+		"href=\"tel:+12025550147\""
+	};
+	g_autoptr(JsonNode) config = ls_yaml_parse(
+		"options:\n  required: [index.html]\n  checks:\n    - path: index.html\n"
+		"      contains:\n        - 'Call Example Plumbing at (202) 555-0147.'\n"
+		"        - 'href=\"tel:+12025550147\"'\n", NULL);
+	g_autoptr(LsStep) step = g_object_new(LS_TYPE_VALIDATE_STEP, NULL);
+	guint i;
+	for (i = 0; i < G_N_ELEMENTS(contents); i++) {
+		g_autoptr(LsContext) context = ls_context_new();
+		g_autoptr(GError) error = NULL;
+		g_autofree gchar *escaped = g_strescape(contents[i], NULL);
+		g_autofree gchar *bundle = g_strdup_printf(
+			"{\"files\":[{\"path\":\"index.html\",\"content\":\"%s\"}]}", escaped);
+		g_assert_true(ls_context_apply(context, bundle, &error));
+		g_assert_no_error(error);
+		g_assert_cmpint(ls_step_execute(step, NULL, json_node_get_object(config),
+			NULL, context, NULL, NULL, &error), ==, i == 0);
+		if (i == 0)
+			g_assert_no_error(error);
+		else {
+			g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+			g_assert_nonnull(strstr(error->message, i == 4
+				? "contains predicate 2" : "contains predicate 1"));
+		}
+	}
+}
+
 /* Remove only this test's private temporary tree, including the Git repository
  * created during publication. Never follow links while descending. */
 static void
@@ -220,12 +275,18 @@ remove_tree(const gchar *path){
  * and only the corrected candidate reaches the published project/checkpoint. */
 static void
 content_retry(gconstpointer data){
-	gboolean resume = GPOINTER_TO_INT(data);
+	guint scenario = GPOINTER_TO_UINT(data);
+	gboolean resume = (scenario % 2) != 0;
+	gboolean copy_lock = scenario >= 2;
+	const gchar *expected = copy_lock
+		? "Call Example Plumbing at (202) 555-0147. href=\"tel:+12025550147\"" : "Ready";
 	g_autofree gchar *yaml = g_strdup_printf(
 		"version: 1\nname: retry\nsite: {brief: contract}\nai: {retries: %u}\npipeline:\n  steps:\n"
 		"    - {id: generate, type: frontend}\n"
 		"    - id: check\n      type: validate\n      options:\n        required: [index.html]\n"
-		"        checks: [{path: index.html, contains: [Ready], excludes: [TODO]}]\n", resume ? 0 : 1);
+		"        checks: [{path: index.html, contains: %s, excludes: [TODO]}]\n", resume ? 0 : 1,
+		copy_lock ? "['Call Example Plumbing at (202) 555-0147.', 'href=\"tel:+12025550147\"']"
+			: "[Ready]");
 	g_autoptr(LsRecipe) recipe = ls_recipe_new(yaml, NULL);
 	g_autoptr(LsPrompts) prompts = ls_prompts_new(NULL, NULL);
 	g_autoptr(GObject) provider = g_object_new(contract_provider_get_type(), NULL);
@@ -241,7 +302,7 @@ content_retry(gconstpointer data){
 	g_autofree gchar *work = g_strconcat(output, ".libresite-work", NULL);
 	g_autofree gchar *checkpoint = g_build_filename(work, "checkpoint.json", NULL);
 	g_autofree gchar *text = NULL;
-	((ContractProvider *)provider)->mode = resume ? 4 : 3;
+	((ContractProvider *)provider)->mode = (resume ? 4 : 3) + (copy_lock ? 2 : 0);
 	if (resume) {
 		g_autoptr(JsonNode) saved = NULL;
 		g_assert_false(ls_pipeline_run(pipeline, recipe, output, FALSE, NULL, &error));
@@ -260,7 +321,7 @@ content_retry(gconstpointer data){
 	g_assert_cmpuint(((ContractProvider *)provider)->calls, ==, 2);
 	g_assert_false(g_file_test(work, G_FILE_TEST_EXISTS));
 	g_assert_true(g_file_get_contents(index, &text, NULL, NULL));
-	g_assert_cmpstr(text, ==, "Ready");
+	g_assert_cmpstr(text, ==, expected);
 	g_assert_false(g_file_test(rejected, G_FILE_TEST_EXISTS));
 	g_clear_pointer(&text, g_free);
 	g_assert_true(g_file_get_contents(metadata, &text, NULL, NULL));
@@ -329,6 +390,9 @@ main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
 	g_test_add_func("/contracts/extensions", extension_contracts);
 	g_test_add_func("/contracts/content", content_checks);
+	g_test_add_func("/contracts/copy-lock/literals", copy_lock_checks);
+	g_test_add_data_func("/contracts/copy-lock/retry", GUINT_TO_POINTER(2), content_retry);
+	g_test_add_data_func("/contracts/copy-lock/resume", GUINT_TO_POINTER(3), content_retry);
 	g_test_add_func("/contracts/yaml-strings", yaml_strings);
 	g_test_add_data_func("/contracts/retry", GINT_TO_POINTER(FALSE), content_retry);
 	g_test_add_data_func("/contracts/resume", GINT_TO_POINTER(TRUE), content_retry);

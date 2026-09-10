@@ -73,6 +73,7 @@ Prompt size is unlimited by default. Use =--max-prompt-bytes BYTES= only when yo
 |--------+--------|
 | [[file:recipes/landing.yaml][landing.yaml]] | Editorial static studio site with product/design/review documents |
 | [[file:recipes/checked-landing.yaml][checked-landing.yaml]] | Static studio site with deterministic content and byte-size acceptance checks |
+| [[file:recipes/copy-locked-landing.yaml][copy-locked-landing.yaml]] | Fictional plumber example locking approved sentences and the call destination |
 | [[file:recipes/flagship.yaml][flagship.yaml]] | FIELDWORK: eight-page studio, two case studies, journal, work filters and local project-brief export |
 | [[file:recipes/application.yaml][application.yaml]] | GNU89 reading-list app with yaml-glib config, htmx-glib pages and orm-glib SQLite; optional PostgreSQL/MySQL |
 | [[file:recipes/mixed-providers.yaml][mixed-providers.yaml]] | Static portfolio demonstrating all five CLI adapters and step-specific models |
@@ -112,6 +113,7 @@ Repository skills live in [[file:skills/libresite-landing/SKILL.md][skills/libre
 
 * Documentation
 
+- [[file:docs/copy-lock.org][Copy-lock client sentences and contact details]]
 - [[file:docs/recipe-format.org][Recipe schema and per-step settings]]
 - [[file:docs/architecture.org][Architecture, ownership, signals and extension contracts]]
 - [[file:docs/prompts.org][Prompt organization and design provenance]]
