@@ -43,7 +43,14 @@ install: all
 	install -m644 $(OUTDIR)/libresite-1.0.pc $(DESTDIR)$(LIBDIR)/pkgconfig/
 	@for h in $(PUBLIC_HEADERS); do install -D -m644 $$h $(DESTDIR)$(INCLUDEDIR)/libresite-1.0/$${h#src/}; done
 	cp -R data recipes skills docs README.org LICENSE $(DESTDIR)$(DATADIR)/libresite/
+# ai-glib records mcp-glib/yaml-glib as nested gitlinks. A non-recursive
+# submodule checkout leaves those directories empty, and the inner make
+# then fails with "No rule to make target 'lib'".
 bundled-deps:
+	@if [ ! -f deps/yaml-glib/Makefile ] || [ ! -f deps/ai-glib/deps/mcp-glib/Makefile ] || [ ! -f deps/ai-glib/deps/yaml-glib/Makefile ]; then \
+		echo 'Initializing bundled git submodules...'; \
+		git submodule update --init --recursive deps/ai-glib deps/yaml-glib; \
+	fi
 	$(MAKE) -C deps/yaml-glib DEBUG=0 GIR=0 build/release/libyaml-glib-1.0.a
 	$(MAKE) -C deps/ai-glib DEBUG=0 GIR=0 static
 clean:

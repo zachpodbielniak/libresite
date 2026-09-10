@@ -1,6 +1,7 @@
 [submodule "deps/ai-glib"]
 	path = deps/ai-glib
 	url = git@git-ssh.podbielniak.com:zachpodbielniak/ai-glib.git
+	fetchRecurseSubmodules = true
 [submodule "deps/htmx-glib"]
 	path = deps/htmx-glib
 	url = git@git-ssh.podbielniak.com:zachpodbielniak/htmx-glib.git

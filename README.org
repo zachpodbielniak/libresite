@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: development, websites, ai, glib
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-09T20:00:00-04:00
+#+updated: 2026-09-09T22:30:00-04:00
 #+version: 0.1.0
 
 * Build a site from a recipe
@@ -16,7 +16,7 @@ The implementation is a reusable GLib/GObject library plus a CLI, with the =conf
 
 ** Build requirements
 
-Fedora packages for the builder: =gcc=, =make=, =pkgconf-pkg-config=, =glib2-devel=, =json-glib-devel=, =libsoup3-devel=, =libyaml-devel=, =libxml2-devel= and =libdex-devel=. Testing also uses =ShellCheck=, =ripgrep= and =coreutils=. The default builds the pinned dependencies from =deps/=; initialize their nested submodules first. Alternatively, =DEPS=system= uses compatible installed =ai-glib-1.0= and =yaml-glib-1.0= development builds. See [[file:docs/building.org][building.org]] for details.
+Fedora packages for the builder: =gcc=, =make=, =pkgconf-pkg-config=, =glib2-devel=, =json-glib-devel=, =libsoup3-devel=, =libyaml-devel=, =libxml2-devel= and =libdex-devel=. Testing also uses =ShellCheck=, =ripgrep= and =coreutils=. The default builds the pinned dependencies from =deps/=; a recursive submodule checkout is the documented first step, and =bundled-deps= initializes missing nested ai-glib gitlinks if you skip it. Alternatively, =DEPS=system= uses compatible installed =ai-glib-1.0= and =yaml-glib-1.0= development builds. See [[file:docs/building.org][building.org]] for details.
 
 On Immutablue/Hyacinth Macaw add missing packages to the image build. No host package installation or writable-/usr overlay is part of this project.
 
