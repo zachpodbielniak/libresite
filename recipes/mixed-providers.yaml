@@ -12,6 +12,9 @@ ai:
   retries: 1
 pipeline:
   steps:
+    - id: scaffold
+      type: scaffold
+      options: {profile: static}
     - id: brief
       type: brief
       ai:
@@ -38,4 +41,4 @@ pipeline:
     - id: acceptance
       type: validate
       options:
-        required: [index.html, styles.css, README.org, AGENTS.md, config/seo.yaml, docs/seo.org, tests/seo.sh, robots.txt, scripts/prepare-seo.sh]
+        required: [index.html, 404.html, styles.css, README.org, AGENTS.md, Makefile, privacy.html, terms.html, docs/contact.org, tests/scaffold.sh, config/seo.yaml, docs/seo.org, tests/seo.sh, robots.txt, scripts/prepare-seo.sh]

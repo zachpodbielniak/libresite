@@ -25,7 +25,7 @@ do
 	(cd /tmp && "$binary" --recipe "$recipe" --plan) > "$test_dir/plan"
 	while IFS=$'\t' read -r _ step module _ _
 	do
-		if [[ "$module" != validate ]]
+		if [[ "$module" != validate && "$module" != scaffold ]]
 		then
 			(cd /tmp && "$binary" --recipe "$recipe" --preview "$step") > "$test_dir/preview"
 			rg -q 'CURRENT PROJECT' "$test_dir/preview"
@@ -121,6 +121,7 @@ pipeline:
       type: validate
       options:
         required: [content/client.org, assets/logo.svg, brand.yaml, legal/terms.txt]
+    - {id: scaffold, type: scaffold}
     - {id: seed, type: seed}
     - id: acceptance
       type: validate
@@ -294,4 +295,5 @@ do
 		rg -q 'Plugin registration failed without an error' "$test_dir/broken.log"
 	fi
 done
+bash "$root/tests/scaffold.sh" "$binary"
 printf '%s\n' 'INSTALL VERIFIED'

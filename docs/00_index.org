@@ -11,6 +11,7 @@
 - [[file:revision.org][Existing-project revisions and incremental file operations]]
 
 - [[file:recipe-format.org][Recipe reference]]
+- [[file:scaffold.org][Native static scaffolding and contact contract]]
 - [[file:structured-recipes.org][Structured recipes, platform forms and YAML export]]
 - [[file:copy-lock.org][Lock approved client sentences and contact details]]
 - [[file:architecture.org][Architecture and extension API]]
