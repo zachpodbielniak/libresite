@@ -7,7 +7,7 @@ description: Turn a concrete landing-page, studio-site or portfolio brief into a
 
 Locate the libresite checkout or installed CLI. Read `docs/recipe-format.org` and `recipes/landing.yaml` from that checkout (installed copies are under `share/libresite`). Keep the user's audience, brand, supplied facts, assets, provider/model choices and output location authoritative.
 
-Create a dedicated recipe rather than modifying the shipped example. Put the product brief, audience, stack and accessibility requirements in `site`. Select `editorial`, `minimalist`, `industrial` or `cinematic` based on the brief. Use the smallest complete pipeline: brief, design, frontend, review, validate. The final native check should require the real output files, including the homepage, stylesheet, README and design/review documents.
+Create a dedicated recipe rather than modifying the shipped example. Put the product brief, audience, stack and accessibility requirements in `site`. Select `editorial`, `minimalist`, `industrial` or `cinematic` based on the brief. Use the smallest complete pipeline: brief, design, frontend, review, validate. The final native check should require the real output files, including the homepage, stylesheet, README, AGENTS.md and design/review documents. AGENTS.md tells a later agent how to preview, test and troubleshoot the generated site.
 
 Specify a real destination for each conversion action. Do not invent contact information, customers, testimonials or statistics. A static site should not imply that a signup or payment backend exists. Use local SVG artwork and licensed supplied assets; the builder's response protocol emits text files, not raster images.
 

@@ -41,6 +41,12 @@ do
 done
 "$binary" --recipe "$root/recipes/landing.yaml" --preview design > "$test_dir/preview"
 rg -q 'DESIGN DIRECTION' "$test_dir/preview"
+"$binary" --recipe "$root/recipes/application.yaml" --preview backend > "$test_dir/app-backend"
+rg -q 'localhost' "$test_dir/app-backend"
+rg -q 'AGENTS.md' "$test_dir/app-backend"
+rg -q 'intentionally rejected' "$test_dir/app-backend"
+rg -q 'AGENTS.md' "$root/recipes/application.yaml"
+rg -q 'localhost' "$root/recipes/application.yaml"
 for limit in -1 9223372036854775808 invalid
 do
 	if "$binary" -r "$root/recipes/flagship.yaml" --preview polish --max-prompt-bytes "$limit" > /dev/null 2>&1

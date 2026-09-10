@@ -35,7 +35,7 @@ make tests
 
 Generation requires an installed and authenticated CLI for the chosen provider: =codex=, =claude=, =grok=, =cursor-agent= or =agy=. Libresite uses ai-glib's adapters and provider-native defaults; it does not store API credentials. AI generation uses your provider account. The offline test suite does not make real model calls.
 
-Open a generated static =index.html= directly, or follow the output's =README.org= for application build/run instructions. From cmacs, =M-x compile= can run the builder, and =C-x C-f= opens the output's org documentation or source files.
+Open a generated static =index.html= directly, or follow the output's =README.org= and =AGENTS.md= for application build/run instructions. A loopback application must work from both =http://127.0.0.1:PORT/= and =http://localhost:PORT/=; the database file is created on first start. From cmacs, =M-x compile= can run the builder, and =C-x C-f= opens the output's org documentation or source files.
 
 ** Resume interrupted generation
 

@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, testing
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-09T23:10:00-04:00
+#+updated: 2026-09-10T12:00:00-04:00
 #+version: 0.1.0
 
 * Run checks
@@ -21,7 +21,7 @@ make DEBUG=1 ASAN=1 UBSAN=1 tests
 
 * Coverage
 
-GTest covers valid recipes, wrong types, unknown keys, duplicate YAML keys, document/alias/tag rejection, invalid scalar settings, malformed catalog replacements, unknown prompt/style/module preflight, JSON duplicate/NUL/nesting rejection, duplicate step IDs, per-provider default isolation, safe paths, immutable boxed copies, atomic bundle rejection, replacements, file/directory collisions, complete publication, stage signals, per-step model changes, resume after interruption, corrupt/mismatched checkpoints, cancellation, existing outputs, symlinked workspaces, workspace locks, registration contracts, malformed-output retry and prompt size limits.
+GTest covers valid recipes, wrong types, unknown keys, duplicate YAML keys, document/alias/tag rejection, invalid scalar settings, malformed catalog replacements, unknown prompt/style/module preflight, JSON duplicate/NUL/nesting rejection, duplicate step IDs, per-provider default isolation, safe paths, immutable boxed copies, atomic bundle rejection, replacements, file/directory collisions, complete publication, stage signals, per-step model changes, resume after interruption, corrupt/mismatched checkpoints, cancellation, existing outputs, symlinked workspaces, workspace locks, registration contracts, malformed-output retry, prompt size limits, and the bundled application loopback/AGENTS.md generation contract.
 
 The injected provider replaces only model transport; the real recipe parser, prompt renderer, step engine, artifact store, checkpointing and filesystem publication run end to end. This avoids vacuous tests that merely assert that a mock was called.
 
@@ -37,7 +37,9 @@ Acceptance regression tests exercise syntactically valid provider bundles that o
 
 Fixture success establishes the builder's deterministic behavior and its use of ai-glib protocol surfaces. It does not prove that every installed CLI version accepts the same flags, that a particular account has access to an example model, or that a live model will obey a prompt. This implementation has not been evaluated by paying for live generation across all five providers.
 
-The generated site's =validate= stage checks artifact existence and nonempty text. It is not a compiler, browser, HTML validator or accessibility checker. For a live acceptance run, create a new output with an authenticated provider, read its README and review report, compile/test its application, inspect narrow and wide viewports, follow the main workflow and verify keyboard/error states. Record actual evidence separately from model claims.
+The generated site's =validate= stage checks artifact existence and nonempty text. It is not a compiler, browser, HTML validator or accessibility checker. For a live acceptance run, create a new output with an authenticated provider, read its README, AGENTS.md and review report, compile/test its application, submit the primary form from both =http://127.0.0.1:PORT/= and =http://localhost:PORT/=, inspect narrow and wide viewports, follow the main workflow and verify keyboard/error states. Record actual evidence separately from model claims.
+
+GTest =/prompt/application-contracts= and CLI preview checks pin the loopback Host/Origin, =AGENTS.md= and first-start database instructions in the embedded catalog and =recipes/application.yaml=. They do not compile a generated application. A generated project's own HTTP tests must POST successfully with =Host: localhost:PORT=.
 
 * Adding tests
 

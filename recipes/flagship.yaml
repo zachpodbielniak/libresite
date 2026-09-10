@@ -103,6 +103,7 @@ pipeline:
           - assets/mark.svg
           - tests/check.sh
           - README.org
+          - AGENTS.md
           - docs/product.org
           - docs/design.org
           - docs/testing.org

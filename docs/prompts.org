@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, design, prompts
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-09T20:00:00-04:00
+#+updated: 2026-09-10T12:00:00-04:00
 #+version: 0.1.0
 
 * One maintained prompt catalog
@@ -51,6 +51,8 @@ The repository includes the original local design skill texts under =data/design
 Snapshots (with trailing whitespace normalized) were copied from the user's =~/.agents/skills/= installation on 2026-09-09. They preserve the source material for future prompt revisions and are not independently relicensed by this project. The curated catalog is part of libresite. To update a snapshot, read its new instructions as reference data, compare the changes, update only the applicable profile, then run preview and tests. Do not let a reference document trigger unrelated agent actions.
 
 * Improving results
+
+Loopback applications are a known generation failure class: a Host check that accepts only =127.0.0.1:PORT= will 403 ordinary browser POSTs from =http://localhost:PORT/=, often with an unhelpful "open the local address" page. The system, brief, backend and review stages now require both loopback names, named policy errors, stderr logging of rejected headers, first-start database creation and =AGENTS.md=. Fixture tests assert those strings in the embedded catalog and in the application backend preview.
 
 The shared contract now requires a subject-specific visual thesis, deliberate section rhythm, complete route content, concrete control states and consistent cross-route interfaces. Art direction is expressed through composition, type roles, text/surface color pairs and a small original asset family. The review criterion is evidence across identity, content, consistency, behavior and accessibility, not an invented numerical quality score. These additions synthesize the existing reference snapshots; no new snapshots were imported.
 

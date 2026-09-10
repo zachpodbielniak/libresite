@@ -38,4 +38,4 @@ pipeline:
     - id: acceptance
       type: validate
       options:
-        required: [index.html, styles.css, README.org]
+        required: [index.html, styles.css, README.org, AGENTS.md]

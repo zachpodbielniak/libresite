@@ -437,6 +437,63 @@ preflight_case(gconstpointer data){
 	g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
 }
 
+/* Bundled application generation must keep loopback Host aliases and AGENTS.md. */
+static void
+application_generation_contracts(void){
+	g_autoptr(GError) error = NULL;
+	g_autofree gchar *recipe_yaml = NULL;
+	g_autoptr(LsRecipe) recipe = NULL;
+	g_autoptr(LsPrompts) prompts = ls_prompts_new(NULL, NULL);
+	g_autoptr(LsContext) context = ls_context_new();
+	g_autofree gchar *prompt = NULL;
+	JsonArray *steps;
+	JsonObject *backend;
+	JsonObject *acceptance;
+	JsonArray *required;
+	gboolean saw_agents;
+	guint i;
+	guint j;
+
+	g_assert_true(g_file_get_contents("recipes/application.yaml", &recipe_yaml, NULL, NULL));
+	g_assert_nonnull(strstr(recipe_yaml, "AGENTS.md"));
+	g_assert_nonnull(strstr(recipe_yaml, "localhost"));
+	recipe = ls_recipe_new(recipe_yaml, &error);
+	g_assert_no_error(error);
+	g_assert_nonnull(strstr(ls_prompts_get_system(prompts), "AGENTS.md"));
+	g_assert_nonnull(strstr(ls_prompts_get_system(prompts), "localhost"));
+	g_assert_nonnull(strstr(ls_prompts_get_system(prompts), "do not require a pre-existing .db"));
+	backend = NULL;
+	acceptance = NULL;
+	steps = ls_recipe_get_steps(recipe);
+	for (i = 0; i < json_array_get_length(steps); i++) {
+		JsonObject *step = json_array_get_object_element(steps, i);
+		const gchar *id = json_object_get_string_member(step, "id");
+		if (g_strcmp0(id, "backend") == 0)
+			backend = step;
+		if (g_strcmp0(id, "acceptance") == 0)
+			acceptance = step;
+	}
+	g_assert_nonnull(backend);
+	g_assert_nonnull(acceptance);
+	required = json_object_get_array_member(json_object_get_object_member(acceptance, "options"), "required");
+	saw_agents = FALSE;
+	for (j = 0; j < json_array_get_length(required); j++) {
+		JsonNode *node = json_array_get_element(required, j);
+		const gchar *path = json_node_get_value_type(node) == G_TYPE_STRING
+			? json_node_get_string(node)
+			: NULL;
+		if (g_strcmp0(path, "AGENTS.md") == 0)
+			saw_agents = TRUE;
+	}
+	g_assert_true(saw_agents);
+	prompt = ls_prompts_render(prompts, recipe, backend, context, &error);
+	g_assert_no_error(error);
+	g_assert_nonnull(strstr(prompt, "localhost"));
+	g_assert_nonnull(strstr(prompt, "AGENTS.md"));
+	g_assert_nonnull(strstr(prompt, "127.0.0.1"));
+	g_assert_nonnull(strstr(prompt, "Do not generate a product that tells the user localhost is intentionally rejected"));
+}
+
 /* Replacement catalogs are checked using the same path as the installed CLI. */
 static void
 catalog_override(void){
@@ -550,6 +607,7 @@ main(int argc, char **argv){
 	g_test_add_func("/pipeline/registry", registry);
 	g_test_add_func("/json/limits", json_limits);
 	g_test_add_func("/prompt/catalog", catalog_override);
+	g_test_add_func("/prompt/application-contracts", application_generation_contracts);
 	g_test_add_data_func("/preflight/style", "style", preflight_case);
 	g_test_add_data_func("/preflight/prompt", "prompt", preflight_case);
 	g_test_add_data_func("/preflight/type", "type", preflight_case);
