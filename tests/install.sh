@@ -105,8 +105,17 @@ cat > "$test_dir/native.yaml" <<'YAML'
 version: 1
 name: native-test
 site: {brief: Test a native module}
+seed_artifacts:
+  - {path: content/client.org, content: 'Approved client copy'}
+  - {path: assets/logo.svg, content: '<svg/>'}
+  - {path: brand.yaml, content: 'color: blue'}
+  - {path: legal/terms.txt, content: 'Approved legal text'}
 pipeline:
   steps:
+    - id: initial-artifacts
+      type: validate
+      options:
+        required: [content/client.org, assets/logo.svg, brand.yaml, legal/terms.txt]
     - {id: seed, type: seed}
     - id: acceptance
       type: validate
@@ -116,6 +125,7 @@ pipeline:
 YAML
 (cd /tmp && "$binary" --plugin "$test_dir/seed.so" -r "$test_dir/native.yaml" -o "$test_dir/site")
 rg -q 'Native module' "$test_dir/site/index.html"
+rg -Fq 'Approved legal text' "$test_dir/site/legal/terms.txt"
 # The published directory is a standalone clean repository with one snapshot.
 test "$(git -C "$test_dir/site" rev-parse --show-toplevel)" = "$test_dir/site"
 test "$(git -C "$test_dir/site" branch --show-current)" = master

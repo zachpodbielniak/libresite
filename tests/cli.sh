@@ -10,6 +10,32 @@ root=$(realpath "$(dirname -- "${BASH_SOURCE[0]}")/..")
 test_dir=$(mktemp -d)
 # Only this script's newly-created temporary directory is removed.
 trap 'rm -rf -- "$test_dir"' EXIT
+# Seed contents must be visible from outside the checkout, and count toward
+# prompt limits during preflight before a workspace or provider can be used.
+cat > "$test_dir/seeds.yaml" <<'YAML'
+version: 1
+name: seeded-preview
+site: {brief: Use the supplied artifacts}
+seed_artifacts:
+  - {path: content/client.org, content: 'Approved client copy'}
+  - {path: assets/logo.svg, content: '<svg/>'}
+  - {path: brand.yaml, content: 'color: blue'}
+  - {path: legal/terms.txt, content: 'Approved legal text'}
+pipeline:
+  steps:
+    - {id: first, type: generate}
+YAML
+(cd /tmp && "$binary" -r "$test_dir/seeds.yaml" --preview first) > "$test_dir/seeds-preview"
+for text in 'Approved client copy' '<svg/>' 'color: blue' 'Approved legal text'
+do
+	rg -Fq "$text" "$test_dir/seeds-preview"
+done
+if "$binary" -r "$test_dir/seeds.yaml" -o "$test_dir/seed-output" \
+	--max-prompt-bytes 1 > "$test_dir/seed-limit" 2>&1
+then
+	exit 1
+fi
+[[ ! -e "$test_dir/seed-output.libresite-work" ]]
 "$binary" --help > "$test_dir/help"
 rg -q 'Examples:' "$test_dir/help"
 rg -q -- '--debug' "$test_dir/help"
