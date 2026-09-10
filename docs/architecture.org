@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, development
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-10T17:47:00-04:00
+#+updated: 2026-09-10T18:07:19-04:00
 #+version: 0.1.0
 
 * Components
