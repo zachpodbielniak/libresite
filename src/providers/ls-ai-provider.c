@@ -5,6 +5,7 @@
 #include <glib/gstdio.h>
 #include <stdarg.h>
 #include <string.h>
+GResource *ls_resources_get_resource(void);
 struct _LsAiProvider {
 	GObject parent_instance;
 	gboolean debug;
@@ -48,6 +49,7 @@ generate(
 	const gchar *model = ls_string(settings, "model");
 	const gchar *effort = ls_string(settings, "effort");
 	GList messages = {NULL, NULL, NULL};
+	GParamSpec *schema_property;
 	gboolean debug = LS_AI_PROVIDER(self)->debug;
 	gint64 started;
 	if (g_strcmp0(provider, "codex") == 0)
@@ -69,6 +71,19 @@ generate(
 			provider != NULL ? provider : "(missing)"
 		);
 		return NULL;
+	}
+	/* Claude Code and Antigravity expose this capability in pinned ai-glib.
+	 * Constrain the invocation; never strip narration from provider output. */
+	schema_property = g_object_class_find_property(G_OBJECT_GET_CLASS(client), "json-schema");
+	if (schema_property != NULL && G_PARAM_SPEC_VALUE_TYPE(schema_property) == G_TYPE_STRING &&
+		(schema_property->flags & G_PARAM_WRITABLE) != 0) {
+		g_autoptr(GBytes) bytes = g_resource_lookup_data(ls_resources_get_resource(),
+			"/org/libresite/file-bundle.schema.json", 0, error);
+		g_autofree gchar *schema = NULL;
+		if (bytes == NULL)
+			return NULL;
+		schema = g_strndup(g_bytes_get_data(bytes, NULL), g_bytes_get_size(bytes));
+		g_object_set(client, "json-schema", schema, NULL);
 	}
 	/* Unattended generation cannot answer TTY or stdin approval prompts.
 	 * Codex exec rejects --ask-for-approval; read-only plus never-ask still

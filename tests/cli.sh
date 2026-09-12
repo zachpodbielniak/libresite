@@ -110,7 +110,8 @@ export LS_TEST_ARGS="$test_dir/args" LS_TEST_INPUT="$test_dir/input"
 export LS_TEST_CWD="$test_dir/cwd"
 for provider in codex claude-code cursor grok-build antigravity
 do
-	export LS_TEST_PROVIDER="$provider"
+	export LS_TEST_PROVIDER="$provider" LS_TEST_REQUIRE_SCHEMA=1
+	export LS_TEST_SCHEMA="$test_dir/$provider-schema.json"
 	cat > "$test_dir/recipe.yaml" <<YAML
 version: 1
 name: adapter-test
@@ -154,6 +155,7 @@ YAML
 			fi
 			;;
 		claude-code|antigravity)
+			cmp "$root/data/file-bundle.schema.json" "$LS_TEST_SCHEMA"
 			rg -qx -- '--dangerously-skip-permissions' "$test_dir/args"
 			;;
 		cursor)
@@ -167,6 +169,10 @@ YAML
 			exit 1
 			;;
 	esac
+	if [[ $provider != claude-code && $provider != antigravity ]]
+	then
+		test ! -e "$LS_TEST_SCHEMA"
+	fi
 	# Output conflicts must fail even with resume requested.
 	if "$binary" -r "$test_dir/recipe.yaml" -o "$test_dir/$provider" --resume > /dev/null 2>&1
 	then

@@ -1,0 +1,28 @@
+{
+  "type": "object",
+  "required": ["files"],
+  "additionalProperties": false,
+  "properties": {
+    "files": {
+      "type": "array", "maxItems": 4096,
+      "items": {
+        "type": "object", "required": ["path", "content"], "additionalProperties": false,
+        "properties": {
+          "path": {"type": "string", "minLength": 1},
+          "content": {"type": "string"},
+          "encoding": {"type": "string", "enum": ["utf8", "base64"]},
+          "executable": {"type": "boolean"}
+        }
+      }
+    },
+    "delete": {"type": "array", "maxItems": 4096, "items": {"type": "string", "minLength": 1}},
+    "rename": {
+      "type": "array", "maxItems": 4096,
+      "items": {
+        "type": "object", "required": ["from", "to"], "additionalProperties": false,
+        "properties": {"from": {"type": "string", "minLength": 1}, "to": {"type": "string", "minLength": 1}}
+      }
+    },
+    "summary": {"type": "string"}
+  }
+}

@@ -519,6 +519,94 @@ scaffold_contract(void){
 	g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
 }
 
+/* Test-only evaluator for the structural keywords used by the bundle schema.
+ * Artifact validation still owns paths, bytes and context-dependent operations. */
+static gboolean
+schema_accepts(JsonObject *schema, JsonNode *value){
+	const gchar *type = ls_string(schema, "type");
+	guint i;
+	if (g_str_equal(type, "object")) {
+		JsonObject *object, *properties;
+		JsonArray *required;
+		g_autoptr(GList) keys = NULL;
+		GList *item;
+		if (!JSON_NODE_HOLDS_OBJECT(value))
+			return FALSE;
+		object = json_node_get_object(value);
+		properties = json_object_get_object_member(schema, "properties");
+		required = json_object_get_array_member(schema, "required");
+		g_assert_false(json_object_get_boolean_member(schema, "additionalProperties"));
+		for (i = 0; i < json_array_get_length(required); i++)
+			if (!json_object_has_member(object, json_array_get_string_element(required, i)))
+				return FALSE;
+		keys = json_object_get_members(object);
+		for (item = keys; item != NULL; item = item->next)
+			if (!json_object_has_member(properties, item->data) ||
+				!schema_accepts(json_object_get_object_member(properties, item->data),
+					json_object_get_member(object, item->data)))
+				return FALSE;
+		return TRUE;
+	}
+	if (g_str_equal(type, "array")) {
+		JsonArray *array;
+		if (!JSON_NODE_HOLDS_ARRAY(value))
+			return FALSE;
+		array = json_node_get_array(value);
+		if (json_array_get_length(array) > json_object_get_int_member(schema, "maxItems"))
+			return FALSE;
+		for (i = 0; i < json_array_get_length(array); i++)
+			if (!schema_accepts(json_object_get_object_member(schema, "items"), json_array_get_element(array, i)))
+				return FALSE;
+		return TRUE;
+	}
+	if (g_str_equal(type, "boolean"))
+		return json_node_get_value_type(value) == G_TYPE_BOOLEAN;
+	g_assert_cmpstr(type, ==, "string");
+	if (json_node_get_value_type(value) != G_TYPE_STRING)
+		return FALSE;
+	if (json_object_has_member(schema, "minLength") &&
+		g_utf8_strlen(json_node_get_string(value), -1) < json_object_get_int_member(schema, "minLength"))
+		return FALSE;
+	if (json_object_has_member(schema, "enum")) {
+		JsonArray *values = json_object_get_array_member(schema, "enum");
+		for (i = 0; i < json_array_get_length(values); i++)
+			if (g_str_equal(json_node_get_string(value), json_array_get_string_element(values, i)))
+				return TRUE;
+		return FALSE;
+	}
+	return TRUE;
+}
+static void
+response_schema(void){
+	g_autoptr(LsPrompts) prompts = ls_prompts_new(NULL, NULL);
+	g_autoptr(GBytes) bytes = g_resources_lookup_data("/org/libresite/file-bundle.schema.json", 0, NULL);
+	g_autoptr(JsonNode) schema = NULL;
+	const gchar *cases[] = {
+		"{\"files\":[]}",
+		"{\"files\":[{\"path\":\"a\",\"content\":\"text\",\"encoding\":\"utf8\",\"executable\":true}],"
+		"\"delete\":[\"old\"],\"rename\":[{\"from\":\"a\",\"to\":\"b\"}],\"summary\":\"Done\"}",
+		"{\"files\":[{\"path\":\"image.png\",\"content\":\"AA==\",\"encoding\":\"base64\"}]}",
+		"Prepared your files. {\"files\":[]}", "{}", "{\"files\":null}",
+		"{\"files\":[{\"path\":\"a\"}]}", "{\"files\":[],\"summary\":false}",
+		"{\"files\":[],\"rename\":[{\"from\":\"a\"}]}", "{\"files\":[],\"delete\":[1]}",
+		"{\"files\":[{\"path\":\"a\",\"content\":\"x\",\"encoding\":\"gzip\"}]}",
+		"{\"files\":[],\"unexpected\":true}"
+	};
+	guint i;
+	g_assert_nonnull(prompts);
+	g_assert_nonnull(bytes);
+	schema = ls_json_parse(g_bytes_get_data(bytes, NULL), NULL);
+	g_assert_nonnull(schema);
+	for (i = 0; i < G_N_ELEMENTS(cases); i++) {
+		g_autoptr(JsonNode) value = ls_json_parse(cases[i], NULL);
+		g_autoptr(LsContext) context = ls_context_new();
+		g_assert_true(ls_context_apply(context, "{\"files\":[{\"path\":\"old\",\"content\":\"old\"},"
+			"{\"path\":\"a\",\"content\":\"original\"}]}", NULL));
+		g_assert_cmpint(ls_context_apply(context, cases[i], NULL), ==, i < 3);
+		g_assert_cmpint(value != NULL && schema_accepts(json_node_get_object(schema), value), ==, i < 3);
+	}
+}
+
 int
 main(int argc, char **argv){
 	const gchar *json[] = {
@@ -549,6 +637,7 @@ main(int argc, char **argv){
 	};
 	guint i;
 	g_test_init(&argc, &argv, NULL);
+	g_test_add_func("/contracts/response-schema", response_schema);
 	g_test_add_func("/contracts/scaffold", scaffold_contract);
 	g_test_add_func("/contracts/structured-form", structured_form);
 	g_test_add_func("/contracts/structured-invalid", structured_invalid);

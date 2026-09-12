@@ -68,6 +68,8 @@ Every generation call creates a fresh temporary working directory, disables sess
 
 Empty temporary provider directories are removed. Directories in which a third-party CLI created files are deliberately retained rather than recursively deleting unknown files. No global CLI configuration or credentials are modified by libresite.
 
+The embedded =data/file-bundle.schema.json= describes the exact response object fields, including =files=, optional =encoding=/=executable=, =delete=, =rename= and =summary=. Libresite sets ai-glib's writable string =json-schema= property when available: Claude Code and Antigravity receive =--json-schema=; the pinned Codex, Grok Build and Cursor adapters have no such property and keep their existing invocation. This requests structured output at generation time instead of stripping narration or spending a retry on it. Strict JSON parsing and atomic artifact validation remain authoritative for path safety, duplicate paths, byte limits, binary decoding and context-dependent operations. The schema is embedded and works outside the checkout; =--prompts= replaces prompt text, not the file-bundle protocol. Offline fixtures verify the argv and schema contract, not live provider compliance.
+
 * Debug tracing
 
 Add =--debug= to generation or resume to enable provider-native session persistence and timestamped diagnostic metadata on stderr. For Codex this removes =--ephemeral=, allowing its normal session JSONL files to be written. Each attempt still starts a fresh provider session; libresite resume restores its own checkpoint, not a previous Codex conversation. The debug flag is independent of =DEBUG=1= compilation and does not change checkpoint fingerprints.

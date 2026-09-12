@@ -304,4 +304,5 @@ do
 	fi
 done
 bash "$root/tests/scaffold.sh" "$binary"
+(cd /tmp && bash "$root/tests/cli.sh" "$binary")
 printf '%s\n' 'INSTALL VERIFIED'

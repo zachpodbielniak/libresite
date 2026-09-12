@@ -21,7 +21,7 @@
 - [[file:flagship.org][FIELDWORK multi-page example and quality checks]]
 - [[file:c-application.org][C applications: YAML, HTMX and ORM providers]]
 - [[file:building.org][Building and installation]]
-- [[file:operations.org][Operations and recovery]]
+- [[file:operations.org][Operations, provider response schemas and recovery]]
 - [[file:testing.org][Tests and validation limits]]
 - [[file:qa.org][Published-tree QA runner]]
 - [[file:robustness-review.org][Robustness review and verification scope]]

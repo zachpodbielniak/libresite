@@ -1,6 +1,7 @@
 <gresources>
   <gresource prefix="/org/libresite">
     <file>prompts.yaml</file>
+    <file>file-bundle.schema.json</file>
     <file>LICENSE</file>
     <file>scaffold/Makefile</file>
     <file>scaffold/404.html</file>

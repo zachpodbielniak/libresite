@@ -9,7 +9,7 @@ $(OUTDIR)/.flags: FORCE | $(OUTDIR)
 $(OBJDIR)/%.o: src/%.c $(OUTDIR)/.flags | $(DEP_TARGET)
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
-$(OUTDIR)/resources.c: data/resources.xml data/prompts.yaml $(wildcard data/scaffold/* data/scaffold/docs/* data/scaffold/tests/*) LICENSE | $(OUTDIR)
+$(OUTDIR)/resources.c: data/resources.xml data/prompts.yaml data/file-bundle.schema.json $(wildcard data/scaffold/* data/scaffold/docs/* data/scaffold/tests/*) LICENSE | $(OUTDIR)
 	glib-compile-resources --sourcedir=data --sourcedir=. --generate-source --c-name=ls_resources --target=$@ $<
 $(OBJDIR)/resources.o: $(OUTDIR)/resources.c $(OUTDIR)/.flags
 	@mkdir -p $(@D)

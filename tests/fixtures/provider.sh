@@ -7,6 +7,15 @@ case "${1-}" in
 	--license) printf '%s\n' 'AGPL-3.0-or-later'; exit 0 ;;
 esac
 printf '%s\n' "$@" > "${LS_TEST_ARGS:?}"
+previous=
+for argument in "$@"
+do
+	if [[ $previous == --json-schema && -n ${LS_TEST_SCHEMA:-} ]]
+	then
+		printf '%s' "$argument" > "$LS_TEST_SCHEMA"
+	fi
+	previous=$argument
+done
 if [[ -n ${LS_TEST_CWD:-} ]]
 then
 	pwd > "$LS_TEST_CWD"
@@ -25,6 +34,10 @@ then
 fi
 # Escape the file bundle for a JSON string, without requiring another language.
 bundle='{"files":[{"path":"index.html","content":"<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width\"><title>Fixture</title></head><main><h1>Offline site</h1></main></html>"}]}'
+if [[ ${LS_TEST_REQUIRE_SCHEMA:-0} == 1 && ( $LS_TEST_PROVIDER == claude-code || $LS_TEST_PROVIDER == antigravity ) && ! -s ${LS_TEST_SCHEMA:?} ]]
+then
+	bundle="Prepared your files. $bundle"
+fi
 escaped=${bundle//\\/\\\\}
 escaped=${escaped//\"/\\\"}
 if [[ ${LS_TEST_PROVIDER} == codex ]]
