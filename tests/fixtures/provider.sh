@@ -34,6 +34,7 @@ then
 fi
 # Escape the file bundle for a JSON string, without requiring another language.
 bundle='{"files":[{"path":"index.html","content":"<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width\"><title>Fixture</title></head><main><h1>Offline site</h1></main></html>"}]}'
+bundle=${LS_TEST_BUNDLE:-$bundle}
 if [[ ${LS_TEST_REQUIRE_SCHEMA:-0} == 1 && ( $LS_TEST_PROVIDER == claude-code || $LS_TEST_PROVIDER == antigravity ) && ! -s ${LS_TEST_SCHEMA:?} ]]
 then
 	bundle="Prepared your files. $bundle"

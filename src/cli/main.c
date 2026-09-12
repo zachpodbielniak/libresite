@@ -4,7 +4,107 @@
 #include <gmodule.h>
 #include <signal.h>
 #include <stdio.h>
+#include <ai-glib.h>
+#include <gio/gunixoutputstream.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <errno.h>
 GResource *ls_resources_get_resource(void);
+/* Event output is separate from human diagnostics and only used when opted in.
+ * All writes occur on the worker, or on main before launch/after join. */
+typedef struct {
+	GOutputStream *stream;
+	GError *error;
+	LsRecipe *recipe;
+	gint64 started, step_started, bytes_in, bytes_out;
+	guint attempt;
+	gchar *provider, *model;
+	const gchar *id;
+	guint index;
+	gint failure_code;
+} Events;
+static void
+event_write(Events *events, const gchar *name, const gchar *message, gint code){
+	g_autoptr(JsonNode) node = json_node_new(JSON_NODE_OBJECT);
+	g_autoptr(JsonObject) object = json_object_new();
+	g_autofree gchar *json = NULL, *line = NULL;
+	gboolean step = g_str_has_prefix(name, "step.");
+	if (events->stream == NULL || events->error != NULL)
+		return;
+	json_object_set_string_member(object, "event", name);
+	json_object_set_int_member(object, "elapsed_ms", (g_get_monotonic_time() -
+		(step ? events->step_started : events->started)) / 1000);
+	if (step) {
+		json_object_set_string_member(object, "step", events->id);
+		json_object_set_int_member(object, "index", events->index);
+		json_object_set_int_member(object, "attempt", events->attempt);
+		json_object_set_string_member(object, "provider", events->provider);
+		json_object_set_string_member(object, "model", events->model);
+		json_object_set_int_member(object, "bytes_in", events->bytes_in);
+		json_object_set_int_member(object, "bytes_out", events->bytes_out);
+	}
+	if (message != NULL)
+		json_object_set_string_member(object, "message", message);
+	if (g_str_equal(name, "run.finished"))
+		json_object_set_int_member(object, "exit_code", code);
+	json_node_set_object(node, object);
+	json = ls_json_encode(node);
+	line = g_strconcat(json, "\n", NULL);
+	(void)g_output_stream_write_all(events->stream, line, strlen(line), NULL, NULL, &events->error);
+}
+static void
+event_usage(LsProvider *provider, const gchar *name, const gchar *model,
+	gint64 bytes_in, gint64 bytes_out, Events *events){
+	(void)provider;
+	(void)name;
+	(void)model;
+	events->bytes_in += bytes_in;
+	events->bytes_out += bytes_out;
+	events->attempt++;
+	events->failure_code = 4;
+}
+/* Typed errors take precedence over the execution phase fallback. */
+static gint
+exit_code(const GError *error, gint fallback){
+	if (error == NULL)
+		return fallback;
+	if (g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED) ||
+		g_error_matches(error, G_IO_ERROR, G_IO_ERROR_TIMED_OUT) ||
+		g_error_matches(error, AI_ERROR, AI_ERROR_TIMEOUT) ||
+		g_error_matches(error, AI_ERROR, AI_ERROR_CANCELLED))
+		return 5;
+	if (g_error_matches(error, LS_ERROR, LS_ERROR_VALIDATION))
+		return 3;
+	if (error->domain == AI_ERROR || g_error_matches(error, LS_ERROR, LS_ERROR_PROVIDER))
+		return 4;
+	if (g_error_matches(error, LS_ERROR, LS_ERROR_RECOVERY))
+		return 6;
+	if (g_error_matches(error, LS_ERROR, LS_ERROR_CONFLICT))
+		return 1;
+	if (error->domain == G_OPTION_ERROR)
+		return 2;
+	if (error->domain == LS_ERROR)
+		return fallback;
+	return 1;
+}
+/* Every normal CLI return closes a started event stream, including inspection. */
+static gint
+finish_events(Events *events, gint code){
+	event_write(events, "run.finished", NULL, code);
+	if (events->stream != NULL) {
+		if (events->error == NULL)
+			(void)g_output_stream_close(events->stream, NULL, &events->error);
+		g_clear_object(&events->stream);
+	}
+	if (events->error != NULL) {
+		g_printerr("libresite: Cannot write events: %s\n", events->error->message);
+		g_clear_error(&events->error);
+		code = 1;
+	}
+	g_free(events->provider);
+	g_free(events->model);
+	return code;
+}
 /* Execute on a worker thread so the main context can deliver SIGINT/SIGTERM. */
 typedef struct {
 	GMainLoop *loop;
@@ -24,6 +124,7 @@ typedef struct {
 	gchar *message;
 	guint index;
 	gint64 since;
+	Events *events;
 } Progress;
 static gboolean
 quit_loop(gpointer data){
@@ -57,7 +158,26 @@ print_progress(const gchar *id, guint index, const gchar *message){
 static void
 step_started(LsPipeline *pipeline, const gchar *id, guint index, gpointer data){
 	Progress *progress = (Progress *)data;
+	Events *events = progress->events;
+	JsonObject *config = json_array_get_object_element(ls_recipe_get_steps(events->recipe), index);
+	g_autoptr(JsonObject) settings = ls_recipe_resolve_ai(events->recipe, config);
+	const gchar *type = ls_string(config, "type");
+	gboolean native = g_str_equal(type, "validate") || g_str_equal(type, "gate") ||
+		g_str_equal(type, "scaffold");
 	(void)pipeline;
+	events->id = ls_string(config, "id");
+	events->index = index;
+	events->step_started = g_get_monotonic_time();
+	events->attempt = 0;
+	events->bytes_in = events->bytes_out = 0;
+	/* Retain resolved names for callbacks after this temporary object is freed. */
+	g_free(events->provider);
+	g_free(events->model);
+	events->provider = g_strdup(native ? "native" : ls_string(settings, "provider"));
+	events->model = g_strdup(native ? "(none)" : ls_string(settings, "model") != NULL
+		? ls_string(settings, "model") : "(provider default)");
+	events->failure_code = 1;
+	event_write(events, "step.started", NULL, 0);
 	g_mutex_lock(&progress->mutex);
 	g_free(progress->id);
 	g_free(progress->message);
@@ -72,10 +192,20 @@ static void
 step_completed(LsPipeline *pipeline, const gchar *id, guint index, gpointer data){
 	Progress *progress = (Progress *)data;
 	(void)pipeline;
+	event_write(progress->events, "step.completed", NULL, 0);
+	progress->events->failure_code = 1;
 	g_mutex_lock(&progress->mutex);
 	g_clear_pointer(&progress->id, g_free);
 	print_progress(id, index, "checkpoint saved");
 	g_mutex_unlock(&progress->mutex);
+}
+static void
+step_failed(LsPipeline *pipeline, const gchar *id, guint index,
+	const GError *error, Progress *progress){
+	(void)pipeline;
+	(void)id;
+	(void)index;
+	event_write(progress->events, "step.failed", error != NULL ? error->message : NULL, 0);
 }
 /* Reset elapsed time at each attempt or retry, without touching checkpoints. */
 static void
@@ -83,6 +213,7 @@ step_progress(LsPipeline *pipeline, const gchar *id, guint index,
 	const gchar *message, gpointer data){
 	Progress *progress = (Progress *)data;
 	(void)pipeline;
+	event_write(progress->events, "step.progress", message, 0);
 	g_mutex_lock(&progress->mutex);
 	g_free(progress->message);
 	progress->message = g_strdup(message);
@@ -159,7 +290,10 @@ main(int argc, char **argv){
 	gboolean emit_yaml = FALSE;
 	g_auto(GStrv) plugins = NULL;
 	gint64 max_prompt_bytes = 0;
-	gint timeout = -1;
+	gint timeout = -1, events_fd = -1;
+	g_autofree gchar *events_path = NULL, *events_arg = NULL;
+	Events events = {0};
+	gint failure_code = 2;
 	gboolean unlimited = FALSE;
 	gboolean validate = FALSE, plan = FALSE, resume = FALSE, license = FALSE, version = FALSE,
 			 list = FALSE, debug = FALSE, approve_all = FALSE;
@@ -176,6 +310,8 @@ main(int argc, char **argv){
 	g_autofree gchar *usage_path = NULL, *rates_path = NULL;
 	g_autoptr(LsContext) preview_context = NULL;
 	GOptionEntry entries[] = {
+		{"events", 0, 0, G_OPTION_ARG_STRING, &events_arg, "Write NDJSON events to an open descriptor (>=3)", "FD"},
+		{"events-file", 0, 0, G_OPTION_ARG_FILENAME, &events_path, "Write NDJSON events to a new file", "PATH"},
 		{"package", 0, 0, G_OPTION_ARG_FILENAME, &package_path,
 		 "Load a sealed recipe and catalog, verifying both digests", "DIR"},
 		{"seal-package", 0, 0, G_OPTION_ARG_FILENAME, &seal_path,
@@ -274,10 +410,50 @@ main(int argc, char **argv){
 		"-o ./my-site-v2\n\nProviders: codex, claude-code, grok-build, cursor, "
 		"antigravity.\nGeneration uses your installed and authenticated provider CLI.\nGenerated "
 		"code is published as files; no build, deployment or hosting is automatic.\n"
-		"--qa inspects a published tree and does not execute generated tests."
+		"--qa inspects a published tree and does not execute generated tests.\n"
+		"Exit codes: 0 success; 1 other failure; 2 usage or invalid recipe;\n"
+		"3 validation rejected output; 4 provider failed after retries;\n"
+		"5 cancelled or deadline; 6 lock held or resume mismatch."
 	);
 	if (!g_option_context_parse(options, &argc, &argv, &error))
 		goto fail;
+	if (events_arg != NULL) {
+		guint64 parsed;
+		if (!g_ascii_string_to_unsigned(events_arg, 10, 3, G_MAXINT, &parsed, NULL)) {
+			g_set_error_literal(&error, LS_ERROR, LS_ERROR_INVALID, "--events requires an integer FD >=3");
+			goto fail;
+		}
+		events_fd = (gint)parsed;
+	}
+	if (events_fd != -1 && events_path != NULL) {
+		g_set_error_literal(&error, LS_ERROR, LS_ERROR_INVALID,
+			"Use either --events FD (>=3) or --events-file PATH");
+		goto fail;
+	}
+	if (events_fd != -1 || events_path != NULL) {
+		/* An event consumer disappearing must produce an I/O failure, not SIGPIPE. */
+		signal(SIGPIPE, SIG_IGN);
+		if (events_path != NULL) {
+			g_autoptr(GFile) file = g_file_new_for_path(events_path);
+			events.stream = G_OUTPUT_STREAM(g_file_create(file, G_FILE_CREATE_PRIVATE, NULL, &error));
+		} else {
+			gint flags = fcntl(events_fd, F_GETFD);
+			gint copy = -1;
+			if (flags >= 0 && fcntl(events_fd, F_SETFD, flags | FD_CLOEXEC) == 0)
+				copy = fcntl(events_fd, F_DUPFD_CLOEXEC, 3);
+			if (copy < 0)
+				g_set_error(&error, G_IO_ERROR, g_io_error_from_errno(errno),
+					"Cannot open events descriptor: %s", g_strerror(errno));
+			else
+				events.stream = g_unix_output_stream_new(copy, TRUE);
+		}
+		if (events.stream == NULL)
+			goto fail;
+		events.started = g_get_monotonic_time();
+		event_write(&events, "run.started", NULL, 0);
+		if (events.error != NULL)
+			return finish_events(&events, 1);
+	}
 	if (argc != 1) {
 		g_set_error_literal(
 			&error, LS_ERROR, LS_ERROR_INVALID, "Unexpected positional argument; use --recipe FILE"
@@ -301,13 +477,13 @@ main(int argc, char **argv){
 				goto fail;
 			if (report != NULL)
 				fputs(report, stdout);
-			return 1;
+			return finish_events(&events, 1);
 		}
 		if (report != NULL && (fputs(report, stdout) == EOF || fflush(stdout) == EOF)) {
-			g_set_error_literal(&error, LS_ERROR, LS_ERROR_INVALID, "Cannot write QA report");
+			g_set_error_literal(&error, G_IO_ERROR, G_IO_ERROR_FAILED, "Cannot write QA report");
 			goto fail;
 		}
-		return 0;
+		return finish_events(&events, 0);
 	}
 	if (usage_path != NULL || rates_path != NULL) {
 		g_autofree gchar *usage_text = NULL, *rates_text = NULL, *priced = NULL;
@@ -331,10 +507,10 @@ main(int argc, char **argv){
 		if (priced == NULL)
 			goto fail;
 		if (puts(priced) == EOF || fflush(stdout) == EOF) {
-			g_set_error_literal(&error, LS_ERROR, LS_ERROR_INVALID, "Cannot write price report");
+			g_set_error_literal(&error, G_IO_ERROR, G_IO_ERROR_FAILED, "Cannot write price report");
 			goto fail;
 		}
-		return 0;
+		return finish_events(&events, 0);
 	}
 	if (license) {
 		g_autoptr(GBytes) bytes = g_resource_lookup_data(
@@ -343,15 +519,15 @@ main(int argc, char **argv){
 		if (bytes == NULL)
 			goto fail;
 		(void)fwrite(g_bytes_get_data(bytes, NULL), 1, g_bytes_get_size(bytes), stdout);
-		return 0;
+		return finish_events(&events, 0);
 	}
 	if (version) {
 		g_print("libresite %s\n", LS_VERSION);
-		return 0;
+		return finish_events(&events, 0);
 	}
 	if (list) {
 		g_print("brief\ndesign\nfrontend\nbackend\ndatabase\nreview\ngenerate\nvalidate\nscaffold\ngate\n");
-		return 0;
+		return finish_events(&events, 0);
 	}
 	if (form_path != NULL) {
 		if (recipe_path != NULL || output != NULL || project != NULL ||
@@ -415,6 +591,7 @@ main(int argc, char **argv){
 		goto fail;
 	}
 	ls_prompts_set_max_bytes(prompts, (gsize)max_prompt_bytes);
+	events.recipe = recipe;
 	provider = ls_ai_provider_new();
 	ls_ai_provider_set_debug(provider, debug);
 	pipeline = ls_pipeline_new(LS_PROVIDER(provider), prompts);
@@ -424,7 +601,7 @@ main(int argc, char **argv){
 		if (!ls_package_save(seal_path, recipe, prompts, &error))
 			goto fail;
 		g_print("Sealed package: %s\nCatalog SHA-256: %s\n", seal_path, ls_prompts_get_digest(prompts));
-		return 0;
+		return finish_events(&events, 0);
 	}
 	/* Inspection uses the same import and rendering boundaries as execution. */
 	if (project != NULL && (validate || plan || preview != NULL)) {
@@ -441,14 +618,14 @@ main(int argc, char **argv){
 		if (emitted == NULL)
 			goto fail;
 		if (fputs(emitted, stdout) == EOF || fflush(stdout) == EOF) {
-			g_set_error_literal(&error, LS_ERROR, LS_ERROR_INVALID, "Cannot write YAML to stdout");
+			g_set_error_literal(&error, G_IO_ERROR, G_IO_ERROR_FAILED, "Cannot write YAML to stdout");
 			goto fail;
 		}
-		return 0;
+		return finish_events(&events, 0);
 	}
 	if (validate) {
 		g_print("Recipe valid\n");
-		return 0;
+		return finish_events(&events, 0);
 	}
 	if (plan || preview != NULL) {
 		JsonArray *steps = ls_recipe_get_steps(recipe);
@@ -474,7 +651,7 @@ main(int argc, char **argv){
 					goto fail;
 				if (g_str_equal(preview, ls_string(step, "id"))) {
 					g_print("%s\n", bundle);
-					return 0;
+					return finish_events(&events, 0);
 				}
 				continue;
 			}
@@ -487,7 +664,7 @@ main(int argc, char **argv){
 				if (text == NULL)
 					goto fail;
 				g_print("%s", text);
-				return 0;
+				return finish_events(&events, 0);
 			}
 			if (preview != NULL && g_str_equal(preview, ls_string(step, "id"))) {
 				g_autofree gchar *text = NULL;
@@ -499,7 +676,7 @@ main(int argc, char **argv){
 				if (text == NULL)
 					goto fail;
 				g_print("%s\n\n%s", ls_prompts_get_system(prompts), text);
-				return 0;
+				return finish_events(&events, 0);
 			}
 			if (plan)
 				g_print(
@@ -515,7 +692,7 @@ main(int argc, char **argv){
 				);
 		}
 		if (plan)
-			return 0;
+			return finish_events(&events, 0);
 		g_set_error(&error, LS_ERROR, LS_ERROR_INVALID, "No step with id '%s'", preview);
 		goto fail;
 	}
@@ -534,7 +711,11 @@ main(int argc, char **argv){
 		guint interrupt = g_unix_signal_add(SIGINT, cancel_run, cancellable);
 		guint terminate = g_unix_signal_add(SIGTERM, cancel_run, cancellable);
 		GThread *thread;
+		progress.events = &events;
+		events.failure_code = 1;
 		g_mutex_init(&progress.mutex);
+		g_signal_connect(provider, "usage", G_CALLBACK(event_usage), &events);
+		g_signal_connect(pipeline, "step-failed", G_CALLBACK(step_failed), &progress);
 		g_signal_connect(pipeline, "step-started", G_CALLBACK(step_started), &progress);
 		g_signal_connect(pipeline, "step-completed", G_CALLBACK(step_completed), &progress);
 		g_signal_connect(pipeline, "step-progress", G_CALLBACK(step_progress), &progress);
@@ -542,6 +723,8 @@ main(int argc, char **argv){
 		thread = g_thread_new("libresite-run", run_thread, &run);
 		g_main_loop_run(loop);
 		g_thread_join(thread);
+		g_signal_handlers_disconnect_by_data(provider, &events);
+		failure_code = events.failure_code;
 		g_source_remove(pulse);
 		g_signal_handlers_disconnect_by_data(pipeline, &progress);
 		g_free(progress.id);
@@ -555,8 +738,8 @@ main(int argc, char **argv){
 		}
 	}
 	g_print("Published %s\n", output);
-	return 0;
+	return finish_events(&events, 0);
 fail:
 	g_printerr("libresite: %s\n", error != NULL ? error->message : "operation failed");
-	return error != NULL && g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED) ? 130 : 1;
+	return finish_events(&events, exit_code(error, failure_code));
 }

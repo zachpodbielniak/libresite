@@ -48,8 +48,8 @@ gboolean ls_pipeline_validate_context(LsPipeline *self, LsRecipe *recipe,
  * @error: return location for an error
  *
  * Emits step-started (id, index), step-completed (id, index), artifact-written
- * (#LsArtifact), and completed (output). Indices are zero-based. Failed work is
- * retained in OUTPUT.libresite-work; a successful run publishes OUTPUT.
+ * (#LsArtifact), step-failed (id, index, error), and completed (output). Indices
+ * are zero-based. Failed work is retained in OUTPUT.libresite-work; a successful run publishes OUTPUT.
  * Returns: whether the complete project was published
  */
 gboolean ls_pipeline_run(

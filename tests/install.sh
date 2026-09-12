@@ -223,7 +223,7 @@ git_pid=$(< "$test_dir/git-ready")
 kill -TERM "$run_pid"
 run_status=0
 wait "$run_pid" || run_status=$?
-test "$run_status" -eq 130
+test "$run_status" -eq 5
 if kill -0 "$git_pid" 2>/dev/null
 then
 	exit 1
@@ -305,4 +305,5 @@ do
 done
 bash "$root/tests/scaffold.sh" "$binary"
 (cd /tmp && bash "$root/tests/cli.sh" "$binary")
+bash "$root/tests/platform-hooks.sh" "$binary"
 printf '%s\n' 'INSTALL VERIFIED'

@@ -259,7 +259,7 @@ sleep 0.2
 kill -TERM "$run_pid"
 run_status=0
 wait "$run_pid" || run_status=$?
-test "$run_status" -eq 130
+test "$run_status" -eq 5
 test ! -e "$test_dir/cancel"
 # Exercise the actual main-context heartbeat while the worker is blocked.
 # The checkpoint must stay byte-identical during a wait and after cancellation.
@@ -281,7 +281,7 @@ done
 kill -TERM "$run_pid"
 run_status=0
 wait "$run_pid" || run_status=$?
-test "$run_status" -eq 130
+test "$run_status" -eq 5
 rg -q 'still waiting .*attempt 1/1; provider codex; timeout 60s; accepted artifacts unchanged' "$test_dir/wait.log"
 # Cancellation changes accounting, while accepted files and next step stay put.
 for checkpoint in "$test_dir/checkpoint-before" "$test_dir/wait.libresite-work/checkpoint.json"
@@ -313,3 +313,5 @@ fi
 test ! -s "$test_dir/rejected.yaml"
 test ! -e "$test_dir/unwanted"
 printf '%s\n' 'STRUCTURED FORM VERIFIED'
+
+bash "$root/tests/platform-hooks.sh" "$binary"

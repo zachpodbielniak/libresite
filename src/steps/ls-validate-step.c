@@ -123,7 +123,7 @@ check_content(JsonObject *check, LsContext *context, GError **error){
 	gsize size;
 	guint i, j;
 	if (artifact == NULL) {
-		g_set_error(error, LS_ERROR, LS_ERROR_INVALID, "Checked artifact is missing: %s", path);
+		g_set_error(error, LS_ERROR, LS_ERROR_VALIDATION, "Checked artifact is missing: %s", path);
 		return FALSE;
 	}
 	size = ls_artifact_get_size(artifact);
@@ -131,13 +131,13 @@ check_content(JsonObject *check, LsContext *context, GError **error){
 		size < (gsize)json_object_get_int_member(check, "min_bytes")) ||
 		(json_object_has_member(check, "max_bytes") &&
 		size > (gsize)json_object_get_int_member(check, "max_bytes"))) {
-		g_set_error(error, LS_ERROR, LS_ERROR_INVALID,
+		g_set_error(error, LS_ERROR, LS_ERROR_VALIDATION,
 			"Artifact '%s' has %" G_GSIZE_FORMAT " bytes, outside its configured byte bounds", path, size);
 		return FALSE;
 	}
 	if (ls_artifact_is_binary(artifact) &&
 		(json_object_has_member(check, "contains") || json_object_has_member(check, "excludes"))) {
-		g_set_error(error, LS_ERROR, LS_ERROR_INVALID,
+		g_set_error(error, LS_ERROR, LS_ERROR_VALIDATION,
 			"Artifact '%s' is binary; contains/excludes apply to UTF-8 text", path);
 		return FALSE;
 	}
@@ -150,7 +150,7 @@ check_content(JsonObject *check, LsContext *context, GError **error){
 		for (j = 0; j < json_array_get_length(strings); j++) {
 			gboolean found = strstr(content, json_array_get_string_element(strings, j)) != NULL;
 			if ((i == 0 && !found) || (i == 1 && found)) {
-				g_set_error(error, LS_ERROR, LS_ERROR_INVALID,
+				g_set_error(error, LS_ERROR, LS_ERROR_VALIDATION,
 					"Artifact '%s' failed %s predicate %u", path, predicates[i], j + 1);
 				return FALSE;
 			}
@@ -193,7 +193,7 @@ execute(
 		if (artifact == NULL ||
 			(ls_artifact_is_binary(artifact) ? ls_artifact_get_size(artifact) == 0
 				: !has_text(ls_artifact_get_content(artifact)))) {
-			g_set_error(error, LS_ERROR, LS_ERROR_INVALID,
+			g_set_error(error, LS_ERROR, LS_ERROR_VALIDATION,
 				"Required artifact is missing or empty: %s", path);
 			return FALSE;
 		}

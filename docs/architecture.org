@@ -22,7 +22,7 @@ The function-by-function embedder catalog is [[file:api.org][api.org]]. This pag
 | recipes | Executable recipe examples |
 | tests | GTest coverage, subprocess fixtures and external plugin/install checks |
 
-The public umbrella header is =libresite.h=. The build emits a static archive, a shared library with SONAME =liblibresite-1.0.so.0=, a CLI and =libresite-1.0.pc=. This is a new 0.1 API; reserved vtable slots leave room for additions, but callers should pin compatible releases. Public error domain =LS_ERROR= uses =LS_ERROR_INVALID=, =LS_ERROR_CONFLICT=, =LS_ERROR_PROVIDER= and =LS_ERROR_LIMIT=. =LS_MAX_DOCUMENT= (16 MiB) and =LS_MAX_PROJECT= (64 MiB) are the public size macros.
+The public umbrella header is =libresite.h=. The build emits a static archive, a shared library with SONAME =liblibresite-1.0.so.0=, a CLI and =libresite-1.0.pc=. This is a new 0.1 API; reserved vtable slots leave room for additions, but callers should pin compatible releases. Public error domain =LS_ERROR= uses =LS_ERROR_INVALID=, =LS_ERROR_CONFLICT=, =LS_ERROR_PROVIDER= =LS_ERROR_LIMIT=, =LS_ERROR_VALIDATION= and =LS_ERROR_RECOVERY=. =LS_MAX_DOCUMENT= (16 MiB) and =LS_MAX_PROJECT= (64 MiB) are the public size macros.
 
 * Lifecycle
 
@@ -50,11 +50,12 @@ Pipeline operations are synchronous and intended for a worker thread. Do not cal
 |--------+-----------+--------|
 | step-started | id string, index unsigned | Before step execution |
 | step-completed | id string, index unsigned | After durable checkpoint write |
+| step-failed | id string, index unsigned, nullable GError | After execution or checkpoint failure |
 | step-progress | id string, index unsigned, message string | Attempt settings and retry reasons, forwarded from LsStep::progress |
 | artifact-written | LsArtifact boxed value | After successful directory publication, once per final artifact |
 | completed | output path string | After successful directory publication |
 
-Indices are zero-based. Resume emits signals only for steps actually run. The callback arguments are borrowed; copy an artifact or duplicate strings to retain them. Failures return through =GError= rather than a second competing completion channel. The CLI prints progress and errors to stderr.
+Indices are zero-based. Resume emits signals only for steps actually run. The callback arguments are borrowed; copy an artifact or duplicate strings to retain them. Failures emit =step-failed= for a started step and return through =GError=; no completion signal is emitted for that step. The CLI prints progress and errors to stderr.
 
 =LsStep::progress= carries a borrowed human-readable message on the executing thread. Custom steps can emit it to describe work without implying artifact acceptance. The pipeline connects it only during execution and forwards it as =step-progress=. The CLI copies the current status under a mutex for its main-context 30-second heartbeat; its timer and signal handlers are removed after the worker joins.
 

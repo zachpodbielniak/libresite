@@ -185,7 +185,7 @@ resume_package(void){
 	g_clear_object(&pipeline);
 	pipeline = ls_pipeline_new(provider, current);
 	g_assert_false(ls_pipeline_run(pipeline, recipe, output, TRUE, NULL, &error));
-	g_assert_error(error, LS_ERROR, LS_ERROR_CONFLICT);
+	g_assert_error(error, LS_ERROR, LS_ERROR_RECOVERY);
 	g_assert_cmpuint(fixture->calls, ==, 2);
 	g_clear_error(&error);
 	g_clear_object(&pipeline);
@@ -194,7 +194,7 @@ resume_package(void){
 		g_autoptr(LsRecipe) unpinned = ls_recipe_new(recipe_text, &error);
 		pipeline = ls_pipeline_new(provider, prompts);
 		g_assert_false(ls_pipeline_run(pipeline, unpinned, output, TRUE, NULL, &error));
-		g_assert_error(error, LS_ERROR, LS_ERROR_CONFLICT);
+		g_assert_error(error, LS_ERROR, LS_ERROR_RECOVERY);
 		g_assert_cmpuint(fixture->calls, ==, 2);
 		g_clear_error(&error);
 		g_clear_object(&pipeline);
@@ -375,7 +375,7 @@ sku_acceptance(gconstpointer data){
 			g_assert_true(ls_step_execute(step, recipe, config, prompts, context, provider, NULL, &error));
 		else {
 			g_assert_false(ls_step_execute(step, recipe, config, prompts, context, provider, NULL, &error));
-			g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+			g_assert_error(error, LS_ERROR, LS_ERROR_VALIDATION);
 			g_clear_error(&error);
 			json_object_set_string_member(file, "path", original);
 		}
@@ -392,7 +392,7 @@ sku_acceptance(gconstpointer data){
 				text = ls_json_encode(bundle);
 				g_assert_true(ls_context_apply(context, text, &error));
 				g_assert_false(ls_step_execute(step, recipe, config, prompts, context, provider, NULL, &error));
-				g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+				g_assert_error(error, LS_ERROR, LS_ERROR_VALIDATION);
 				g_clear_error(&error);
 				json_object_set_string_member(file, "content", original);
 			}

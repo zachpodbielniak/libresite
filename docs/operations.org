@@ -14,6 +14,7 @@
 |--------+------|
 | =-r FILE= / =--recipe FILE= | YAML recipe |
 | =-o DIR= / =--output DIR= | New output directory; parent must exist |
+| =--events FD= / =--events-file PATH= | Separate NDJSON event stream |
 | =--prompts FILE= | Replace the entire embedded catalog |
 | =--plugin FILE= | Load a native step plugin (repeatable) |
 | =--package DIR= | Load a sealed recipe and catalog, verifying both digests |
@@ -117,7 +118,7 @@ Deadlines apply even while the provider is receiving response tokens. Codex roll
 
 The resolved =AI SETTINGS= object is sent in the task prompt so the catalog's configured-output-budget instruction has an actual value. The pinned Codex adapter ignores its =max_tokens= argument when constructing CLI arguments: for Codex the value is model guidance, not a hard output cap. Increasing the deadline allows a long response to finish but cannot guarantee model compliance or successful validation. No dependency pin, global provider configuration or completed checkpoint is changed by this recovery.
 
-SIGINT/SIGTERM cancel the run through =GCancellable=. Cancelled calls are not retried. Completed checkpoints remain available. Exit status is 0 on success, 130 for a returned cancellation error, and 1 for other failures. Provider-specific timeout failures are errors and may be retried within the configured bound. No successful output is published when a provider fails or a required artifact is missing.
+SIGINT/SIGTERM cancel the run through =GCancellable=. Cancelled calls are not retried. Completed checkpoints remain available. See the stable exit codes below. Provider-specific timeout failures are errors and may be retried within the configured bound. No successful output is published when a provider fails or a required artifact is missing.
 
 Errors report the failed stage ID where possible. Common remedies:
 
@@ -150,3 +151,56 @@ Inputs with quoted numeric/boolean/null values now retain their YAML string type
 * Incremental revision
 
 =--revise DIR= imports an existing text project and interprets =site.brief= as a change brief. It works with =--validate=, =--plan= and =--preview=; generation still requires a new =--output= outside the source tree. The revision result has its own Git repository and =feat: revise existing project= commit. Resume also verifies the current source snapshot. See [[file:revision.org][revision.org]] for commands, supported files and exclusions.
+
+* Subprocess events and exit codes
+
+=--events FD= writes only newline-delimited JSON to an already open writable
+file descriptor numbered 3 or higher. =--events-file PATH= exclusively creates
+an equivalent private file; existing files are never truncated. The options
+are mutually exclusive. Neither changes ordinary stdout or stderr messages.
+The descriptor is excluded from provider and Git subprocess inheritance.
+
+#+begin_src bash
+libresite -r recipes/landing.yaml --validate --events 3 3>events.jsonl
+libresite -r site.yaml -o ./site --events-file ./site-events.jsonl
+#+end_src
+
+Every invocation with a successfully opened stream emits =run.started= and
+=run.finished= (including inspection modes). Generation also emits
+=step.started=, =step.progress=, =step.completed= and =step.failed=. Indices are
+zero-based; resumed runs emit only steps actually executed. Completion means
+the step checkpoint was saved; =run.finished= carries the process =exit_code=.
+A failed step carries its diagnostic in =message=; progress carries the original
+signal message. All strings are JSON escaped, including embedded newlines.
+
+#+begin_src json
+{"event":"step.completed","step":"design","index":2,"elapsed_ms":1234,"attempt":1,"provider":"codex","model":"fixture-model","bytes_in":2000,"bytes_out":500}
+#+end_src
+
+=elapsed_ms= uses a monotonic clock, measured from invocation or step start.
+Step records include the resolved provider/model, cumulative completed provider
+call count in =attempt=, and cumulative input/output bytes across retries.
+These counters update when a provider call returns, so start and first progress
+have zero counters. Native steps use =native= / =(none)= and zero counters;
+unselected models use =(provider default)=. Bytes are not token or cost estimates.
+
+Consumers must drain pipes: writes apply backpressure. Stream errors return 1
+and report a diagnostic on stderr; the stream cannot promise a final record
+after an I/O failure, forced termination or crash. An event write failure does
+not roll back accepted checkpoints or a published output. Option-parser errors
+and automatic =--help= exit before opening the stream.
+
+| Code | Meaning |
+|------+---------|
+| 0 | Success, including inspection |
+| 1 | Other failures: filesystem/publication I/O, existing output, QA rejection, unapproved gate, event I/O |
+| 2 | Invalid options, recipe, catalog, module configuration or inspection input |
+| 3 | Native validation rejected required content or predicates, including generation's downstream acceptance checks |
+| 4 | Provider/response failure after configured retries, including malformed or unsafe bundles |
+| 5 | Cancellation (SIGINT/SIGTERM) or exhausted provider deadline |
+| 6 | Held/invalid workspace lock or invalid/mismatched resume checkpoint |
+
+These statuses apply without event flags too. Cancellation previously returned
+130; subprocess callers should now handle 5. Native validation rejection uses
+=LS_ERROR_VALIDATION= in the library; malformed validation options remain
+=LS_ERROR_INVALID=. Missing input files remain filesystem errors (1).

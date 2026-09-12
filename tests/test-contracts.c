@@ -198,7 +198,7 @@ content_checks(void){
 		} else {
 			g_assert_false(ls_step_execute(step, NULL, json_node_get_object(parsed),
 				NULL, context, NULL, NULL, &error));
-			g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+			g_assert_error(error, LS_ERROR, LS_ERROR_VALIDATION);
 		}
 	}
 	/* Unicode spaces also fail required-only validation, without byte rules. */
@@ -211,7 +211,7 @@ content_checks(void){
 			"{\"files\":[{\"path\":\"index.html\",\"content\":\"\\u2003\\t\\n\"}]}", NULL));
 		g_assert_false(ls_step_execute(step, NULL, json_node_get_object(parsed),
 			NULL, context, NULL, NULL, &error));
-		g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+		g_assert_error(error, LS_ERROR, LS_ERROR_VALIDATION);
 	}
 }
 
@@ -246,7 +246,7 @@ copy_lock_checks(void){
 		if (i == 0)
 			g_assert_no_error(error);
 		else {
-			g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+			g_assert_error(error, LS_ERROR, LS_ERROR_VALIDATION);
 			g_assert_nonnull(strstr(error->message, i == 4
 				? "contains predicate 2" : "contains predicate 1"));
 		}
@@ -306,7 +306,7 @@ content_retry(gconstpointer data){
 	if (resume) {
 		g_autoptr(JsonNode) saved = NULL;
 		g_assert_false(ls_pipeline_run(pipeline, recipe, output, FALSE, NULL, &error));
-		g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+		g_assert_error(error, LS_ERROR, LS_ERROR_VALIDATION);
 		g_clear_error(&error);
 		g_assert_false(g_file_test(output, G_FILE_TEST_EXISTS));
 		g_assert_true(g_file_get_contents(checkpoint, &text, NULL, NULL));

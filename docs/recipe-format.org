@@ -180,3 +180,12 @@ Quoted and block YAML scalars preserve string types: ='1'= is a string and is re
 With CLI =--revise DIR=, =site.brief= describes the changes to the imported project. No additional YAML source-path key is needed. Use =type: generate= with =prompt: revision= for a focused edit stage, then native acceptance checks appropriate to the existing application. All generation stages receive the revision contract. See [[file:revision.org][revision.org]] and =recipes/revision.yaml=.
 
 Keep =files= present, even when empty. =delete= and =rename= are first-class operations for every generation stage, not only revision. Deletions, rename sources/destinations and written paths cannot overlap except that a write may recreate a renamed-from path. File objects may include =encoding= and boolean =executable=. Checkpoint snapshots contain final files rather than operations.
+
+Deletion is persisted as absence from the complete checkpoint file snapshot.
+Resume replaces the context with that snapshot; it never merges imported or
+seed files back into it. Consequently a completed delete or rename cannot
+resurrect its source on resume, even after a later gate or provider failure.
+For example, ={"files":[],"delete":["old.css"],"rename":[{"from":"old.html","to":"new.html"}]}=
+removes =old.css= and moves =old.html= atomically. Every source must exist;
+rename preserves bytes and executable intent. Unsafe paths reject the entire
+bundle before any deletion, rename or write is accepted.

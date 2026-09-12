@@ -17,7 +17,7 @@ struct _LsPipeline {
 	gboolean running;
 };
 G_DEFINE_TYPE(LsPipeline, ls_pipeline, G_TYPE_OBJECT)
-static guint signals[5];
+static guint signals[6];
 /* The forwarding data lives for the synchronous execution of one step. */
 typedef struct {
 	LsPipeline *pipeline;
@@ -43,6 +43,19 @@ ls_pipeline_finalize(GObject *object){
 static void
 ls_pipeline_class_init(LsPipelineClass *klass){
 	G_OBJECT_CLASS(klass)->finalize = ls_pipeline_finalize;
+	/**
+	 * LsPipeline::step-failed:
+	 * @self: the pipeline
+	 * @id: (transfer none): step ID
+	 * @index: zero-based step index
+	 * @error: (transfer none) (nullable): execution or checkpoint error
+	 *
+	 * Emitted on the calling thread after a started step fails. No artifacts
+	 * are published; the run still returns its detailed GError to the caller.
+	 */
+	signals[5] = g_signal_new("step-failed", G_TYPE_FROM_CLASS(klass),
+		G_SIGNAL_RUN_LAST, 0, NULL, NULL, NULL, G_TYPE_NONE, 3,
+		G_TYPE_STRING, G_TYPE_UINT, G_TYPE_ERROR);
 	/**
 	 * LsPipeline::step-progress:
 	 * @self: the pipeline
@@ -582,7 +595,7 @@ run_pipeline(
 		g_set_error_literal(
 			error,
 			LS_ERROR,
-			LS_ERROR_CONFLICT,
+			LS_ERROR_RECOVERY,
 			"Workspace is locked by another run or lock is invalid"
 		);
 		goto out;
@@ -612,16 +625,19 @@ run_pipeline(
 	);
 	fingerprint = g_compute_checksum_for_string(G_CHECKSUM_SHA256, fingerprint_input, -1);
 	if (resume && g_lstat(checkpoint, &info) == 0) {
+		g_autoptr(GError) checkpoint_error = NULL;
 		if (!S_ISREG(info.st_mode)) {
 			g_set_error_literal(
-				error, LS_ERROR, LS_ERROR_CONFLICT, "Checkpoint must be a regular file"
+				error, LS_ERROR, LS_ERROR_RECOVERY, "Checkpoint must be a regular file"
 			);
 			goto out;
 		}
 		if (!load_checkpoint(
-				checkpoint, fingerprint, json_array_get_length(steps), context, &next, &usage, &usage_complete, error
-			))
+				checkpoint, fingerprint, json_array_get_length(steps), context, &next, &usage, &usage_complete, &checkpoint_error
+			)) {
+			g_set_error_literal(error, LS_ERROR, LS_ERROR_RECOVERY, checkpoint_error->message);
 			goto out;
+		}
 	} else {
 		/* Seeds precede every step and the initial checkpoint. Never reapply
 		 * them over a resumed project's accepted replacements. */
@@ -671,11 +687,14 @@ run_pipeline(
 
 			if (error != NULL && *error != NULL)
 				g_prefix_error(error, "Step '%s': ", id);
+			g_signal_emit(self, signals[5], 0, id, i, error != NULL ? *error : NULL);
 			goto out;
 		}
 		if (!save_checkpoint(checkpoint, context, fingerprint, i + 1, usage, usage_complete, error) ||
-			g_cancellable_set_error_if_cancelled(cancellable, error))
+			g_cancellable_set_error_if_cancelled(cancellable, error)) {
+			g_signal_emit(self, signals[5], 0, id, i, error != NULL ? *error : NULL);
 			goto out;
+		}
 		g_signal_emit(self, signals[1], 0, id, i);
 	}
 	{

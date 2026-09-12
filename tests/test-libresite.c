@@ -494,7 +494,7 @@ revision_case(gconstpointer data){
 			g_assert_cmpuint(info.st_mode & 0777, ==, 0700);
 		} else {
 			g_assert_false(ls_pipeline_revise(pipeline, recipe, project, output, TRUE, NULL, &error));
-			g_assert_error(error, LS_ERROR, LS_ERROR_CONFLICT);
+			g_assert_error(error, LS_ERROR, LS_ERROR_RECOVERY);
 			g_assert_cmpuint(fixture->calls, ==, 2);
 			g_assert_false(g_file_test(output, G_FILE_TEST_EXISTS));
 		}
@@ -568,7 +568,7 @@ pipeline_case(gconstpointer data){
 		g_assert_cmpint(fd, >=, 0);
 		g_assert_cmpint(flock(fd, LOCK_EX), ==, 0);
 		g_assert_false(ls_pipeline_run(pipeline, recipe, output, TRUE, NULL, &error));
-		g_assert_error(error, LS_ERROR, LS_ERROR_CONFLICT);
+		g_assert_error(error, LS_ERROR, LS_ERROR_RECOVERY);
 		g_assert_cmpuint(fixture->calls, ==, 0);
 		close(fd);
 	} else if (
@@ -584,14 +584,14 @@ pipeline_case(gconstpointer data){
 		if (g_str_equal(mode, "corrupt")) {
 			g_assert_true(g_file_set_contents(checkpoint, "{}", -1, NULL));
 			g_assert_false(ls_pipeline_run(pipeline, recipe, output, TRUE, NULL, &error));
-			g_assert_error(error, LS_ERROR, LS_ERROR_CONFLICT);
+			g_assert_error(error, LS_ERROR, LS_ERROR_RECOVERY);
 		} else if (g_str_equal(mode, "changed")) {
 			g_autofree gchar *changed = g_strconcat(recipe_text, "# harmless comment\n", NULL);
 			g_autoptr(LsRecipe) other = ls_recipe_new(changed, NULL);
 			/* Semantic changes invalidate; formatting-only changes do not. */
 			json_object_set_string_member(ls_recipe_get_root(other), "name", "different");
 			g_assert_false(ls_pipeline_run(pipeline, other, output, TRUE, NULL, &error));
-			g_assert_error(error, LS_ERROR, LS_ERROR_CONFLICT);
+			g_assert_error(error, LS_ERROR, LS_ERROR_RECOVERY);
 		} else {
 			g_assert_true(ls_pipeline_run(pipeline, recipe, output, TRUE, NULL, &error));
 			g_assert_no_error(error);
@@ -669,7 +669,7 @@ seed_pipeline(gconstpointer data){
 		g_autoptr(LsRecipe) changed = ls_recipe_new(changed_yaml, &error);
 		g_assert_no_error(error);
 		g_assert_false(ls_pipeline_run(pipeline, changed, output, TRUE, NULL, &error));
-		g_assert_error(error, LS_ERROR, LS_ERROR_CONFLICT);
+		g_assert_error(error, LS_ERROR, LS_ERROR_RECOVERY);
 		g_assert_cmpuint(fixture->calls, ==, fail_at);
 		g_clear_error(&error);
 	}
@@ -785,7 +785,7 @@ acceptance_retry(gconstpointer data){
 	g_assert_true(ls_context_apply(context, "{\"files\":[{\"path\":\"index.html\",\"content\":\"original\"}]}", NULL));
 	if (exhaust) {
 		g_assert_false(ls_step_execute(step, recipe, config, prompts, context, LS_PROVIDER(provider), NULL, &error));
-		g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+		g_assert_error(error, LS_ERROR, LS_ERROR_VALIDATION);
 		g_assert_nonnull(strstr(error->message, "docs/build.org"));
 		g_assert_cmpstr(ls_artifact_get_content(ls_context_lookup(context, "index.html")), ==, "original");
 	} else {
@@ -1141,7 +1141,7 @@ application_stack_artifacts(void){
 		if (i == 0)
 			g_assert_no_error(error);
 		else {
-			g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+			g_assert_error(error, LS_ERROR, LS_ERROR_VALIDATION);
 			g_assert_nonnull(strstr(error->message, json_array_get_string_element(required, (i - 1) / 2)));
 		}
 	}
@@ -1206,7 +1206,7 @@ seo_artifacts(gconstpointer data){
 		if (i == 0)
 			g_assert_no_error(error);
 		else {
-			g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+			g_assert_error(error, LS_ERROR, LS_ERROR_VALIDATION);
 			g_assert_nonnull(strstr(error->message, paths[(i - 1) / 3]));
 		}
 	}

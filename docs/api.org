@@ -19,13 +19,15 @@ Domain =LS_ERROR= (=ls_error_quark()=). Codes:
 | Code | Meaning |
 |------+---------|
 | =LS_ERROR_INVALID= | Malformed input, unknown keys/types, invalid provider JSON |
-| =LS_ERROR_CONFLICT= | Existing output, locked workspace or incompatible checkpoint |
+| =LS_ERROR_CONFLICT= | Conflicting output/workspace, required gate approval or Git publication |
 | =LS_ERROR_PROVIDER= | Transport failure after a valid request |
+| =LS_ERROR_RECOVERY= | Held/invalid workspace lock or invalid/mismatched resume checkpoint |
+| =LS_ERROR_VALIDATION= | Native required-content or predicate rejection |
 | =LS_ERROR_LIMIT= | Document, file, project, prompt or nesting limit |
 
 Public size macros: =LS_MAX_DOCUMENT= is 16 MiB (YAML, catalog and checkpoint text) and =LS_MAX_PROJECT= is 64 MiB of decoded project bytes. Other limits (4096 files, 128 recipe steps, 16 MiB per file, 128 MiB encoded checkpoints, 32 JSON/YAML nesting, 100000 YAML events) are enforced by the same parsers; see [[file:operations.org][operations.org]].
 
-Cancellation after a callback is normalized to =G_IO_ERROR_CANCELLED=. CLI exit status is 0 on success, 130 on that cancellation error and 1 otherwise.
+Cancellation after a callback is normalized to =G_IO_ERROR_CANCELLED=. CLI exit status follows the [[file:operations.org::*Subprocess events and exit codes][stable subprocess contract]] (cancellation is 5).
 
 * Recipe
 
@@ -113,7 +115,7 @@ A replacement catalog is complete: there is no merge with embedded styles, stage
 | =ls_pipeline_run(self, recipe, output, resume, cancellable, error)= | Generate and publish a new directory |
 | =ls_pipeline_revise(self, recipe, project, output, resume, cancellable, error)= | Import =project=, leave it unchanged, publish a new tree |
 
-Signals (calling thread, zero-based indices): =step-started= (id, index), =step-completed= (id, index), =step-progress= (id, index, message), =artifact-written= (=LsArtifact=), =completed= (output path). Resume emits only for steps actually run. Failures return through =GError=.
+Signals (calling thread, zero-based indices): =step-started= (id, index), =step-completed= (id, index), =step-progress= (id, index, message), =step-failed= (id, index, nullable GError), =artifact-written= (=LsArtifact=), =completed= (output path). Resume emits only for steps actually run. Failures return through =GError=.
 
 * Provider and AI adapter
 
