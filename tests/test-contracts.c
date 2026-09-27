@@ -519,6 +519,43 @@ scaffold_contract(void){
 	g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
 }
 
+/* Every scaffold page carries its own nonempty meta description: generated SEO
+ * contracts check each HTML route, including noindex drafts and 404. */
+static void
+scaffold_metadata(void){
+	g_autoptr(GError) error = NULL;
+	g_autoptr(LsRecipe) recipe = ls_recipe_new(
+		"version: 1\nname: scaffold\nsite: {brief: Static site}\n"
+		"pipeline: {steps: [{id: scaffold, type: scaffold}]}\n", &error);
+	g_autoptr(LsPrompts) prompts = ls_prompts_new(NULL, &error);
+	g_autoptr(LsProvider) provider = g_object_new(contract_provider_get_type(), NULL);
+	g_autoptr(LsStep) step = g_object_new(LS_TYPE_SCAFFOLD_STEP, NULL);
+	g_autoptr(LsContext) context = ls_context_new();
+	g_autoptr(GHashTable) seen = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+	JsonObject *config = json_array_get_object_element(ls_recipe_get_steps(recipe), 0);
+	const gchar *pages[] = {"404.html", "privacy.html", "terms.html"};
+	const gchar *marker = "<meta name=\"description\" content=\"";
+	guint i;
+	g_assert_no_error(error);
+	g_assert_true(ls_step_execute(step, recipe, config, prompts, context, provider, NULL, &error));
+	g_assert_no_error(error);
+	for (i = 0; i < G_N_ELEMENTS(pages); i++) {
+		const gchar *html = ls_artifact_get_content(ls_context_lookup(context, pages[i]));
+		const gchar *start = strstr(html, marker);
+		const gchar *end;
+		g_autofree gchar *description = NULL;
+		g_assert_nonnull(start);
+		start += strlen(marker);
+		end = strchr(start, '"');
+		g_assert_nonnull(end);
+		description = g_strndup(start, (gsize)(end - start));
+		g_strstrip(description);
+		g_assert_cmpuint(strlen(description), >, 0);
+		g_assert_true(g_hash_table_add(seen, g_steal_pointer(&description)));
+		g_assert_nonnull(strstr(html, "<meta name=\"robots\" content=\"noindex\">"));
+	}
+}
+
 /* Test-only evaluator for the structural keywords used by the bundle schema.
  * Artifact validation still owns paths, bytes and context-dependent operations. */
 static gboolean
@@ -639,6 +676,7 @@ main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
 	g_test_add_func("/contracts/response-schema", response_schema);
 	g_test_add_func("/contracts/scaffold", scaffold_contract);
+	g_test_add_func("/contracts/scaffold-metadata", scaffold_metadata);
 	g_test_add_func("/contracts/structured-form", structured_form);
 	g_test_add_func("/contracts/structured-invalid", structured_invalid);
 	g_test_add_func("/contracts/extensions", extension_contracts);
