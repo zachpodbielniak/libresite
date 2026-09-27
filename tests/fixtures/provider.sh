@@ -7,6 +7,10 @@ case "${1-}" in
 	--license) printf '%s\n' 'AGPL-3.0-or-later'; exit 0 ;;
 esac
 printf '%s\n' "$@" > "${LS_TEST_ARGS:?}"
+if [[ -n ${LS_TEST_ENV:-} ]]
+then
+	printf '%s' "${CLAUDE_CODE_MAX_OUTPUT_TOKENS-unset}" > "$LS_TEST_ENV"
+fi
 previous=
 for argument in "$@"
 do

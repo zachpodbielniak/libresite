@@ -42,6 +42,31 @@ configure_answer_only(AiCliClient *client){
 		NULL
 	);
 }
+/* Claude Code has no max-tokens flag; its per-reply cap comes from
+ * CLAUDE_CODE_MAX_OUTPUT_TOKENS and defaults to 32000. A file bundle is one
+ * reply, so that default cut bundles off mid-JSON and made the model shrink
+ * the site to fit. The recipe budget stays guidance in the prompt; the
+ * transport cap only rises: never below the CLI default, to the budget when
+ * it is larger, and for an unlimited budget (0) to LS_CLAUDE_UNLIMITED_OUTPUT,
+ * which the CLI limits to the selected model's own maximum. */
+#define LS_CLAUDE_DEFAULT_OUTPUT 32000
+#define LS_CLAUDE_UNLIMITED_OUTPUT 128000
+static void
+configure_output_cap(AiCliClient *client, gint64 max_tokens){
+	g_autoptr(GHashTable) environment = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
+	GHashTable *existing = ai_cli_client_get_environment(client);
+	if (existing != NULL) {
+		GHashTableIter iter;
+		gpointer key, value;
+		g_hash_table_iter_init(&iter, existing);
+		while (g_hash_table_iter_next(&iter, &key, &value))
+			g_hash_table_insert(environment, g_strdup(key), g_strdup(value));
+	}
+	g_hash_table_insert(environment, g_strdup("CLAUDE_CODE_MAX_OUTPUT_TOKENS"),
+		g_strdup_printf("%" G_GINT64_FORMAT, max_tokens == 0 ? LS_CLAUDE_UNLIMITED_OUTPUT
+			: MAX(max_tokens, LS_CLAUDE_DEFAULT_OUTPUT)));
+	ai_cli_client_set_environment(client, environment);
+}
 static void provider_iface_init(LsProviderInterface *iface);
 G_DEFINE_TYPE_WITH_CODE(
 	LsAiProvider,
@@ -113,9 +138,10 @@ generate(
 	directory = g_dir_make_tmp("libresite-provider-XXXXXX", error);
 	if (directory == NULL)
 		return NULL;
-	if (AI_IS_CLAUDE_CODE_CLIENT(client))
+	if (AI_IS_CLAUDE_CODE_CLIENT(client)) {
 		configure_answer_only(client);
-	else
+		configure_output_cap(client, json_object_get_int_member(settings, "max_tokens"));
+	} else
 		g_object_set(client, "skip-permissions", TRUE, NULL);
 	ai_cli_client_set_working_directory(client, directory);
 	ai_cli_client_set_session_persistence(client, debug);
