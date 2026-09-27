@@ -150,9 +150,13 @@ check_shell(const gchar *path, const gchar *content, GCancellable *cancellable, 
 	g_subprocess_launcher_unsetenv(launcher, "SHELLCHECK_OPTS");
 	process = g_subprocess_launcher_spawn(launcher, error,
 		"shellcheck", "--norc", "--format=gcc", "-", NULL);
-	if (process == NULL ||
-		!g_subprocess_communicate_utf8(process, content, cancellable, &output, NULL, error))
+	if (process == NULL)
 		return FALSE;
+	if (!g_subprocess_communicate_utf8(process, content, cancellable, &output, NULL, error)) {
+		/* Cancellation does not stop the child; never leave it running. */
+		g_subprocess_force_exit(process);
+		return FALSE;
+	}
 	if (g_subprocess_get_if_exited(process) && g_subprocess_get_exit_status(process) == 0)
 		return TRUE;
 	/* gcc format is "-:LINE:COL: severity: text [SCnnnn]"; name the artifact. */
