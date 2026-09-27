@@ -51,7 +51,7 @@ Each exact existing path is left byte-for-byte unchanged, including executable i
 
 The renderer builds one JSON bundle and =ls_context_apply()= validates every new file before mutation. Directory/file conflicts and project limits reject the complete step; cancellation before commit leaves the context unchanged. Templates use fixed revision metadata rather than wall-clock timestamps so output remains deterministic.
 
-Each HTML template carries a distinct, nonempty =<meta name="description">= because generated SEO tests check every HTML route, including noindex drafts and the 404 page. The templates previously had none, so every static site failed its own SEO test on those three pages. A supplied seed at the same path is still preserved unchanged.
+Each HTML template carries a distinct, nonempty =<meta name="description">= because generated SEO tests check every HTML route, including noindex drafts and the 404 page. The templates previously had none; in the first live run the generated SEO test failed on exactly those three pages. A supplied seed at the same path is still preserved unchanged.
 
 Normal checkpoint rules apply after the native step. Template bytes join the recipe/catalog fingerprint for recipes containing scaffold, including replacement prompt catalogs; a changed template invalidates resume rather than mixing old and new boilerplate. Seeds are not reapplied on resume. No template is executed by Libresite during generation or publication.
 
