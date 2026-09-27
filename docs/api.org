@@ -121,7 +121,7 @@ Implement =LsProviderInterface.generate=: return an owned UTF-8 JSON file-bundle
 
 =LsProvider::usage= fires after each dispatched call with borrowed provider, model, input-byte and output-byte values. Do not share a provider across concurrent executions. Custom steps that bypass the wrapper are not counted.
 
-=ls_ai_provider_new()= constructs the ai-glib CLI adapter (Codex, Claude Code, Grok Build, Cursor, Antigravity). =ls_ai_provider_set_debug()= is transport configuration, not recipe state. The stock CLI uses this adapter; embedders may inject any =LsProvider=.
+=ls_ai_provider_new()= constructs the ai-glib CLI adapter (Codex, Claude Code, Grok Build, Cursor, Antigravity). Claude Code calls run answer-only (only the response-schema tool; no MCP servers, hooks, skills, user configuration or permission bypass); the other adapters keep their permission bypass. See [[file:operations.org][operations.org]]. =ls_ai_provider_set_debug()= is transport configuration, not recipe state. The stock CLI uses this adapter; embedders may inject any =LsProvider=.
 
 * Steps
 

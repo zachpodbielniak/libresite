@@ -6,6 +6,12 @@ G_BEGIN_DECLS
 G_DECLARE_FINAL_TYPE(LsAiProvider, ls_ai_provider, LS, AI_PROVIDER, GObject)
 /**
  * ls_ai_provider_new:
+ *
+ * Claude Code calls run answer-only: the response-schema tool is the only
+ * tool, with no MCP servers, hooks, skills or user configuration, and no
+ * permission bypass. The other CLI adapters keep their bypass because pinned
+ * ai-glib cannot remove their tools.
+ *
  * Returns: (transfer full): ai-glib CLI transport
  */
 LsAiProvider *ls_ai_provider_new(void);
