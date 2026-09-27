@@ -9,15 +9,17 @@ G_BEGIN_DECLS
 /**
  * LsError:
  * @LS_ERROR_INVALID: Invalid input or provider output.
- * @LS_ERROR_CONFLICT: Conflicting output, workspace or required approval.
+ * @LS_ERROR_CONFLICT: Conflicting output or workspace.
  * @LS_ERROR_PROVIDER: Provider failure.
  * @LS_ERROR_LIMIT: Resource limit exceeded.
  * @LS_ERROR_VALIDATION: Native validation rejected generated artifacts.
  * @LS_ERROR_RECOVERY: Held/invalid workspace lock or invalid resume checkpoint.
+ * @LS_ERROR_APPROVAL: A native gate is waiting for approval. The previous step
+ *   is checkpointed; resume with the gate approved to continue.
  */
 typedef enum {
 	LS_ERROR_INVALID, LS_ERROR_CONFLICT, LS_ERROR_PROVIDER, LS_ERROR_LIMIT,
-	LS_ERROR_VALIDATION, LS_ERROR_RECOVERY
+	LS_ERROR_VALIDATION, LS_ERROR_RECOVERY, LS_ERROR_APPROVAL
 } LsError;
 GQuark ls_error_quark(void);
 /* Internal helpers shared by the parser, artifact store and CLI. */

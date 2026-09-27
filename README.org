@@ -74,7 +74,7 @@ To start with client copy, logo SVG, brand YAML, approved legal text or binary a
 
 Successful steps are saved under =my-site.libresite-work/checkpoint.json=. Resume restores their files and starts at the next step. Bundled recipes stop at =design-gate= until you inspect =OUTPUT.libresite-work/review/design-gate/= and resume with =--approve design-gate= (or =--approve-all= for unattended runs). The parsed recipe and exact prompt catalog must match. Existing output directories are never overwritten. The output's parent directory must already exist. Concurrent runs targeting the same workspace are rejected. After publication, =--qa DIR= inspects HTML structure and local asset references without executing generated code; native =validate= remains the in-process literal check.
 
-Orchestrators can add =--events FD= or =--events-file PATH= for NDJSON lifecycle events. Stable exit codes distinguish invalid recipes, rejected output, provider failure, cancellation and recovery conflicts; see [[file:docs/operations.org::*Subprocess events and exit codes][the subprocess contract]].
+Orchestrators can add =--events FD= or =--events-file PATH= for NDJSON lifecycle events. Stable exit codes distinguish invalid recipes, rejected output, provider failure, cancellation, recovery conflicts and a gate waiting for approval (7); see [[file:docs/operations.org::*Subprocess events and exit codes][the subprocess contract]].
 
 Stderr reports attempt numbers, per-attempt timeouts, retry reasons and a waiting heartbeat every 30 seconds. Accepted artifacts advance only after successful steps; accounting also updates before execution and on failure; =timeout: 900= with =retries: 1= can spend 30 minutes on one step before failing.
 

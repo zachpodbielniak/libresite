@@ -19,11 +19,12 @@ Domain =LS_ERROR= (=ls_error_quark()=). Codes:
 | Code | Meaning |
 |------+---------|
 | =LS_ERROR_INVALID= | Malformed input, unknown keys/types, invalid provider JSON |
-| =LS_ERROR_CONFLICT= | Conflicting output/workspace, required gate approval or Git publication |
+| =LS_ERROR_CONFLICT= | Conflicting output/workspace or Git publication |
 | =LS_ERROR_PROVIDER= | Transport failure after a valid request |
 | =LS_ERROR_RECOVERY= | Held/invalid workspace lock or invalid/mismatched resume checkpoint |
 | =LS_ERROR_VALIDATION= | Native required-content or predicate rejection |
 | =LS_ERROR_LIMIT= | Document, file, project, prompt or nesting limit |
+| =LS_ERROR_APPROVAL= | A native gate is waiting for approval (a pause, not a failure) |
 
 Public size macros: =LS_MAX_DOCUMENT= is 16 MiB (YAML, catalog and checkpoint text) and =LS_MAX_PROJECT= is 64 MiB of decoded project bytes. Other limits (4096 files, 128 recipe steps, 16 MiB per file, 128 MiB encoded checkpoints, 32 JSON/YAML nesting, 100000 YAML events) are enforced by the same parsers; see [[file:operations.org][operations.org]].
 

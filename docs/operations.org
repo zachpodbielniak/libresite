@@ -193,12 +193,15 @@ and automatic =--help= exit before opening the stream.
 | Code | Meaning |
 |------+---------|
 | 0 | Success, including inspection |
-| 1 | Other failures: filesystem/publication I/O, existing output, QA rejection, unapproved gate, event I/O |
+| 1 | Other failures: filesystem/publication I/O, existing output, QA rejection, event I/O |
 | 2 | Invalid options, recipe, catalog, module configuration or inspection input |
 | 3 | Native validation rejected required content or predicates, including generation's downstream acceptance checks |
 | 4 | Provider/response failure after configured retries, including malformed or unsafe bundles |
 | 5 | Cancellation (SIGINT/SIGTERM) or exhausted provider deadline |
 | 6 | Held/invalid workspace lock or invalid/mismatched resume checkpoint |
+| 7 | A native gate is waiting for approval; the previous step is checkpointed and review files are exported |
+
+Status 7 is a pause, not a failure: inspect =OUTPUT.libresite-work/review/STEP-ID/= and resume with =--approve STEP-ID=. It previously shared status 1 with real failures, so an orchestrator could not tell waiting from broken. The library reports it as =LS_ERROR_APPROVAL=.
 
 These statuses apply without event flags too. Cancellation previously returned
 130; subprocess callers should now handle 5. Native validation rejection uses

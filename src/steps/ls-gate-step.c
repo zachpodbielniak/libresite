@@ -103,7 +103,7 @@ execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *prompts,
 	g_signal_emit_by_name(self, "progress", message);
 	if (ls_recipe_is_approved(recipe, id))
 		return TRUE;
-	g_set_error(error, LS_ERROR, LS_ERROR_CONFLICT,
+	g_set_error(error, LS_ERROR, LS_ERROR_APPROVAL,
 		"Gate '%s' needs approval. Inspect workspace/review/%s, then resume with --approve %s "
 		"(or --approve-all)",
 		id, id, id);

@@ -51,8 +51,8 @@ expect_status 2 "$binary" --events 2 -r "$test_dir/recipe.yaml" --validate
 expect_status 2 "$binary" --events 3 --events-file "$test_dir/both" -r "$test_dir/recipe.yaml" --validate 3> /dev/null
 expect_status 1 "$binary" --events 99 -r "$test_dir/recipe.yaml" --validate
 export LS_TEST_BUNDLE='{"files":[],"delete":["old.txt"],"rename":[{"from":"move.txt","to":"new.txt"}]}'
-expect_status 1 "$binary" -r "$test_dir/recipe.yaml" -o "$test_dir/site" --events-file "$test_dir/edit.jsonl"
-"$test_dir/check" "$test_dir/edit.jsonl" run.started,step.started,step.progress,step.completed,step.started,step.progress,step.failed,run.finished 1 || failures=$((failures + 1))
+expect_status 7 "$binary" -r "$test_dir/recipe.yaml" -o "$test_dir/site" --events-file "$test_dir/edit.jsonl"
+"$test_dir/check" "$test_dir/edit.jsonl" run.started,step.started,step.progress,step.completed,step.started,step.progress,step.failed,run.finished 7 || failures=$((failures + 1))
 expect_status 0 "$binary" -r "$test_dir/recipe.yaml" -o "$test_dir/site" --resume --approve-all --events 3 3> "$test_dir/resume.jsonl"
 "$test_dir/check" "$test_dir/resume.jsonl" run.started,step.started,step.progress,step.completed,step.started,step.completed,run.finished 0 || failures=$((failures + 1))
 [[ ! -e "$test_dir/site/old.txt" && ! -e "$test_dir/site/move.txt" && -f "$test_dir/site/new.txt" ]] || failures=$((failures + 1))

@@ -79,6 +79,9 @@ exit_code(const GError *error, gint fallback){
 		return 4;
 	if (g_error_matches(error, LS_ERROR, LS_ERROR_RECOVERY))
 		return 6;
+	/* A pause for review, distinct from every failure. */
+	if (g_error_matches(error, LS_ERROR, LS_ERROR_APPROVAL))
+		return 7;
 	if (g_error_matches(error, LS_ERROR, LS_ERROR_CONFLICT))
 		return 1;
 	if (error->domain == G_OPTION_ERROR)

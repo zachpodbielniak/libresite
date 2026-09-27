@@ -331,7 +331,7 @@ pipeline_gate(void){
 	g_autofree gchar *review = g_build_filename(temp, "site.libresite-work", "review",
 		"design-gate", "index.html", NULL);
 	g_assert_false(ls_pipeline_run(pipeline, recipe, output, FALSE, NULL, &error));
-	g_assert_error(error, LS_ERROR, LS_ERROR_CONFLICT);
+	g_assert_error(error, LS_ERROR, LS_ERROR_APPROVAL);
 	g_assert_true(g_file_test(review, G_FILE_TEST_IS_REGULAR));
 	g_assert_false(g_file_test(output, G_FILE_TEST_EXISTS));
 	g_clear_error(&error);

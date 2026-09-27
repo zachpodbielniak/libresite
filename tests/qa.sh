@@ -44,10 +44,10 @@ pipeline:
       options:
         required: [index.html]
 YAML
-if "$binary" -r "$test_dir/gated.yaml" -o "$test_dir/blocked" > "$test_dir/blocked.log" 2>&1
-then
-	exit 1
-fi
+# An unapproved gate is a pause, not a failure: its own exit status (7).
+status=0
+"$binary" -r "$test_dir/gated.yaml" -o "$test_dir/blocked" > "$test_dir/blocked.log" 2>&1 || status=$?
+test "$status" -eq 7
 rg -q "Gate 'design-gate' needs approval" "$test_dir/blocked.log"
 test -f "$test_dir/blocked.libresite-work/review/design-gate/index.html"
 "$binary" -r "$test_dir/gated.yaml" -o "$test_dir/blocked" --resume --approve design-gate
