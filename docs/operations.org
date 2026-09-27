@@ -167,7 +167,10 @@ libresite -r site.yaml -o ./site --events-file ./site-events.jsonl
 
 Every invocation with a successfully opened stream emits =run.started= and
 =run.finished= (including inspection modes). Generation also emits
-=step.started=, =step.progress=, =step.completed= and =step.failed=. Indices are
+=step.started=, =step.progress=, =step.completed=, =step.failed= and
+=step.awaiting_approval=. A native gate that needs =--approve= emits
+=step.awaiting_approval= (never =step.failed=) followed by =run.finished= with
+exit code 7; its =message= names the review directory. Indices are
 zero-based; resumed runs emit only steps actually executed. Completion means
 the step checkpoint was saved; =run.finished= carries the process =exit_code=.
 A failed step carries its diagnostic in =message=; progress carries the original

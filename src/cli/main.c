@@ -208,7 +208,10 @@ step_failed(LsPipeline *pipeline, const gchar *id, guint index,
 	(void)pipeline;
 	(void)id;
 	(void)index;
-	event_write(progress->events, "step.failed", error != NULL ? error->message : NULL, 0);
+	/* A gate waiting for review is a pause; consumers must not see a failure. */
+	event_write(progress->events,
+		g_error_matches(error, LS_ERROR, LS_ERROR_APPROVAL) ? "step.awaiting_approval" : "step.failed",
+		error != NULL ? error->message : NULL, 0);
 }
 /* Reset elapsed time at each attempt or retry, without touching checkpoints. */
 static void
@@ -416,7 +419,8 @@ main(int argc, char **argv){
 		"--qa inspects a published tree and does not execute generated tests.\n"
 		"Exit codes: 0 success; 1 other failure; 2 usage or invalid recipe;\n"
 		"3 validation rejected output; 4 provider failed after retries;\n"
-		"5 cancelled or deadline; 6 lock held or resume mismatch."
+		"5 cancelled or deadline; 6 lock held or resume mismatch;\n"
+		"7 gate waiting for approval."
 	);
 	if (!g_option_context_parse(options, &argc, &argv, &error))
 		goto fail;
