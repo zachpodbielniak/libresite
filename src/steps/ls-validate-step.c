@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
 #include "steps/ls-step.h"
 #include <string.h>
+/* Bound on ShellCheck output quoted back into an error and retry prompt. */
+#define LS_SHELLCHECK_REPORT 400
 struct _LsValidateStep {
 	LsStep parent_instance;
 };
@@ -42,6 +44,7 @@ ls_validate_step_check_options(JsonObject *options, GError **error){
 	g_autoptr(GHashTable) seen = g_hash_table_new(g_str_hash, g_str_equal);
 	JsonNode *node;
 	JsonArray *checks;
+	gboolean shellcheck = FALSE;
 	guint i;
 	if (options == NULL) {
 		g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID,
@@ -69,8 +72,17 @@ ls_validate_step_check_options(JsonObject *options, GError **error){
 		if (!JSON_NODE_HOLDS_OBJECT(node))
 			goto invalid;
 		check = json_node_get_object(node);
-		if (!ls_object_keys(check, "|path|contains|excludes|min_bytes|max_bytes|", error))
+		if (!ls_object_keys(check, "|path|contains|excludes|min_bytes|max_bytes|shellcheck|", error))
 			return FALSE;
+		node = json_object_get_member(check, "shellcheck");
+		if (node != NULL) {
+			if (json_node_get_value_type(node) != G_TYPE_BOOLEAN || !json_node_get_boolean(node)) {
+				g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID,
+					"validate shellcheck must be true when present");
+				return FALSE;
+			}
+			shellcheck = TRUE;
+		}
 		path = ls_string(check, "path");
 		if (!ls_path_valid(path) || !g_hash_table_add(seen, (gpointer)path) ||
 			json_object_get_size(check) < 2)
@@ -93,6 +105,15 @@ ls_validate_step_check_options(JsonObject *options, GError **error){
 		if (values[0] > values[1])
 			goto invalid;
 	}
+	/* Missing host tools fail preflight, not after a paid provider call. */
+	if (shellcheck) {
+		g_autofree gchar *program = g_find_program_in_path("shellcheck");
+		if (program == NULL) {
+			g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID,
+				"validate shellcheck requires ShellCheck on PATH (Fedora package: ShellCheck)");
+			return FALSE;
+		}
+	}
 	return TRUE;
 invalid:
 	g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID,
@@ -112,10 +133,48 @@ has_text(const gchar *content){
 	return FALSE;
 }
 
+/* Static analysis only: ShellCheck reads the script on stdin and never runs it.
+ * --norc and a cleared SHELLCHECK_OPTS keep the verdict independent of the
+ * caller's directory and environment. The shebang selects the dialect; a
+ * script without one is rejected (SC2148). */
+static gboolean
+check_shell(const gchar *path, const gchar *content, GCancellable *cancellable, GError **error){
+	g_autoptr(GSubprocessLauncher) launcher = g_subprocess_launcher_new(
+		G_SUBPROCESS_FLAGS_STDIN_PIPE | G_SUBPROCESS_FLAGS_STDOUT_PIPE | G_SUBPROCESS_FLAGS_STDERR_MERGE);
+	g_autoptr(GSubprocess) process = NULL;
+	g_autofree gchar *output = NULL;
+	g_autofree gchar *report = NULL;
+	g_auto(GStrv) lines = NULL;
+	g_autoptr(GString) summary = NULL;
+	guint i;
+	g_subprocess_launcher_unsetenv(launcher, "SHELLCHECK_OPTS");
+	process = g_subprocess_launcher_spawn(launcher, error,
+		"shellcheck", "--norc", "--format=gcc", "-", NULL);
+	if (process == NULL ||
+		!g_subprocess_communicate_utf8(process, content, cancellable, &output, NULL, error))
+		return FALSE;
+	if (g_subprocess_get_if_exited(process) && g_subprocess_get_exit_status(process) == 0)
+		return TRUE;
+	/* gcc format is "-:LINE:COL: severity: text [SCnnnn]"; name the artifact. */
+	summary = g_string_new(NULL);
+	lines = g_strsplit(output != NULL ? output : "", "\n", -1);
+	for (i = 0; lines[i] != NULL && summary->len < LS_SHELLCHECK_REPORT; i++) {
+		if (*lines[i] == '\0')
+			continue;
+		if (summary->len > 0)
+			g_string_append(summary, "; ");
+		g_string_append(summary, g_str_has_prefix(lines[i], "-:") ? lines[i] + 2 : lines[i]);
+	}
+	report = g_utf8_make_valid(summary->str, MIN(summary->len, LS_SHELLCHECK_REPORT));
+	g_set_error(error, LS_ERROR, LS_ERROR_VALIDATION, "Artifact '%s' failed ShellCheck: %s",
+		path, *report != '\0' ? report : "no diagnostics");
+	return FALSE;
+}
+
 /* Literal predicates are deterministic and never execute generated code.
  * Report the predicate index instead of dumping arbitrary project content. */
 static gboolean
-check_content(JsonObject *check, LsContext *context, GError **error){
+check_content(JsonObject *check, LsContext *context, GCancellable *cancellable, GError **error){
 	const gchar *path = ls_string(check, "path");
 	const LsArtifact *artifact = ls_context_lookup(context, path);
 	const gchar *content;
@@ -136,9 +195,10 @@ check_content(JsonObject *check, LsContext *context, GError **error){
 		return FALSE;
 	}
 	if (ls_artifact_is_binary(artifact) &&
-		(json_object_has_member(check, "contains") || json_object_has_member(check, "excludes"))) {
+		(json_object_has_member(check, "contains") || json_object_has_member(check, "excludes") ||
+		json_object_has_member(check, "shellcheck"))) {
 		g_set_error(error, LS_ERROR, LS_ERROR_VALIDATION,
-			"Artifact '%s' is binary; contains/excludes apply to UTF-8 text", path);
+			"Artifact '%s' is binary; contains/excludes/shellcheck apply to UTF-8 text", path);
 		return FALSE;
 	}
 	content = ls_artifact_get_content(artifact);
@@ -156,6 +216,8 @@ check_content(JsonObject *check, LsContext *context, GError **error){
 			}
 		}
 	}
+	if (json_object_has_member(check, "shellcheck"))
+		return check_shell(path, content, cancellable, error);
 	return TRUE;
 }
 
@@ -202,7 +264,7 @@ execute(
 		JsonArray *checks = json_object_get_array_member(options, "checks");
 		for (i = 0; i < json_array_get_length(checks); i++) {
 			if (g_cancellable_set_error_if_cancelled(cancellable, error) ||
-				!check_content(json_array_get_object_element(checks, i), context, error))
+				!check_content(json_array_get_object_element(checks, i), context, cancellable, error))
 				return FALSE;
 		}
 	}

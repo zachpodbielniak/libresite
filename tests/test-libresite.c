@@ -1051,6 +1051,7 @@ acceptance_sentinel(JsonObject *acceptance, const gchar *path){
 	JsonNode *node = json_object_get_member(options, "checks");
 	g_autoptr(GString) text = g_string_new("Fixture");
 	g_autoptr(JsonNode) value = json_node_new(JSON_NODE_VALUE);
+	gboolean shell = FALSE;
 	guint i, j;
 	if (node != NULL) {
 		JsonArray *checks = json_node_get_array(node);
@@ -1058,6 +1059,11 @@ acceptance_sentinel(JsonObject *acceptance, const gchar *path){
 			JsonObject *check = json_array_get_object_element(checks, i);
 			if (!g_str_equal(path, ls_string(check, "path")))
 				continue;
+			/* A linted script sentinel must itself be a clean script. */
+			if (json_object_has_member(check, "shellcheck") && !shell) {
+				g_string_prepend(text, "#!/usr/bin/env bash\n# ");
+				shell = TRUE;
+			}
 			if (json_object_has_member(check, "contains")) {
 				JsonArray *contains = json_object_get_array_member(check, "contains");
 				for (j = 0; j < json_array_get_length(contains); j++)
@@ -1070,6 +1076,8 @@ acceptance_sentinel(JsonObject *acceptance, const gchar *path){
 			}
 		}
 	}
+	if (shell)
+		g_string_append(text, "\n:\n");
 	json_node_set_string(value, text->str);
 	return ls_json_encode(value);
 }

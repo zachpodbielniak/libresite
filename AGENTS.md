@@ -39,7 +39,7 @@ Run `make tests` for behavior changes. Before delivering a substantial change, r
 
 The test transport must remain injectable, and default tests must never invoke real AI accounts. CLI integration uses controlled executables through ai-glib's provider path overrides. Extend negative cases alongside new input fields, artifact operations or checkpoint behavior. External plugin/install tests exercise public API usability, not just internal helpers.
 
-A fixture-generated site is evidence for orchestration, not evidence of live AI design quality. Native `validate` proves required non-whitespace artifact text and optional literal-content/byte-size predicates, including `AGENTS.md` on bundled recipes. State clearly whether generated application builds, browser workflows or live provider generation were actually tested. A loopback form 403 caused by `Host: localhost` is a generator defect: prompts and HTTP tests must accept both `127.0.0.1` and `localhost`.
+A fixture-generated site is evidence for orchestration, not evidence of live AI design quality. Native `validate` proves required non-whitespace artifact text and optional literal-content/byte-size predicates plus opt-in ShellCheck static analysis of emitted scripts (never executed), including `AGENTS.md` on bundled recipes. State clearly whether generated application builds, browser workflows or live provider generation were actually tested. A loopback form 403 caused by `Host: localhost` is a generator defect: prompts and HTTP tests must accept both `127.0.0.1` and `localhost`.
 
 ## Agent-facing workflows
 

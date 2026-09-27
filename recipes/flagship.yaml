@@ -85,6 +85,7 @@ pipeline:
       type: validate
       options:
         required: [site.js, tests/check.sh, docs/testing.org, README.org]
+        checks: [{path: tests/check.sh, shellcheck: true}]
     - id: polish
       type: generate
       prompt: polish
@@ -129,3 +130,9 @@ pipeline:
           - tests/seo.sh
           - robots.txt
           - scripts/prepare-seo.sh
+        # Static analysis of emitted scripts; ShellCheck never runs them.
+        checks:
+          - {path: tests/check.sh, shellcheck: true}
+          - {path: tests/seo.sh, shellcheck: true}
+          - {path: tests/scaffold.sh, shellcheck: true}
+          - {path: scripts/prepare-seo.sh, shellcheck: true}

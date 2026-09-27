@@ -24,6 +24,16 @@ generate(LsProvider *provider, JsonObject *settings, const gchar *system,
 	self->calls++;
 	/* Copy locks must reach the transport unchanged and reject a single wrong
 	 * digit even when the rest of the sentence and telephone URI are correct. */
+	if (self->mode == 7) {
+		if (self->calls == 1)
+			return g_strdup("{\"files\":[{\"path\":\"run.sh\",\"content\":"
+				"\"#!/usr/bin/env bash\\necho $1\\n\"}]}");
+		g_assert_nonnull(strstr(prompt, "PREVIOUS ATTEMPT REJECTED"));
+		g_assert_nonnull(strstr(prompt, "run.sh"));
+		g_assert_nonnull(strstr(prompt, "SC2086"));
+		return g_strdup("{\"files\":[{\"path\":\"run.sh\",\"content\":"
+			"\"#!/usr/bin/env bash\\nprintf '%s\\\\n' \\\"$1\\\"\\n\"}]}");
+	}
 	if (self->mode >= 5) {
 		g_assert_nonnull(strstr(prompt, "Call Example Plumbing at (202) 555-0147."));
 		g_assert_nonnull(strstr(system, "CLIENT COPY LOCK"));
@@ -556,6 +566,112 @@ scaffold_metadata(void){
 	}
 }
 
+/* Run a validate step with one ShellCheck rule against a single artifact. */
+static gboolean
+shellcheck_one(const gchar *bundle, GError **error){
+	g_autoptr(JsonNode) parsed = ls_json_parse(
+		"{\"options\":{\"required\":[\"run.sh\"],"
+		"\"checks\":[{\"path\":\"run.sh\",\"shellcheck\":true}]}}", NULL);
+	g_autoptr(LsStep) step = g_object_new(LS_TYPE_VALIDATE_STEP, NULL);
+	g_autoptr(LsContext) context = ls_context_new();
+	g_assert_true(ls_context_apply(context, bundle, NULL));
+	return ls_step_execute(step, NULL, json_node_get_object(parsed), NULL, context, NULL, NULL, error);
+}
+
+/* ShellCheck reads the emitted script, never runs it, and reports findings
+ * with the artifact path so a retry prompt can name the defect. */
+static void
+shellcheck_checks(void){
+	g_autoptr(GError) error = NULL;
+	g_assert_true(shellcheck_one("{\"files\":[{\"path\":\"run.sh\",\"content\":"
+		"\"#!/usr/bin/env bash\\nset -euo pipefail\\nprintf '%s\\\\n' \\\"$1\\\"\\n\"}]}", &error));
+	g_assert_no_error(error);
+	g_assert_false(shellcheck_one("{\"files\":[{\"path\":\"run.sh\",\"content\":"
+		"\"#!/usr/bin/env bash\\necho $1\\n\"}]}", &error));
+	g_assert_error(error, LS_ERROR, LS_ERROR_VALIDATION);
+	g_assert_nonnull(strstr(error->message, "run.sh"));
+	g_assert_nonnull(strstr(error->message, "SC2086"));
+	g_clear_error(&error);
+	/* No shebang: the shell dialect is unknown, which is itself a defect. */
+	g_assert_false(shellcheck_one("{\"files\":[{\"path\":\"run.sh\",\"content\":\"echo hi\\n\"}]}", &error));
+	g_assert_error(error, LS_ERROR, LS_ERROR_VALIDATION);
+	g_assert_nonnull(strstr(error->message, "SC2148"));
+	g_clear_error(&error);
+	g_assert_false(shellcheck_one("{\"files\":[{\"path\":\"run.sh\",\"content\":\"AA==\","
+		"\"encoding\":\"base64\"}]}", &error));
+	g_assert_error(error, LS_ERROR, LS_ERROR_VALIDATION);
+}
+
+/* Neither a .shellcheckrc in the working directory nor SHELLCHECK_OPTS may
+ * relax the check. Runs in a child so chdir/setenv precede any thread. */
+static void
+shellcheck_isolated(void){
+	g_autoptr(GError) error = NULL;
+	g_autofree gchar *temp = NULL;
+	g_autofree gchar *rc = NULL;
+	if (!g_test_subprocess()) {
+		g_test_trap_subprocess(NULL, 0, G_TEST_SUBPROCESS_INHERIT_STDERR);
+		g_test_trap_assert_passed();
+		return;
+	}
+	temp = g_dir_make_tmp("libresite-shellcheck-XXXXXX", NULL);
+	rc = g_build_filename(temp, ".shellcheckrc", NULL);
+	g_assert_true(g_file_set_contents(rc, "disable=SC2086\n", -1, NULL));
+	g_assert_cmpint(g_chdir(temp), ==, 0);
+	g_assert_true(g_setenv("SHELLCHECK_OPTS", "--exclude=SC2086", TRUE));
+	g_assert_false(shellcheck_one("{\"files\":[{\"path\":\"run.sh\",\"content\":"
+		"\"#!/usr/bin/env bash\\necho $1\\n\"}]}", &error));
+	g_assert_error(error, LS_ERROR, LS_ERROR_VALIDATION);
+	(void)g_unlink(rc);
+	(void)g_rmdir(temp);
+}
+
+/* A missing ShellCheck fails preflight, before any paid generation. */
+static void
+shellcheck_missing(void){
+	g_autoptr(GError) error = NULL;
+	g_autoptr(JsonNode) options = NULL;
+	g_autofree gchar *empty = NULL;
+	if (!g_test_subprocess()) {
+		g_test_trap_subprocess(NULL, 0, G_TEST_SUBPROCESS_INHERIT_STDERR);
+		g_test_trap_assert_passed();
+		return;
+	}
+	empty = g_dir_make_tmp("libresite-nopath-XXXXXX", NULL);
+	g_assert_true(g_setenv("PATH", empty, TRUE));
+	options = ls_json_parse("{\"required\":[\"run.sh\"],"
+		"\"checks\":[{\"path\":\"run.sh\",\"shellcheck\":true}]}", NULL);
+	g_assert_false(ls_validate_step_check_options(json_node_get_object(options), &error));
+	g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+	g_assert_nonnull(strstr(error->message, "ShellCheck"));
+	(void)g_rmdir(empty);
+}
+
+/* ShellCheck findings reach the model through the existing corrective retry. */
+static void
+shellcheck_retry(void){
+	g_autoptr(LsRecipe) recipe = ls_recipe_new(
+		"version: 1\nname: lint\nsite: {brief: contract}\nai: {retries: 1}\npipeline:\n  steps:\n"
+		"    - {id: generate, type: frontend}\n"
+		"    - id: check\n      type: validate\n      options:\n        required: [run.sh]\n"
+		"        checks: [{path: run.sh, shellcheck: true}]\n", NULL);
+	g_autoptr(LsPrompts) prompts = ls_prompts_new(NULL, NULL);
+	g_autoptr(GObject) provider = g_object_new(contract_provider_get_type(), NULL);
+	g_autoptr(LsPipeline) pipeline = ls_pipeline_new(LS_PROVIDER(provider), prompts);
+	g_autoptr(GError) error = NULL;
+	g_autofree gchar *temp = g_dir_make_tmp("libresite-lint-XXXXXX", NULL);
+	g_autofree gchar *output = g_build_filename(temp, "site", NULL);
+	g_autofree gchar *script = g_build_filename(output, "run.sh", NULL);
+	g_autofree gchar *text = NULL;
+	g_assert_nonnull(recipe);
+	((ContractProvider *)provider)->mode = 7;
+	g_assert_true(ls_pipeline_run(pipeline, recipe, output, FALSE, NULL, &error));
+	g_assert_no_error(error);
+	g_assert_cmpuint(((ContractProvider *)provider)->calls, ==, 2);
+	g_assert_true(g_file_get_contents(script, &text, NULL, NULL));
+	g_assert_null(strstr(text, "echo $1"));
+}
+
 /* Test-only evaluator for the structural keywords used by the bundle schema.
  * Artifact validation still owns paths, bytes and context-dependent operations. */
 static gboolean
@@ -670,7 +786,10 @@ main(int argc, char **argv){
 		"{required: [a], checks: [{path: a, max_bytes: '1'}]}",
 		"{required: [a], checks: [{path: a, max_bytes: 1}, {path: a, max_bytes: 2}]}",
 		"{required: [a], checks: [{path: a, contain: [x]}]}",
-		"{required: [a], 'required|checks': []}"
+		"{required: [a], 'required|checks': []}",
+		"{required: [a], checks: [{path: a, shellcheck: false}]}",
+		"{required: [a], checks: [{path: a, shellcheck: 'yes'}]}",
+		"{required: [a], checks: [{path: a, shellcheck: 1}]}"
 	};
 	guint i;
 	g_test_init(&argc, &argv, NULL);
@@ -681,6 +800,10 @@ main(int argc, char **argv){
 	g_test_add_func("/contracts/structured-invalid", structured_invalid);
 	g_test_add_func("/contracts/extensions", extension_contracts);
 	g_test_add_func("/contracts/content", content_checks);
+	g_test_add_func("/contracts/shellcheck/findings", shellcheck_checks);
+	g_test_add_func("/contracts/shellcheck/isolated", shellcheck_isolated);
+	g_test_add_func("/contracts/shellcheck/missing", shellcheck_missing);
+	g_test_add_func("/contracts/shellcheck/retry", shellcheck_retry);
 	g_test_add_func("/contracts/copy-lock/literals", copy_lock_checks);
 	g_test_add_data_func("/contracts/copy-lock/retry", GUINT_TO_POINTER(2), content_retry);
 	g_test_add_data_func("/contracts/copy-lock/resume", GUINT_TO_POINTER(3), content_retry);

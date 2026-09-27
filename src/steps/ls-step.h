@@ -65,8 +65,10 @@ G_DECLARE_FINAL_TYPE(LsValidateStep, ls_validate_step, LS, VALIDATE_STEP, LsStep
  * @options: (nullable) (transfer none): native validation options
  * @error: return location for an error
  *
- * Checks required paths and optional literal-content and byte-size predicates
- * without accessing artifacts or invoking a provider. Does not mutate @options.
+ * Checks required paths and optional literal-content, byte-size and ShellCheck
+ * predicates without accessing artifacts or invoking a provider. When a rule
+ * sets shellcheck, also requires ShellCheck on PATH so a missing host tool
+ * fails before paid generation. Does not mutate @options.
  *
  * Returns: whether the options have a valid schema
  */

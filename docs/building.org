@@ -14,7 +14,7 @@
 
 * Packages and dependency modes
 
-Generation and the test suite require the =git= executable (Fedora package =git-core=). Git initializes and commits each generated output before publication; no libgit2 dependency is needed. The build prerequisites remain =gcc=, =make=, =pkgconf-pkg-config=, =glib2-devel=, =json-glib-devel=, =libsoup3-devel=, =libyaml-devel=, =libxml2-devel= and =libdex-devel=; verification also uses =ShellCheck=, =ripgrep= and =coreutils=.
+Generation and the test suite require the =git= executable (Fedora package =git-core=). Git initializes and commits each generated output before publication; no libgit2 dependency is needed. The build prerequisites remain =gcc=, =make=, =pkgconf-pkg-config=, =glib2-devel=, =json-glib-devel=, =libsoup3-devel=, =libyaml-devel=, =libxml2-devel= and =libdex-devel=; verification also uses =ShellCheck=, =ripgrep= and =coreutils=. Generation also needs =ShellCheck= when a recipe's =validate= rule sets =shellcheck: true= (the flagship recipe does); preflight names it if it is missing.
 
 Fedora builder packages: =gcc=, =make=, =pkgconf-pkg-config=, =glib2-devel=, =json-glib-devel=, =libsoup3-devel= and =libyaml-devel=. =DEPS=system= optionally uses compatible installed =ai-glib-1.0= and =yaml-glib-1.0= development builds. Those are the user's own libraries, not assumed Fedora distribution packages. Their pkg-config metadata resolves transitive requirements. The pinned ai-glib revision includes Codex, Claude Code, Grok Build, Cursor and Antigravity CLI classes.
 
