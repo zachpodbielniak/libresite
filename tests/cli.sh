@@ -154,7 +154,18 @@ YAML
 				exit 1
 			fi
 			;;
-		claude-code|antigravity)
+		claude-code)
+			# Answer-only: the schema tool is the only tool; nothing to bypass.
+			cmp "$root/data/file-bundle.schema.json" "$LS_TEST_SCHEMA"
+			rg -qx -- '--safe-mode' "$test_dir/args"
+			rg -qx -- '--strict-mcp-config' "$test_dir/args"
+			rg -x -A1 -- '--tools' "$test_dir/args" | rg -qx 'StructuredOutput'
+			if rg -qx -- '--dangerously-skip-permissions' "$test_dir/args"
+			then
+				exit 1
+			fi
+			;;
+		antigravity)
 			cmp "$root/data/file-bundle.schema.json" "$LS_TEST_SCHEMA"
 			rg -qx -- '--dangerously-skip-permissions' "$test_dir/args"
 			;;

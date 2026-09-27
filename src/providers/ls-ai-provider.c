@@ -23,6 +23,24 @@ debug_log(const gchar *format, ...){
 	va_end(args);
 	g_printerr("[%s] debug: %s\n", timestamp, message);
 }
+/* Claude Code: the structured file bundle is the only output libresite keeps,
+ * so the session gets nothing else. Naming only the schema's own tool in
+ * --tools leaves no built-in tool (pinned ai-glib cannot emit an empty list);
+ * safe mode drops CLAUDE.md, skills, plugins, hooks and custom agents; strict
+ * MCP with no configuration loads no server. Nothing can run, so the session
+ * needs no permission bypass. Requires the json-schema property to be set. */
+static void
+configure_answer_only(AiCliClient *client){
+	g_object_set(
+		client,
+		"tools", "StructuredOutput",
+		"safe-mode", TRUE,
+		"strict-mcp-config", TRUE,
+		"disable-slash-commands", TRUE,
+		"skip-permissions", FALSE,
+		NULL
+	);
+}
 static void provider_iface_init(LsProviderInterface *iface);
 G_DEFINE_TYPE_WITH_CODE(
 	LsAiProvider,
@@ -87,13 +105,17 @@ generate(
 	}
 	/* Unattended generation cannot answer TTY or stdin approval prompts.
 	 * Codex exec rejects --ask-for-approval; read-only plus never-ask still
-	 * waits for sandbox-escalation approval and never returns. Bypass is
-	 * required for every CLI adapter. skip-permissions conflicts with an
-	 * explicit restrictive Codex sandbox, so do not set one. */
+	 * waits for sandbox-escalation approval and never returns. The other
+	 * agent CLIs cannot drop their tools in pinned ai-glib, so they still
+	 * need the bypass. skip-permissions conflicts with an explicit
+	 * restrictive Codex sandbox, so do not set one. */
 	directory = g_dir_make_tmp("libresite-provider-XXXXXX", error);
 	if (directory == NULL)
 		return NULL;
-	g_object_set(client, "skip-permissions", TRUE, NULL);
+	if (g_str_equal(provider, "claude-code"))
+		configure_answer_only(client);
+	else
+		g_object_set(client, "skip-permissions", TRUE, NULL);
 	ai_cli_client_set_working_directory(client, directory);
 	ai_cli_client_set_session_persistence(client, debug);
 	ai_cli_client_set_process_timeout_ms(

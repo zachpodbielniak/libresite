@@ -33,10 +33,13 @@ $(OUTDIR)/test-contracts: tests/test-contracts.c $(LIB_STATIC) $(DEP_ARCHIVES) $
 	$(CC) $(CFLAGS) -MMD -MP -MF $@.d -o $@ $< $(LIB_STATIC) $(LDFLAGS)
 $(OUTDIR)/test-packages: tests/test-packages.c $(LIB_STATIC) $(DEP_ARCHIVES) $(OUTDIR)/.flags
 	$(CC) $(CFLAGS) -MMD -MP -MF $@.d -o $@ $< $(LIB_STATIC) $(LDFLAGS)
-tests test: all $(OUTDIR)/test-libresite $(OUTDIR)/test-contracts $(OUTDIR)/test-packages
+$(OUTDIR)/test-ls-ai-provider: tests/test-ls-ai-provider.c $(LIB_STATIC) $(DEP_ARCHIVES) $(OUTDIR)/.flags
+	$(CC) $(CFLAGS) -MMD -MP -MF $@.d -o $@ $< $(LIB_STATIC) $(LDFLAGS)
+tests test: all $(OUTDIR)/test-libresite $(OUTDIR)/test-contracts $(OUTDIR)/test-packages $(OUTDIR)/test-ls-ai-provider
 	G_DEBUG=fatal-warnings $(OUTDIR)/test-libresite
 	G_DEBUG=fatal-warnings $(OUTDIR)/test-contracts
 	G_DEBUG=fatal-warnings $(OUTDIR)/test-packages
+	G_DEBUG=fatal-warnings $(OUTDIR)/test-ls-ai-provider
 	bash tests/packages.sh $(CLI)
 	bash tests/cli.sh $(CLI)
 	bash tests/revision.sh $(CLI)

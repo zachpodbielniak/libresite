@@ -23,7 +23,7 @@ bash tests/install.sh
 make DEBUG=1 ASAN=1 UBSAN=1 tests
 #+end_src
 
-=make tests= compiles and runs the GTest executables with fatal GLib warnings, then CLI integration tests. The three GTest binaries are =test-libresite= (parser, pipeline, artifacts, prompts, checkpoints), =test-contracts= (dispatch, JSON/YAML, native predicates) and =test-packages= (SKU acceptance and archive pins). Shell suites invoked afterward:
+=make tests= compiles and runs the GTest executables with fatal GLib warnings, then CLI integration tests. The four GTest binaries are =test-libresite= (parser, pipeline, artifacts, prompts, checkpoints), =test-contracts= (dispatch, JSON/YAML, native predicates), =test-packages= (SKU acceptance and archive pins) and =test-ls-ai-provider= (the argv each real ai-glib adapter builds, against the controlled fixture; each case runs in a fresh child so the fixture environment is set before any thread exists). Shell suites invoked afterward:
 
 | Script | Coverage |
 |--------+----------|
@@ -49,7 +49,7 @@ Progress regression coverage forces a provider deadline and verifies that the re
 
 Debug tests verify that Codex defaults to =--ephemeral=, that =--debug= removes that flag even when resuming a non-debug checkpoint, and that diagnostics include request sizes, retained working directory, parsed fixture session ID, response metadata and timeout error codes. They check that diagnostic metadata stays on stderr without dumping fixture contents. Actual provider session file creation requires a live provider and is not simulated as evidence of live tracing.
 
-CLI integration tests use actual =LsAiProvider= and ai-glib adapters with controlled executable fixtures for Codex, Claude Code, Grok Build, Cursor and Antigravity. They check file publication, model forwarding, unattended permission-bypass flags, output conflict handling, nonzero subprocess exit, resume, process deadlines and actual SIGTERM cancellation. No provider credentials, model calls or network access are required. Fixtures emit provider-specific envelopes; Antigravity success status is uppercase =SUCCESS=. Codex argv must include =--dangerously-bypass-approvals-and-sandbox= and must not include =--sandbox=.
+CLI integration tests use actual =LsAiProvider= and ai-glib adapters with controlled executable fixtures for Codex, Claude Code, Grok Build, Cursor and Antigravity. They check file publication, model forwarding, Claude Code's answer-only flags (schema tool only, safe mode, strict MCP, no permission bypass), the other adapters' unattended permission-bypass flags, output conflict handling, nonzero subprocess exit, resume, process deadlines and actual SIGTERM cancellation. No provider credentials, model calls or network access are required. Fixtures emit provider-specific envelopes; Antigravity success status is uppercase =SUCCESS=. Codex argv must include =--dangerously-bypass-approvals-and-sandbox= and must not include =--sandbox=.
 
 * Accessibility contract coverage
 

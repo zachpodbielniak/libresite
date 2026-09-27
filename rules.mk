@@ -14,7 +14,7 @@ $(OUTDIR)/resources.c: data/resources.xml data/prompts.yaml data/file-bundle.sch
 $(OBJDIR)/resources.o: $(OUTDIR)/resources.c $(OUTDIR)/.flags
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
--include $(LIB_OBJECTS:.o=.d) $(OBJDIR)/cli/main.d $(OUTDIR)/test-libresite.d $(OUTDIR)/test-contracts.d
+-include $(LIB_OBJECTS:.o=.d) $(OBJDIR)/cli/main.d $(OUTDIR)/test-libresite.d $(OUTDIR)/test-contracts.d $(OUTDIR)/test-packages.d $(OUTDIR)/test-ls-ai-provider.d
 # Recursion is once per make invocation; changed upstream archives relink users.
 $(DEP_ARCHIVES): bundled-deps
 	@test -f $@
