@@ -28,7 +28,8 @@ debug_log(const gchar *format, ...){
  * --tools leaves no built-in tool (pinned ai-glib cannot emit an empty list);
  * safe mode drops CLAUDE.md, skills, plugins, hooks and custom agents; strict
  * MCP with no configuration loads no server. Nothing can run, so the session
- * needs no permission bypass. Requires the json-schema property to be set. */
+ * needs no permission bypass. Pairs with json-schema: without a schema the
+ * session has no tool at all and answers as text, which is still parsed. */
 static void
 configure_answer_only(AiCliClient *client){
 	g_object_set(
