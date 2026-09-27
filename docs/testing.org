@@ -23,7 +23,7 @@ bash tests/install.sh
 make DEBUG=1 ASAN=1 UBSAN=1 tests
 #+end_src
 
-=make tests= compiles and runs the GTest executables with fatal GLib warnings, then CLI integration tests. The four GTest binaries are =test-libresite= (parser, pipeline, artifacts, prompts, checkpoints), =test-contracts= (dispatch, JSON/YAML, native predicates including ShellCheck findings, isolation from =.shellcheckrc=/=SHELLCHECK_OPTS=, missing-tool preflight and corrective retry), =test-packages= (SKU acceptance and archive pins) and =test-ls-ai-provider= (the argv each real ai-glib adapter builds, against the controlled fixture; each case runs in a fresh child so the fixture environment is set before any thread exists). Shell suites invoked afterward:
+=make tests= compiles and runs the GTest executables with fatal GLib warnings, then CLI integration tests. The four GTest binaries are =test-libresite= (parser, pipeline, artifacts, prompts, checkpoints), =test-contracts= (dispatch, JSON/YAML, native predicates including ShellCheck findings, isolation from =.shellcheckrc=/=SHELLCHECK_OPTS=, missing-tool preflight and corrective retry), =test-packages= (SKU acceptance and archive pins) and =test-ls-ai-provider= (the argv and Claude Code output-cap environment each real ai-glib adapter produces, against the controlled fixture; each case runs in a fresh child so the fixture environment is set before any thread exists). Shell suites invoked afterward:
 
 | Script | Coverage |
 |--------+----------|
