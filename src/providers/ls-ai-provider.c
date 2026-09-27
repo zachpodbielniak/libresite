@@ -113,7 +113,7 @@ generate(
 	directory = g_dir_make_tmp("libresite-provider-XXXXXX", error);
 	if (directory == NULL)
 		return NULL;
-	if (g_str_equal(provider, "claude-code"))
+	if (AI_IS_CLAUDE_CODE_CLIENT(client))
 		configure_answer_only(client);
 	else
 		g_object_set(client, "skip-permissions", TRUE, NULL);
