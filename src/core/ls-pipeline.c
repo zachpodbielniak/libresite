@@ -52,6 +52,8 @@ ls_pipeline_class_init(LsPipelineClass *klass){
 	 *
 	 * Emitted on the calling thread after a started step fails. No artifacts
 	 * are published; the run still returns its detailed GError to the caller.
+	 * A native gate waiting for approval is reported here with
+	 * %LS_ERROR_APPROVAL: a pause, with the previous step checkpointed.
 	 */
 	signals[5] = g_signal_new("step-failed", G_TYPE_FROM_CLASS(klass),
 		G_SIGNAL_RUN_LAST, 0, NULL, NULL, NULL, G_TYPE_NONE, 3,

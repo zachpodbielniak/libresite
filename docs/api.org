@@ -116,7 +116,7 @@ A replacement catalog is complete: there is no merge with embedded styles, stage
 | =ls_pipeline_run(self, recipe, output, resume, cancellable, error)= | Generate and publish a new directory |
 | =ls_pipeline_revise(self, recipe, project, output, resume, cancellable, error)= | Import =project=, leave it unchanged, publish a new tree |
 
-Signals (calling thread, zero-based indices): =step-started= (id, index), =step-completed= (id, index), =step-progress= (id, index, message), =step-failed= (id, index, nullable GError), =artifact-written= (=LsArtifact=), =completed= (output path). Resume emits only for steps actually run. Failures return through =GError=.
+Signals (calling thread, zero-based indices): =step-started= (id, index), =step-completed= (id, index), =step-progress= (id, index, message), =step-failed= (id, index, nullable GError; =LS_ERROR_APPROVAL= means a gate is waiting, not a failure), =artifact-written= (=LsArtifact=), =completed= (output path). Resume emits only for steps actually run. Failures return through =GError=.
 
 * Provider and AI adapter
 

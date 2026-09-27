@@ -50,7 +50,7 @@ Pipeline operations are synchronous and intended for a worker thread. Do not cal
 |--------+-----------+--------|
 | step-started | id string, index unsigned | Before step execution |
 | step-completed | id string, index unsigned | After durable checkpoint write |
-| step-failed | id string, index unsigned, nullable GError | After execution or checkpoint failure |
+| step-failed | id string, index unsigned, nullable GError | After execution or checkpoint failure, or a gate waiting for approval (=LS_ERROR_APPROVAL=) |
 | step-progress | id string, index unsigned, message string | Attempt settings and retry reasons, forwarded from LsStep::progress |
 | artifact-written | LsArtifact boxed value | After successful directory publication, once per final artifact |
 | completed | output path string | After successful directory publication |
