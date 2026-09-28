@@ -4,22 +4,104 @@
 # directory. Slot types: text, rich, link, links, image, items, fields, choice,
 # flag. See docs/components.org before adding or changing a component.
 version: 1
+# Site-wide look. Each axis changes structure shared by every component
+# (look.css); the plan picks one value per axis so two sites that use the same
+# components do not share a skeleton. The first value is the default.
+looks:
+  header:
+    summary: How the site header is laid out.
+    values:
+      bar: Wordmark left, navigation right, a hairline below.
+      centered: Wordmark centered above centered navigation.
+      stacked: A large wordmark on its own row, navigation in a ruled row beneath.
+      inverted: A solid ink-colored bar with paper-colored text.
+      floating: An inset rounded bar that floats over the page edge.
+  nav:
+    summary: How navigation links look.
+    values:
+      underline: Plain links; the current page is underlined in the accent.
+      pill: Links in rounded pills; the current page is filled.
+      caps: Small spaced capitals.
+      slashes: Links separated by slashes, like a path.
+  heads:
+    summary: How section headings are set.
+    values:
+      plain: No ornament.
+      rule: A short heavy rule above each heading.
+      numbered: Sections are numbered 01, 02, 03 before the heading.
+      bar: A thick accent bar at the heading's left edge.
+      split: On wide screens the heading sits left and its intro right.
+      giant: Oversized, tightly set headings.
+  buttons:
+    summary: Button shape.
+    values:
+      square: Rectangles with the token radius.
+      pill: Fully rounded.
+      underline: Text with a heavy underline and an arrow; no box.
+      offset: A hard offset shadow that presses in on hover.
+  panels:
+    summary: How cards, tiles and boxed items are surfaced.
+    values:
+      flat: Tinted surface, no border.
+      outlined: Transparent with a strong outline.
+      raised: Paper with a soft shadow.
+      rules: No box; items are divided by rules.
+      inverted: Solid ink panels with paper text.
+  rhythm:
+    summary: How sections follow one another.
+    values:
+      even: One continuous page background.
+      bands: Alternate sections sit on the surface color, edge to edge.
+      divided: A full-width rule between sections.
+      tight: Sections close up, with less space between them.
+  align:
+    summary: Alignment of section headings and intros.
+    values:
+      left: Left aligned.
+      center: Centered headings and intros; content keeps its own alignment.
+  images:
+    summary: Treatment of artwork.
+    values:
+      plain: As drawn.
+      rounded: Generous rounded corners.
+      framed: A thin frame with a mat.
+      print: Printed-ink look, blended into the paper.
+      shadow: A hard offset shadow in the accent.
+  footer:
+    summary: Footer layout.
+    values:
+      simple: A quiet surface band with links.
+      big: An oversized wordmark across the footer.
+      inverted: Solid ink with paper text.
+  texture:
+    summary: Background texture on the page.
+    values:
+      none: Plain.
+      grain: Fine paper grain.
+      grid: A faint drafting grid.
+      dots: A faint dot grid.
+      lines: Faint horizontal ruled lines.
+  motion:
+    summary: Scroll motion.
+    values:
+      none: Static.
+      rise: Sections rise gently into view where the browser supports it; never with reduced motion.
 # Every planned page has a kind. A kind fixes which components may open the
 # page and whether wide screens get an in-page contents sidebar. Only home
 # may open with a hero: interior pages open with a page header.
 kinds:
   home:
     summary: The front door. A confident opening, a short tour of what matters and a clear next step.
-    openings: [hero, cover, manifesto, custom]
-    suggested: [cards, bento, features, media, statement, marquee, numbers, voices, strip, quote, text, cta]
+    openings: [hero, cover, manifesto, custom, poster]
+    suggested: [cards, bento, features, media, statement, marquee, numbers, voices, strip, quote, text, cta, showcase, big-list, story, badges, offer]
   index:
     summary: A list of things to choose from, such as work, articles, services or locations. Opens with a page header; the list is the page.
     openings: [page-header]
-    suggested: [entries, cards, filter, directory, bento, links, pager]
+    suggested: [entries, cards, filter, directory, bento, links, pager, big-list, showcase]
   detail:
     summary: One thing in depth, such as a project, service, dish or product. Key facts up front, then the story, evidence and related items.
     openings: [page-header]
-    suggested: [facts, specs, text, figure, compare, article, callout, table, links, pager]
+    suggested: [facts, specs, text, figure, compare, article, callout, table, links, pager, story]
     sidebar: true
   article:
     summary: Longform reading such as an essay, guide or case study. A reading column with contents, inline figures and notes.
@@ -37,7 +119,7 @@ kinds:
   about:
     summary: The story, people and values. A quiet opening, longer reading, pictures and milestones.
     openings: [page-header]
-    suggested: [lead, text, columns, timeline, team, numbers, voices, partners, figure, quote, statement]
+    suggested: [lead, text, columns, timeline, team, numbers, voices, partners, figure, quote, statement, profile, story, badges]
   form:
     summary: A page built around one task, such as a booking request, a brief or a sign-up. Explain, then the form, then what happens next.
     openings: [page-header]
@@ -45,11 +127,11 @@ kinds:
   services:
     summary: What the business offers. Services with prices where supplied, what is included and how it works.
     openings: [page-header]
-    suggested: [services, checklist, details, tabs, steps, areas, faq, cta]
+    suggested: [services, checklist, details, tabs, steps, areas, faq, cta, offer, story, badges, showcase]
   pricing:
     summary: Prices and packages. Tiers, what each includes and the questions buyers ask.
     openings: [page-header]
-    suggested: [pricing, checklist, table, faq, cta]
+    suggested: [pricing, checklist, table, faq, cta, offer]
   contact:
     summary: How to reach the business. Contact details, a form only with a real endpoint, and where to find it.
     openings: [page-header]
@@ -57,11 +139,11 @@ kinds:
   gallery:
     summary: A portfolio or photo page. Artworks first, words second.
     openings: [page-header]
-    suggested: [gallery, strip, bento, compare, figure, cta]
+    suggested: [gallery, strip, bento, compare, figure, cta, showcase]
   events:
     summary: What is on. Dates, places and how to join.
     openings: [page-header]
-    suggested: [schedule, notice, callout, location, faq]
+    suggested: [schedule, notice, callout, location, faq, offer]
   general:
     summary: Any other interior page. Opens with a page header.
     openings: [page-header]
@@ -145,6 +227,9 @@ components:
       numbered: Cards numbered in order.
       bordered: Outlined cards with no art background.
       list: Compact rows with small art.
+      overlap: Text panels overlapping the bottom edge of their artwork.
+      polaroid: Artwork in thick paper frames, gently tilted, captions beneath.
+      minimal: Large titles and meta only; artwork hidden.
     slots:
       heading: {type: text, max: 140}
       intro: {type: rich, max: 1200}
@@ -201,6 +286,7 @@ components:
       plain: Quiet inline quotation.
       boxed: In a panel with a large quote mark.
       side: Quote beside a heading rule.
+      giant: The quotation set enormous across the full width.
     slots:
       quote: {type: text, required: true, max: 400}
       source: {type: text, max: 120, note: "Only a real, supplied attribution."}
@@ -212,6 +298,7 @@ components:
       split: Heading on one side and actions on the other.
       card: A raised card inside the content width.
       stack: Centered stack with large type.
+      giant: A heading set enormous across the width, actions beneath.
     slots:
       heading: {type: text, required: true, max: 140}
       body: {type: rich, max: 800}
@@ -275,6 +362,7 @@ components:
       mosaic: A grid where the first artwork is larger.
       strip: One row that scrolls sideways.
       framed: Artworks in frames with captions below.
+      masonry: Artworks of mixed heights packed in columns.
     slots:
       heading: {type: text, max: 140}
       items:
@@ -309,6 +397,7 @@ components:
       rule: Oversized title set under a heavy rule, for editorial pages.
       centered: Title and lede centered.
       minimal: Title only, small and quiet.
+      giant: An enormous title that fills the width.
     slots:
       kicker: {type: text, max: 80, note: "Short label above the title, such as a category."}
       heading: {type: text, required: true, max: 140}
@@ -830,3 +919,105 @@ components:
     slots:
       label: {type: text, required: true, max: 120, note: "Accessible name for the region."}
       html: {type: html, required: true, max: 12000}
+  poster:
+    summary: A typographic poster opening. The title is the image. Home only.
+    variants:
+      type: Type alone, set as large as the width allows.
+      stamped: The title in a tilted accent block with the lede beside it.
+      backdrop: Artwork behind the title, faded into the page.
+    slots:
+      kicker: {type: text, max: 80}
+      heading: {type: text, required: true, max: 80, note: "Short: two to six words set very large."}
+      lede: {type: rich, max: 400}
+      art: {type: image, note: "Used by backdrop."}
+      actions: {type: links, max_items: 2}
+  showcase:
+    summary: Large feature panels, one per project, service or product, each with artwork and a short pitch.
+    variants:
+      alternating: Wide panels whose artwork alternates sides.
+      overlap: Artwork with a text card overlapping one corner.
+      full: Artwork edge to edge with the text beneath, one panel after another.
+    slots:
+      heading: {type: text, max: 140}
+      items:
+        type: items
+        min_items: 1
+        max_items: 6
+        fields:
+          art: {type: image, required: true}
+          kicker: {type: text, max: 60}
+          title: {type: text, required: true, max: 100}
+          body: {type: rich, max: 600}
+          link: {type: link}
+  big-list:
+    summary: An oversized typographic list of links, like a table of contents or an index of work.
+    variants:
+      plain: Huge titles divided by rules.
+      numbered: Each line numbered, with its meta at the right.
+      invert: Lines fill with the accent on hover and focus.
+    slots:
+      heading: {type: text, max: 140}
+      items:
+        type: items
+        min_items: 2
+        max_items: 20
+        fields:
+          title: {type: text, required: true, max: 80}
+          meta: {type: text, max: 60}
+          link: {type: link}
+  story:
+    summary: A scrolling sequence beside one artwork that stays in view. For a process, a history or how something is made.
+    variants:
+      left: Artwork held on the left.
+      right: Artwork held on the right.
+    slots:
+      heading: {type: text, max: 140}
+      art: {type: image, required: true}
+      items:
+        type: items
+        min_items: 2
+        max_items: 8
+        fields:
+          kicker: {type: text, max: 40}
+          title: {type: text, required: true, max: 100}
+          body: {type: rich, required: true, max: 800}
+  profile:
+    summary: One supplied person, such as a founder or the owner, with portrait artwork, role and a few words. Never invent people.
+    variants:
+      side: Portrait beside the text.
+      centered: Portrait above centered text.
+      quote: The person's supplied words set large beside a small portrait.
+    slots:
+      heading: {type: text, max: 140}
+      art: {type: image}
+      name: {type: text, required: true, max: 80}
+      role: {type: text, max: 80}
+      body: {type: rich, max: 1200}
+      quote: {type: text, max: 300, note: "Only words the person is supplied as saying."}
+  badges:
+    summary: Supplied credentials, memberships, guarantees or standards. Never invent any.
+    variants:
+      row: A row of outlined labels.
+      seals: Round seals with a label and note.
+    slots:
+      heading: {type: text, max: 140}
+      items:
+        type: items
+        min_items: 1
+        max_items: 12
+        fields:
+          label: {type: text, required: true, max: 60}
+          note: {type: text, max: 120}
+  offer:
+    summary: One highlighted offer, package or ticket with its supplied price and what it includes.
+    variants:
+      ticket: A ticket with a perforated stub holding the price.
+      card: A bold card with the price large.
+    slots:
+      kicker: {type: text, max: 60}
+      heading: {type: text, required: true, max: 120}
+      price: {type: text, max: 40, note: "Only a supplied price."}
+      note: {type: text, max: 120, note: "Such as per person or valid until."}
+      body: {type: rich, max: 600}
+      includes: {type: items, max_items: 10, fields: {text: {type: text, required: true, max: 120}}}
+      actions: {type: links, max_items: 2}

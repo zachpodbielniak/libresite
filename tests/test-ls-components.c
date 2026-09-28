@@ -13,6 +13,9 @@ load(const gchar *name){
 	return ls_json_parse(text, NULL);
 }
 
+static void contains(const gchar *text, const gchar *needle);
+static void lacks(const gchar *text, const gchar *needle);
+
 static LsComponents *
 library(void){
 	g_autoptr(GError) error = NULL;
@@ -135,6 +138,17 @@ test_plan_errors(void){
 		const gchar *kinds[] = {"only index.html may be kind home", "kind must be one of home, index", NULL};
 		expect_plan_error(components, plan, kinds);
 	}
+	{
+		JsonObject *look = json_object_get_object_member(root, "look");
+		JsonObject *restyle = json_object_get_object_member(root, "restyle");
+		const gchar *looks[] = {"look.header must be one of the listed values", "look.sparkle is not a look axis",
+			"restyle.banner is not a component", "restyle.hero: ", NULL};
+		json_object_set_string_member(look, "header", "wobbly");
+		json_object_set_string_member(look, "sparkle", "on");
+		json_object_set_string_member(restyle, "banner", "a { color: red; }");
+		json_object_set_string_member(restyle, "hero", "@import url(x.css);");
+		expect_plan_error(components, plan, looks);
+	}
 }
 
 /* Mechanical misses are repaired natively instead of costing a model retry:
@@ -160,6 +174,8 @@ test_plan_repair(void){
 	g_assert_nonnull(strstr(notes, "muted"));
 	g_assert_nonnull(strstr(notes, "ratio"));
 	g_assert_nonnull(strstr(notes, "work.html kind -> general"));
+	g_assert_nonnull(strstr(notes, "look.nav -> underline"));
+	lacks(notes, "look.header");
 	g_assert_true(ls_components_check_plan(components, plan, &error));
 	g_assert_no_error(error);
 	g_assert_cmpstr(ls_string(tokens, "accent_ink"), !=, NULL);
@@ -741,6 +757,110 @@ test_directory_and_tabs(void){
 	lacks(file_content(bundle, "index.html"), "data-tabs");
 }
 
+
+/* The plan's look reaches every page as body classes, library styles sit in
+ * cascade layers, and restyles follow them only for components in use. */
+static void
+test_look_and_restyle(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(JsonNode) plan = load("plan.json");
+	g_autoptr(JsonObject) pages = fixture_pages();
+	g_autoptr(GError) error = NULL;
+	g_autofree gchar *text = NULL;
+	g_autoptr(JsonNode) bundle = NULL;
+	const gchar *css, *layers, *look, *restyle, *hero;
+	text = ls_components_compose(components, plan, pages, NULL, &error);
+	g_assert_no_error(error);
+	bundle = ls_json_parse(text, NULL);
+	contains(file_content(bundle, "index.html"), "look-header-centered look-nav-underline look-heads-numbered");
+	contains(file_content(bundle, "work.html"), "look-panels-outlined look-rhythm-bands");
+	contains(file_content(bundle, "404.html"), "look-footer-big");
+	css = file_content(bundle, "styles.css");
+	layers = strstr(css, "@layer ls-base, ls-components, ls-look;");
+	hero = strstr(css, "@layer ls-components {\n.hero {");
+	look = strstr(css, "@layer ls-look {");
+	restyle = strstr(css, "/* Site restyle: hero */\n.hero__title { font-style: italic; }");
+	g_assert_nonnull(layers);
+	g_assert_nonnull(hero);
+	g_assert_nonnull(look);
+	g_assert_nonnull(restyle);
+	g_assert_true(layers < hero && hero < look && look < restyle);
+	g_assert_true(restyle < strstr(css, "/* Site plan */") || strstr(css, "/* Site plan */") == NULL);
+	lacks(css, ".tabs__tab { color: red; }");
+	contains(css, "@layer ls-base {\n");
+}
+
+/* Every look value other than an axis default has styles of its own, and the
+ * plan schema offers exactly the catalog's look values. */
+static void
+test_every_look(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(JsonNode) plan = load("plan.json");
+	g_autoptr(JsonObject) pages = fixture_pages();
+	g_autoptr(GError) error = NULL;
+	g_autofree gchar *yaml = NULL, *text = NULL;
+	g_autoptr(JsonNode) catalog = NULL, bundle = NULL;
+	g_autoptr(JsonNode) schema = ls_json_parse(ls_components_get_plan_schema(components), NULL);
+	JsonObject *looks, *schema_look;
+	g_autoptr(GList) axes = NULL;
+	g_autoptr(GString) unstyled = g_string_new(NULL);
+	GList *axis;
+	const gchar *css;
+	g_assert_true(g_file_get_contents("data/components/catalog.yaml", &yaml, NULL, NULL));
+	catalog = ls_yaml_parse(yaml, NULL);
+	looks = json_object_get_object_member(json_node_get_object(catalog), "looks");
+	schema_look = json_object_get_object_member(json_object_get_object_member(json_object_get_object_member(
+		json_node_get_object(schema), "properties"), "look"), "properties");
+	text = ls_components_compose(components, plan, pages, NULL, &error);
+	g_assert_no_error(error);
+	bundle = ls_json_parse(text, NULL);
+	css = file_content(bundle, "styles.css");
+	axes = json_object_get_members(looks);
+	g_assert_cmpuint(g_list_length(axes), ==, json_object_get_size(schema_look));
+	for (axis = axes; axis != NULL; axis = axis->next) {
+		JsonObject *values = json_object_get_object_member(json_object_get_object_member(looks, axis->data), "values");
+		JsonArray *listed = json_object_get_array_member(json_object_get_object_member(schema_look, axis->data), "enum");
+		g_autoptr(GList) names = json_object_get_members(values);
+		GList *name;
+		g_assert_cmpuint(json_array_get_length(listed), ==, g_list_length(names));
+		for (name = names; name != NULL; name = name->next) {
+			g_autofree gchar *selector = g_strdup_printf(".look-%s-%s", (const gchar *)axis->data,
+				(const gchar *)name->data);
+			if (name != names && strstr(css, selector) == NULL)
+				g_string_append_printf(unstyled, " %s", selector);
+		}
+	}
+	if (unstyled->len > 0)
+		g_error("look values without styles:%s", unstyled->str);
+}
+
+
+/* Look suggestions are stable per site, valid, and vary between sites. */
+static void
+test_suggest_look(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(JsonObject) first = ls_components_suggest_look(components, "harbor\nA furniture workshop");
+	g_autoptr(JsonObject) again = ls_components_suggest_look(components, "harbor\nA furniture workshop");
+	g_autoptr(GHashTable) seen = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+	g_autoptr(JsonNode) plan = load("plan.json");
+	g_autoptr(GList) axes = json_object_get_members(first);
+	GList *axis;
+	guint i;
+	g_assert_cmpuint(g_list_length(axes), ==, 11);
+	for (axis = axes; axis != NULL; axis = axis->next)
+		g_assert_cmpstr(ls_string(first, axis->data), ==, ls_string(again, axis->data));
+	json_object_set_object_member(json_node_get_object(plan), "look", json_object_ref(first));
+	g_assert_true(ls_components_check_plan(components, plan, NULL));
+	for (i = 0; i < 12; i++) {
+		g_autofree gchar *seed = g_strdup_printf("site-%u", i);
+		g_autoptr(JsonObject) look = ls_components_suggest_look(components, seed);
+		g_autoptr(JsonNode) node = json_node_new(JSON_NODE_OBJECT);
+		json_node_set_object(node, look);
+		g_hash_table_add(seen, ls_json_encode(node));
+	}
+	g_assert_cmpuint(g_hash_table_size(seen), >=, 11);
+}
+
 int
 main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
@@ -760,6 +880,9 @@ main(int argc, char **argv){
 	g_test_add_func("/components/escaping", test_escaping);
 	g_test_add_func("/components/long-heading", test_long_heading);
 	g_test_add_func("/components/every-variant", test_every_variant);
+	g_test_add_func("/components/look-restyle", test_look_and_restyle);
+	g_test_add_func("/components/every-look", test_every_look);
+	g_test_add_func("/components/suggest-look", test_suggest_look);
 	g_test_add_func("/components/directory-tabs", test_directory_and_tabs);
 	g_test_add_func("/components/schema-kinds", test_schema_kinds);
 	return g_test_run();

@@ -1,0 +1,14 @@
+<div class="wrap">
+{{#heading}}<div class="section-head"><{{htag}} id="{{id}}-h">{{heading}}</{{htag}}></div>
+{{/heading}}<div class="story__grid">
+{{#art}}<figure class="story__art"><img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}" loading="lazy" decoding="async"></figure>
+{{/art}}<ol class="story__steps" role="list">
+{{#items}}<li class="story__step">
+{{#kicker}}<p class="kicker">{{kicker}}</p>
+{{/kicker}}{{^kicker}}<p class="kicker" aria-hidden="true">{{n2}}</p>
+{{/kicker}}<{{subtag}} class="story__title">{{title}}</{{subtag}}>
+<div class="prose">{{{body}}}</div>
+</li>
+{{/items}}</ol>
+</div>
+</div>

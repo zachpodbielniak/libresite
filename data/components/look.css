@@ -1,0 +1,120 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* Site-wide look axes (catalog.yaml "looks"). The builder puts one class per
+ * axis on <body>, for example look-header-centered. These rules sit in the
+ * ls-look layer, after the components, so a look reshapes every component;
+ * the plan's own CSS is unlayered and always wins over all of them. */
+
+/* Fixed copies of the site colors. Inverted areas swap the working tokens
+ * locally, so every component inside them keeps readable pairs. */
+:root { --ls-paper: var(--paper); --ls-ink: var(--ink); --ls-surface: var(--surface); --ls-accent: var(--accent); --ls-accent-ink: var(--accent-ink); }
+
+/* Header. */
+.look-header-centered .site-header__inner { flex-direction: column; justify-content: center; padding-block: var(--space-4); }
+.look-header-centered .site-nav { justify-content: center; }
+.look-header-stacked .site-header { border-bottom: 0; }
+.look-header-stacked .site-header__inner { flex-direction: column; align-items: stretch; gap: 0; padding-block: var(--space-5) 0; }
+.look-header-stacked .brand { font-size: var(--step-4); line-height: 1; }
+.look-header-stacked .site-nav { padding-block: var(--space-2); margin-top: var(--space-4); border-block: var(--border-strong) solid var(--ink); }
+.look-header-stacked .site-nav .button { margin-left: auto; }
+.look-header-stacked .nav-toggle { align-self: flex-start; margin-block: var(--space-3); }
+.look-header-inverted .site-header,
+.look-footer-inverted .site-footer,
+.look-panels-inverted :is(.features--boxed .features__item, .cards--bordered .card, .pricing__tier, .bento__tile, .split__panel, .voices__item, .services--grid .services__item, .locations--cards .locations__item, .contact-card--card .contact-card__box, .facts--grid .facts__item, .team--cards .team__person, .entries--cards .entries__item, .steps--grid .steps__item, .links--cards .links__item a, .quote--boxed .quote__figure, .menu--board .menu__section, .cta--card .cta__inner, .form--card .form__inner, .location--card .location__inner, .hours--grid .hours__row, .faq--boxed .faq__item, .details--bordered .details__item) {
+	--ink: var(--ls-paper); --paper: var(--ls-ink); --surface: var(--ls-ink); --muted: var(--ls-paper);
+	--accent-text: var(--ls-paper); --line: color-mix(in srgb, var(--ls-paper) 35%, var(--ls-ink));
+	--line-strong: var(--ls-paper); --focus: var(--ls-paper); --field: var(--ls-ink);
+	background: var(--ls-ink); color: var(--ls-paper); border-color: var(--ls-ink);
+}
+.look-header-inverted .site-header { border-bottom: 0; }
+.look-header-floating .site-header { position: relative; z-index: 2; border-bottom: 0; background: transparent; padding-top: var(--space-3); }
+.look-header-floating .site-header__inner { padding-inline: var(--space-5); background: var(--paper); border: var(--border) solid var(--line-strong); border-radius: 1.5rem; box-shadow: 0 0.75rem 2rem color-mix(in srgb, var(--ink) 12%, transparent); }
+@media (min-width: 48rem) { .look-header-floating .site-header__inner { border-radius: 999px; } }
+
+/* Navigation. */
+.look-nav-pill .site-nav a:not(.button) { padding-inline: 0.95em; border: var(--border) solid var(--line-strong); border-radius: 999px; }
+.look-nav-pill .site-nav a:not(.button):hover { border-color: var(--ink); }
+.look-nav-pill .site-nav a[aria-current="page"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.look-nav-caps .site-nav a:not(.button) { font-size: var(--step--1); letter-spacing: 0.14em; text-transform: uppercase; }
+.look-nav-slashes .site-nav ul { gap: var(--space-1) var(--space-3); }
+.look-nav-slashes .site-nav li + li::before { content: "/"; margin-right: var(--space-3); color: var(--muted); }
+.look-nav-slashes .site-nav li { display: inline-flex; align-items: center; }
+
+/* Section headings: every section heading carries id="SECTION-h". */
+.look-heads-rule main h2[id$="-h"]::before { content: ""; display: block; width: 3rem; height: calc(var(--border-strong) * 2); margin-bottom: var(--space-4); background: var(--ink); }
+.look-heads-numbered main { counter-reset: ls-section; }
+.look-heads-numbered main h2[id$="-h"]::before { counter-increment: ls-section; content: counter(ls-section, decimal-leading-zero); display: block; margin-bottom: var(--space-2); font: 600 var(--step--1) / 1 var(--font-mono); letter-spacing: 0.08em; color: var(--accent-text); }
+.look-heads-bar main h2[id$="-h"] { padding-left: var(--space-4); border-left: 0.3em solid var(--accent); }
+.look-heads-giant main h2[id$="-h"] { font-size: var(--step-5); line-height: 0.98; letter-spacing: calc(var(--heading-tracking) - 0.015em); }
+@media (min-width: 56rem) {
+	.look-heads-split .section-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-7); max-width: none; align-items: end; }
+	.look-heads-split .section-head > h2 { margin: 0; }
+}
+
+/* Alignment. */
+.look-align-center .section-head, .look-align-center main h2[id$="-h"] { margin-inline: auto; text-align: center; }
+.look-align-center .section-head .prose { margin-inline: auto; }
+.look-align-center.look-heads-rule main h2[id$="-h"]::before { margin-inline: auto; }
+.look-align-center.look-heads-bar main h2[id$="-h"] { padding-left: 0; border-left: 0; }
+
+/* Buttons. */
+.look-buttons-pill .button, .look-buttons-pill .nav-toggle { border-radius: 999px; }
+.look-buttons-underline .button, .look-buttons-underline .button--ghost {
+	min-height: 44px; padding: 0.3em 0; border: 0; border-bottom: 0.2em solid var(--accent);
+	border-radius: 0; background: transparent; color: inherit;
+}
+.look-buttons-underline .button::after { content: "\2192"; transition: transform 150ms ease; }
+.look-buttons-underline .button:hover { background: transparent; color: inherit; border-color: currentColor; }
+.look-buttons-underline .button:hover::after { transform: translateX(0.25em); }
+.look-buttons-underline .actions { gap: var(--space-3) var(--space-6); }
+.look-buttons-offset .button { border-color: var(--ink); box-shadow: 0.25rem 0.25rem 0 var(--ink); transition: transform 120ms ease, box-shadow 120ms ease, background-color 150ms ease; }
+.look-buttons-offset .button:hover { transform: translate(0.15rem, 0.15rem); box-shadow: 0.1rem 0.1rem 0 var(--ink); }
+.look-buttons-offset .button:active { transform: translate(0.25rem, 0.25rem); box-shadow: none; }
+
+/* Panels: cards, tiles and boxed items across components. */
+.look-panels-outlined :is(.features--boxed .features__item, .cards--bordered .card, .pricing__tier, .bento__tile, .split__panel, .voices__item, .services--grid .services__item, .locations--cards .locations__item, .contact-card--card .contact-card__box, .facts--grid .facts__item, .team--cards .team__person, .entries--cards .entries__item, .steps--grid .steps__item, .links--cards .links__item a, .quote--boxed .quote__figure, .menu--board .menu__section, .cta--card .cta__inner, .form--card .form__inner, .location--card .location__inner, .hours--grid .hours__row, .faq--boxed .faq__item, .details--bordered .details__item) {
+	background: transparent; border: var(--border-strong) solid var(--ink); box-shadow: none;
+}
+.look-panels-raised :is(.features--boxed .features__item, .cards--bordered .card, .pricing__tier, .bento__tile, .split__panel, .voices__item, .services--grid .services__item, .locations--cards .locations__item, .contact-card--card .contact-card__box, .facts--grid .facts__item, .team--cards .team__person, .entries--cards .entries__item, .steps--grid .steps__item, .links--cards .links__item a, .quote--boxed .quote__figure, .menu--board .menu__section, .cta--card .cta__inner, .form--card .form__inner, .location--card .location__inner, .hours--grid .hours__row, .faq--boxed .faq__item, .details--bordered .details__item) {
+	background: var(--paper); border: var(--border) solid color-mix(in srgb, var(--ink) 8%, transparent);
+	border-radius: max(var(--radius), 0.75rem);
+	box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 8%, transparent), 0 0.75rem 2rem color-mix(in srgb, var(--ink) 10%, transparent);
+}
+.look-panels-rules :is(.features--boxed .features__item, .cards--bordered .card, .pricing__tier, .bento__tile, .split__panel, .voices__item, .services--grid .services__item, .locations--cards .locations__item, .contact-card--card .contact-card__box, .facts--grid .facts__item, .team--cards .team__person, .entries--cards .entries__item, .steps--grid .steps__item, .links--cards .links__item a, .quote--boxed .quote__figure, .menu--board .menu__section, .cta--card .cta__inner, .form--card .form__inner, .location--card .location__inner, .hours--grid .hours__row, .faq--boxed .faq__item, .details--bordered .details__item) {
+	background: transparent; border: 0; border-top: var(--border-strong) solid var(--ink); border-radius: 0; box-shadow: none; padding-inline: 0;
+}
+.look-panels-inverted :is(.bento__tile, .pricing__tier, .split__panel) { border-radius: max(var(--radius), 0.5rem); }
+.look-panels-outlined .pricing__tier--highlight, .look-panels-raised .pricing__tier--highlight { border-color: var(--accent); }
+
+/* Rhythm. */
+.look-rhythm-bands main > .block { padding-block: calc(var(--section-space) * 0.7); }
+.look-rhythm-bands main > .block:nth-of-type(even) { --surface: var(--ls-paper); background: var(--ls-surface); }
+.look-rhythm-divided main > .block + .block { padding-top: var(--section-space); border-top: var(--border) solid var(--line-strong); }
+.look-rhythm-tight { --section-space: clamp(2.5rem, 6vw, 4.5rem); }
+
+/* Artwork. */
+.look-images-rounded main img { border-radius: clamp(0.75rem, 2vw, 1.5rem); }
+.look-images-framed main img { padding: clamp(0.35rem, 1vw, 0.75rem); border: var(--border) solid var(--line-strong); border-radius: 0; background: var(--paper); }
+.look-images-print main img { filter: grayscale(1) contrast(1.15); }
+.look-images-shadow main img { border-radius: var(--radius); box-shadow: 0.6rem 0.6rem 0 var(--accent); }
+.look-images-shadow main :is(.bento__art, .strip__item img) { box-shadow: none; }
+
+/* Footer. */
+.look-footer-big .site-footer .brand { display: block; margin: 0 0 var(--space-4); font-size: clamp(3rem, 13vw, 11rem); line-height: 0.88; letter-spacing: calc(var(--heading-tracking) - 0.03em); }
+.look-footer-big .site-footer__inner { grid-template-columns: 1fr; }
+.look-footer-inverted .site-footer { border-top: 0; }
+
+/* Texture. Drawn with gradients in the site's own ink, at low strength. */
+.look-texture-grid { background-image: linear-gradient(color-mix(in srgb, var(--ink) 6%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--ink) 6%, transparent) 1px, transparent 1px); background-size: 2rem 2rem; }
+.look-texture-dots { background-image: radial-gradient(color-mix(in srgb, var(--ink) 14%, transparent) 1px, transparent 1.5px); background-size: 1.25rem 1.25rem; }
+.look-texture-lines { background-image: repeating-linear-gradient(to bottom, transparent 0 calc(1.75rem - 1px), color-mix(in srgb, var(--ink) 7%, transparent) calc(1.75rem - 1px) 1.75rem); }
+.look-texture-grain { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.07'/%3E%3C/svg%3E"); }
+
+/* Motion. Scroll-linked, so nothing waits on a script; off for reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+	@supports (animation-timeline: view()) {
+		.look-motion-rise main > .block > .wrap, .look-motion-rise .page-main > .block > .wrap {
+			animation: ls-rise linear both; animation-timeline: view(); animation-range: entry 0% entry 45%;
+		}
+	}
+}
+@keyframes ls-rise { from { opacity: 0; transform: translateY(2.5rem); } }

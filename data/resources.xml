@@ -9,6 +9,7 @@
     <file>components/article.css</file>
     <file>components/article.html</file>
     <file>components/base.css</file>
+    <file>components/look.css</file>
     <file>components/cards.css</file>
     <file>components/cards.html</file>
     <file>components/catalog.yaml</file>
@@ -124,5 +125,19 @@
     <file>components/tabs.js</file>
     <file>components/voices.css</file>
     <file>components/voices.html</file>
+    <file>components/badges.css</file>
+    <file>components/badges.html</file>
+    <file>components/big-list.css</file>
+    <file>components/big-list.html</file>
+    <file>components/offer.css</file>
+    <file>components/offer.html</file>
+    <file>components/poster.css</file>
+    <file>components/poster.html</file>
+    <file>components/profile.css</file>
+    <file>components/profile.html</file>
+    <file>components/showcase.css</file>
+    <file>components/showcase.html</file>
+    <file>components/story.css</file>
+    <file>components/story.html</file>
   </gresource>
 </gresources>

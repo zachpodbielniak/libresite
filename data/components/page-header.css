@@ -25,3 +25,5 @@
 .page-header--minimal { padding-block: var(--space-5) var(--space-4); }
 .page-header--minimal .page-header__title { font-size: var(--step-4); }
 .page-header--minimal .page-header__art { display: none; }
+.page-header--giant .page-header__title { max-width: none; font-size: clamp(3rem, 12vw, 10rem); line-height: 0.88; letter-spacing: calc(var(--heading-tracking) - 0.03em); }
+.page-header--giant .page-header__title--long { font-size: clamp(2.5rem, 8vw, 6.5rem); }

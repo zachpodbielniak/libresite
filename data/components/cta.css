@@ -16,3 +16,5 @@
 .cta--stack .cta__inner { text-align: center; }
 .cta--stack .cta__title, .cta--stack .prose { margin-inline: auto; }
 .cta--stack .actions { justify-content: center; }
+.cta--giant .cta__title { max-width: none; font-size: clamp(3rem, 11vw, 9.5rem); line-height: 0.9; letter-spacing: calc(var(--heading-tracking) - 0.03em); }
+.cta--giant .cta__inner { display: grid; gap: var(--space-5); }

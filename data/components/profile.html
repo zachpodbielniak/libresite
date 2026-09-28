@@ -1,0 +1,12 @@
+<div class="wrap">
+{{#heading}}<div class="section-head"><{{htag}} id="{{id}}-h">{{heading}}</{{htag}}></div>
+{{/heading}}<div class="profile__inner">
+{{#art}}<figure class="profile__art"><img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}" loading="lazy" decoding="async"></figure>
+{{/art}}<div class="profile__text">
+{{#quote}}<blockquote class="profile__quote"><p>{{quote}}</p></blockquote>
+{{/quote}}<p class="profile__name">{{name}}</p>
+{{#role}}<p class="profile__role muted">{{role}}</p>
+{{/role}}{{#body}}<div class="prose">{{{body}}}</div>
+{{/body}}</div>
+</div>
+</div>

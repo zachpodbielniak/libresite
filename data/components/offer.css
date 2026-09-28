@@ -1,0 +1,14 @@
+.offer__box { display: grid; max-width: 60rem; border: var(--border-strong) solid var(--ink); border-radius: var(--radius); background: var(--paper); }
+.offer__main { padding: var(--space-6); }
+.offer__title { font-size: var(--step-4); }
+.offer__includes { margin: var(--space-4) 0 0; padding: 0; list-style: none; display: grid; gap: var(--space-2); }
+.offer__includes li { padding-left: 1.5em; position: relative; }
+.offer__includes li::before { content: ""; position: absolute; left: 0.2em; top: 0.3em; width: 0.45em; height: 0.8em; border: solid var(--accent-text); border-width: 0 0.18em 0.18em 0; transform: rotate(45deg); }
+.offer__stub { display: grid; place-content: center; gap: var(--space-1); padding: var(--space-6); text-align: center; background: var(--accent); color: var(--accent-ink); }
+.offer__price { margin: 0; font-family: var(--font-display); font-weight: var(--heading-weight); font-size: var(--step-5); line-height: 1; }
+.offer__note { margin: 0; font-size: var(--step--1); }
+@media (min-width: 48rem) { .offer__box:has(.offer__stub) { grid-template-columns: minmax(0, 1fr) 16rem; } }
+.offer--ticket .offer__stub { border-top: 0.2rem dashed var(--accent-ink); }
+@media (min-width: 48rem) { .offer--ticket .offer__stub { border-top: 0; border-left: 0.2rem dashed var(--paper); } }
+.offer--ticket .offer__box { overflow: hidden; -webkit-mask: radial-gradient(circle 0.9rem at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat, radial-gradient(circle 0.9rem at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat; mask: radial-gradient(circle 0.9rem at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat, radial-gradient(circle 0.9rem at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat; }
+.offer--card .offer__box { border: 0; background: var(--surface); border-radius: max(var(--radius), 0.75rem); overflow: hidden; }

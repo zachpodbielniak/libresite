@@ -20,9 +20,11 @@ struct _LsComponents {
 	JsonNode *catalog;
 	JsonObject *components;
 	JsonObject *kinds;
+	JsonObject *looks;
 	GPtrArray *order;
 	GHashTable *files;	/* resource-relative name -> contents */
 	JsonNode *utility[G_N_ELEMENTS(utility_routes)];
+	gchar *plan_schema;	/* plan.schema.json with catalog enums filled in */
 	gchar *digest;
 };
 G_DEFINE_TYPE(LsComponents, ls_components, G_TYPE_OBJECT)
@@ -36,6 +38,7 @@ ls_components_finalize(GObject *object){
 	g_clear_pointer(&self->files, g_hash_table_unref);
 	for (i = 0; i < G_N_ELEMENTS(self->utility); i++)
 		g_clear_pointer(&self->utility[i], json_node_unref);
+	g_free(self->plan_schema);
 	g_free(self->digest);
 	G_OBJECT_CLASS(ls_components_parent_class)->finalize(object);
 }
@@ -677,12 +680,102 @@ load_resource(LsComponents *self, GChecksum *digest, const gchar *name, gboolean
 	return text;
 }
 
+static const gchar *
+file_text(LsComponents *self, const gchar *name){
+	return g_hash_table_lookup(self->files, name);
+}
+
+/* Every look axis lists named values with a description; the first is the default. */
+static gboolean
+check_look_definitions(JsonObject *looks, GError **error){
+	g_autoptr(GList) axes = json_object_get_members(looks);
+	GList *axis;
+	if (axes == NULL)
+		return catalog_invalid(error, "looks", "needs at least one axis");
+	for (axis = axes; axis != NULL; axis = axis->next) {
+		JsonObject *definition = member_object(looks, axis->data);
+		JsonObject *values = member_object(definition, "values");
+		g_autoptr(GList) names = NULL;
+		GList *name;
+		if (definition == NULL || !ls_object_keys(definition, "|summary|values|", NULL) ||
+			ls_string(definition, "summary") == NULL || values == NULL || json_object_get_size(values) < 2)
+			return catalog_invalid(error, axis->data, "look axes need a summary and two or more values");
+		names = json_object_get_members(values);
+		for (name = names; name != NULL; name = name->next) {
+			const gchar *p;
+			if (ls_string(values, name->data) == NULL)
+				return catalog_invalid(error, axis->data, "look values need a description");
+			for (p = name->data; *p != '\0'; p++)
+				if (!g_ascii_islower(*p) && *p != '-')
+					return catalog_invalid(error, axis->data, "look values are lowercase words");
+		}
+	}
+	return TRUE;
+}
+
+static const gchar *
+look_default(LsComponents *self, const gchar *axis){
+	JsonObject *values = member_object(member_object(self->looks, axis), "values");
+	g_autoptr(GList) names = json_object_get_members(values);
+	return names != NULL ? names->data : NULL;
+}
+
+/* The plan schema offers exactly the catalog's plannable kinds and look values. */
+static gchar *
+build_plan_schema(LsComponents *self, GError **error){
+	g_autoptr(JsonNode) schema = ls_json_parse(file_text(self, "plan.schema.json"), error);
+	JsonObject *properties, *page_properties, *look;
+	JsonArray *kinds = json_array_new();
+	JsonArray *required = json_array_new();
+	JsonObject *look_properties = json_object_new();
+	g_autoptr(GList) names = NULL;
+	GList *item;
+	if (schema == NULL || !JSON_NODE_HOLDS_OBJECT(schema)) {
+		json_array_unref(kinds);
+		json_array_unref(required);
+		json_object_unref(look_properties);
+		if (error != NULL && *error == NULL)
+			catalog_invalid(error, "plan.schema.json", "must be a JSON object");
+		return NULL;
+	}
+	properties = member_object(json_node_get_object(schema), "properties");
+	page_properties = member_object(member_object(member_object(properties, "pages"), "items"), "properties");
+	names = json_object_get_members(self->kinds);
+	for (item = names; item != NULL; item = item->next)
+		if (!json_object_has_member(member_object(self->kinds, item->data), "builtin"))
+			json_array_add_string_element(kinds, item->data);
+	json_object_set_array_member(member_object(page_properties, "kind"), "enum", kinds);
+	g_list_free(g_steal_pointer(&names));
+	names = json_object_get_members(self->looks);
+	for (item = names; item != NULL; item = item->next) {
+		JsonObject *axis = json_object_new();
+		JsonArray *values = json_array_new();
+		g_autoptr(GList) value_names = json_object_get_members(member_object(member_object(self->looks, item->data), "values"));
+		GList *value;
+		for (value = value_names; value != NULL; value = value->next)
+			json_array_add_string_element(values, value->data);
+		json_object_set_string_member(axis, "type", "string");
+		json_object_set_array_member(axis, "enum", values);
+		json_object_set_object_member(look_properties, item->data, axis);
+		json_array_add_string_element(required, item->data);
+	}
+	look = member_object(properties, "look");
+	if (look == NULL) {
+		json_array_unref(required);
+		json_object_unref(look_properties);
+		return catalog_invalid(error, "plan.schema.json", "needs a look property"), NULL;
+	}
+	json_object_set_object_member(look, "properties", look_properties);
+	json_object_set_array_member(look, "required", required);
+	return ls_json_encode(schema);
+}
+
 LsComponents *
 ls_components_new(GError **error){
 	g_autoptr(LsComponents) self = g_object_new(LS_TYPE_COMPONENTS, NULL);
 	g_autoptr(GChecksum) digest = g_checksum_new(G_CHECKSUM_SHA256);
 	g_autofree gchar *catalog = NULL;
-	const gchar *shared[] = {"layout.html", "section.html", "base.css", "nav.js", "plan.schema.json"};
+	const gchar *shared[] = {"layout.html", "section.html", "base.css", "look.css", "nav.js", "plan.schema.json"};
 	g_autoptr(GList) names = NULL;
 	JsonObject *root;
 	GList *item;
@@ -694,13 +787,16 @@ ls_components_new(GError **error){
 	if (self->catalog == NULL)
 		return NULL;
 	root = JSON_NODE_HOLDS_OBJECT(self->catalog) ? json_node_get_object(self->catalog) : NULL;
-	if (root == NULL || !ls_object_keys(root, "|version|kinds|components|", error) ||
+	if (root == NULL || !ls_object_keys(root, "|version|looks|kinds|components|", error) ||
 		(self->components = member_object(root, "components")) == NULL ||
-		(self->kinds = member_object(root, "kinds")) == NULL) {
+		(self->kinds = member_object(root, "kinds")) == NULL ||
+		(self->looks = member_object(root, "looks")) == NULL) {
 		if (error != NULL && *error == NULL)
-			catalog_invalid(error, "catalog.yaml", "needs version, kinds and components");
+			catalog_invalid(error, "catalog.yaml", "needs version, looks, kinds and components");
 		return NULL;
 	}
+	if (!check_look_definitions(self->looks, error))
+		return NULL;
 	for (i = 0; i < G_N_ELEMENTS(shared); i++) {
 		g_autofree gchar *text = load_resource(self, digest, shared[i], TRUE, error);
 		if (text == NULL)
@@ -761,6 +857,9 @@ ls_components_new(GError **error){
 		if (json == NULL || (self->utility[i] = ls_json_parse(json, error)) == NULL)
 			return NULL;
 	}
+	self->plan_schema = build_plan_schema(self, error);
+	if (self->plan_schema == NULL)
+		return NULL;
 	self->digest = g_strdup(g_checksum_get_string(digest));
 	return (LsComponents *)g_steal_pointer(&self);
 }
@@ -771,15 +870,38 @@ ls_components_get_digest(LsComponents *self){
 	return self->digest;
 }
 
-static const gchar *
-file_text(LsComponents *self, const gchar *name){
-	return g_hash_table_lookup(self->files, name);
+
+JsonObject *
+ls_components_suggest_look(LsComponents *self, const gchar *seed){
+	JsonObject *look;
+	g_autoptr(GList) axes = NULL;
+	GList *axis;
+	g_return_val_if_fail(LS_IS_COMPONENTS(self), NULL);
+	g_return_val_if_fail(seed != NULL, NULL);
+	look = json_object_new();
+	axes = json_object_get_members(self->looks);
+	for (axis = axes; axis != NULL; axis = axis->next) {
+		JsonObject *values = member_object(member_object(self->looks, axis->data), "values");
+		g_autoptr(GList) names = json_object_get_members(values);
+		g_autoptr(GChecksum) checksum = g_checksum_new(G_CHECKSUM_SHA256);
+		guint8 bytes[32];
+		gsize length = sizeof bytes;
+		guint32 pick;
+		g_checksum_update(checksum, (const guchar *)seed, -1);
+		g_checksum_update(checksum, (const guchar *)"\n", 1);
+		g_checksum_update(checksum, (const guchar *)axis->data, -1);
+		g_checksum_get_digest(checksum, bytes, &length);
+		pick = ((guint32)bytes[0] << 24 | (guint32)bytes[1] << 16 | (guint32)bytes[2] << 8 | bytes[3]) %
+			g_list_length(names);
+		json_object_set_string_member(look, axis->data, g_list_nth_data(names, pick));
+	}
+	return look;
 }
 
 const gchar *
 ls_components_get_plan_schema(LsComponents *self){
 	g_return_val_if_fail(LS_IS_COMPONENTS(self), NULL);
-	return file_text(self, "plan.schema.json");
+	return self->plan_schema;
 }
 
 /* Content stays a free object: per-slot rules are checked natively with
@@ -894,6 +1016,29 @@ ls_components_describe(LsComponents *self){
 			g_string_append_c(out, '\n');
 		}
 	}
+	g_string_append(out, "\nLOOK\n"
+		"The plan's look picks one value per axis. Each axis reshapes every component on the site, "
+		"so choose them from the subject; two sites should rarely share more than a few values.\n");
+	{
+		g_autoptr(GList) axes = json_object_get_members(self->looks);
+		GList *axis;
+		for (axis = axes; axis != NULL; axis = axis->next) {
+			JsonObject *definition = member_object(self->looks, axis->data);
+			JsonObject *values = member_object(definition, "values");
+			g_autoptr(GList) value_names = json_object_get_members(values);
+			GList *value;
+			g_string_append_printf(out, "%s: %s", (const gchar *)axis->data, ls_string(definition, "summary"));
+			for (value = value_names; value != NULL; value = value->next)
+				g_string_append_printf(out, " %s (%s)%s", (const gchar *)value->data, ls_string(values, value->data),
+					value->next != NULL ? ";" : ".");
+			g_string_append_c(out, '\n');
+		}
+	}
+	g_string_append(out, "\nOVERRIDES\n"
+		"Every component can be restyled. Library styles sit in cascade layers, so the plan's css, "
+		"its restyle entries and page css always win without extra specificity. restyle maps a "
+		"component name to CSS included only where that component is used; target its classes "
+		"(.NAME, .NAME--VARIANT, .NAME__PART). Sections carry id attributes for page css.\n");
 	g_string_append(out, "\nCOMPONENTS\n");
 	for (i = 0; i < self->order->len; i++) {
 		const gchar *name = g_ptr_array_index(self->order, i);
@@ -1151,8 +1296,63 @@ check_plan_links(Problems *problems, LinkScope *scope, const gchar *where, JsonA
 	}
 }
 
+/* One listed value per look axis; the builder repairs missing axes to defaults. */
 static void
-check_plan_into(Problems *problems, JsonObject *kinds, JsonNode *node){
+check_look(Problems *problems, LsComponents *self, JsonObject *plan){
+	JsonObject *look = member_object(plan, "look");
+	g_autoptr(GList) axes = NULL;
+	GList *axis;
+	if (!json_object_has_member(plan, "look"))
+		return;
+	if (look == NULL) {
+		problem(problems, "look must be an object with one value per axis");
+		return;
+	}
+	axes = json_object_get_members(look);
+	for (axis = axes; axis != NULL; axis = axis->next) {
+		JsonObject *definition = member_object(self->looks, axis->data);
+		const gchar *value = ls_string(look, axis->data);
+		if (definition == NULL)
+			problem(problems, "look.%s is not a look axis", (const gchar *)axis->data);
+		else if (value == NULL || ls_string(member_object(definition, "values"), value) == NULL)
+			problem(problems, "look.%s must be one of the listed values", (const gchar *)axis->data);
+	}
+}
+
+/* restyle maps a component name to CSS for that component on this site. */
+static void
+check_restyle(Problems *problems, LsComponents *self, JsonObject *plan){
+	JsonObject *restyle = member_object(plan, "restyle");
+	g_autoptr(GList) names = NULL;
+	GList *name;
+	gsize total = 0;
+	if (!json_object_has_member(plan, "restyle"))
+		return;
+	if (restyle == NULL) {
+		problem(problems, "restyle must map component names to CSS");
+		return;
+	}
+	names = json_object_get_members(restyle);
+	for (name = names; name != NULL; name = name->next) {
+		JsonNode *value = json_object_get_member(restyle, name->data);
+		g_autofree gchar *why = NULL;
+		if (member_object(self->components, name->data) == NULL) {
+			problem(problems, "restyle.%s is not a component", (const gchar *)name->data);
+			continue;
+		}
+		why = is_string(value) ? css_problem(json_node_get_string(value), 8000) : g_strdup("css must be a string");
+		if (why != NULL)
+			problem(problems, "restyle.%s: %s", (const gchar *)name->data, why);
+		else
+			total += strlen(json_node_get_string(value));
+	}
+	if (total > 24000)
+		problem(problems, "restyle CSS must total at most 24000 bytes");
+}
+
+static void
+check_plan_into(Problems *problems, LsComponents *self, JsonNode *node){
+	JsonObject *kinds = self->kinds;
 	JsonObject *plan = node != NULL && JSON_NODE_HOLDS_OBJECT(node) ? json_node_get_object(node) : NULL;
 	JsonArray *pages, *art, *nav;
 	JsonObject *brand, *footer, *ui;
@@ -1165,9 +1365,12 @@ check_plan_into(Problems *problems, JsonObject *kinds, JsonNode *node){
 		problem(problems, "the plan must be a JSON object");
 		return;
 	}
-	if (!ls_object_keys(plan, "|name|tagline|lang|tokens|fonts|brand|nav|action|footer|voice|art|pages|css|ui|", NULL))
+	if (!ls_object_keys(plan, "|name|tagline|lang|tokens|fonts|brand|nav|action|footer|voice|look|art|pages|"
+		"css|restyle|ui|", NULL))
 		problem(problems, "unknown top-level key; allowed: name, tagline, lang, tokens, fonts, brand, "
-			"nav, action, footer, voice, art, pages, css, ui");
+			"nav, action, footer, voice, look, art, pages, css, restyle, ui");
+	check_look(problems, self, plan);
+	check_restyle(problems, self, plan);
 	check_fonts(problems, plan);
 	plan_scope(plan, &scope);
 	check_text(problems, "name", json_object_get_member(plan, "name"), TRUE, 80);
@@ -1353,6 +1556,25 @@ ls_components_repair_plan(LsComponents *self, JsonNode *plan){
 	GString *notes = g_string_new(NULL);
 	guint i, round;
 	g_return_val_if_fail(LS_IS_COMPONENTS(self), NULL);
+	/* Missing look axes take the catalog default. */
+	if (plan != NULL && JSON_NODE_HOLDS_OBJECT(plan) &&
+		(!json_object_has_member(json_node_get_object(plan), "look") ||
+		member_object(json_node_get_object(plan), "look") != NULL)) {
+		JsonObject *root = json_node_get_object(plan);
+		JsonObject *look = member_object(root, "look");
+		g_autoptr(GList) axes = json_object_get_members(self->looks);
+		GList *axis;
+		if (look == NULL) {
+			look = json_object_new();
+			json_object_set_object_member(root, "look", look);
+		}
+		for (axis = axes; axis != NULL; axis = axis->next)
+			if (!json_object_has_member(look, axis->data)) {
+				json_object_set_string_member(look, axis->data, look_default(self, axis->data));
+				g_string_append_printf(notes, "%slook.%s -> %s", notes->len > 0 ? "; " : "",
+					(const gchar *)axis->data, look_default(self, axis->data));
+			}
+	}
 	/* A missing or misplaced kind has one mechanical answer. */
 	if (plan != NULL && JSON_NODE_HOLDS_OBJECT(plan)) {
 		JsonArray *pages = member_array(json_node_get_object(plan), "pages");
@@ -1418,7 +1640,7 @@ ls_components_check_plan(LsComponents *self, JsonNode *plan, GError **error){
 	Problems problems = {g_ptr_array_new_with_free_func(g_free)};
 	gboolean okay;
 	g_return_val_if_fail(LS_IS_COMPONENTS(self), FALSE);
-	check_plan_into(&problems, self->kinds, plan);
+	check_plan_into(&problems, self, plan);
 	okay = finish(&problems, "The site plan", error);
 	g_ptr_array_unref(problems.messages);
 	return okay;
@@ -1812,7 +2034,7 @@ check_page_into(LsComponents *self, Problems *problems, JsonNode *plan_node, con
 				strchr("aeiou", kind_name[0]) != NULL ? "an" : "a", kind_name, openings->str);
 			g_string_free(openings, TRUE);
 		}
-		if ((g_str_equal(name, "hero") || g_str_equal(name, "cover")) && g_strcmp0(kind_name, "home") != 0)
+		if ((g_str_equal(name, "hero") || g_str_equal(name, "cover") || g_str_equal(name, "poster")) && g_strcmp0(kind_name, "home") != 0)
 			problem(problems, "%s: %s belongs only on the home page; open this %s page with page-header",
 				where, name, kind_name);
 		slots = member_object(component, "slots");
@@ -2280,6 +2502,21 @@ append_link_views(JsonArray *out, JsonArray *links, const gchar *path, GHashTabl
 	}
 }
 
+/* One body class per look axis, falling back to the catalog default. */
+static gchar *
+look_classes(LsComponents *self, JsonObject *look){
+	GString *out = g_string_new(NULL);
+	g_autoptr(GList) axes = json_object_get_members(self->looks);
+	GList *axis;
+	for (axis = axes; axis != NULL; axis = axis->next) {
+		const gchar *value = look != NULL ? ls_string(look, axis->data) : NULL;
+		if (value == NULL || ls_string(member_object(member_object(self->looks, axis->data), "values"), value) == NULL)
+			value = look_default(self, axis->data);
+		g_string_append_printf(out, "%slook-%s-%s", out->len > 0 ? " " : "", (const gchar *)axis->data, value);
+	}
+	return g_string_free(out, FALSE);
+}
+
 static gchar *
 render_page(Render *render, const gchar *path, const gchar *title, const gchar *description,
 	gboolean noindex, JsonObject *page, const gchar *base_url){
@@ -2315,6 +2552,10 @@ render_page(Render *render, const gchar *path, const gchar *title, const gchar *
 	}
 	json_object_set_string_member(view, "site", name);
 	json_object_set_string_member(view, "slug", slug);
+	{
+		g_autofree gchar *classes = look_classes(render->self, member_object(plan, "look"));
+		json_object_set_string_member(view, "look_classes", classes);
+	}
 	json_object_set_boolean_member(view, "home", g_str_equal(path, "index.html"));
 	parse_color(ls_string(tokens, "paper"), paper);
 	json_object_set_string_member(view, "color_scheme", luminance(paper) < 0.2 ? "dark" : "light");
@@ -2499,7 +2740,7 @@ ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages
 	guint i;
 	g_return_val_if_fail(LS_IS_COMPONENTS(self) && plan_node != NULL && pages != NULL, NULL);
 	json_object_set_array_member(bundle, "files", files);
-	check_plan_into(&problems, self->kinds, plan_node);
+	check_plan_into(&problems, self, plan_node);
 	if (!finish(&problems, "The site plan", error))
 		goto fail;
 	base = normalize_base(base_url, error);
@@ -2557,12 +2798,15 @@ ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages
 			g_string_free(sitemap, TRUE);
 		goto fail;
 	}
-	css = g_string_new("/* Generated by libresite from the site plan and component library. */\n");
+	/* Library styles sit in cascade layers; the plan's restyles and CSS are
+	 * unlayered, so any rule a site writes overrides any library rule. */
+	css = g_string_new("/* Generated by libresite from the site plan and component library. */\n"
+		"@layer ls-base, ls-components, ls-look;\n");
 	{
 		g_autofree gchar *tokens = token_css(member_object(plan, "tokens"));
 		g_string_append(css, tokens);
 	}
-	g_string_append(css, file_text(self, "base.css"));
+	g_string_append_printf(css, "@layer ls-base {\n%s}\n", file_text(self, "base.css"));
 	js = g_string_new("/* Generated by libresite from the component library. */\n");
 	g_string_append(js, file_text(self, "nav.js"));
 	for (i = 0; i < self->order->len; i++) {
@@ -2572,9 +2816,16 @@ ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages
 		if (!g_hash_table_contains(used, name))
 			continue;
 		if (file_text(self, style) != NULL)
-			g_string_append_printf(css, "\n/* %s */\n%s", name, file_text(self, style));
+			g_string_append_printf(css, "\n/* %s */\n@layer ls-components {\n%s}\n", name, file_text(self, style));
 		if (file_text(self, script) != NULL)
 			g_string_append_printf(js, "\n%s", file_text(self, script));
+	}
+	g_string_append_printf(css, "\n/* look */\n@layer ls-look {\n%s}\n", file_text(self, "look.css"));
+	for (i = 0; member_object(plan, "restyle") != NULL && i < self->order->len; i++) {
+		const gchar *name = g_ptr_array_index(self->order, i);
+		const gchar *restyle = ls_string(member_object(plan, "restyle"), name);
+		if (restyle != NULL && g_hash_table_contains(used, name))
+			g_string_append_printf(css, "\n/* Site restyle: %s */\n%s\n", name, restyle);
 	}
 	if (ls_string(plan, "css") != NULL)
 		g_string_append_printf(css, "\n/* Site plan */\n%s\n", ls_string(plan, "css"));

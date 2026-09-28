@@ -51,6 +51,17 @@ gchar *ls_components_dup_page_schema(LsComponents *self);
  */
 gchar *ls_components_dup_art_schema(LsComponents *self);
 /**
+ * ls_components_suggest_look:
+ * @self: a component library
+ * @seed: stable text identifying the site, such as the recipe name and brief
+ *
+ * Picks one value per look axis from a hash of @seed, so different sites
+ * start from different skeletons while one site always gets the same
+ * suggestion. The plan may keep or change any axis.
+ * Returns: (transfer full): axis name to look value
+ */
+JsonObject *ls_components_suggest_look(LsComponents *self, const gchar *seed);
+/**
  * ls_components_describe:
  * @self: a component library
  * Returns: (transfer full): model-facing reference for page specifications:

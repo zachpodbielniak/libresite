@@ -1,0 +1,12 @@
+<div class="wrap">
+<div class="offer__box">
+<div class="offer__main">
+{{#kicker}}<p class="kicker">{{kicker}}</p>
+{{/kicker}}<{{htag}} class="offer__title" id="{{id}}-h">{{heading}}</{{htag}}>
+{{#body}}<div class="prose">{{{body}}}</div>
+{{/body}}{{#has_includes}}<ul class="offer__includes">{{#includes}}<li>{{text}}</li>{{/includes}}</ul>
+{{/has_includes}}{{#has_actions}}<p class="actions">{{#actions}}<a class="button{{^primary}} button--ghost{{/primary}}" href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{label}}</a>{{/actions}}</p>
+{{/has_actions}}</div>
+{{#price}}<div class="offer__stub"><p class="offer__price">{{price}}</p>{{#note}}<p class="offer__note">{{note}}</p>{{/note}}</div>
+{{/price}}</div>
+</div>

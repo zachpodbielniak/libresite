@@ -11,3 +11,7 @@
 	.quote--side figcaption { margin: 0; padding-left: var(--space-4); border-left: var(--border) solid var(--line-strong); }
 }
 .quote--side blockquote p { font-family: var(--font-display); font-size: var(--step-3); line-height: 1.2; }
+.quote--giant .quote__figure { max-width: none; }
+.quote--giant blockquote p { font-family: var(--font-display); font-weight: var(--heading-weight); font-size: clamp(2.25rem, 7vw, 6rem); line-height: 0.98; letter-spacing: calc(var(--heading-tracking) - 0.02em); text-wrap: balance; }
+.quote--giant blockquote p::before { content: "\201C"; color: var(--accent-text); }
+.quote--giant blockquote p::after { content: "\201D"; color: var(--accent-text); }

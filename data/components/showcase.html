@@ -1,0 +1,14 @@
+<div class="wrap">
+{{#heading}}<div class="section-head"><{{htag}} id="{{id}}-h">{{heading}}</{{htag}}></div>
+{{/heading}}<ul class="showcase__list" role="list">
+{{#items}}<li class="showcase__item">
+<figure class="showcase__art">{{#art}}<img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}" loading="lazy" decoding="async">{{/art}}</figure>
+<div class="showcase__text">
+{{#kicker}}<p class="kicker">{{kicker}}</p>
+{{/kicker}}<{{subtag}} class="showcase__title">{{title}}</{{subtag}}>
+{{#body}}<div class="prose">{{{body}}}</div>
+{{/body}}{{#link}}<p class="showcase__link"><a href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{label}}</a></p>
+{{/link}}</div>
+</li>
+{{/items}}</ul>
+</div>

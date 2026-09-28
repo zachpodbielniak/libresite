@@ -1,55 +1,295 @@
 {
   "type": "object",
-  "required": ["name", "tokens", "nav", "pages", "art"],
+  "required": [
+    "name",
+    "tokens",
+    "look",
+    "nav",
+    "pages",
+    "art"
+  ],
   "additionalProperties": false,
   "properties": {
-    "name": {"type": "string"},
-    "tagline": {"type": "string"},
-    "lang": {"type": "string"},
+    "name": {
+      "type": "string"
+    },
+    "tagline": {
+      "type": "string"
+    },
+    "lang": {
+      "type": "string"
+    },
     "tokens": {
       "type": "object",
-      "required": ["paper", "ink", "muted", "surface", "line", "accent", "accent_ink", "font_display", "font_body", "font_mono",
-        "base_size", "ratio", "measure", "radius", "border", "space", "density", "heading_weight", "heading_tracking", "heading_leading", "heading_case"],
+      "required": [
+        "paper",
+        "ink",
+        "muted",
+        "surface",
+        "line",
+        "accent",
+        "accent_ink",
+        "font_display",
+        "font_body",
+        "font_mono",
+        "base_size",
+        "ratio",
+        "measure",
+        "radius",
+        "border",
+        "space",
+        "density",
+        "heading_weight",
+        "heading_tracking",
+        "heading_leading",
+        "heading_case"
+      ],
       "additionalProperties": false,
       "properties": {
-        "paper": {"type": "string"}, "ink": {"type": "string"}, "muted": {"type": "string"}, "surface": {"type": "string"},
-        "line": {"type": "string"}, "accent": {"type": "string"}, "accent_ink": {"type": "string"},
-        "font_display": {"type": "string"}, "font_body": {"type": "string"}, "font_mono": {"type": "string"},
-        "base_size": {"type": "number"}, "ratio": {"type": "number"}, "measure": {"type": "number"},
-        "radius": {"type": "number"}, "border": {"type": "number"}, "space": {"type": "number"},
-        "density": {"type": "string", "enum": ["compact", "regular", "airy"]},
-        "heading_weight": {"type": "number"}, "heading_tracking": {"type": "number"}, "heading_leading": {"type": "number"},
-        "heading_case": {"type": "string", "enum": ["none", "uppercase"]},
-        "max_width": {"type": "number"}
+        "paper": {
+          "type": "string"
+        },
+        "ink": {
+          "type": "string"
+        },
+        "muted": {
+          "type": "string"
+        },
+        "surface": {
+          "type": "string"
+        },
+        "line": {
+          "type": "string"
+        },
+        "accent": {
+          "type": "string"
+        },
+        "accent_ink": {
+          "type": "string"
+        },
+        "font_display": {
+          "type": "string"
+        },
+        "font_body": {
+          "type": "string"
+        },
+        "font_mono": {
+          "type": "string"
+        },
+        "base_size": {
+          "type": "number"
+        },
+        "ratio": {
+          "type": "number"
+        },
+        "measure": {
+          "type": "number"
+        },
+        "radius": {
+          "type": "number"
+        },
+        "border": {
+          "type": "number"
+        },
+        "space": {
+          "type": "number"
+        },
+        "density": {
+          "type": "string",
+          "enum": [
+            "compact",
+            "regular",
+            "airy"
+          ]
+        },
+        "heading_weight": {
+          "type": "number"
+        },
+        "heading_tracking": {
+          "type": "number"
+        },
+        "heading_leading": {
+          "type": "number"
+        },
+        "heading_case": {
+          "type": "string",
+          "enum": [
+            "none",
+            "uppercase"
+          ]
+        },
+        "max_width": {
+          "type": "number"
+        }
       }
     },
     "fonts": {
-      "type": "array", "maxItems": 3,
-      "items": {"type": "object", "required": ["family", "weights"], "additionalProperties": false,
-        "properties": {"family": {"type": "string"}, "weights": {"type": "array", "items": {"type": "integer"}}, "italic": {"type": "boolean"}}}
+      "type": "array",
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "required": [
+          "family",
+          "weights"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "family": {
+            "type": "string"
+          },
+          "weights": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          },
+          "italic": {
+            "type": "boolean"
+          }
+        }
+      }
     },
-    "brand": {"type": "object", "additionalProperties": false, "properties": {"wordmark": {"type": "string"}, "mark": {"type": "string"}}},
-    "nav": {"type": "array", "items": {"$ref": "#/$defs/link"}},
-    "action": {"$ref": "#/$defs/link"},
-    "footer": {"type": "object", "additionalProperties": false,
-      "properties": {"note": {"type": "string"}, "links": {"type": "array", "items": {"$ref": "#/$defs/link"}}}},
-    "voice": {"type": "string"},
+    "brand": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "wordmark": {
+          "type": "string"
+        },
+        "mark": {
+          "type": "string"
+        }
+      }
+    },
+    "nav": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/link"
+      }
+    },
+    "action": {
+      "$ref": "#/$defs/link"
+    },
+    "footer": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "note": {
+          "type": "string"
+        },
+        "links": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/link"
+          }
+        }
+      }
+    },
+    "voice": {
+      "type": "string"
+    },
+    "look": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Filled from catalog.yaml looks by the builder."
+    },
     "art": {
       "type": "array",
-      "items": {"type": "object", "required": ["path", "brief", "ratio"], "additionalProperties": false,
-        "properties": {"path": {"type": "string"}, "brief": {"type": "string"},
-          "ratio": {"type": "string", "enum": ["16:9", "4:3", "3:2", "1:1", "3:4", "2:1", "3:1", "21:9"]}}}
+      "items": {
+        "type": "object",
+        "required": [
+          "path",
+          "brief",
+          "ratio"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "brief": {
+            "type": "string"
+          },
+          "ratio": {
+            "type": "string",
+            "enum": [
+              "16:9",
+              "4:3",
+              "3:2",
+              "1:1",
+              "3:4",
+              "2:1",
+              "3:1",
+              "21:9"
+            ]
+          }
+        }
+      }
     },
     "pages": {
       "type": "array",
-      "items": {"type": "object", "required": ["path", "kind", "title", "description", "brief"], "additionalProperties": false,
-        "properties": {"path": {"type": "string"}, "kind": {"type": "string", "enum": ["home", "index", "detail", "article", "menu", "visit", "about", "form", "services", "pricing", "contact", "gallery", "events", "general"]}, "title": {"type": "string"}, "description": {"type": "string"}, "brief": {"type": "string"}}}
+      "items": {
+        "type": "object",
+        "required": [
+          "path",
+          "kind",
+          "title",
+          "description",
+          "brief"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "description": "Filled from catalog.yaml kinds by the builder."
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "brief": {
+            "type": "string"
+          }
+        }
+      }
     },
-    "css": {"type": "string"},
-    "ui": {"type": "object", "additionalProperties": {"type": "string"}}
+    "css": {
+      "type": "string"
+    },
+    "restyle": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "ui": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "string"
+      }
+    }
   },
   "$defs": {
-    "link": {"type": "object", "required": ["href", "label"], "additionalProperties": false,
-      "properties": {"href": {"type": "string"}, "label": {"type": "string"}}}
+    "link": {
+      "type": "object",
+      "required": [
+        "href",
+        "label"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "href": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        }
+      }
+    }
   }
 }

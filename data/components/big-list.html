@@ -1,0 +1,6 @@
+<div class="wrap">
+{{#heading}}<div class="section-head"><{{htag}} id="{{id}}-h">{{heading}}</{{htag}}></div>
+{{/heading}}<ol class="big-list__list" role="list">
+{{#items}}<li class="big-list__item">{{#link}}<a class="big-list__row" href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{/link}}{{^link}}<span class="big-list__row">{{/link}}<span class="big-list__n" aria-hidden="true">{{n2}}</span><span class="big-list__title">{{title}}</span>{{#meta}}<span class="big-list__meta">{{meta}}</span>{{/meta}}{{#link}}</a>{{/link}}{{^link}}</span>{{/link}}</li>
+{{/items}}</ol>
+</div>

@@ -4,7 +4,7 @@
 #+categories: libresite
 #+created: 2026-09-28T16:00:00-04:00
 #+updated: 2026-09-28T19:00:00-04:00
-#+version: 0.2.0
+#+version: 0.3.0
 
 * Why it exists
 
@@ -58,6 +58,34 @@ Every planned page has a =kind=, defined in =catalog.yaml=. A kind fixes which c
 
 =page-header= renders a breadcrumb back home on every interior page. Reading kinds show a sticky contents column built from the page's headed sections and article parts once there are at least two; a page may add an =aside= rich-text note under it. Plan repair sets a missing kind (=home= for =index.html=, else =general=) and moves a misplaced =home= to =general=. The reference each writer receives lists every kind with its openings and suited components.
 
+* Look and overrides
+
+Colors and fonts alone do not make two sites different: the skeleton does. The plan's =look= picks one value for each axis in =catalog.yaml= (=looks=), and the builder puts one class per axis on every page's =body=, for example =look-header-stacked=. =look.css= reshapes every component through those classes.
+
+- header: bar, centered, stacked, inverted, floating
+- nav: underline, pill, caps, slashes
+- heads: plain, rule, numbered, bar, split, giant
+- buttons: square, pill, underline, offset
+- panels (cards, tiles, boxed items across components): flat, outlined, raised, rules, inverted
+- rhythm: even, bands, divided, tight
+- align: left, center
+- images: plain, rounded, framed, print, shadow
+- footer: simple, big, inverted
+- texture: none, grain, grid, dots, lines
+- motion: none, rise (scroll-linked, off for reduced motion)
+
+The first value of each axis is the default, and plan repair fills a missing axis with it. Inverted areas swap the working color tokens locally, so every component inside them keeps its contrast pairs. So that sites do not converge on a favorite set, the plan task carries a =suggested_look= that =ls_components_suggest_look()= derives from a hash of the recipe name and brief: different sites start from different skeletons, and the same site always gets the same suggestion. The plan keeps a suggested value unless the subject argues against it.
+
+Every component can be overridden. =styles.css= declares =@layer ls-base, ls-components, ls-look=; the base stylesheet, each component's styles and the look sit in those layers, and everything a site writes is unlayered after them:
+
+1. =restyle=, a plan map from component name to CSS, is emitted after the look and only for components the site uses. Target =.NAME=, =.NAME--VARIANT= and =.NAME__PART=.
+2. The plan's =css= follows, for site-wide signature rules.
+3. Page =css= is inlined per page, and every section has an =id=.
+
+Unlayered rules beat layered ones regardless of specificity, so an override never needs =!important= or longer selectors. The reduced-motion rules are layered =!important= declarations and still win. Restyle entries are checked like plan CSS (8 KB each, 24 KB in total).
+
+The model-facing reference lists the axes and the override rules (LOOK and OVERRIDES). =/components/every-look= requires styles for each non-default look value, and checks that the plan schema lists exactly the catalog's axes and values; the schema's kind and look enums are generated from the catalog at load.
+
 * What the builder produces
 
 From the plan, one specification per route and the artwork, =ls_components_compose()= renders:
@@ -86,11 +114,13 @@ Files live in =data/components/= and are embedded by =data/resources.xml=:
 | =plan.schema.json= | Response schema for a plan |
 | =pages/*.json= | Built-in utility page specifications |
 
-Components (53, with 152 variants):
+Components (60, with 177 variants):
 
-- Openings: =hero= (home only; statement, split, banner, centered, overlap, minimal), =cover= (home only; full-bleed, framed or split artwork), =manifesto= (short stacked lines) and =page-header= (plain, split, band, rule, centered, minimal; breadcrumb, key-fact strip, actions).
+- Openings: =hero= (home only; statement, split, banner, centered, overlap, minimal), =cover= (home only; full-bleed, framed or split artwork), =poster= (home only; the title as the image: type, stamped, backdrop), =manifesto= (short stacked lines) and =page-header= (plain, split, band, rule, centered, minimal, giant; breadcrumb, key-fact strip, actions).
 - Reading: =lead= (with optional drop cap), =text=, =article= (parts with inline figures, numbered notes), =figure=, =callout=, =quote=, =statement=, =table=, =glossary=, =columns=, =details= (collapsible panels) and =tabs=.
-- Lists and navigation: =cards=, =bento= (tiles of four sizes), =strip= (horizontally scrolling cards), =entries=, =filter=, =directory= (entries grouped by initial letter with a jump list), =links=, =pager=.
+- Showcases: =showcase= (large panels, alternating, overlapping or full-bleed), =story= (steps scrolling beside a pinned artwork), =big-list= (an oversized typographic index of links), =profile= (one supplied person) and =badges= (supplied credentials only).
+- Offers: =offer= (one highlighted package or ticket with its supplied price).
+- Lists and navigation: =cards= (now also overlap, polaroid and minimal), =bento= (tiles of four sizes), =strip= (horizontally scrolling cards), =entries=, =filter=, =directory= (entries grouped by initial letter with a jump list), =links=, =pager=.
 - Sequences: =features=, =split= (two panels), =steps=, =timeline=, =schedule=.
 - Business facts: =facts=, =numbers=, =specs= (grouped specification sheets), =hours=, =location= (with a drawn map, never an embedded map service), =locations=, =areas= (places served), =contact-card=, =notice=, =menu= (sections, dotted leaders, supplied prices, tags), =services=, =pricing=, =checklist= (included and not included), =team= (supplied people only), =voices= and =partners= (supplied quotes and names only).
 - Media and actions: =media=, =gallery=, =compare= (two artworks side by side), =marquee= (a scrolling band that stops for reduced motion and wraps instead), =cta=, =faq=, =form= and the =custom= escape hatch. =libresite --preview pages -r RECIPE= prints the full reference each writer receives.
@@ -162,6 +192,8 @@ A composed recipe's checkpoint fingerprint includes the component library digest
 | 2026-09-28 | night-ramen, with page kinds | 49 s | kinds: home, menu, about, visit, general; five artworks; no retries |
 | 2026-09-28 | studio, 53-component library | 60 s | no retries |
 | 2026-09-28 | night-ramen, 53-component library | 51 s | events kind; marquee, statement, notice, big facts; no retries |
+| 2026-09-28 | studio, looks and restyles | 51 s | stacked-free look from its suggestion: caps nav, split heads, outlined panels, framed images, lines texture; showcase used; no retries |
+| 2026-09-28 | trial bicycle workshop, looks and restyles | 61 s | offset buttons, print images, grid texture; no retries |
 | 2026-09-28 | trial bicycle workshop (not bundled), 53-component library | 66 s, then 53 s | services, pricing, contact and detail kinds; services, checklist, specs, compare, areas, contact-card; no retries |
 
 These are single live runs on Claude Code with the default model. They establish timing, not design quality; a person must still look at every delivered site.

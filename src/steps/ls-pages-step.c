@@ -21,6 +21,12 @@ struct _LsPagesStep {
 G_DEFINE_TYPE(LsPagesStep, ls_pages_step, LS_TYPE_STEP)
 
 static JsonObject *
+member_object_of(JsonObject *object, const gchar *name){
+	JsonNode *node = object != NULL ? json_object_get_member(object, name) : NULL;
+	return node != NULL && JSON_NODE_HOLDS_OBJECT(node) ? json_node_get_object(node) : NULL;
+}
+
+static JsonObject *
 step_options(JsonObject *config){
 	JsonNode *node = config != NULL ? json_object_get_member(config, "options") : NULL;
 	return node != NULL && JSON_NODE_HOLDS_OBJECT(node) ? json_node_get_object(node) : NULL;
@@ -199,6 +205,13 @@ plan_prompt(LsPrompts *prompts, LsRecipe *recipe, JsonObject *config, LsComponen
 		if (!is_utility_route(item->data))
 			json_array_add_string_element(routes, item->data);
 	json_object_set_array_member(task, "required_routes", routes);
+	{
+		JsonObject *root = ls_recipe_get_root(recipe);
+		const gchar *name = ls_string(root, "name");
+		const gchar *brief = ls_string(member_object_of(root, "site"), "brief");
+		g_autofree gchar *seed = g_strconcat(name != NULL ? name : "", "\n", brief != NULL ? brief : "", NULL);
+		json_object_set_object_member(task, "suggested_look", ls_components_suggest_look(components, seed));
+	}
 	json_object_set_object_member(task, "required_text", json_object_ref(literals));
 	json_node_set_object(node, task);
 	task_json = ls_json_encode(node);

@@ -24,3 +24,14 @@
 .cards--list .cards__list { gap: 0; border-top: var(--border) solid var(--line); }
 .cards--list .card { padding-block: var(--space-4); border-bottom: var(--border) solid var(--line); }
 .cards--list .card__art { display: none; }
+.cards--overlap .cards__list { gap: var(--space-7) var(--space-6); }
+@media (min-width: 48rem) { .cards--overlap .cards__list, .cards--polaroid .cards__list, .cards--minimal .cards__list { grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); } }
+.cards--overlap .card { gap: 0; }
+.cards--overlap .card__text { position: relative; margin: calc(var(--space-6) * -1) var(--space-4) 0; padding: var(--space-4) var(--space-5); background: var(--paper); border: var(--border) solid var(--line-strong); }
+.cards--polaroid .card { padding: var(--space-3) var(--space-3) var(--space-5); background: var(--paper); box-shadow: 0 0.5rem 1.5rem color-mix(in srgb, var(--ink) 16%, transparent); transform: rotate(-1.2deg); transition: transform 200ms ease; }
+.cards--polaroid .card:nth-child(even) { transform: rotate(1.4deg); }
+.cards--polaroid .card:hover, .cards--polaroid .card:focus-within { transform: none; }
+.cards--polaroid .card__art { border-radius: 0; }
+.cards--minimal .card__art { display: none; }
+.cards--minimal .card { padding-top: var(--space-4); border-top: var(--border-strong) solid var(--ink); }
+.cards--minimal .card__title { font-size: var(--step-4); line-height: 1; }

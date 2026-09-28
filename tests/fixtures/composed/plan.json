@@ -24,6 +24,13 @@
     "heading_tracking": -0.02,
     "heading_case": "none"
   },
+  "look": {
+    "header": "centered",
+    "heads": "numbered",
+    "panels": "outlined",
+    "rhythm": "bands",
+    "footer": "big"
+  },
   "brand": {
     "wordmark": "Harbor & Pine",
     "mark": "assets/mark.svg"
@@ -109,5 +116,9 @@
       "brief": "Visit"
     }
   ],
-  "css": ".page--index .hero__title { max-width: 12ch; }"
+  "css": ".page--index .hero__title { max-width: 12ch; }",
+  "restyle": {
+    "hero": ".hero__title { font-style: italic; }",
+    "tabs": ".tabs__tab { color: red; }"
+  }
 }
