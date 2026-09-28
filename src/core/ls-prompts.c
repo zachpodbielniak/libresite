@@ -67,9 +67,13 @@ ls_prompts_new_from_yaml(const gchar *text, GError **error){
 	if (!JSON_NODE_HOLDS_OBJECT(self->root))
 		goto invalid;
 	root = json_node_get_object(self->root);
-	if (!ls_object_keys(root, "|version|system|styles|stages|stacks|", error))
+	if (!ls_object_keys(root, "|version|system|spec_system|styles|stages|stacks|", error))
 		return NULL;
 	if (ls_string(root, "system") == NULL || *ls_string(root, "system") == '\0')
+		goto invalid;
+	/* Optional: only component recipes need it, and they fail preflight without it. */
+	if (json_object_has_member(root, "spec_system") &&
+		(ls_string(root, "spec_system") == NULL || *ls_string(root, "spec_system") == '\0'))
 		goto invalid;
 	{
 		JsonNode *version = json_object_get_member(root, "version");
@@ -106,7 +110,7 @@ invalid:
 		LS_ERROR,
 		LS_ERROR_INVALID,
 		"Catalog needs version: 1, nonempty system, styles and stages string mappings; "
-		"optional stacks must be a nonempty string mapping"
+		"optional stacks must be a nonempty string mapping and optional spec_system nonempty"
 	);
 	return NULL;
 }
@@ -114,6 +118,55 @@ const gchar *
 ls_prompts_get_system(LsPrompts *self){
 	return ls_string(json_node_get_object(self->root), "system");
 }
+const gchar *
+ls_prompts_get_spec_system(LsPrompts *self){
+	g_return_val_if_fail(LS_IS_PROMPTS(self), NULL);
+	return ls_string(json_node_get_object(self->root), "spec_system");
+}
+
+/* Component calls get only what they need: no bundle protocol, acceptance
+ * dump or project manifest. Untrusted text stays inside JSON data. */
+gchar *
+ls_prompts_render_spec(LsPrompts *self, LsRecipe *recipe, JsonObject *step,
+	const gchar *stage, const gchar *reference, const gchar *task, GError **error){
+	JsonObject *root = json_node_get_object(self->root);
+	JsonObject *site = json_object_get_object_member(ls_recipe_get_root(recipe), "site");
+	const gchar *style = ls_string(site, "style") != NULL ? ls_string(site, "style") : "editorial";
+	const gchar *style_text = ls_string(json_object_get_object_member(root, "styles"), style);
+	const gchar *stage_text = ls_string(json_object_get_object_member(root, "stages"), stage);
+	const gchar *system = ls_prompts_get_spec_system(self);
+	g_autoptr(JsonNode) data = json_node_new(JSON_NODE_OBJECT);
+	g_autofree gchar *site_json = NULL;
+	gchar *result;
+	g_return_val_if_fail(LS_IS_PROMPTS(self) && stage != NULL && task != NULL, NULL);
+	if (system == NULL) {
+		g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID,
+			"Component steps need a spec_system prompt in the catalog");
+		return NULL;
+	}
+	if (style_text == NULL || stage_text == NULL) {
+		g_set_error(error, LS_ERROR, LS_ERROR_INVALID, "Unknown style '%s' or prompt '%s'", style, stage);
+		return NULL;
+	}
+	json_node_set_object(data, site);
+	site_json = ls_json_encode(data);
+	result = g_strdup_printf(
+		"STAGE CONTRACT\n%s\n\nDESIGN DIRECTION\n%s\n\nSITE DATA (JSON)\n%s\n\n"
+		"STEP INSTRUCTIONS\n%s\n\nREFERENCE\n%s\n\nTASK (JSON)\n%s\n",
+		stage_text, style_text, site_json,
+		ls_string(step, "instructions") != NULL ? ls_string(step, "instructions") : "(none)",
+		reference != NULL ? reference : "(none)", task);
+	if (self->max_bytes != 0 && strlen(result) + strlen(system) > self->max_bytes) {
+		g_set_error(error, LS_ERROR, LS_ERROR_LIMIT,
+			"Prompt needs %" G_GSIZE_FORMAT " bytes; limit is %" G_GSIZE_FORMAT
+			"; raise --max-prompt-bytes for your provider and resume",
+			strlen(result) + strlen(system), self->max_bytes);
+		g_free(result);
+		return NULL;
+	}
+	return result;
+}
+
 const gchar *
 ls_prompts_get_digest(LsPrompts *self){
 	return self->digest;

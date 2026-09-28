@@ -53,6 +53,30 @@ gchar *ls_prompts_render(
 	LsPrompts *self, LsRecipe *recipe, JsonObject *step, LsContext *context, GError **error
 );
 /**
+ * ls_prompts_get_spec_system:
+ * @self: a catalog
+ * Returns: (transfer none) (nullable): shared system prompt for component
+ *   steps (plan, pages), or NULL when the catalog has no spec_system
+ */
+const gchar *ls_prompts_get_spec_system(LsPrompts *self);
+/**
+ * ls_prompts_render_spec:
+ * @self: a catalog with spec_system
+ * @recipe: recipe and site brief
+ * @step: step configuration; its instructions are included verbatim
+ * @stage: stages entry holding the stage contract
+ * @reference: (nullable): reference text such as the component catalog
+ * @task: JSON task data for this call
+ * @error: return location for an error
+ *
+ * Builds a compact prompt for a component step: stage contract, design
+ * direction, site data, step instructions, reference and task, in that
+ * order. Site text and task data are serialized as data, never templates.
+ * Returns: (transfer full) (nullable): prompt text
+ */
+gchar *ls_prompts_render_spec(LsPrompts *self, LsRecipe *recipe, JsonObject *step,
+	const gchar *stage, const gchar *reference, const gchar *task, GError **error);
+/**
  * ls_prompts_get_digest:
  * @self: a catalog
  * Returns: (transfer none): SHA-256 of the catalog
