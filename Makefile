@@ -17,6 +17,8 @@ include config.mk
 LIB_SOURCES = $(wildcard src/core/*.c src/interfaces/*.c src/model/*.c src/providers/*.c src/steps/*.c)
 LIB_OBJECTS = $(patsubst src/%.c,$(OBJDIR)/%.o,$(LIB_SOURCES)) $(OBJDIR)/resources.o
 PUBLIC_HEADERS = $(wildcard src/*.h src/core/*.h src/interfaces/*.h src/model/*.h src/providers/*.h src/steps/*.h)
+UNIT_TESTS = $(patsubst tests/%.c,%,$(wildcard tests/test-*.c))
+UNIT_BINS = $(addprefix $(OUTDIR)/,$(UNIT_TESTS))
 include rules.mk
 .PHONY: all tests test stack-tests clean install help bundled-deps
 all: $(CLI) $(LIB_SHARED) $(OUTDIR)/libresite-1.0.pc
@@ -27,22 +29,11 @@ $(LIB_SHARED): $(LIB_OBJECTS) $(DEP_ARCHIVES)
 	ln -sf liblibresite-1.0.so.0 $(OUTDIR)/liblibresite-1.0.so
 $(CLI): $(OBJDIR)/cli/main.o $(LIB_STATIC) $(DEP_ARCHIVES)
 	$(CC) -o $@ $(OBJDIR)/cli/main.o $(LIB_STATIC) $(LDFLAGS)
-$(OUTDIR)/test-libresite: tests/test-libresite.c $(LIB_STATIC) $(DEP_ARCHIVES) $(OUTDIR)/.flags
+# Every tests/test-*.c is one GTest binary linked against the static library.
+$(OUTDIR)/test-%: tests/test-%.c $(LIB_STATIC) $(DEP_ARCHIVES) $(OUTDIR)/.flags
 	$(CC) $(CFLAGS) -MMD -MP -MF $@.d -o $@ $< $(LIB_STATIC) $(LDFLAGS)
-$(OUTDIR)/test-contracts: tests/test-contracts.c $(LIB_STATIC) $(DEP_ARCHIVES) $(OUTDIR)/.flags
-	$(CC) $(CFLAGS) -MMD -MP -MF $@.d -o $@ $< $(LIB_STATIC) $(LDFLAGS)
-$(OUTDIR)/test-packages: tests/test-packages.c $(LIB_STATIC) $(DEP_ARCHIVES) $(OUTDIR)/.flags
-	$(CC) $(CFLAGS) -MMD -MP -MF $@.d -o $@ $< $(LIB_STATIC) $(LDFLAGS)
-$(OUTDIR)/test-ls-ai-provider: tests/test-ls-ai-provider.c $(LIB_STATIC) $(DEP_ARCHIVES) $(OUTDIR)/.flags
-	$(CC) $(CFLAGS) -MMD -MP -MF $@.d -o $@ $< $(LIB_STATIC) $(LDFLAGS)
-$(OUTDIR)/test-ls-prune-step: tests/test-ls-prune-step.c $(LIB_STATIC) $(DEP_ARCHIVES) $(OUTDIR)/.flags
-	$(CC) $(CFLAGS) -MMD -MP -MF $@.d -o $@ $< $(LIB_STATIC) $(LDFLAGS)
-tests test: all $(OUTDIR)/test-libresite $(OUTDIR)/test-contracts $(OUTDIR)/test-packages $(OUTDIR)/test-ls-ai-provider $(OUTDIR)/test-ls-prune-step
-	G_DEBUG=fatal-warnings $(OUTDIR)/test-libresite
-	G_DEBUG=fatal-warnings $(OUTDIR)/test-contracts
-	G_DEBUG=fatal-warnings $(OUTDIR)/test-packages
-	G_DEBUG=fatal-warnings $(OUTDIR)/test-ls-ai-provider
-	G_DEBUG=fatal-warnings $(OUTDIR)/test-ls-prune-step
+tests test: all $(UNIT_BINS)
+	@set -e; for t in $(UNIT_BINS); do echo "G_DEBUG=fatal-warnings $$t"; G_DEBUG=fatal-warnings $$t; done
 	bash tests/packages.sh $(CLI)
 	bash tests/cli.sh $(CLI)
 	bash tests/revision.sh $(CLI)
