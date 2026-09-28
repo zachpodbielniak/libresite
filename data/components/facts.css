@@ -7,3 +7,7 @@
 .facts--list .facts__list { gap: 0; max-width: calc(var(--measure) * 1.2); }
 .facts--list .facts__item { padding-block: var(--space-3); border-top: var(--border) solid var(--line); }
 @media (min-width: 48rem) { .facts--list .facts__item { display: grid; grid-template-columns: 12rem minmax(0, 1fr); gap: var(--space-5); } .facts--list .facts__item dd { margin: 0; } }
+.facts--inline .facts__list { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-7); }
+.facts--big .facts__item { padding-block: var(--space-5); border-top: var(--border) solid var(--line); }
+.facts--big .facts__item dd { font-family: var(--font-display); font-weight: var(--heading-weight); font-size: var(--step-4); line-height: 1.1; }
+@media (min-width: 48rem) { .facts--big .facts__list { grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 0 var(--space-6); } }

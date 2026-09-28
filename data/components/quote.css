@@ -4,3 +4,10 @@
 .quote--pull blockquote p::before { content: ""; display: block; width: 3rem; height: var(--border-strong); margin-bottom: var(--space-5); background: var(--accent); }
 .quote--plain blockquote { padding-left: var(--space-5); border-left: var(--border-strong) solid var(--accent); font-size: var(--step-1); }
 .quote__figure figcaption { margin-top: var(--space-3); font-size: var(--step--1); }
+.quote--boxed .quote__figure { padding: var(--space-6); background: var(--surface); border-radius: var(--radius); }
+.quote--boxed blockquote p { font-size: var(--step-2); line-height: 1.35; }
+@media (min-width: 56rem) {
+	.quote--side .quote__figure { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: var(--space-6); max-width: none; align-items: end; }
+	.quote--side figcaption { margin: 0; padding-left: var(--space-4); border-left: var(--border) solid var(--line-strong); }
+}
+.quote--side blockquote p { font-family: var(--font-display); font-size: var(--step-3); line-height: 1.2; }

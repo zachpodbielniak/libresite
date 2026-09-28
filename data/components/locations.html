@@ -1,0 +1,12 @@
+<div class="wrap">
+{{#heading}}<div class="section-head"><{{htag}} id="{{id}}-h">{{heading}}</{{htag}}></div>
+{{/heading}}<ul class="locations__list" role="list">
+{{#items}}<li class="locations__item">
+{{#art}}<img class="locations__art" src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}" loading="lazy" decoding="async">
+{{/art}}<{{subtag}} class="locations__name">{{name}}</{{subtag}}>
+<address class="locations__address">{{{address}}}</address>
+{{#hours}}<p class="locations__hours muted">{{hours}}</p>
+{{/hours}}{{#link}}<p class="locations__link"><a href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{label}}</a></p>
+{{/link}}</li>
+{{/items}}</ul>
+</div>

@@ -1,0 +1,11 @@
+.checklist__grid { display: grid; gap: var(--space-6); }
+@media (min-width: 48rem) { .checklist--columns .checklist__grid { grid-template-columns: 1fr 1fr; } }
+.checklist__label { font-family: var(--font-display); font-weight: 700; margin-bottom: var(--space-3); }
+.checklist__items { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--space-2); }
+.checklist__items li { display: grid; grid-template-columns: 1.5rem minmax(0, 1fr); gap: var(--space-2); }
+/* Marks are drawn, not glyphs, so no web font can drop them. */
+.checklist__items li::before { content: ""; justify-self: center; margin-top: 0.35em; }
+.checklist__group--yes li::before { width: 0.45em; height: 0.8em; border: solid var(--accent-text); border-width: 0 0.18em 0.18em 0; transform: rotate(45deg); }
+.checklist__group--no li::before { width: 0.8em; height: 0.18em; margin-top: 0.7em; background: var(--muted); }
+.checklist__group--no li { color: var(--muted); }
+.checklist--single .checklist__group--no { display: none; }

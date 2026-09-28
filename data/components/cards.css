@@ -16,3 +16,11 @@
 	.cards--alternating .card:nth-child(even) .card__art { order: 2; }
 	.cards--rows .card:not(:has(.card__art)), .cards--alternating .card:not(:has(.card__art)) { grid-template-columns: 1fr; }
 }
+.cards--numbered .cards__list { counter-reset: card; }
+.cards--numbered .card { counter-increment: card; padding-top: var(--space-4); border-top: var(--border-strong) solid var(--ink); }
+.cards--numbered .card::before { content: counter(card, decimal-leading-zero); font-family: var(--font-mono); font-size: var(--step--1); color: var(--accent-text); }
+.cards--bordered .card { padding: var(--space-4); border: var(--border) solid var(--line-strong); border-radius: var(--radius); }
+@media (min-width: 48rem) { .cards--numbered .cards__list, .cards--bordered .cards__list { grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); } }
+.cards--list .cards__list { gap: 0; border-top: var(--border) solid var(--line); }
+.cards--list .card { padding-block: var(--space-4); border-bottom: var(--border) solid var(--line); }
+.cards--list .card__art { display: none; }

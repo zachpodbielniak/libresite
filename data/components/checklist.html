@@ -1,0 +1,13 @@
+<div class="wrap">
+{{#heading}}<div class="section-head"><{{htag}} id="{{id}}-h">{{heading}}</{{htag}}></div>
+{{/heading}}<div class="checklist__grid">
+<div class="checklist__group checklist__group--yes">
+<p class="checklist__label">{{#included_label}}{{included_label}}{{/included_label}}{{^included_label}}{{checklist_yes_label}}{{/included_label}}</p>
+<ul class="checklist__items">{{#included}}<li>{{text}}</li>{{/included}}</ul>
+</div>
+{{#has_excluded}}<div class="checklist__group checklist__group--no">
+<p class="checklist__label">{{#excluded_label}}{{excluded_label}}{{/excluded_label}}{{^excluded_label}}{{checklist_no_label}}{{/excluded_label}}</p>
+<ul class="checklist__items">{{#excluded}}<li>{{text}}</li>{{/excluded}}</ul>
+</div>
+{{/has_excluded}}</div>
+</div>

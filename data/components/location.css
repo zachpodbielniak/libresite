@@ -9,3 +9,5 @@
 	.location--stacked .location__map { order: -1; margin: 0 0 var(--space-5); }
 	.location--stacked .location__inner { display: flex; flex-direction: column; }
 }
+.location--card .location__inner { padding: var(--space-6); background: var(--surface); border: var(--border) solid var(--line); border-radius: var(--radius); }
+@media (min-width: 56rem) { .location--card .location__inner { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-6); align-items: start; } .location--card .location__map { margin: 0; } }

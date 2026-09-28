@@ -16,3 +16,12 @@
 	.features--list .features__item { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: var(--space-5); }
 	.features--list .features__item > :not(.features__title) { grid-column: 2; }
 }
+@media (min-width: 56rem) {
+	.features--split .wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); gap: var(--space-7); align-items: start; }
+	.features--split .section-head { position: sticky; top: var(--space-5); }
+}
+.features--split .features__item { padding-block: var(--space-4); border-top: var(--border) solid var(--line); }
+.features--split .features__list { gap: 0; }
+.features--boxed .features__list { gap: var(--space-4); }
+@media (min-width: 48rem) { .features--boxed .features__list { grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); } }
+.features--boxed .features__item { padding: var(--space-5); background: var(--surface); border-radius: var(--radius); }

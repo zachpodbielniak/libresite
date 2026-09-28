@@ -1,0 +1,7 @@
+.compare__pair { display: grid; gap: var(--space-4); }
+@media (min-width: 48rem) { .compare--side .compare__pair { grid-template-columns: 1fr 1fr; } }
+.compare__side { margin: 0; }
+.compare__side img { width: 100%; border-radius: var(--radius); background: var(--surface); }
+.compare__side figcaption { margin-top: var(--space-2); }
+.compare__caption { margin-top: var(--space-3); font-size: var(--step--1); max-width: var(--measure); }
+.compare--stacked .compare__pair { max-width: calc(var(--measure) * 1.3); }

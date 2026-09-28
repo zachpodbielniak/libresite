@@ -214,6 +214,8 @@ test_page_errors(void){
 		{"{'path':'work.html','sections':[{'component':'hero','content':{'heading':'x'}}]}", "hero belongs only on the home page"},
 		{"{'path':'work.html','sections':[{'component':'text','content':{'heading':'x','body':'y'}}]}", "an index page opens with page-header"},
 		{"{'path':'work.html','sections':[{'component':'page-header','content':{'heading':'x'}},{'component':'hero','content':{'heading':'y'}}]}", "hero belongs only"},
+		{"{'path':'work.html','sections':[{'component':'page-header','content':{'heading':'x'}},{'component':'cover','content':{'heading':'y','art':{'src':'assets/bench.svg','alt':''}}}]}", "cover belongs only on the home page"},
+		{"{'path':'work.html','sections':[{'component':'manifesto','content':{'heading':'x','lines':[{'text':'a'},{'text':'b'}]}}]}", "opens with page-header"},
 		{"{'path':'work.html','aside':'[x](nowhere.html)','sections':[{'component':'page-header','content':{'heading':'x'}}]}", "nowhere.html"},
 	};
 	guint i;
@@ -525,6 +527,220 @@ test_long_heading(void){
 	contains(file_content(bundle, "styles.css"), ".page-header__title--long");
 }
 
+
+/* Build a sample value that exercises every declared field of a slot. */
+static JsonNode *
+sample_value(JsonObject *slot, guint depth){
+	const gchar *type = ls_string(slot, "type");
+	JsonNode *node;
+	if (g_str_equal(type, "text")) {
+		gint64 max = json_object_has_member(slot, "max") ? json_object_get_int_member(slot, "max") : 40;
+		g_autofree gchar *text = g_strndup(depth % 2 == 0 ? "Sample words here" : "Other sample words", MAX(max, 1));
+		node = json_node_new(JSON_NODE_VALUE);
+		json_node_set_string(node, text);
+		return node;
+	}
+	if (g_str_equal(type, "rich"))
+		return json("'Sample *rich* text.'");
+	if (g_str_equal(type, "link"))
+		return json("{'href':'work.html','label':'Work'}");
+	if (g_str_equal(type, "links"))
+		return json("[{'href':'work.html','label':'Work'},{'href':'visit.html','label':'Visit'}]");
+	if (g_str_equal(type, "image"))
+		return json("{'src':'assets/bench.svg','alt':'A bench'}");
+	if (g_str_equal(type, "choice")) {
+		node = json_node_new(JSON_NODE_VALUE);
+		json_node_set_string(node, json_array_get_string_element(json_object_get_array_member(slot, "values"), 0));
+		return node;
+	}
+	if (g_str_equal(type, "flag")) {
+		node = json_node_new(JSON_NODE_VALUE);
+		json_node_set_boolean(node, TRUE);
+		return node;
+	}
+	if (g_str_equal(type, "items")) {
+		JsonObject *fields = json_object_get_object_member(slot, "fields");
+		gint64 wanted = json_object_has_member(slot, "min_items") ? json_object_get_int_member(slot, "min_items") : 0;
+		JsonArray *items = json_array_new();
+		gint64 i;
+		wanted = MAX(wanted, 2);
+		if (json_object_has_member(slot, "max_items"))
+			wanted = MIN(wanted, json_object_get_int_member(slot, "max_items"));
+		for (i = 0; i < wanted; i++) {
+			JsonObject *item = json_object_new();
+			g_autoptr(GList) names = json_object_get_members(fields);
+			GList *name;
+			for (name = names; name != NULL; name = name->next)
+				json_object_set_member(item, name->data,
+					sample_value(json_object_get_object_member(fields, name->data), depth + (guint)i));
+			json_array_add_object_element(items, item);
+		}
+		node = json_node_new(JSON_NODE_ARRAY);
+		json_node_take_array(node, items);
+		return node;
+	}
+	g_error("no sample for slot type %s", type);
+	return NULL;
+}
+
+/* Content for a component, generated from its catalog slots; a few components
+ * have cross-slot rules and use handwritten content instead. */
+static JsonNode *
+sample_content(const gchar *name, JsonObject *component){
+	JsonObject *slots = json_object_get_object_member(component, "slots");
+	g_autoptr(GList) names = NULL;
+	GList *slot;
+	JsonObject *content;
+	JsonNode *node;
+	if (g_str_equal(name, "form"))
+		return json("{'heading':'Request','mode':'local','fields':[{'name':'piece','label':'Piece','required':true}],"
+			"'submit':'Prepare','download_name':'request.txt'}");
+	if (g_str_equal(name, "filter"))
+		return json("{'heading':'Filtered','all_label':'All','categories':[{'label':'Chairs'},{'label':'Tables'}],"
+			"'empty':'None yet.','items':[{'title':'Ladderback','category':'Chairs'},{'title':'Drop-leaf','category':'Tables'}]}");
+	if (g_str_equal(name, "custom"))
+		return json("{'label':'Custom region','html':'<div><p>Custom sample</p></div>'}");
+	content = json_object_new();
+	names = json_object_get_members(slots);
+	for (slot = names; slot != NULL; slot = slot->next)
+		json_object_set_member(content, slot->data, sample_value(json_object_get_object_member(slots, slot->data), 0));
+	node = json_node_new(JSON_NODE_OBJECT);
+	json_node_take_object(node, content);
+	return node;
+}
+
+/* Every component renders in every variant, and every variant but the
+ * default one has its own styles. */
+static void
+test_every_variant(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(JsonNode) plan = load("plan.json");
+	g_autofree gchar *yaml = NULL;
+	g_autoptr(JsonNode) catalog = NULL;
+	JsonObject *all;
+	g_autoptr(GList) names = NULL;
+	GList *name;
+	guint rendered = 0;
+	g_autoptr(GString) unstyled = g_string_new(NULL);
+	g_assert_true(g_file_get_contents("data/components/catalog.yaml", &yaml, NULL, NULL));
+	catalog = ls_yaml_parse(yaml, NULL);
+	g_assert_nonnull(catalog);
+	all = json_object_get_object_member(json_node_get_object(catalog), "components");
+	names = json_object_get_members(all);
+	for (name = names; name != NULL; name = name->next) {
+		JsonObject *component = json_object_get_object_member(all, name->data);
+		JsonObject *variants = json_object_get_object_member(component, "variants");
+		g_autoptr(GList) variant_names = json_object_get_members(variants);
+		GList *variant;
+		for (variant = variant_names; variant != NULL; variant = variant->next) {
+			g_autoptr(JsonObject) pages = fixture_pages();
+			g_autoptr(JsonNode) page = json("{'path':'index.html','sections':[{'component':'hero','variant':'statement',"
+				"'content':{'heading':'Home'}}]}");
+			JsonObject *section = json_object_new();
+			g_autoptr(GError) error = NULL;
+			g_autofree gchar *text = NULL;
+			g_autofree gchar *marker = g_strdup_printf("class=\"block block--%s %s %s--%s",
+				(const gchar *)name->data, (const gchar *)name->data, (const gchar *)name->data,
+				(const gchar *)variant->data);
+			g_autofree gchar *selector = g_strdup_printf(".%s--%s", (const gchar *)name->data,
+				(const gchar *)variant->data);
+			g_autoptr(JsonNode) bundle = NULL;
+			const gchar *html;
+			json_object_set_string_member(section, "component", name->data);
+			json_object_set_string_member(section, "variant", variant->data);
+			json_object_set_member(section, "content", sample_content(name->data, component));
+			json_array_add_object_element(json_object_get_array_member(json_node_get_object(page), "sections"), section);
+			json_object_set_member(pages, "index.html", json_node_copy(page));
+			text = ls_components_compose(components, plan, pages, NULL, &error);
+			if (error != NULL)
+				g_error("%s/%s: %s", (const gchar *)name->data, (const gchar *)variant->data, error->message);
+			bundle = ls_json_parse(text, NULL);
+			html = file_content(bundle, "index.html");
+			contains(html, marker);
+			lacks(html, "{{");
+			lacks(html, "Sample *rich*");
+			if (variant != variant_names && strstr(file_content(bundle, "styles.css"), selector) == NULL)
+				g_string_append_printf(unstyled, " %s", selector);
+			rendered++;
+		}
+	}
+	if (unstyled->len > 0)
+		g_error("variants without styles:%s", unstyled->str);
+	g_assert_cmpuint(rendered, >=, 150);
+}
+
+/* The plan schema offers exactly the plannable page kinds of the catalog. */
+static void
+test_schema_kinds(void){
+	g_autoptr(LsComponents) components = library();
+	g_autofree gchar *yaml = NULL;
+	g_autoptr(JsonNode) catalog = NULL;
+	g_autoptr(JsonNode) schema = ls_json_parse(ls_components_get_plan_schema(components), NULL);
+	JsonObject *kinds;
+	JsonArray *listed;
+	g_autoptr(GList) names = NULL;
+	GList *name;
+	guint plannable = 0, i;
+	g_assert_true(g_file_get_contents("data/components/catalog.yaml", &yaml, NULL, NULL));
+	catalog = ls_yaml_parse(yaml, NULL);
+	kinds = json_object_get_object_member(json_node_get_object(catalog), "kinds");
+	listed = json_object_get_array_member(json_object_get_object_member(json_object_get_object_member(
+		json_object_get_object_member(json_object_get_object_member(json_object_get_object_member(
+		json_node_get_object(schema), "properties"), "pages"), "items"), "properties"), "kind"), "enum");
+	names = json_object_get_members(kinds);
+	for (name = names; name != NULL; name = name->next) {
+		JsonObject *kind = json_object_get_object_member(kinds, name->data);
+		gboolean found = FALSE;
+		if (json_object_has_member(kind, "builtin") && json_object_get_boolean_member(kind, "builtin"))
+			continue;
+		plannable++;
+		for (i = 0; i < json_array_get_length(listed); i++)
+			found |= g_str_equal(json_array_get_string_element(listed, i), name->data);
+		if (!found)
+			g_error("plan schema lacks kind %s", (const gchar *)name->data);
+	}
+	g_assert_cmpuint(json_array_get_length(listed), ==, plannable);
+}
+
+
+/* Directory entries group under sorted initial letters; tabs ship their
+ * script and every panel stays readable without it. */
+static void
+test_directory_and_tabs(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(JsonNode) plan = load("plan.json");
+	g_autoptr(JsonObject) pages = fixture_pages();
+	g_autoptr(GError) error = NULL;
+	g_autofree gchar *text = NULL;
+	g_autoptr(JsonNode) bundle = NULL;
+	const gchar *html, *a, *b, *e, *hash;
+	json_object_set_member(pages, "work.html", json(
+		"{'path':'work.html','sections':[{'component':'page-header','content':{'heading':'Woods'}},"
+		"{'component':'directory','variant':'list','content':{'heading':'All woods','items':["
+		"{'title':'elm'},{'title':'Ash'},{'title':'2x4 offcuts'},{'title':'Beech'},{'title':'Alder'}]}},"
+		"{'component':'tabs','variant':'line','content':{'heading':'Care','items':["
+		"{'label':'Oil','body':'Oil twice a year.'},{'label':'Wax','body':'Wax monthly.'}]}}]}"));
+	text = ls_components_compose(components, plan, pages, NULL, &error);
+	g_assert_no_error(error);
+	bundle = ls_json_parse(text, NULL);
+	html = file_content(bundle, "work.html");
+	a = strstr(html, "<p class=\"directory__letter\" id=\"all-woods-g1-h\">A</p>");
+	b = strstr(html, ">B</p>");
+	e = strstr(html, ">E</p>");
+	hash = strstr(html, ">#</p>");
+	if (a == NULL || b == NULL || e == NULL || hash == NULL || !(a < b && b < e && e < hash))
+		g_error("directory groups out of order:\n%.3000s", html);
+	g_assert_cmpuint(count(html, "class=\"directory__letter\""), ==, 4);
+	g_assert_true(strstr(a, "Ash") < strstr(a, "Alder"));
+	contains(html, "<a href=\"#all-woods-g1\">A</a>");
+	contains(html, "aria-label=\"Jump to letter\"");
+	contains(html, "role=\"tablist\" hidden");
+	contains(html, "Oil twice a year.");
+	contains(html, "Wax monthly.");
+	contains(file_content(bundle, "site.js"), "[data-tabs]");
+	lacks(file_content(bundle, "index.html"), "data-tabs");
+}
+
 int
 main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
@@ -543,5 +759,8 @@ main(int argc, char **argv){
 	g_test_add_func("/components/compose/errors", test_compose_errors);
 	g_test_add_func("/components/escaping", test_escaping);
 	g_test_add_func("/components/long-heading", test_long_heading);
+	g_test_add_func("/components/every-variant", test_every_variant);
+	g_test_add_func("/components/directory-tabs", test_directory_and_tabs);
+	g_test_add_func("/components/schema-kinds", test_schema_kinds);
 	return g_test_run();
 }

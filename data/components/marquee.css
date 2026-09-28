@@ -1,0 +1,13 @@
+.block.marquee { padding-block: var(--space-4); overflow: hidden; border-block: var(--border) solid var(--line); }
+.marquee__track { display: flex; width: max-content; animation: marquee-scroll 40s linear infinite; }
+.marquee__row { display: flex; gap: var(--space-7); margin: 0; padding: 0 var(--space-7) 0 0; list-style: none; font-family: var(--font-display); font-weight: var(--heading-weight); font-size: var(--step-2); text-transform: var(--heading-case); white-space: nowrap; }
+.marquee__row li::after { content: "\2022"; margin-left: var(--space-7); color: var(--accent-text); }
+.marquee--accent { background: var(--accent); color: var(--accent-ink); border: 0; }
+.marquee--accent .marquee__row li::after { color: inherit; }
+@keyframes marquee-scroll { to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) {
+	.marquee__track { animation: none; width: auto; }
+	.marquee__row { flex-wrap: wrap; white-space: normal; padding-inline: var(--gutter); }
+	.marquee__row[aria-hidden="true"] { display: none; }
+}
+.marquee__track:hover { animation-play-state: paused; }

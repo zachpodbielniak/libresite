@@ -19,3 +19,9 @@
 .page-header--band { background: var(--surface); border-bottom: var(--border) solid var(--line); }
 .page-header--rule .page-header__title { font-size: var(--step-6); max-width: none; padding-top: var(--space-4); border-top: calc(var(--border-strong) * 3) solid var(--ink); }
 .page-header--rule .page-header__title--long { font-size: var(--step-5); }
+.page-header--centered .page-header__inner { text-align: center; }
+.page-header--centered .crumbs ol, .page-header--centered .page-header__meta, .page-header--centered .actions { justify-content: center; }
+.page-header--centered .page-header__title, .page-header--centered .page-header__lede { margin-inline: auto; }
+.page-header--minimal { padding-block: var(--space-5) var(--space-4); }
+.page-header--minimal .page-header__title { font-size: var(--step-4); }
+.page-header--minimal .page-header__art { display: none; }

@@ -1,0 +1,11 @@
+.services__list { display: grid; margin: 0; padding: 0; list-style: none; }
+.services__head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-4); }
+.services__name { margin: 0; font-size: var(--step-2); }
+.services__name a { text-decoration: none; } .services__name a:hover { text-decoration: underline; }
+.services__price { margin: 0; font-family: var(--font-display); font-weight: 700; color: var(--accent-text); white-space: nowrap; }
+.services__duration { margin: var(--space-1) 0 var(--space-2); font-family: var(--font-mono); font-size: var(--step--1); }
+.services--rows .services__list { border-top: var(--border) solid var(--line); max-width: calc(var(--measure) * 1.5); }
+.services--rows .services__item { padding-block: var(--space-5); border-bottom: var(--border) solid var(--line); }
+.services--grid .services__list { gap: var(--space-4); }
+@media (min-width: 48rem) { .services--grid .services__list { grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); } }
+.services--grid .services__item { padding: var(--space-5); border: var(--border) solid var(--line-strong); border-radius: var(--radius); }

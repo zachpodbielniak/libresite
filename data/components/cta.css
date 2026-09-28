@@ -12,3 +12,7 @@
 	.cta--split .cta__inner { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: var(--space-7); align-items: end; }
 	.cta--split .actions { justify-content: flex-end; }
 }
+.cta--card .cta__inner { padding: var(--space-7) var(--space-6); background: var(--surface); border: var(--border) solid var(--line); border-radius: var(--radius); }
+.cta--stack .cta__inner { text-align: center; }
+.cta--stack .cta__title, .cta--stack .prose { margin-inline: auto; }
+.cta--stack .actions { justify-content: center; }

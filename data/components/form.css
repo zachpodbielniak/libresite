@@ -11,3 +11,5 @@
 	.form--aside .form__inner { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: var(--space-8); align-items: start; }
 	.form--aside .form__head { position: sticky; top: var(--space-5); }
 }
+.form--card .form__inner { max-width: 46rem; padding: var(--space-6); background: var(--surface); border: var(--border) solid var(--line); border-radius: var(--radius); }
+.form--card .form__form { max-width: none; }

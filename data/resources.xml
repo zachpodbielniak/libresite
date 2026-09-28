@@ -81,5 +81,48 @@
     <file>components/team.html</file>
     <file>components/timeline.css</file>
     <file>components/timeline.html</file>
+    <file>components/areas.css</file>
+    <file>components/areas.html</file>
+    <file>components/bento.css</file>
+    <file>components/bento.html</file>
+    <file>components/checklist.css</file>
+    <file>components/checklist.html</file>
+    <file>components/compare.css</file>
+    <file>components/compare.html</file>
+    <file>components/contact-card.css</file>
+    <file>components/contact-card.html</file>
+    <file>components/cover.css</file>
+    <file>components/cover.html</file>
+    <file>components/details.css</file>
+    <file>components/details.html</file>
+    <file>components/directory.css</file>
+    <file>components/directory.html</file>
+    <file>components/locations.css</file>
+    <file>components/locations.html</file>
+    <file>components/manifesto.css</file>
+    <file>components/manifesto.html</file>
+    <file>components/marquee.css</file>
+    <file>components/marquee.html</file>
+    <file>components/notice.css</file>
+    <file>components/notice.html</file>
+    <file>components/numbers.css</file>
+    <file>components/numbers.html</file>
+    <file>components/partners.css</file>
+    <file>components/partners.html</file>
+    <file>components/services.css</file>
+    <file>components/services.html</file>
+    <file>components/specs.css</file>
+    <file>components/specs.html</file>
+    <file>components/split.css</file>
+    <file>components/split.html</file>
+    <file>components/statement.css</file>
+    <file>components/statement.html</file>
+    <file>components/strip.css</file>
+    <file>components/strip.html</file>
+    <file>components/tabs.css</file>
+    <file>components/tabs.html</file>
+    <file>components/tabs.js</file>
+    <file>components/voices.css</file>
+    <file>components/voices.html</file>
   </gresource>
 </gresources>

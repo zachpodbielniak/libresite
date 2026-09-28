@@ -1,0 +1,10 @@
+.details__list { display: grid; gap: var(--space-2); max-width: calc(var(--measure) * 1.2); }
+.details__item summary { display: flex; justify-content: space-between; gap: var(--space-4); min-height: 44px; padding: var(--space-3) 0; font-family: var(--font-display); font-weight: 600; cursor: pointer; list-style: none; }
+.details__item summary::-webkit-details-marker { display: none; }
+.details__item summary::after { content: ""; flex: none; width: 0.55em; height: 0.55em; margin: 0.35em 0.2em 0 0; border: solid var(--accent-text); border-width: 0 0.15em 0.15em 0; transform: rotate(45deg); transition: transform 150ms ease; }
+.details__item[open] summary::after { transform: rotate(-135deg); margin-top: 0.65em; }
+@media (prefers-reduced-motion: reduce) { .details__item summary::after { transition: none; } }
+.details__item .prose { padding-bottom: var(--space-4); }
+.details--bordered .details__item { padding-inline: var(--space-4); border: var(--border) solid var(--line-strong); border-radius: var(--radius); }
+.details--plain .details__list { gap: 0; border-top: var(--border) solid var(--line); }
+.details--plain .details__item { border-bottom: var(--border) solid var(--line); }

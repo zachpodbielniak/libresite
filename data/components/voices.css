@@ -1,0 +1,10 @@
+.voices__list { display: grid; gap: var(--space-5); margin: 0; padding: 0; list-style: none; }
+.voices__item { margin: 0; height: 100%; padding: var(--space-5); background: var(--surface); border-radius: var(--radius); }
+.voices__item blockquote { margin: 0 0 var(--space-4); font-size: var(--step-1); line-height: 1.45; }
+.voices__item blockquote p::before { content: "\201C"; } .voices__item blockquote p::after { content: "\201D"; }
+.voices__item figcaption { display: grid; gap: 0.1em; }
+.voices__name { font-family: var(--font-display); font-weight: 700; }
+.voices__role { font-size: var(--step--1); }
+@media (min-width: 48rem) { .voices--wall .voices__list { grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); } }
+.voices--single .voices__item { background: transparent; padding: 0 0 var(--space-5); border-bottom: var(--border) solid var(--line); }
+.voices--single .voices__item blockquote { font-family: var(--font-display); font-size: var(--step-3); line-height: 1.2; }

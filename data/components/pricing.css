@@ -6,3 +6,9 @@
 .pricing__price .muted { font-size: var(--step-0); font-weight: 400; }
 .pricing__features { padding-left: 1.2em; }
 .pricing__tier .actions { margin-top: auto; padding-top: var(--space-4); }
+.pricing--stack .pricing__list { grid-template-columns: 1fr; max-width: calc(var(--measure) * 1.3); }
+@media (min-width: 48rem) {
+	.pricing--stack .pricing__tier { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 0 var(--space-6); }
+	.pricing--stack .pricing__tier > * { grid-column: 1; }
+	.pricing--stack .pricing__features { grid-column: 2; grid-row: 1 / span 4; margin: 0; }
+}

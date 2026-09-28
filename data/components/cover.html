@@ -1,0 +1,11 @@
+<div class="cover__frame">
+{{#art}}<figure class="cover__art"><img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}"{{#eager}} fetchpriority="high"{{/eager}}{{^eager}} loading="lazy"{{/eager}} decoding="async"></figure>{{/art}}
+<div class="cover__text">
+<div class="wrap">
+{{#kicker}}<p class="kicker">{{kicker}}</p>
+{{/kicker}}<{{htag}} class="cover__title{{#long_heading}} cover__title--long{{/long_heading}}" id="{{id}}-h">{{heading}}</{{htag}}>
+{{#lede}}<div class="cover__lede lede prose">{{{lede}}}</div>
+{{/lede}}{{#has_actions}}<p class="actions">{{#actions}}<a class="button{{^primary}} button--ghost{{/primary}}" href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{label}}</a>{{/actions}}</p>
+{{/has_actions}}</div>
+</div>
+</div>

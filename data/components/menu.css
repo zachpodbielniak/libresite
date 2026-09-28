@@ -16,3 +16,7 @@
 }
 .menu--board .menu__section { padding: var(--space-5); background: var(--surface); border: var(--border) solid var(--line); border-radius: var(--radius); }
 .menu--list .menu__sections { max-width: calc(var(--measure) * 1.2); }
+.menu--minimal .menu__sections { max-width: calc(var(--measure) * 1.1); gap: var(--space-6); }
+.menu--minimal .menu__leader { border-bottom-style: none; }
+.menu--minimal .menu__desc, .menu--minimal .menu__tags { display: none; }
+.menu--minimal .menu__items { gap: var(--space-2); }

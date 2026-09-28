@@ -4,3 +4,7 @@
 	.text--aside .text__inner { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: var(--space-7); align-items: start; }
 	.text--aside .text__title { position: sticky; top: var(--space-5); }
 }
+@media (min-width: 56rem) { .text--columns .text__body { max-width: none; columns: 2; column-gap: var(--space-7); } .text--columns .text__body > * { break-inside: avoid; } }
+.text--centered .text__inner { text-align: center; }
+.text--centered .text__title, .text--centered .text__body { margin-inline: auto; }
+.text--centered .text__body { max-width: var(--measure); }

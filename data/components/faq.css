@@ -5,3 +5,6 @@
 .faq__item summary::after { content: "+"; font-weight: 400; color: var(--accent-text); }
 .faq__item[open] summary::after { content: "\2212"; }
 .faq__item .prose { padding-bottom: var(--space-5); }
+@media (min-width: 56rem) { .faq--columns .faq__list { max-width: none; columns: 2; column-gap: var(--space-7); border-top: 0; } .faq--columns .faq__item { break-inside: avoid; border-top: var(--border) solid var(--line); border-bottom: 0; } }
+.faq--boxed .faq__list { display: grid; gap: var(--space-3); border: 0; }
+.faq--boxed .faq__item { padding-inline: var(--space-5); background: var(--surface); border: 0; border-radius: var(--radius); }

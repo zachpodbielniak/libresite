@@ -1,0 +1,12 @@
+.tabs__list { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-bottom: var(--space-5); }
+.tabs__list[hidden] { display: none; }
+.tabs__tab { min-height: 44px; padding: 0.5em 1em; border: 0; background: transparent; color: var(--ink); font: 600 var(--step-0) var(--font-display); cursor: pointer; }
+.tabs--line .tabs__list { gap: var(--space-5); border-bottom: var(--border) solid var(--line); }
+.tabs--line .tabs__tab { padding-inline: 0; border-bottom: 3px solid transparent; }
+.tabs--line .tabs__tab[aria-selected="true"] { border-bottom-color: var(--accent); }
+.tabs--pill .tabs__tab { border: var(--border-strong) solid var(--ink); border-radius: 999px; }
+.tabs--pill .tabs__tab[aria-selected="true"] { background: var(--ink); color: var(--paper); }
+.tabs__panel { max-width: calc(var(--measure) * 1.2); }
+.tabs__panel + .tabs__panel { margin-top: var(--space-6); }
+.js [data-tabs].is-ready .tabs__panel + .tabs__panel { margin-top: 0; }
+.js [data-tabs].is-ready .tabs__label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }

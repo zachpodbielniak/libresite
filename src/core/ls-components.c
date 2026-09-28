@@ -927,11 +927,13 @@ static const gchar *const color_tokens[] = {"paper", "ink", "muted", "surface", 
 static const gchar *const font_tokens[] = {"font_display", "font_body", "font_mono"};
 static const gchar *const ui_keys[] = {"skip", "menu", "nav", "footer_nav", "contents", "filter",
 	"count_one", "count_many", "required", "reset", "preview", "download", "error_required",
-	"error_invalid", "error_summary", "breadcrumb", "pager", "previous", "next"};
+	"error_invalid", "error_summary", "breadcrumb", "pager", "previous", "next", "letters", "scroll",
+	"checklist_yes", "checklist_no"};
 static const gchar *const ui_defaults[] = {"Skip to content", "Menu", "Primary", "Footer", "Contents",
 	"Filter entries", "{n} entry shown", "{n} entries shown", "required", "Clear", "Preview",
 	"Download text file", "Fill in this field.", "Check this entry.", "{n} fields need attention.",
-	"Breadcrumb", "More pages", "Previous", "Next"};
+	"Breadcrumb", "More pages", "Previous", "Next", "Jump to letter", "Scrollable list", "Included",
+	"Not included"};
 static const gchar *const art_ratios[] = {"16:9", "4:3", "3:2", "1:1", "3:4", "2:1", "3:1", "21:9", NULL};
 
 static gdouble
@@ -1810,9 +1812,9 @@ check_page_into(LsComponents *self, Problems *problems, JsonNode *plan_node, con
 				strchr("aeiou", kind_name[0]) != NULL ? "an" : "a", kind_name, openings->str);
 			g_string_free(openings, TRUE);
 		}
-		if (g_str_equal(name, "hero") && g_strcmp0(kind_name, "home") != 0)
-			problem(problems, "%s: hero belongs only on the home page; open this %s page with page-header",
-				where, kind_name);
+		if ((g_str_equal(name, "hero") || g_str_equal(name, "cover")) && g_strcmp0(kind_name, "home") != 0)
+			problem(problems, "%s: %s belongs only on the home page; open this %s page with page-header",
+				where, name, kind_name);
 		slots = member_object(component, "slots");
 		keys = json_object_get_members(content);
 		for (item = keys; item != NULL; item = item->next)
@@ -2059,6 +2061,57 @@ render_template(Render *render, const gchar *name, JsonObject *view){
 
 /* Renders each section into @pieces and collects in-page contents entries
  * (headed sections after the opening, and article parts) into @toc. */
+static gint
+compare_letters(gconstpointer a, gconstpointer b){
+	const gchar *left = *(const gchar *const *)a;
+	const gchar *right = *(const gchar *const *)b;
+	if (g_str_equal(left, "#") != g_str_equal(right, "#"))
+		return g_str_equal(left, "#") ? 1 : -1;
+	return g_utf8_collate(left, right);
+}
+
+/* Group directory entries under their initial letter, keeping the given order
+ * within a letter; titles that start with a non-letter gather under '#'. */
+static void
+directory_view(JsonObject *view, const gchar *id){
+	JsonArray *items = json_object_get_array_member(view, "items");
+	g_autoptr(GHashTable) by_letter = g_hash_table_new_full(g_str_hash, g_str_equal, g_free,
+		(GDestroyNotify)json_array_unref);
+	g_autoptr(GPtrArray) letters = g_ptr_array_new();
+	JsonArray *groups = json_array_new();
+	guint i;
+	for (i = 0; i < json_array_get_length(items); i++) {
+		JsonNode *item = json_array_get_element(items, i);
+		const gchar *title = ls_string(json_node_get_object(item), "title");
+		gunichar first = title != NULL ? g_utf8_get_char(title) : 0;
+		gchar letter[8] = {0};
+		JsonArray *entries;
+		if (g_unichar_isalpha(first))
+			g_unichar_to_utf8(g_unichar_toupper(first), letter);
+		else
+			letter[0] = '#';
+		entries = g_hash_table_lookup(by_letter, letter);
+		if (entries == NULL) {
+			gchar *key = g_strdup(letter);
+			entries = json_array_new();
+			g_hash_table_insert(by_letter, key, entries);
+			g_ptr_array_add(letters, key);
+		}
+		json_array_add_element(entries, json_node_copy(item));
+	}
+	g_ptr_array_sort(letters, compare_letters);
+	for (i = 0; i < letters->len; i++) {
+		JsonObject *group = json_object_new();
+		g_autofree gchar *group_id = g_strdup_printf("%s-g%u", id, i + 1);
+		json_object_set_string_member(group, "letter", letters->pdata[i]);
+		json_object_set_string_member(group, "group_id", group_id);
+		json_object_set_array_member(group, "entries",
+			json_array_ref(g_hash_table_lookup(by_letter, letters->pdata[i])));
+		json_array_add_object_element(groups, group);
+	}
+	json_object_set_array_member(view, "groups", groups);
+}
+
 static void
 render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArray *toc){
 	g_autoptr(GHashTable) anchors = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
@@ -2195,6 +2248,8 @@ render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArra
 		}
 		if (g_str_equal(name, "form"))
 			form_view(render, view, content, id);
+		if (g_str_equal(name, "directory"))
+			directory_view(view, id);
 		inner = render_template(render, file, view);
 		json_object_set_string_member(wrapper, "component", name);
 		json_object_set_string_member(wrapper, "variant", variant);

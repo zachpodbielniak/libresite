@@ -1,0 +1,11 @@
+<div class="wrap">
+{{#heading}}<div class="section-head"><{{htag}} id="{{id}}-h">{{heading}}</{{htag}}></div>
+{{/heading}}<div class="split__panels">
+{{#panels}}<div class="split__panel">
+{{#kicker}}<p class="kicker">{{kicker}}</p>
+{{/kicker}}<{{subtag}} class="split__title">{{heading}}</{{subtag}}>
+<div class="prose">{{{body}}}</div>
+{{#link}}<p class="split__link"><a href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{label}}</a></p>
+{{/link}}</div>
+{{/panels}}</div>
+</div>

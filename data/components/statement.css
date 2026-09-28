@@ -1,0 +1,8 @@
+.statement__text { max-width: 26ch; margin: 0; font-family: var(--font-display); font-weight: var(--heading-weight); font-size: var(--step-4); line-height: 1.15; letter-spacing: var(--heading-tracking); text-wrap: balance; }
+.statement__link { margin: var(--space-4) 0 0; font-weight: 600; }
+.statement--centered .wrap { text-align: center; }
+.statement--centered .statement__text { margin-inline: auto; }
+.statement--left .statement__text { padding-top: var(--space-4); border-top: var(--border-strong) solid var(--accent); }
+.statement--band { background: var(--accent); color: var(--accent-ink); padding-block: var(--section-space); }
+.block.statement--band { padding-top: var(--section-space); }
+.statement--band a { color: inherit; }

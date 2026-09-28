@@ -1,0 +1,11 @@
+.manifesto__title { font-size: var(--step--1); margin-bottom: var(--space-5); }
+.manifesto__lines { margin: 0; padding: 0; list-style: none; }
+.manifesto__line { font-family: var(--font-display); font-weight: var(--heading-weight); font-size: var(--step-5); line-height: 1.05; letter-spacing: var(--heading-tracking); text-transform: var(--heading-case); text-wrap: balance; }
+.manifesto__line + .manifesto__line { margin-top: var(--space-3); }
+.manifesto__n { display: none; }
+.manifesto--stacked .manifesto__line:nth-child(even) { font-weight: 400; color: var(--muted); }
+.manifesto--numbered .manifesto__line { display: grid; grid-template-columns: 3.5rem minmax(0, 1fr); gap: var(--space-3); }
+.manifesto--numbered .manifesto__n { display: block; font-family: var(--font-mono); font-size: var(--step--1); padding-top: 0.6em; color: var(--accent-text); }
+.manifesto--outlined .manifesto__line { color: transparent; -webkit-text-stroke: 1.5px var(--ink); }
+.manifesto--outlined .manifesto__line:first-child { color: var(--accent-text); -webkit-text-stroke: 0; }
+@supports not (-webkit-text-stroke: 1px black) { .manifesto--outlined .manifesto__line { color: var(--ink); } }

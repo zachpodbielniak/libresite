@@ -7,3 +7,10 @@
 .timeline--horizontal .timeline__list { display: grid; gap: var(--space-5); }
 .timeline--horizontal .timeline__item { padding-top: var(--space-4); border-top: var(--border-strong) solid var(--accent); }
 @media (min-width: 56rem) { .timeline--horizontal .timeline__list { grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); } }
+@media (min-width: 56rem) {
+	.timeline--alternating .timeline__list { position: relative; }
+	.timeline--alternating .timeline__list::before { content: ""; position: absolute; top: 0; bottom: 0; left: 50%; width: var(--border-strong); background: var(--line-strong); }
+	.timeline--alternating .timeline__item { width: 50%; padding: 0 var(--space-6) var(--space-6) 0; text-align: right; }
+	.timeline--alternating .timeline__item:nth-child(even) { margin-left: 50%; padding: 0 0 var(--space-6) var(--space-6); text-align: left; }
+}
+.timeline--alternating .timeline__item { padding-bottom: var(--space-5); }
