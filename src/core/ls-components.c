@@ -19,6 +19,7 @@ struct _LsComponents {
 	GObject parent_instance;
 	JsonNode *catalog;
 	JsonObject *components;
+	JsonObject *kinds;
 	GPtrArray *order;
 	GHashTable *files;	/* resource-relative name -> contents */
 	JsonNode *utility[G_N_ELEMENTS(utility_routes)];
@@ -693,10 +694,11 @@ ls_components_new(GError **error){
 	if (self->catalog == NULL)
 		return NULL;
 	root = JSON_NODE_HOLDS_OBJECT(self->catalog) ? json_node_get_object(self->catalog) : NULL;
-	if (root == NULL || !ls_object_keys(root, "|version|components|", error) ||
-		(self->components = member_object(root, "components")) == NULL) {
+	if (root == NULL || !ls_object_keys(root, "|version|kinds|components|", error) ||
+		(self->components = member_object(root, "components")) == NULL ||
+		(self->kinds = member_object(root, "kinds")) == NULL) {
 		if (error != NULL && *error == NULL)
-			catalog_invalid(error, "catalog.yaml", "needs version and components");
+			catalog_invalid(error, "catalog.yaml", "needs version, kinds and components");
 		return NULL;
 	}
 	for (i = 0; i < G_N_ELEMENTS(shared); i++) {
@@ -726,6 +728,27 @@ ls_components_new(GError **error){
 		style = load_resource(self, digest, css, FALSE, NULL);
 		script = load_resource(self, digest, js, FALSE, NULL);
 		g_ptr_array_add(self->order, g_strdup(name));
+	}
+	/* Page kinds name only real components; home is the one hero kind. */
+	{
+		g_autoptr(GList) kind_names = json_object_get_members(self->kinds);
+		for (item = kind_names; item != NULL; item = item->next) {
+			JsonObject *kind = member_object(self->kinds, item->data);
+			JsonArray *lists[2];
+			guint l, j;
+			if (kind == NULL || !ls_object_keys(kind, "|summary|openings|suggested|sidebar|builtin|", NULL) ||
+				ls_string(kind, "summary") == NULL || member_array(kind, "openings") == NULL ||
+				json_array_get_length(member_array(kind, "openings")) == 0)
+				return catalog_invalid(error, item->data, "kinds need a summary and openings"), NULL;
+			lists[0] = member_array(kind, "openings");
+			lists[1] = member_array(kind, "suggested");
+			for (l = 0; l < 2; l++)
+				for (j = 0; lists[l] != NULL && j < json_array_get_length(lists[l]); j++)
+					if (member_object(self->components, json_array_get_string_element(lists[l], j)) == NULL)
+						return catalog_invalid(error, item->data, "kinds may only name catalog components"), NULL;
+		}
+		if (member_object(self->kinds, "home") == NULL || member_object(self->kinds, "utility") == NULL)
+			return catalog_invalid(error, "kinds", "home and utility kinds are required"), NULL;
 	}
 	for (i = 0; i < G_N_ELEMENTS(utility_routes); i++) {
 		g_autofree gchar *file = g_strconcat("pages/", utility_routes[i], NULL);
@@ -775,7 +798,7 @@ ls_components_dup_page_schema(LsComponents *self){
 		"  \"sections\": {\"type\": \"array\", \"minItems\": 1, \"maxItems\": %d, \"items\": {\"type\": \"object\",\n"
 		"   \"required\": [\"component\", \"content\"], \"additionalProperties\": false,\n"
 		"   \"properties\": {\"component\": {\"type\": \"string\", \"enum\": [%s]}, \"variant\": {\"type\": \"string\"},\n"
-		"    \"id\": {\"type\": \"string\"}, \"content\": {\"type\": \"object\"}}}}}}\n", MAX_SECTIONS, names->str);
+		"    \"id\": {\"type\": \"string\"}, \"content\": {\"type\": \"object\"}}}}, \"aside\": {\"type\": \"string\"}}}\n", MAX_SECTIONS, names->str);
 	g_string_free(names, TRUE);
 	return schema;
 }
@@ -827,7 +850,8 @@ ls_components_describe(LsComponents *self){
 	g_return_val_if_fail(LS_IS_COMPONENTS(self), NULL);
 	g_string_append(out,
 		"PAGE SPECIFICATION\n"
-		"{\"path\": planned route, \"sections\": [section, ...] (1-16), \"css\": optional page CSS}\n"
+		"{\"path\": planned route, \"sections\": [section, ...] (1-16), \"css\": optional page CSS, "
+		"\"aside\": optional rich text shown under the contents on reading pages}\n"
 		"Section: {\"component\": name, \"variant\": name (default: first listed), \"id\": optional "
 		"anchor id, \"content\": {slot: value}}. The first section's heading becomes the page h1, "
 		"so the first section must have a heading. Section ids default to a slug of the heading.\n\n"
@@ -847,7 +871,30 @@ ls_components_describe(LsComponents *self){
 		"event handlers or remote URLs.\n"
 		"Page css: rules for this page only, prefixed with .page--SLUG where SLUG is the route "
 		"without .html; url() may only reference assets/ or #ids; no @import.\n\n"
-		"COMPONENTS\n");
+		"PAGE KINDS\n"
+		"Every planned page has a kind. The first section must be one of the kind's openings, and "
+		"hero is allowed only on the home page. Reading kinds (detail, article) get an in-page "
+		"contents column from their section headings.\n");
+	{
+		g_autoptr(GList) kind_names = json_object_get_members(self->kinds);
+		GList *kind_item;
+		for (kind_item = kind_names; kind_item != NULL; kind_item = kind_item->next) {
+			JsonObject *kind = member_object(self->kinds, kind_item->data);
+			JsonArray *lists[2] = {member_array(kind, "openings"), member_array(kind, "suggested")};
+			guint l, j;
+			if (json_object_has_member(kind, "builtin"))
+				continue;
+			g_string_append_printf(out, "%s: %s", (const gchar *)kind_item->data, ls_string(kind, "summary"));
+			for (l = 0; l < 2; l++) {
+				g_string_append(out, l == 0 ? " Opens with: " : " Suits: ");
+				for (j = 0; lists[l] != NULL && j < json_array_get_length(lists[l]); j++)
+					g_string_append_printf(out, "%s%s", j == 0 ? "" : ", ", json_array_get_string_element(lists[l], j));
+				g_string_append_c(out, '.');
+			}
+			g_string_append_c(out, '\n');
+		}
+	}
+	g_string_append(out, "\nCOMPONENTS\n");
 	for (i = 0; i < self->order->len; i++) {
 		const gchar *name = g_ptr_array_index(self->order, i);
 		JsonObject *component = member_object(self->components, name);
@@ -880,10 +927,11 @@ static const gchar *const color_tokens[] = {"paper", "ink", "muted", "surface", 
 static const gchar *const font_tokens[] = {"font_display", "font_body", "font_mono"};
 static const gchar *const ui_keys[] = {"skip", "menu", "nav", "footer_nav", "contents", "filter",
 	"count_one", "count_many", "required", "reset", "preview", "download", "error_required",
-	"error_invalid", "error_summary"};
+	"error_invalid", "error_summary", "breadcrumb", "pager", "previous", "next"};
 static const gchar *const ui_defaults[] = {"Skip to content", "Menu", "Primary", "Footer", "Contents",
 	"Filter entries", "{n} entry shown", "{n} entries shown", "required", "Clear", "Preview",
-	"Download text file", "Fill in this field.", "Check this entry.", "{n} fields need attention."};
+	"Download text file", "Fill in this field.", "Check this entry.", "{n} fields need attention.",
+	"Breadcrumb", "More pages", "Previous", "Next"};
 static const gchar *const art_ratios[] = {"16:9", "4:3", "3:2", "1:1", "3:4", "2:1", "3:1", "21:9", NULL};
 
 static gdouble
@@ -1102,7 +1150,7 @@ check_plan_links(Problems *problems, LinkScope *scope, const gchar *where, JsonA
 }
 
 static void
-check_plan_into(Problems *problems, JsonNode *node){
+check_plan_into(Problems *problems, JsonObject *kinds, JsonNode *node){
 	JsonObject *plan = node != NULL && JSON_NODE_HOLDS_OBJECT(node) ? json_node_get_object(node) : NULL;
 	JsonArray *pages, *art, *nav;
 	JsonObject *brand, *footer, *ui;
@@ -1143,8 +1191,26 @@ check_plan_into(Problems *problems, JsonNode *node){
 			problem(problems, "%s must be an object", where);
 			continue;
 		}
-		if (!ls_object_keys(page, "|path|title|description|brief|", NULL))
-			problem(problems, "%s may only have path, title, description and brief", where);
+		if (!ls_object_keys(page, "|path|kind|title|description|brief|", NULL))
+			problem(problems, "%s may only have path, kind, title, description and brief", where);
+		{
+			const gchar *kind = ls_string(page, "kind");
+			JsonObject *definition = kind != NULL ? member_object(kinds, kind) : NULL;
+			if (definition == NULL || json_object_has_member(definition, "builtin")) {
+				GString *known = g_string_new(NULL);
+				g_autoptr(GList) names = json_object_get_members(kinds);
+				GList *name;
+				for (name = names; name != NULL; name = name->next)
+					if (!json_object_has_member(member_object(kinds, name->data), "builtin"))
+						g_string_append_printf(known, "%s%s", known->len > 0 ? ", " : "", (const gchar *)name->data);
+				problem(problems, "%s.kind must be one of %s", where, known->str);
+				g_string_free(known, TRUE);
+			} else if (g_strcmp0(path, "index.html") == 0 && !g_str_equal(kind, "home"))
+				problem(problems, "%s: index.html is the home page, so its kind must be home", where);
+			else if (g_strcmp0(path, "index.html") != 0 && g_str_equal(kind, "home"))
+				problem(problems, "%s: only index.html may be kind home; choose index, detail, article, "
+					"menu, visit, about, form or general", where);
+		}
 		if (is_utility(path))
 			problem(problems, "%s.path %s is built in; do not plan 404.html, privacy.html or terms.html", where, path);
 		else if (!route_valid(path))
@@ -1285,6 +1351,27 @@ ls_components_repair_plan(LsComponents *self, JsonNode *plan){
 	GString *notes = g_string_new(NULL);
 	guint i, round;
 	g_return_val_if_fail(LS_IS_COMPONENTS(self), NULL);
+	/* A missing or misplaced kind has one mechanical answer. */
+	if (plan != NULL && JSON_NODE_HOLDS_OBJECT(plan)) {
+		JsonArray *pages = member_array(json_node_get_object(plan), "pages");
+		for (i = 0; pages != NULL && i < json_array_get_length(pages); i++) {
+			JsonNode *entry = json_array_get_element(pages, i);
+			JsonObject *page = JSON_NODE_HOLDS_OBJECT(entry) ? json_node_get_object(entry) : NULL;
+			const gchar *path = page != NULL ? ls_string(page, "path") : NULL;
+			const gchar *kind = page != NULL ? ls_string(page, "kind") : NULL;
+			const gchar *fixed = NULL;
+			if (path == NULL)
+				continue;
+			if (g_str_equal(path, "index.html") && g_strcmp0(kind, "home") != 0)
+				fixed = "home";
+			else if (!g_str_equal(path, "index.html") && (kind == NULL || g_str_equal(kind, "home")))
+				fixed = "general";
+			if (fixed != NULL) {
+				g_string_append_printf(notes, "%s%s kind -> %s", notes->len > 0 ? "; " : "", path, fixed);
+				json_object_set_string_member(page, "kind", fixed);
+			}
+		}
+	}
 	for (i = 0; tokens != NULL && i < G_N_ELEMENTS(number_tokens); i++) {
 		JsonNode *node = json_object_get_member(tokens, number_tokens[i].name);
 		gdouble value;
@@ -1329,7 +1416,7 @@ ls_components_check_plan(LsComponents *self, JsonNode *plan, GError **error){
 	Problems problems = {g_ptr_array_new_with_free_func(g_free)};
 	gboolean okay;
 	g_return_val_if_fail(LS_IS_COMPONENTS(self), FALSE);
-	check_plan_into(&problems, plan);
+	check_plan_into(&problems, self->kinds, plan);
 	okay = finish(&problems, "The site plan", error);
 	g_ptr_array_unref(problems.messages);
 	return okay;
@@ -1613,6 +1700,32 @@ check_component_rules(PageCheck *check, const gchar *where, const gchar *compone
 	}
 }
 
+/* The kind a page is checked and rendered as: planned, or declared by a built-in page. */
+static const gchar *
+page_kind(JsonObject *plan, const gchar *path, JsonObject *page){
+	JsonArray *pages = member_array(plan, "pages");
+	guint i;
+	if (page != NULL && ls_string(page, "kind") != NULL)
+		return ls_string(page, "kind");
+	for (i = 0; pages != NULL && i < json_array_get_length(pages); i++) {
+		JsonNode *entry = json_array_get_element(pages, i);
+		JsonObject *object = JSON_NODE_HOLDS_OBJECT(entry) ? json_node_get_object(entry) : NULL;
+		if (object != NULL && g_strcmp0(ls_string(object, "path"), path) == 0)
+			return ls_string(object, "kind") != NULL ? ls_string(object, "kind") : "general";
+	}
+	return "general";
+}
+
+static gboolean
+kind_allows(JsonObject *kind, const gchar *component){
+	JsonArray *openings = member_array(kind, "openings");
+	guint i;
+	for (i = 0; openings != NULL && i < json_array_get_length(openings); i++)
+		if (g_strcmp0(json_array_get_string_element(openings, i), component) == 0)
+			return TRUE;
+	return FALSE;
+}
+
 static void
 check_page_into(LsComponents *self, Problems *problems, JsonNode *plan_node, const gchar *path,
 	JsonNode *page_node, gboolean builtin){
@@ -1622,6 +1735,8 @@ check_page_into(LsComponents *self, Problems *problems, JsonNode *plan_node, con
 	LinkScope scope = {NULL, NULL, NULL};
 	PageCheck check = {problems, &scope};
 	g_autoptr(GPtrArray) ids = NULL;
+	const gchar *kind_name;
+	JsonObject *kind;
 	guint i;
 	if (plan == NULL || page == NULL) {
 		problem(problems, "the page specification must be a JSON object");
@@ -1629,8 +1744,17 @@ check_page_into(LsComponents *self, Problems *problems, JsonNode *plan_node, con
 	}
 	plan_scope(plan, &scope);
 	scope.anchors = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
-	if (!ls_object_keys(page, builtin ? "|path|title|description|noindex|sections|" : "|path|sections|css|", NULL))
-		problem(problems, "unknown top-level key; allowed: path, sections, css");
+	if (!ls_object_keys(page, builtin ? "|path|kind|title|description|noindex|sections|" : "|path|sections|css|aside|", NULL))
+		problem(problems, "unknown top-level key; allowed: path, sections, css, aside");
+	kind_name = page_kind(plan, path, builtin ? page : NULL);
+	kind = member_object(self->kinds, kind_name);
+	if (json_object_has_member(page, "aside")) {
+		JsonObject *slot = json_object_new();
+		json_object_set_string_member(slot, "type", "rich");
+		json_object_set_int_member(slot, "max", 1200);
+		check_value(&check, "aside", "aside", slot, json_object_get_member(page, "aside"));
+		json_object_unref(slot);
+	}
 	if (g_strcmp0(ls_string(page, "path"), path) != 0)
 		problem(problems, "path must be %s", path);
 	if (!builtin && !g_hash_table_contains(scope.routes, path))
@@ -1675,6 +1799,20 @@ check_page_into(LsComponents *self, Problems *problems, JsonNode *plan_node, con
 		}
 		if (i == 0 && blank(ls_string(content, "heading")))
 			problem(problems, "the first section must have a heading; it becomes the page h1");
+		/* Structure follows the page kind: only home may open like a landing page. */
+		if (i == 0 && kind != NULL && !kind_allows(kind, name)) {
+			GString *openings = g_string_new(NULL);
+			JsonArray *allowed = member_array(kind, "openings");
+			guint j;
+			for (j = 0; j < json_array_get_length(allowed); j++)
+				g_string_append_printf(openings, "%s%s", j == 0 ? "" : " or ", json_array_get_string_element(allowed, j));
+			problem(problems, "%s: %s %s page opens with %s", where,
+				strchr("aeiou", kind_name[0]) != NULL ? "an" : "a", kind_name, openings->str);
+			g_string_free(openings, TRUE);
+		}
+		if (g_str_equal(name, "hero") && g_strcmp0(kind_name, "home") != 0)
+			problem(problems, "%s: hero belongs only on the home page; open this %s page with page-header",
+				where, kind_name);
 		slots = member_object(component, "slots");
 		keys = json_object_get_members(content);
 		for (item = keys; item != NULL; item = item->next)
@@ -1719,6 +1857,9 @@ typedef struct {
 	JsonObject *ui;			/* resolved interface strings */
 	GHashTable *used;		/* component names used anywhere */
 	GError *error;
+	const gchar *page_path;		/* page being rendered */
+	const gchar *page_title;
+	const gchar *wordmark;
 } Render;
 
 static const gchar *
@@ -1784,7 +1925,15 @@ item_view(Render *render, JsonObject *fields, JsonObject *item, guint index, gbo
 	for (name = names; name != NULL; name = name->next) {
 		JsonNode *value = json_object_get_member(item, name->data);
 		JsonObject *slot = member_object(fields, name->data);
-		if (value != NULL && !JSON_NODE_HOLDS_NULL(value)) {
+		/* Shadow absent fields so templates never read an outer value of the same name. */
+		if (value == NULL || JSON_NODE_HOLDS_NULL(value)) {
+			const gchar *type = ls_string(slot, "type");
+			json_object_set_null_member(view, name->data);
+			if (g_strcmp0(type, "items") == 0 || g_strcmp0(type, "links") == 0) {
+				g_autofree gchar *has = g_strconcat("has_", (const gchar *)name->data, NULL);
+				json_object_set_boolean_member(view, has, FALSE);
+			}
+		} else {
 			json_object_set_member(view, name->data, convert_value(render, slot, value, eager));
 			if (JSON_NODE_HOLDS_ARRAY(value)) {
 				g_autofree gchar *has = g_strconcat("has_", (const gchar *)name->data, NULL);
@@ -1908,9 +2057,10 @@ render_template(Render *render, const gchar *name, JsonObject *view){
 	return text != NULL ? text : g_strdup("");
 }
 
-static gchar *
-render_sections(Render *render, JsonArray *sections){
-	GString *out = g_string_new(NULL);
+/* Renders each section into @pieces and collects in-page contents entries
+ * (headed sections after the opening, and article parts) into @toc. */
+static void
+render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArray *toc){
 	g_autoptr(GHashTable) anchors = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 	g_autoptr(GPtrArray) ids = section_ids(sections, anchors);
 	guint i;
@@ -1965,6 +2115,41 @@ render_sections(Render *render, JsonArray *sections){
 			g_utf8_strlen(ls_string(content, "heading"), -1) > 38);
 		json_object_set_boolean_member(view, "has_text", json_object_has_member(content, "heading") ||
 			json_object_has_member(content, "body"));
+		json_object_set_boolean_member(view, "has_caption", json_object_has_member(content, "caption") ||
+			json_object_has_member(content, "credit"));
+		json_object_set_string_member(view, "crumbs_label", ui_text(render, "breadcrumb"));
+		json_object_set_string_member(view, "pager_label", ui_text(render, "pager"));
+		json_object_set_string_member(view, "previous_label", ui_text(render, "previous"));
+		json_object_set_string_member(view, "next_label", ui_text(render, "next"));
+		/* Interior openings carry a breadcrumb back home. */
+		if (i == 0 && g_str_equal(name, "page-header") && g_strcmp0(render->page_path, "index.html") != 0) {
+			JsonArray *crumbs = json_array_new();
+			JsonObject *home = json_object_new();
+			JsonObject *here = json_object_new();
+			json_object_set_string_member(home, "href", "index.html");
+			json_object_set_string_member(home, "label", render->wordmark);
+			json_object_set_string_member(here, "label", render->page_title);
+			json_array_add_object_element(crumbs, home);
+			json_array_add_object_element(crumbs, here);
+			json_object_set_array_member(view, "crumbs", crumbs);
+			json_object_set_boolean_member(view, "has_crumbs", TRUE);
+		}
+		if (i > 0 && !blank(ls_string(content, "heading")) && !g_str_equal(name, "article")) {
+			JsonObject *entry = json_object_new();
+			json_object_set_string_member(entry, "id", id);
+			json_object_set_string_member(entry, "label", ls_string(content, "heading"));
+			json_array_add_object_element(toc, entry);
+		}
+		if (g_str_equal(name, "menu")) {
+			JsonArray *menu_sections = json_object_get_array_member(view, "sections");
+			guint j;
+			for (j = 0; j < json_array_get_length(menu_sections); j++) {
+				JsonObject *menu_section = json_array_get_object_element(menu_sections, j);
+				g_autofree gchar *slug = slugify(ls_string(menu_section, "name"), 32);
+				g_autofree gchar *section_id = g_strdup_printf("%s-%u-%s", id, j + 1, slug);
+				json_object_set_string_member(menu_section, "section_id", section_id);
+			}
+		}
 		if (g_str_equal(name, "article")) {
 			JsonArray *parts = json_object_get_array_member(view, "parts");
 			g_autoptr(GHashTable) part_anchors = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
@@ -1986,7 +2171,11 @@ render_sections(Render *render, JsonArray *sections){
 			for (j = 0; parts != NULL && j < json_array_get_length(parts); j++) {
 				JsonObject *part = json_array_get_object_element(parts, j);
 				g_autofree gchar *pid = part_id(part_anchors, ls_string(part, "heading"));
+				JsonObject *entry = json_object_new();
 				json_object_set_string_member(part, "part_id", pid);
+				json_object_set_string_member(entry, "id", pid);
+				json_object_set_string_member(entry, "label", ls_string(part, "heading"));
+				json_array_add_object_element(toc, entry);
 			}
 		}
 		if (g_str_equal(name, "filter")) {
@@ -2018,9 +2207,8 @@ render_sections(Render *render, JsonArray *sections){
 			json_object_set_boolean_member(wrapper, "bleed", g_strcmp0(variant, "bleed") == 0);
 		}
 		html = render_template(render, "section.html", wrapper);
-		g_string_append(out, html);
+		g_ptr_array_add(pieces, g_steal_pointer(&html));
 	}
-	return g_string_free(out, FALSE);
 }
 
 static void
@@ -2049,8 +2237,13 @@ render_page(Render *render, const gchar *path, const gchar *title, const gchar *
 	JsonArray *footer_links = json_array_new();
 	g_autoptr(GHashTable) seen = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 	g_autoptr(JsonArray) legal = json_array_new();
-	g_autofree gchar *main = render_sections(render, member_array(page, "sections"));
+	g_autoptr(GPtrArray) pieces = g_ptr_array_new_with_free_func(g_free);
+	g_autoptr(JsonArray) toc = json_array_new();
 	g_autofree gchar *slug = g_strndup(path, strlen(path) - 5);
+	const gchar *kind_name = page_kind(plan, path, noindex ? page : NULL);
+	JsonObject *kind = member_object(render->self->kinds, kind_name);
+	GString *main = g_string_new(NULL);
+	gboolean sidebar;
 	const gchar *name = ls_string(plan, "name");
 	g_autofree gchar *full = g_strcmp0(title, name) == 0 ? g_strdup(name) : g_strdup_printf("%s | %s", title, name);
 	gdouble paper[3];
@@ -2088,7 +2281,26 @@ render_page(Render *render, const gchar *path, const gchar *title, const gchar *
 		JsonObject *action = link_view(member_object(plan, "action"), TRUE);
 		json_object_set_object_member(view, "action", action);
 	}
-	json_object_set_string_member(view, "main", main);
+	render->page_path = path;
+	render->page_title = title;
+	render->wordmark = ls_string(view, "wordmark");
+	render_sections(render, member_array(page, "sections"), pieces, toc);
+	/* Reading kinds get an in-page contents column once there is enough to navigate. */
+	sidebar = kind != NULL && json_object_has_member(kind, "sidebar") &&
+		json_object_get_boolean_member(kind, "sidebar") && json_array_get_length(toc) >= 2 && pieces->len > 1;
+	for (i = sidebar ? 1 : 0; i < pieces->len; i++)
+		g_string_append(main, g_ptr_array_index(pieces, i));
+	json_object_set_string_member(view, "kind", kind_name);
+	json_object_set_boolean_member(view, "sidebar", sidebar);
+	if (sidebar) {
+		json_object_set_string_member(view, "opening", g_ptr_array_index(pieces, 0));
+		json_object_set_array_member(view, "toc", json_array_ref(toc));
+		json_object_set_string_member(view, "contents_label", ui_text(render, "contents"));
+		if (ls_string(page, "aside") != NULL)
+			json_object_set_member(view, "aside", rich_node(render, ls_string(page, "aside")));
+	}
+	json_object_set_string_member(view, "main", main->str);
+	g_string_free(main, TRUE);
 	if (footer != NULL && ls_string(footer, "note") != NULL) {
 		JsonNode *note = rich_node(render, ls_string(footer, "note"));
 		json_object_set_member(view, "footer_note", note);
@@ -2218,7 +2430,7 @@ normalize_base(const gchar *base_url, GError **error){
 gchar *
 ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages, const gchar *base_url, GError **error){
 	Problems problems = {g_ptr_array_new_with_free_func(g_free)};
-	Render render = {self, NULL, NULL, NULL, NULL};
+	Render render = {self, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 	g_autoptr(JsonObject) ui = json_object_new();
 	g_autoptr(GHashTable) used = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 	g_autoptr(JsonNode) root = json_node_new(JSON_NODE_OBJECT);
@@ -2232,7 +2444,7 @@ ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages
 	guint i;
 	g_return_val_if_fail(LS_IS_COMPONENTS(self) && plan_node != NULL && pages != NULL, NULL);
 	json_object_set_array_member(bundle, "files", files);
-	check_plan_into(&problems, plan_node);
+	check_plan_into(&problems, self->kinds, plan_node);
 	if (!finish(&problems, "The site plan", error))
 		goto fail;
 	base = normalize_base(base_url, error);

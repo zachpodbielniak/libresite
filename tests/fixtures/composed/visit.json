@@ -1,0 +1,181 @@
+{
+  "path": "visit.html",
+  "sections": [
+    {
+      "component": "page-header",
+      "variant": "split",
+      "content": {
+        "heading": "Visit the workshop",
+        "lede": "Bring the piece, or send photos first.",
+        "art": {
+          "src": "assets/bench.svg",
+          "alt": "Drawn map of the workshop street"
+        }
+      }
+    },
+    {
+      "component": "hours",
+      "variant": "table",
+      "content": {
+        "heading": "Hours",
+        "items": [
+          {
+            "days": "Tuesday to Friday",
+            "times": "9 am to 5 pm"
+          },
+          {
+            "days": "Saturday",
+            "times": "10 am to 2 pm"
+          }
+        ],
+        "note": "Closed on public holidays."
+      }
+    },
+    {
+      "component": "location",
+      "variant": "split",
+      "content": {
+        "heading": "Where",
+        "address": "Harbor & Pine\n\n12 Quay Lane, Harbor County",
+        "directions": "Parking behind the building.",
+        "art": {
+          "src": "assets/bench.svg",
+          "alt": "Map drawing"
+        },
+        "actions": [
+          {
+            "href": "start.html",
+            "label": "Start a repair"
+          }
+        ]
+      }
+    },
+    {
+      "component": "menu",
+      "variant": "list",
+      "content": {
+        "heading": "Services",
+        "sections": [
+          {
+            "name": "Chairs",
+            "items": [
+              {
+                "name": "Re-glue",
+                "price": "40",
+                "description": "Per joint.",
+                "tags": [
+                  {
+                    "label": "Most common"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "Tables",
+            "note": "Quoted after assessment.",
+            "items": [
+              {
+                "name": "Butterfly key"
+              }
+            ]
+          }
+        ],
+        "note": "Prices are illustrative."
+      }
+    },
+    {
+      "component": "schedule",
+      "variant": "list",
+      "content": {
+        "heading": "Open days",
+        "items": [
+          {
+            "when": "First Saturday",
+            "title": "Open bench",
+            "place": "The workshop",
+            "body": "Watch a repair."
+          }
+        ]
+      }
+    },
+    {
+      "component": "team",
+      "variant": "list",
+      "content": {
+        "heading": "Who you will meet",
+        "people": [
+          {
+            "name": "The workshop",
+            "role": "Illustrative"
+          }
+        ]
+      }
+    },
+    {
+      "component": "steps",
+      "variant": "row",
+      "content": {
+        "heading": "How to bring a piece",
+        "items": [
+          {
+            "title": "Photograph it"
+          },
+          {
+            "title": "Book a slot"
+          },
+          {
+            "title": "Drop it off"
+          }
+        ]
+      }
+    },
+    {
+      "component": "columns",
+      "variant": "two",
+      "content": {
+        "heading": "Before and after",
+        "items": [
+          {
+            "heading": "Before",
+            "body": "Wobbling."
+          },
+          {
+            "heading": "After",
+            "body": "Solid."
+          }
+        ]
+      }
+    },
+    {
+      "component": "entries",
+      "variant": "dated",
+      "content": {
+        "heading": "Notes",
+        "items": [
+          {
+            "title": "Why we mend",
+            "meta": "Journal",
+            "summary": "An essay.",
+            "link": {
+              "href": "journal.html",
+              "label": "Read"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "component": "faq",
+      "content": {
+        "heading": "Questions",
+        "items": [
+          {
+            "question": "Do you collect?",
+            "answer": "Not yet."
+          }
+        ]
+      }
+    }
+  ]
+}

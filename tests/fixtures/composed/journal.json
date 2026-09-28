@@ -1,0 +1,160 @@
+{
+  "path": "journal.html",
+  "aside": "Written for owners weighing a repair. See [the work](work.html).",
+  "sections": [
+    {
+      "component": "page-header",
+      "variant": "rule",
+      "content": {
+        "kicker": "Journal",
+        "heading": "Why we mend instead of replace",
+        "meta": [
+          {
+            "label": "Reading",
+            "value": "6 minutes"
+          },
+          {
+            "label": "Topic",
+            "value": "Repair"
+          }
+        ]
+      }
+    },
+    {
+      "component": "lead",
+      "variant": "dropcap",
+      "content": {
+        "body": "Most furniture fails at a joint, not everywhere at once."
+      }
+    },
+    {
+      "component": "article",
+      "variant": "plain",
+      "content": {
+        "parts": [
+          {
+            "heading": "What a repair saves",
+            "body": "Wood that has already moved and settled.",
+            "art": {
+              "src": "assets/bench.svg",
+              "alt": "Plan of a bench"
+            },
+            "caption": "A bench in plan."
+          },
+          {
+            "heading": "What it asks",
+            "body": "Patience and a clear estimate."
+          }
+        ],
+        "notes": [
+          {
+            "text": "Figures are illustrative."
+          }
+        ]
+      }
+    },
+    {
+      "component": "figure",
+      "variant": "wide",
+      "content": {
+        "art": {
+          "src": "assets/bench.svg",
+          "alt": ""
+        },
+        "caption": "The workbench.",
+        "credit": "Workshop drawing"
+      }
+    },
+    {
+      "component": "callout",
+      "variant": "tip",
+      "content": {
+        "heading": "Before you call",
+        "body": "Photograph the joint from two sides."
+      }
+    },
+    {
+      "component": "table",
+      "variant": "striped",
+      "content": {
+        "heading": "Common repairs",
+        "caption": "Repair types and what they involve",
+        "columns": [
+          {
+            "label": "Repair"
+          },
+          {
+            "label": "Involves"
+          }
+        ],
+        "rows": [
+          {
+            "cells": [
+              {
+                "text": "Loose joint"
+              },
+              {
+                "text": "Clean and re-glue"
+              }
+            ]
+          },
+          {
+            "cells": [
+              {
+                "text": "Split top"
+              },
+              {
+                "text": "Butterfly key"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "component": "timeline",
+      "variant": "vertical",
+      "content": {
+        "heading": "A repair, start to finish",
+        "items": [
+          {
+            "when": "Day 1",
+            "title": "Assessment"
+          },
+          {
+            "when": "Week 2",
+            "title": "Return",
+            "body": "You collect the piece."
+          }
+        ]
+      }
+    },
+    {
+      "component": "glossary",
+      "variant": "list",
+      "content": {
+        "heading": "Terms",
+        "items": [
+          {
+            "term": "Mortise",
+            "definition": "A cavity that receives a tenon."
+          }
+        ]
+      }
+    },
+    {
+      "component": "pager",
+      "variant": "split",
+      "content": {
+        "previous": {
+          "href": "work.html",
+          "label": "Recent work"
+        },
+        "next": {
+          "href": "visit.html",
+          "label": "Visit the workshop"
+        }
+      }
+    }
+  ]
+}

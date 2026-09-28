@@ -1,0 +1,14 @@
+<div class="wrap">
+{{#heading}}<div class="section-head">
+<{{htag}} id="{{id}}-h">{{heading}}</{{htag}}>
+{{#intro}}<div class="prose">{{{intro}}}</div>
+{{/intro}}</div>
+{{/heading}}<ul class="team__list" role="list">
+{{#people}}<li class="team__person">
+{{#art}}<img class="team__art" src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}" loading="lazy" decoding="async">
+{{/art}}<{{subtag}} class="team__name">{{name}}</{{subtag}}>
+{{#role}}<p class="team__role muted">{{role}}</p>
+{{/role}}{{#bio}}<div class="prose">{{{bio}}}</div>
+{{/bio}}</li>
+{{/people}}</ul>
+</div>

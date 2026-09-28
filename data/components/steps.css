@@ -1,0 +1,11 @@
+.steps__list { display: grid; gap: var(--space-5); margin: 0; padding: 0; list-style: none; }
+.steps__n { display: inline-grid; place-items: center; width: 2.5rem; height: 2.5rem; margin-bottom: var(--space-3); border-radius: 50%; background: var(--accent); color: var(--accent-ink); font-family: var(--font-display); font-weight: 700; }
+.steps__title { margin-bottom: var(--space-2); }
+@media (min-width: 56rem) {
+	.steps--row .steps__list { grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: var(--space-5); }
+	.steps--row .steps__item { position: relative; }
+	.steps--row .steps__item:not(:last-child)::after { content: ""; position: absolute; top: 1.25rem; left: 3.25rem; right: calc(-1 * var(--space-5) + 0.75rem); height: var(--border-strong); background: var(--line-strong); }
+}
+.steps--stack .steps__item { display: grid; grid-template-columns: 4rem minmax(0, 1fr); column-gap: var(--space-4); max-width: calc(var(--measure) * 1.2); }
+.steps--stack .steps__n { grid-row: 1 / span 2; width: 3.25rem; height: 3.25rem; font-size: var(--step-2); }
+.steps--stack .steps__item > :not(.steps__n) { grid-column: 2; }

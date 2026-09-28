@@ -1,0 +1,5 @@
+.glossary__list { margin: 0; max-width: calc(var(--measure) * 1.2); }
+.glossary__entry { padding-block: var(--space-4); border-top: var(--border) solid var(--line); }
+.glossary__entry dt { font-family: var(--font-display); font-weight: 700; font-size: var(--step-1); }
+.glossary__entry dd { margin: var(--space-1) 0 0; }
+@media (min-width: 48rem) { .glossary__entry { display: grid; grid-template-columns: 12rem minmax(0, 1fr); gap: var(--space-5); } .glossary__entry dd { margin: 0; } }

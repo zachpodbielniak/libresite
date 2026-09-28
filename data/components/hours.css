@@ -1,0 +1,7 @@
+.hours__list { margin: 0; max-width: 34rem; }
+.hours__row { display: flex; justify-content: space-between; gap: var(--space-4); padding-block: var(--space-3); border-bottom: var(--border) solid var(--line); }
+.hours__row dt { font-family: var(--font-display); font-weight: 600; }
+.hours__row dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+.hours--inline .hours__row { display: block; border: 0; padding-block: var(--space-1); }
+.hours--inline .hours__row dd { text-align: left; }
+.hours__note { margin-top: var(--space-3); font-size: var(--step--1); }

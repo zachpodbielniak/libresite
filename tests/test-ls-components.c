@@ -39,6 +39,8 @@ fixture_pages(void){
 	json_object_set_member(pages, "index.html", load("index.json"));
 	json_object_set_member(pages, "work.html", load("work.json"));
 	json_object_set_member(pages, "start.html", load("start.json"));
+	json_object_set_member(pages, "journal.html", load("journal.json"));
+	json_object_set_member(pages, "visit.html", load("visit.json"));
 	return pages;
 }
 
@@ -48,7 +50,9 @@ test_catalog(void){
 	g_autoptr(LsComponents) components = library();
 	g_autofree gchar *reference = ls_components_describe(components);
 	const gchar *names[] = {"hero", "text", "article", "features", "cards", "filter", "media",
-		"quote", "cta", "faq", "facts", "pricing", "gallery", "form", "links", "custom"};
+		"quote", "cta", "faq", "facts", "pricing", "gallery", "form", "page-header", "lead", "figure",
+		"callout", "table", "menu", "timeline", "entries", "pager", "hours", "location", "team", "steps",
+		"columns", "glossary", "schedule", "links", "custom"};
 	guint i;
 	g_assert_cmpuint(strlen(ls_components_get_digest(components)), ==, 64);
 	g_assert_nonnull(strstr(reference, "Rich text"));
@@ -58,6 +62,9 @@ test_catalog(void){
 		g_assert_nonnull(strstr(reference, heading));
 	}
 	g_assert_nonnull(strstr(reference, "statement"));
+	g_assert_nonnull(strstr(reference, "PAGE KINDS"));
+	g_assert_nonnull(strstr(reference, "\narticle: "));
+	g_assert_null(strstr(reference, "\nutility: "));
 	g_assert_nonnull(strstr(reference, "required"));
 }
 
@@ -121,7 +128,13 @@ test_plan_errors(void){
 	json_object_set_string_member(json_array_get_object_element(pages, 0), "path", "404.html");
 	json_object_set_string_member(json_array_get_object_element(art, 1), "path", "assets/bench.png");
 	json_object_set_string_member(root, "css", "@import url(x.css);");
+	json_object_set_string_member(json_array_get_object_element(pages, 1), "kind", "home");
+	json_object_set_string_member(json_array_get_object_element(pages, 2), "kind", "landing");
 	expect_plan_error(components, plan, several);
+	{
+		const gchar *kinds[] = {"only index.html may be kind home", "kind must be one of home, index", NULL};
+		expect_plan_error(components, plan, kinds);
+	}
 }
 
 /* Mechanical misses are repaired natively instead of costing a model retry:
@@ -139,11 +152,14 @@ test_plan_repair(void){
 	json_object_set_string_member(tokens, "accent_ink", "#fff8f0");
 	json_object_set_double_member(tokens, "ratio", 2.4);
 	json_object_set_double_member(tokens, "measure", 120);
+	json_object_remove_member(json_array_get_object_element(json_object_get_array_member(
+		json_node_get_object(plan), "pages"), 1), "kind");
 	g_assert_false(ls_components_check_plan(components, plan, NULL));
 	notes = ls_components_repair_plan(components, plan);
 	g_assert_nonnull(notes);
 	g_assert_nonnull(strstr(notes, "muted"));
 	g_assert_nonnull(strstr(notes, "ratio"));
+	g_assert_nonnull(strstr(notes, "work.html kind -> general"));
 	g_assert_true(ls_components_check_plan(components, plan, &error));
 	g_assert_no_error(error);
 	g_assert_cmpstr(ls_string(tokens, "accent_ink"), !=, NULL);
@@ -156,7 +172,7 @@ static void
 test_page_valid(void){
 	g_autoptr(LsComponents) components = library();
 	g_autoptr(JsonNode) plan = load("plan.json");
-	const gchar *names[] = {"index", "work", "start"};
+	const gchar *names[] = {"index", "work", "start", "journal", "visit"};
 	guint i;
 	for (i = 0; i < G_N_ELEMENTS(names); i++) {
 		g_autoptr(GError) error = NULL;
@@ -194,7 +210,20 @@ test_page_errors(void){
 		{"{'path':'index.html','sections':[{'component':'hero','content':{'heading':'x'}}],'css':'a{color:red}</style>'}", "css"},
 		{"{'path':'index.html','sections':[{'component':'hero','content':{'heading':'x','lede':'[a](javascript:alert(1))'}}]}", "javascript:"},
 	};
+	const PageCase kind_cases[] = {
+		{"{'path':'work.html','sections':[{'component':'hero','content':{'heading':'x'}}]}", "hero belongs only on the home page"},
+		{"{'path':'work.html','sections':[{'component':'text','content':{'heading':'x','body':'y'}}]}", "an index page opens with page-header"},
+		{"{'path':'work.html','sections':[{'component':'page-header','content':{'heading':'x'}},{'component':'hero','content':{'heading':'y'}}]}", "hero belongs only"},
+		{"{'path':'work.html','aside':'[x](nowhere.html)','sections':[{'component':'page-header','content':{'heading':'x'}}]}", "nowhere.html"},
+	};
 	guint i;
+	for (i = 0; i < G_N_ELEMENTS(kind_cases); i++) {
+		g_autoptr(GError) error = NULL;
+		g_autoptr(JsonNode) page = json(kind_cases[i].page);
+		g_assert_false(ls_components_check_page(components, plan, "work.html", page, &error));
+		if (strstr(error->message, kind_cases[i].needle) == NULL)
+			g_error("kind case %u error lacks '%s': %s", i, kind_cases[i].needle, error->message);
+	}
 	for (i = 0; i < G_N_ELEMENTS(cases); i++) {
 		g_autoptr(GError) error = NULL;
 		g_autoptr(JsonNode) page = json(cases[i].page);
@@ -295,8 +324,8 @@ test_compose(void){
 	g_autoptr(GError) error = NULL;
 	g_autofree gchar *text = ls_components_compose(components, plan, pages, "https://example.com/", &error);
 	g_autoptr(JsonNode) bundle = NULL;
-	const gchar *paths[] = {"index.html", "work.html", "start.html", "404.html", "privacy.html",
-		"terms.html", "styles.css", "site.js", "robots.txt", "sitemap.xml"};
+	const gchar *paths[] = {"index.html", "work.html", "start.html", "journal.html", "visit.html",
+		"404.html", "privacy.html", "terms.html", "styles.css", "site.js", "robots.txt", "sitemap.xml"};
 	const gchar *index, *work, *start, *privacy, *css, *js;
 	guint i;
 	g_assert_no_error(error);
@@ -312,7 +341,7 @@ test_compose(void){
 	privacy = file_content(bundle, "privacy.html");
 	css = file_content(bundle, "styles.css");
 	js = file_content(bundle, "site.js");
-	for (i = 0; i < 6; i++) {
+	for (i = 0; i < 8; i++) {
 		const gchar *page = file_content(bundle, paths[i]);
 		g_assert_cmpuint(count(page, "<h1"), ==, 1);
 		g_assert_cmpuint(count(page, "<main"), ==, 1);
@@ -346,9 +375,44 @@ test_compose(void){
 	contains(start, "method=\"dialog\" novalidate data-local-form data-download-name=\"repair-request.txt\"");
 	contains(start, "Nothing is sent.");
 	contains(start, "data-form-actions hidden");
-	contains(start, "aria-describedby=\"start-a-repair-form-problem-hint start-a-repair-form-problem-error\"");
+	contains(start, "aria-describedby=\"repair-request-form-problem-hint repair-request-form-problem-error\"");
 	contains(start, "<option value=\"Table\">Table</option>");
 	contains(privacy, "<meta name=\"robots\" content=\"noindex\">");
+	/* Interior pages open with a page header and a breadcrumb, never a hero. */
+	lacks(work, "block--hero");
+	contains(work, "block--page-header");
+	contains(work, "<nav class=\"crumbs\" aria-label=\"Breadcrumb\"><ol><li><a href=\"index.html\">Harbor &amp; Pine</a></li>"
+		"<li><span aria-current=\"page\">Recent work</span></li></ol></nav>");
+	contains(work, "page--kind-index");
+	lacks(index, "class=\"crumbs\"");
+	/* Reading kinds get an in-page contents column built from their structure. */
+	{
+		const gchar *journal = file_content(bundle, "journal.html");
+		const gchar *visit = file_content(bundle, "visit.html");
+		contains(journal, "<div class=\"wrap page-grid\">");
+		contains(journal, "<li><a href=\"#what-a-repair-saves\">What a repair saves</a></li>");
+		contains(journal, "<li><a href=\"#common-repairs\">Common repairs</a></li>");
+		contains(journal, "page-aside__note");
+		contains(journal, "<figure class=\"article__figure\">");
+		contains(journal, "<ol class=\"article__notes\">");
+		contains(journal, "<caption>Repair types and what they involve</caption>");
+		contains(journal, "<th scope=\"col\">Repair</th>");
+		contains(journal, "lead--dropcap");
+		contains(journal, "pager__link--next");
+		contains(journal, "<dt>Reading</dt><dd>6 minutes</dd>");
+		lacks(visit, "page-grid");
+		/* An item's missing field never falls through to an outer value. */
+		lacks(visit, "&lt;p&gt;");
+		g_assert_cmpuint(count(visit, "class=\"menu__note muted\""), ==, 1);
+		contains(visit, "<span class=\"menu__dish\">Re-glue</span><span class=\"menu__leader\" aria-hidden=\"true\"></span><span class=\"menu__price\">40</span>");
+		contains(visit, "<address class=\"location__address\">");
+		contains(visit, "<div class=\"hours__row\"><dt>Saturday</dt><dd>10 am to 2 pm</dd></div>");
+		contains(visit, "steps--row");
+		contains(visit, "entries--dated");
+		contains(visit, "schedule__when");
+		contains(css, ".page-grid");
+		contains(css, ".menu__leader");
+	}
 	contains(css, "--paper: #f4efe6;");
 	contains(css, ".hero--split");
 	contains(css, ".filter__controls");
@@ -433,7 +497,7 @@ test_escaping(void){
 	g_autofree gchar *text = NULL;
 	g_autoptr(JsonNode) bundle = NULL;
 	json_object_set_member(pages, "work.html", json(
-		"{'path':'work.html','sections':[{'component':'hero','content':{'heading':'<img src=x onerror=alert(1)>'}}]}"));
+		"{'path':'work.html','sections':[{'component':'page-header','content':{'heading':'<img src=x onerror=alert(1)>'}}]}"));
 	text = ls_components_compose(components, plan, pages, NULL, &error);
 	g_assert_no_error(error);
 	bundle = ls_json_parse(text, NULL);
@@ -451,14 +515,14 @@ test_long_heading(void){
 	g_autofree gchar *text = NULL;
 	g_autoptr(JsonNode) bundle = NULL;
 	json_object_set_member(pages, "work.html", json(
-		"{'path':'work.html','sections':[{'component':'hero','variant':'statement','content':"
+		"{'path':'work.html','sections':[{'component':'page-header','variant':'plain','content':"
 		"{'heading':'Prepare a brief before you write to anyone at all'}}]}"));
 	text = ls_components_compose(components, plan, pages, NULL, &error);
 	g_assert_no_error(error);
 	bundle = ls_json_parse(text, NULL);
-	contains(file_content(bundle, "work.html"), "hero__title hero__title--long");
+	contains(file_content(bundle, "work.html"), "page-header__title page-header__title--long");
 	lacks(file_content(bundle, "index.html"), "hero__title--long");
-	contains(file_content(bundle, "styles.css"), ".hero__title--long");
+	contains(file_content(bundle, "styles.css"), ".page-header__title--long");
 }
 
 int

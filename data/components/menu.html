@@ -1,0 +1,20 @@
+<div class="wrap">
+{{#heading}}<div class="section-head">
+<{{htag}} id="{{id}}-h">{{heading}}</{{htag}}>
+{{#intro}}<div class="prose">{{{intro}}}</div>
+{{/intro}}</div>
+{{/heading}}<div class="menu__sections">
+{{#sections}}<section class="menu__section" aria-labelledby="{{section_id}}">
+<{{subtag}} class="menu__name" id="{{section_id}}">{{name}}</{{subtag}}>
+{{#note}}<p class="menu__note muted">{{note}}</p>
+{{/note}}<ul class="menu__items" role="list">
+{{#items}}<li class="menu__item">
+<p class="menu__line"><span class="menu__dish">{{name}}</span>{{#price}}<span class="menu__leader" aria-hidden="true"></span><span class="menu__price">{{price}}</span>{{/price}}</p>
+{{#description}}<p class="menu__desc">{{description}}</p>
+{{/description}}{{#has_tags}}<p class="menu__tags">{{#tags}}<span class="menu__tag">{{label}}</span>{{/tags}}</p>
+{{/has_tags}}</li>
+{{/items}}</ul>
+</section>
+{{/sections}}</div>
+{{#note}}<div class="menu__footnote prose muted">{{{note}}}</div>
+{{/note}}</div>

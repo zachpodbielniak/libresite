@@ -1,0 +1,13 @@
+<div class="wrap">
+{{#heading}}<{{htag}} id="{{id}}-h">{{heading}}</{{htag}}>
+{{/heading}}<div class="table__scroll" role="region" aria-label="{{caption}}" tabindex="0">
+<table class="table__grid">
+<caption>{{caption}}</caption>
+<thead><tr>{{#columns}}<th scope="col">{{label}}</th>{{/columns}}</tr></thead>
+<tbody>
+{{#rows}}<tr>{{#cells}}<td>{{text}}</td>{{/cells}}</tr>
+{{/rows}}</tbody>
+</table>
+</div>
+{{#note}}<div class="table__note prose">{{{note}}}</div>
+{{/note}}</div>

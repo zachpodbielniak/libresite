@@ -14,3 +14,9 @@
 	.article--contents .article__contents { grid-column: 2; grid-row: 3; align-self: start; position: sticky; top: var(--space-5); }
 	.article--contents .article__body { grid-column: 1; grid-row: 3; }
 }
+.article__figure { margin: var(--space-5) 0 0; max-width: calc(var(--measure) * 1.2); }
+.article__figure img { width: 100%; border-radius: var(--radius); background: var(--surface); }
+.article__figure figcaption { margin-top: var(--space-2); font-size: var(--step--1); color: var(--muted); }
+.article__notes { max-width: var(--measure); margin-top: var(--space-7); padding-top: var(--space-4); border-top: var(--border) solid var(--line); font-size: var(--step--1); color: var(--muted); }
+.page-main .article--contents .article__inner { display: block; }
+.page-main .article--contents .article__contents { display: none; }

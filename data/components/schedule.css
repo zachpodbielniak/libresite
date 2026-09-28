@@ -1,0 +1,8 @@
+.schedule__list { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; border-top: var(--border) solid var(--line); }
+.schedule__item { padding-block: var(--space-4); border-bottom: var(--border) solid var(--line); }
+.schedule__when { margin: 0 0 var(--space-1); font-family: var(--font-mono); font-size: var(--step--1); color: var(--accent-text); }
+.schedule__title { margin-bottom: var(--space-1); }
+.schedule__place { margin: 0 0 var(--space-2); font-size: var(--step--1); }
+@media (min-width: 48rem) { .schedule--list .schedule__item { display: grid; grid-template-columns: 12rem minmax(0, 1fr); gap: var(--space-5); } .schedule--list .schedule__when { margin-top: 0.3em; } }
+.schedule--cards .schedule__list { border: 0; gap: var(--space-4); grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr)); }
+.schedule--cards .schedule__item { padding: var(--space-5); border: var(--border) solid var(--line-strong); border-radius: var(--radius); }

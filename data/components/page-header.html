@@ -1,0 +1,11 @@
+<div class="wrap page-header__inner">
+{{#has_crumbs}}<nav class="crumbs" aria-label="{{crumbs_label}}"><ol>{{#crumbs}}<li>{{#href}}<a href="{{href}}">{{label}}</a>{{/href}}{{^href}}<span aria-current="page">{{label}}</span>{{/href}}</li>{{/crumbs}}</ol></nav>
+{{/has_crumbs}}<div class="page-header__text">
+{{#kicker}}<p class="kicker">{{kicker}}</p>
+{{/kicker}}<{{htag}} class="page-header__title{{#long_heading}} page-header__title--long{{/long_heading}}" id="{{id}}-h">{{heading}}</{{htag}}>
+{{#lede}}<div class="page-header__lede lede prose">{{{lede}}}</div>
+{{/lede}}{{#has_meta}}<dl class="page-header__meta">{{#meta}}<div><dt>{{label}}</dt><dd>{{value}}</dd></div>{{/meta}}</dl>
+{{/has_meta}}{{#has_actions}}<p class="actions">{{#actions}}<a class="button{{^primary}} button--ghost{{/primary}}" href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{label}}</a>{{/actions}}</p>
+{{/has_actions}}</div>
+{{#art}}<figure class="page-header__art"><img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}" fetchpriority="high" decoding="async"></figure>
+{{/art}}</div>

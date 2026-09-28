@@ -23,7 +23,7 @@
 </style>
 {{/page_css}}<script src="site.js" defer></script>
 </head>
-<body class="page page--{{slug}}">
+<body class="page page--{{slug}} page--kind-{{kind}}">
 <a class="skip-link" href="#main">{{skip_label}}</a>
 <header class="site-header">
 <div class="wrap site-header__inner">
@@ -38,8 +38,23 @@
 </div>
 </header>
 <main id="main" tabindex="-1">
+{{#sidebar}}{{{opening}}}
+<div class="wrap page-grid">
+<aside class="page-aside">
+<nav class="page-contents" aria-label="{{contents_label}}">
+<p class="kicker">{{contents_label}}</p>
+<ol>
+{{#toc}}<li><a href="#{{id}}">{{label}}</a></li>
+{{/toc}}</ol>
+</nav>
+{{#aside}}<div class="page-aside__note prose">{{{aside}}}</div>
+{{/aside}}</aside>
+<div class="page-main">
 {{{main}}}
-</main>
+</div>
+</div>
+{{/sidebar}}{{^sidebar}}{{{main}}}
+{{/sidebar}}</main>
 <footer class="site-footer">
 <div class="wrap site-footer__inner">
 <div>

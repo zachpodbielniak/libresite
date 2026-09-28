@@ -45,11 +45,18 @@ site_generate(LsProvider *provider, JsonObject *settings, const gchar *system, c
 		json_node_set_object(node, object);
 		return ls_json_encode(node);
 	}
-	if (strstr(task, "\"route\":\"index.html\"") != NULL)
-		return read_fixture("index.json");
-	if (strstr(task, "\"route\":\"work.html\"") != NULL)
-		return read_fixture("work.json");
-	return read_fixture("start.json");
+	{
+		const gchar *routes[] = {"index", "work", "start", "journal", "visit"};
+		guint i;
+		for (i = 0; i < G_N_ELEMENTS(routes); i++) {
+			g_autofree gchar *needle = g_strdup_printf("\"route\":\"%s.html\"", routes[i]);
+			g_autofree gchar *file = g_strconcat(routes[i], ".json", NULL);
+			if (strstr(task, needle) != NULL)
+				return read_fixture(file);
+		}
+	}
+	g_assert_not_reached();
+	return NULL;
 }
 static void
 site_iface_init(LsProviderInterface *iface){
@@ -114,7 +121,7 @@ test_composed_run(void){
 			g_error("missing %s", present[i]);
 	}
 	g_assert_false(g_file_test(specs, G_FILE_TEST_EXISTS));
-	g_assert_cmpint(((SiteProvider *)provider)->calls, ==, 1 + 3 + 2);
+	g_assert_cmpint(((SiteProvider *)provider)->calls, ==, 1 + 5 + 2);
 	g_assert_true(g_file_get_contents(index_path, &index, NULL, NULL));
 	g_assert_nonnull(strstr(index, "<link rel=\"canonical\" href=\"https://harbor.example/\">"));
 }

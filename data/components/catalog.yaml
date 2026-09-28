@@ -4,6 +4,53 @@
 # directory. Slot types: text, rich, link, links, image, items, fields, choice,
 # flag. See docs/components.org before adding or changing a component.
 version: 1
+# Every planned page has a kind. A kind fixes which components may open the
+# page and whether wide screens get an in-page contents sidebar. Only home
+# may open with a hero: interior pages open with a page header.
+kinds:
+  home:
+    summary: The front door. A confident opening, a short tour of what matters and a clear next step.
+    openings: [hero, custom]
+    suggested: [cards, features, media, quote, text, cta]
+  index:
+    summary: A list of things to choose from, such as work, articles, services or locations. Opens with a page header; the list is the page.
+    openings: [page-header]
+    suggested: [entries, cards, filter, links, pager]
+  detail:
+    summary: One thing in depth, such as a project, service, dish or product. Key facts up front, then the story, evidence and related items.
+    openings: [page-header]
+    suggested: [facts, text, figure, article, callout, table, links, pager]
+    sidebar: true
+  article:
+    summary: Longform reading such as an essay, guide or case study. A reading column with contents, inline figures and notes.
+    openings: [page-header]
+    suggested: [lead, article, figure, callout, table, timeline, glossary, pager]
+    sidebar: true
+  menu:
+    summary: A menu or price list. Sections of items with prices and notes, little else.
+    openings: [page-header]
+    suggested: [menu, pricing, callout, hours, cta]
+  visit:
+    summary: How to get there and when. Hours, address, directions, practical questions and one clear action.
+    openings: [page-header]
+    suggested: [hours, location, faq, facts, schedule, cta]
+  about:
+    summary: The story, people and values. A quiet opening, longer reading, pictures and milestones.
+    openings: [page-header]
+    suggested: [lead, text, columns, timeline, team, figure, quote]
+  form:
+    summary: A page built around one task, such as a booking request, a brief or a sign-up. Explain, then the form, then what happens next.
+    openings: [page-header]
+    suggested: [text, steps, form, faq]
+  general:
+    summary: Any other interior page. Opens with a page header.
+    openings: [page-header]
+    suggested: [text, features, columns, steps, callout, faq, links]
+  utility:
+    summary: Built-in 404, privacy and terms pages. Not plannable.
+    openings: [page-header]
+    suggested: [text, links]
+    builtin: true
 components:
   hero:
     summary: The page opening. The first section of every page renders its heading as the page h1.
@@ -42,6 +89,9 @@ components:
         fields:
           heading: {type: text, required: true, max: 140}
           body: {type: rich, required: true, max: 6000}
+          art: {type: image}
+          caption: {type: text, max: 300}
+      notes: {type: items, max_items: 20, note: "Numbered notes or sources shown after the parts.", fields: {text: {type: rich, required: true, max: 600}}}
   features:
     summary: A set of short points, principles or offerings.
     variants:
@@ -206,6 +256,225 @@ components:
       note: {type: rich, max: 600, note: "Shown beside the button; state plainly what happens to entered data."}
       download_name: {type: text, max: 60, note: "Local mode file name ending in .txt."}
       fallback: {type: rich, max: 1200, note: "Shown without JavaScript in local mode, such as how to copy the questions by hand."}
+  page-header:
+    summary: The opening of every interior page. Compact, with a breadcrumb back home, the page title and optional key facts.
+    variants:
+      plain: Title and lede on the page background.
+      split: Title beside one artwork.
+      band: Title on a full-width surface band.
+      rule: Oversized title set under a heavy rule, for editorial pages.
+    slots:
+      kicker: {type: text, max: 80, note: "Short label above the title, such as a category."}
+      heading: {type: text, required: true, max: 140}
+      lede: {type: rich, max: 600}
+      meta: {type: items, max_items: 6, note: "Key facts shown as a strip, such as Year, Role or Price.", fields: {label: {type: text, required: true, max: 40}, value: {type: text, required: true, max: 80}}}
+      actions: {type: links, max_items: 2}
+      art: {type: image, note: "Required by split."}
+  lead:
+    summary: An opening paragraph set large, optionally with a drop cap, to start long reading.
+    variants:
+      plain: Large lead text.
+      dropcap: Large lead text with a drop cap.
+    slots:
+      body: {type: rich, required: true, max: 1200}
+  figure:
+    summary: An artwork placed within reading, with a caption.
+    variants:
+      inline: At reading width.
+      wide: Wider than the reading column.
+      aside: Beside the text on wide screens.
+    slots:
+      art: {type: image, required: true}
+      caption: {type: text, max: 300}
+      credit: {type: text, max: 120, note: "Only a supplied credit."}
+  callout:
+    summary: A highlighted note, tip or warning inside reading.
+    variants:
+      note: A quiet side note.
+      tip: A helpful tip with the accent color.
+      warning: Something the reader must not miss.
+    slots:
+      heading: {type: text, max: 120}
+      body: {type: rich, required: true, max: 1200}
+  table:
+    summary: Tabular data such as a comparison, specification or schedule of fees. Supplied figures only.
+    variants:
+      plain: Ruled rows.
+      striped: Alternating row shading.
+    slots:
+      heading: {type: text, max: 140}
+      caption: {type: text, required: true, max: 200, note: "Describes what the table shows; read by screen readers."}
+      columns: {type: items, min_items: 2, max_items: 6, fields: {label: {type: text, required: true, max: 60}}}
+      rows: {type: items, min_items: 1, max_items: 40, fields: {cells: {type: items, min_items: 1, max_items: 6, fields: {text: {type: text, required: true, max: 200}}}}}
+      note: {type: rich, max: 400}
+  menu:
+    summary: A menu or price list in sections. Use exactly the supplied names and prices.
+    variants:
+      list: Items with dotted leaders to the price.
+      columns: Sections in two columns on wide screens.
+      board: Each section as a panel, like a chalkboard.
+    slots:
+      heading: {type: text, max: 140}
+      intro: {type: rich, max: 600}
+      sections:
+        type: items
+        min_items: 1
+        max_items: 12
+        fields:
+          name: {type: text, required: true, max: 60}
+          note: {type: text, max: 200}
+          items:
+            type: items
+            min_items: 1
+            max_items: 30
+            fields:
+              name: {type: text, required: true, max: 80}
+              price: {type: text, max: 20, note: "Only a supplied price, exactly as given."}
+              description: {type: text, max: 240}
+              tags: {type: items, max_items: 4, fields: {label: {type: text, required: true, max: 24}}}
+      note: {type: rich, max: 400, note: "Allergens, payment or other supplied notes."}
+  timeline:
+    summary: Dated milestones or phases in order. Only supplied dates.
+    variants:
+      vertical: A vertical line with markers.
+      horizontal: A row of phases on wide screens.
+    slots:
+      heading: {type: text, max: 140}
+      items:
+        type: items
+        min_items: 2
+        max_items: 16
+        fields:
+          when: {type: text, required: true, max: 40}
+          title: {type: text, required: true, max: 120}
+          body: {type: rich, max: 600}
+  entries:
+    summary: A plain list of linked entries such as articles, services or documents, for index pages.
+    variants:
+      list: Title, meta and summary per row.
+      compact: One line per entry.
+      dated: Meta such as a date set in a left column.
+    slots:
+      heading: {type: text, max: 140}
+      intro: {type: rich, max: 600}
+      items:
+        type: items
+        min_items: 1
+        max_items: 48
+        fields:
+          title: {type: text, required: true, max: 140}
+          meta: {type: text, max: 80}
+          summary: {type: rich, max: 600}
+          link: {type: link}
+  pager:
+    summary: Previous and next links between sibling pages.
+    variants:
+      split: Previous on the left, next on the right.
+    slots:
+      previous: {type: link}
+      next: {type: link}
+  hours:
+    summary: Opening hours by day. Only supplied hours.
+    variants:
+      table: A two-column table.
+      inline: A compact block.
+    slots:
+      heading: {type: text, max: 140}
+      items:
+        type: items
+        min_items: 1
+        max_items: 14
+        fields:
+          days: {type: text, required: true, max: 60}
+          times: {type: text, required: true, max: 80}
+      note: {type: rich, max: 400}
+  location:
+    summary: An address with directions and an optional drawn map. Never embed a map service.
+    variants:
+      split: Address and directions beside the map drawing.
+      stacked: Map drawing above the address.
+    slots:
+      heading: {type: text, max: 140}
+      address: {type: rich, required: true, max: 400, note: "The supplied address, one line per line."}
+      directions: {type: rich, max: 1200}
+      art: {type: image, note: "A planned map drawing."}
+      actions: {type: links, max_items: 2}
+  team:
+    summary: The people behind the business. Only people the client supplied.
+    variants:
+      grid: Portrait cards in a grid.
+      list: Names and roles in a list.
+    slots:
+      heading: {type: text, max: 140}
+      intro: {type: rich, max: 600}
+      people:
+        type: items
+        min_items: 1
+        max_items: 24
+        fields:
+          name: {type: text, required: true, max: 80}
+          role: {type: text, max: 80}
+          bio: {type: rich, max: 600}
+          art: {type: image}
+  steps:
+    summary: A process the visitor follows, shown as connected steps.
+    variants:
+      row: Connected steps in a row on wide screens.
+      stack: Large numbered steps stacked.
+    slots:
+      heading: {type: text, max: 140}
+      intro: {type: rich, max: 600}
+      items:
+        type: items
+        min_items: 2
+        max_items: 8
+        fields:
+          title: {type: text, required: true, max: 100}
+          body: {type: rich, max: 600}
+  columns:
+    summary: Two or three columns of headed prose, for balanced comparisons or parallel topics.
+    variants:
+      two: Two columns.
+      three: Three columns.
+    slots:
+      heading: {type: text, max: 140}
+      items:
+        type: items
+        min_items: 2
+        max_items: 3
+        fields:
+          heading: {type: text, required: true, max: 120}
+          body: {type: rich, required: true, max: 2000}
+  glossary:
+    summary: Terms and their definitions.
+    variants:
+      list: A definition list.
+    slots:
+      heading: {type: text, max: 140}
+      items:
+        type: items
+        min_items: 1
+        max_items: 30
+        fields:
+          term: {type: text, required: true, max: 80}
+          definition: {type: rich, required: true, max: 800}
+  schedule:
+    summary: Upcoming or recurring events. Only supplied dates and times.
+    variants:
+      list: Events as rows.
+      cards: Events as cards.
+    slots:
+      heading: {type: text, max: 140}
+      items:
+        type: items
+        min_items: 1
+        max_items: 24
+        fields:
+          when: {type: text, required: true, max: 80}
+          title: {type: text, required: true, max: 120}
+          place: {type: text, max: 120}
+          body: {type: rich, max: 600}
+          link: {type: link}
   links:
     summary: Onward links to related pages.
     variants:

@@ -182,7 +182,7 @@ static const gchar *recipe_text =
 	"    - id: acceptance\n"
 	"      type: validate\n"
 	"      options:\n"
-	"        required: [index.html, work.html, start.html, styles.css, site.js]\n"
+	"        required: [index.html, work.html, start.html, journal.html, visit.html, styles.css, site.js]\n"
 	"        checks:\n"
 	"          - {path: start.html, contains: ['Nothing is sent. Your request']}\n";
 
@@ -312,7 +312,7 @@ test_parallel(void){
 	for (i = 0; i < G_N_ELEMENTS(paths); i++)
 		if (ls_context_lookup(fixture.context, paths[i]) == NULL)
 			g_error("missing %s", paths[i]);
-	g_assert_cmpint(fixture.provider->calls, ==, 6);
+	g_assert_cmpint(fixture.provider->calls, ==, 8);
 	g_assert_cmpint(fixture.provider->max_in_flight, >=, 3);
 	g_assert_cmpuint(g_hash_table_size(fixture.provider->threads), >=, 3);
 	g_assert_cmpint(fixture.off_thread, ==, 0);
@@ -354,7 +354,7 @@ test_retry_one(void){
 		g_assert_no_error(error);
 		g_assert_true(okay);
 	}
-	g_assert_cmpint(fixture.provider->calls, ==, 7);
+	g_assert_cmpint(fixture.provider->calls, ==, 9);
 	work = prompts_for(fixture.provider, "work.html");
 	g_assert_cmpuint(work->len, ==, 2);
 	g_assert_nonnull(strstr(g_ptr_array_index(work, 1), "unknown component 'banner'"));
@@ -445,7 +445,7 @@ test_review(void){
 		g_assert_no_error(error);
 		g_assert_true(okay);
 	}
-	g_assert_cmpint(fixture.provider->calls, ==, 1 + 5 + 3);
+	g_assert_cmpint(fixture.provider->calls, ==, 1 + 7 + 5);
 	g_assert_cmpuint(prompts_for(fixture.provider, "work.html")->len, ==, 2);
 	g_assert_nonnull(strstr(g_ptr_array_index(prompts_for(fixture.provider, "work.html"), 1), "Ladderback chair"));
 	fixture_teardown(&fixture);

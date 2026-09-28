@@ -12,6 +12,10 @@
 {{#parts}}<section class="article__part" id="{{part_id}}" aria-labelledby="{{part_id}}-h">
 <{{subtag}} id="{{part_id}}-h">{{heading}}</{{subtag}}>
 <div class="prose">{{{body}}}</div>
-</section>
-{{/parts}}</div>
+{{#art}}<figure class="article__figure"><img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}" loading="lazy" decoding="async">{{#caption}}<figcaption>{{caption}}</figcaption>{{/caption}}</figure>
+{{/art}}</section>
+{{/parts}}{{#has_notes}}<ol class="article__notes">
+{{#notes}}<li id="{{id}}-note-{{n}}">{{{text}}}</li>
+{{/notes}}</ol>
+{{/has_notes}}</div>
 </div>

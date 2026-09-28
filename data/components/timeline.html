@@ -1,0 +1,10 @@
+<div class="wrap">
+{{#heading}}<div class="section-head"><{{htag}} id="{{id}}-h">{{heading}}</{{htag}}></div>
+{{/heading}}<ol class="timeline__list">
+{{#items}}<li class="timeline__item">
+<p class="timeline__when">{{when}}</p>
+<{{subtag}} class="timeline__title">{{title}}</{{subtag}}>
+{{#body}}<div class="prose">{{{body}}}</div>
+{{/body}}</li>
+{{/items}}</ol>
+</div>

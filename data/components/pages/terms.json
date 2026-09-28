@@ -4,9 +4,21 @@
   "description": "Draft terms of use for this site, pending the operator's confirmed legal details and review.",
   "noindex": true,
   "sections": [
-    {"component": "text", "variant": "narrow", "content": {
-      "heading": "Terms of use",
-      "body": "This draft is awaiting site-owner and legal review. It is not a published agreement.\n\nBefore publication, the owner must state who operates the site, the governing terms for using it and any services it describes, liability limits, intellectual property, and how to make contact about these terms, with an effective date.\n\n[Return to the home page](index.html)"
-    }}
-  ]
+    {
+      "component": "page-header",
+      "variant": "plain",
+      "content": {
+        "heading": "Terms of use",
+        "lede": "This draft is awaiting site-owner and legal review. It is not a published agreement."
+      }
+    },
+    {
+      "component": "text",
+      "variant": "narrow",
+      "content": {
+        "body": "Before publication, the owner must state who operates the site, the governing terms for using it and any services it describes, liability limits, intellectual property, and how to make contact about these terms, with an effective date.\n\n[Return to the home page](index.html)"
+      }
+    }
+  ],
+  "kind": "utility"
 }

@@ -1,16 +1,50 @@
 {
   "path": "work.html",
   "sections": [
-    {"component": "hero", "variant": "statement", "content": {"heading": "Recent work"}},
-    {"component": "filter", "variant": "grid", "content": {
-      "all_label": "All",
-      "categories": [{"label": "Chairs"}, {"label": "Tables"}],
-      "empty": "Nothing in this category yet.",
-      "items": [
-        {"title": "Ladderback chair", "category": "Chairs", "body": "Re-glued joints.", "art": {"src": "assets/bench.svg", "alt": ""}},
-        {"title": "Drop-leaf table", "category": "Tables", "link": {"href": "start.html", "label": "Ask about tables"}}
-      ]
-    }}
+    {
+      "component": "page-header",
+      "variant": "plain",
+      "content": {
+        "kicker": "Workshop record",
+        "heading": "Recent work",
+        "lede": "Illustrative repairs, sorted by kind."
+      }
+    },
+    {
+      "component": "filter",
+      "variant": "grid",
+      "content": {
+        "all_label": "All",
+        "categories": [
+          {
+            "label": "Chairs"
+          },
+          {
+            "label": "Tables"
+          }
+        ],
+        "empty": "Nothing in this category yet.",
+        "items": [
+          {
+            "title": "Ladderback chair",
+            "category": "Chairs",
+            "body": "Re-glued joints.",
+            "art": {
+              "src": "assets/bench.svg",
+              "alt": ""
+            }
+          },
+          {
+            "title": "Drop-leaf table",
+            "category": "Tables",
+            "link": {
+              "href": "start.html",
+              "label": "Ask about tables"
+            }
+          }
+        ]
+      }
+    }
   ],
   "css": ".filter__list { gap: 2rem; }"
 }

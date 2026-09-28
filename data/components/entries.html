@@ -1,0 +1,15 @@
+<div class="wrap">
+{{#heading}}<div class="section-head">
+<{{htag}} id="{{id}}-h">{{heading}}</{{htag}}>
+{{#intro}}<div class="prose">{{{intro}}}</div>
+{{/intro}}</div>
+{{/heading}}<ul class="entries__list" role="list">
+{{#items}}<li class="entries__item">
+{{#meta}}<p class="entries__meta muted">{{meta}}</p>
+{{/meta}}<div class="entries__text">
+<{{subtag}} class="entries__title">{{#link}}<a href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{title}}</a>{{/link}}{{^link}}{{title}}{{/link}}</{{subtag}}>
+{{#summary}}<div class="prose entries__summary">{{{summary}}}</div>
+{{/summary}}</div>
+</li>
+{{/items}}</ul>
+</div>

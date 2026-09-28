@@ -1,0 +1,11 @@
+.location__address { font-style: normal; font-family: var(--font-display); font-size: var(--step-1); line-height: 1.4; }
+.location__address p { margin: 0; }
+.location__directions { margin-top: var(--space-4); }
+.location__map { margin: var(--space-5) 0 0; }
+.location__map img { width: 100%; border-radius: var(--radius); background: var(--surface); }
+@media (min-width: 56rem) {
+	.location--split .location__inner { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: var(--space-7); align-items: start; }
+	.location--split .location__map { margin: 0; }
+	.location--stacked .location__map { order: -1; margin: 0 0 var(--space-5); }
+	.location--stacked .location__inner { display: flex; flex-direction: column; }
+}

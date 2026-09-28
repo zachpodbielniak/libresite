@@ -1,0 +1,13 @@
+<div class="wrap">
+{{#heading}}<div class="section-head"><{{htag}} id="{{id}}-h">{{heading}}</{{htag}}></div>
+{{/heading}}<ul class="schedule__list" role="list">
+{{#items}}<li class="schedule__item">
+<p class="schedule__when">{{when}}</p>
+<div class="schedule__text">
+<{{subtag}} class="schedule__title">{{#link}}<a href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{title}}</a>{{/link}}{{^link}}{{title}}{{/link}}</{{subtag}}>
+{{#place}}<p class="schedule__place muted">{{place}}</p>
+{{/place}}{{#body}}<div class="prose">{{{body}}}</div>
+{{/body}}</div>
+</li>
+{{/items}}</ul>
+</div>

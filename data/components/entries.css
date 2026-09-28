@@ -1,0 +1,13 @@
+.entries__list { margin: 0; padding: 0; list-style: none; border-top: var(--border) solid var(--line); max-width: calc(var(--measure) * 1.4); }
+.entries__item { padding-block: var(--space-5); border-bottom: var(--border) solid var(--line); }
+.entries__meta { margin: 0 0 var(--space-1); font-family: var(--font-mono); font-size: var(--step--1); }
+.entries__title { font-size: var(--step-2); margin-bottom: var(--space-2); }
+.entries__title a { text-decoration: none; }
+.entries__title a:hover { text-decoration: underline; }
+.entries--compact .entries__item { padding-block: var(--space-3); }
+.entries--compact .entries__title { font-size: var(--step-1); margin: 0; }
+.entries--compact .entries__summary { display: none; }
+@media (min-width: 48rem) {
+	.entries--dated .entries__item { display: grid; grid-template-columns: 10rem minmax(0, 1fr); gap: var(--space-5); }
+	.entries--dated .entries__meta { margin: 0.35em 0 0; }
+}

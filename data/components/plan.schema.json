@@ -42,8 +42,8 @@
     },
     "pages": {
       "type": "array",
-      "items": {"type": "object", "required": ["path", "title", "description", "brief"], "additionalProperties": false,
-        "properties": {"path": {"type": "string"}, "title": {"type": "string"}, "description": {"type": "string"}, "brief": {"type": "string"}}}
+      "items": {"type": "object", "required": ["path", "kind", "title", "description", "brief"], "additionalProperties": false,
+        "properties": {"path": {"type": "string"}, "kind": {"type": "string", "enum": ["home", "index", "detail", "article", "menu", "visit", "about", "form", "general"]}, "title": {"type": "string"}, "description": {"type": "string"}, "brief": {"type": "string"}}}
     },
     "css": {"type": "string"},
     "ui": {"type": "object", "additionalProperties": {"type": "string"}}

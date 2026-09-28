@@ -49,5 +49,37 @@
     <file>components/section.html</file>
     <file>components/text.css</file>
     <file>components/text.html</file>
+    <file>components/callout.css</file>
+    <file>components/callout.html</file>
+    <file>components/columns.css</file>
+    <file>components/columns.html</file>
+    <file>components/entries.css</file>
+    <file>components/entries.html</file>
+    <file>components/figure.css</file>
+    <file>components/figure.html</file>
+    <file>components/glossary.css</file>
+    <file>components/glossary.html</file>
+    <file>components/hours.css</file>
+    <file>components/hours.html</file>
+    <file>components/lead.css</file>
+    <file>components/lead.html</file>
+    <file>components/location.css</file>
+    <file>components/location.html</file>
+    <file>components/menu.css</file>
+    <file>components/menu.html</file>
+    <file>components/page-header.css</file>
+    <file>components/page-header.html</file>
+    <file>components/pager.css</file>
+    <file>components/pager.html</file>
+    <file>components/schedule.css</file>
+    <file>components/schedule.html</file>
+    <file>components/steps.css</file>
+    <file>components/steps.html</file>
+    <file>components/table.css</file>
+    <file>components/table.html</file>
+    <file>components/team.css</file>
+    <file>components/team.html</file>
+    <file>components/timeline.css</file>
+    <file>components/timeline.html</file>
   </gresource>
 </gresources>

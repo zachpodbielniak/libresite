@@ -1,0 +1,2 @@
+.lead__body { font-size: var(--step-2); line-height: 1.45; max-width: 34em; }
+.lead--dropcap .lead__body > p:first-child::first-letter { float: left; margin: 0.08em 0.1em 0 0; font-family: var(--font-display); font-weight: var(--heading-weight); font-size: 3.4em; line-height: 0.8; color: var(--accent-text); }

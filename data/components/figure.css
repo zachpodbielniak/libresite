@@ -1,0 +1,10 @@
+.figure__item { margin: 0; }
+.figure__item img { width: 100%; border-radius: var(--radius); background: var(--surface); }
+.figure__item figcaption { margin-top: var(--space-2); max-width: var(--measure); font-size: var(--step--1); color: var(--muted); }
+.figure__credit { font-family: var(--font-mono); }
+.figure--inline .figure__item { max-width: var(--measure); }
+.figure--wide .figure__item { max-width: calc(var(--measure) * 1.5); }
+@media (min-width: 56rem) {
+	.figure--aside .figure__item { float: right; width: min(40%, 22rem); margin: 0 0 var(--space-4) var(--space-6); }
+	.figure--aside + .block { clear: none; }
+}
