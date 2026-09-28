@@ -121,12 +121,19 @@ generate(
 	schema_property = g_object_class_find_property(G_OBJECT_GET_CLASS(client), "json-schema");
 	if (schema_property != NULL && G_PARAM_SPEC_VALUE_TYPE(schema_property) == G_TYPE_STRING &&
 		(schema_property->flags & G_PARAM_WRITABLE) != 0) {
-		g_autoptr(GBytes) bytes = g_resource_lookup_data(ls_resources_get_resource(),
-			"/org/libresite/file-bundle.schema.json", 0, error);
+		g_autoptr(GBytes) bytes = NULL;
 		g_autofree gchar *schema = NULL;
-		if (bytes == NULL)
-			return NULL;
-		schema = g_strndup(g_bytes_get_data(bytes, NULL), g_bytes_get_size(bytes));
+		/* Component steps answer with a plan, page or artwork object; every
+		 * other step answers with the file-bundle schema. */
+		if (ls_string(settings, "json_schema") != NULL)
+			schema = g_strdup(ls_string(settings, "json_schema"));
+		else {
+			bytes = g_resource_lookup_data(ls_resources_get_resource(),
+				"/org/libresite/file-bundle.schema.json", 0, error);
+			if (bytes == NULL)
+				return NULL;
+			schema = g_strndup(g_bytes_get_data(bytes, NULL), g_bytes_get_size(bytes));
+		}
 		g_object_set(client, "json-schema", schema, NULL);
 	}
 	/* Unattended generation cannot answer TTY or stdin approval prompts.

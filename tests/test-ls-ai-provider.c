@@ -36,7 +36,7 @@ argv_index(GStrv argv, const gchar *word){
 /* Run one generation through @adapter; returns the recorded argv and stores
  * the child's CLAUDE_CODE_MAX_OUTPUT_TOKENS ("unset" if absent) in @output_cap. */
 static GStrv
-generate_argv(const AdapterCase *adapter, gchar **output_cap){
+generate_argv(const AdapterCase *adapter, const gchar *schema, gchar **output_cap){
 	g_autoptr(GError) error = NULL;
 	g_autoptr(LsAiProvider) transport = NULL;
 	g_autoptr(JsonObject) settings = json_object_new();
@@ -65,6 +65,8 @@ generate_argv(const AdapterCase *adapter, gchar **output_cap){
 	json_object_set_string_member(settings, "provider", adapter->provider);
 	json_object_set_int_member(settings, "timeout", 30);
 	json_object_set_int_member(settings, "max_tokens", adapter->max_tokens);
+	if (schema != NULL)
+		json_object_set_string_member(settings, "json_schema", schema);
 	response = ls_provider_generate(LS_PROVIDER(transport), settings, "system", "prompt", NULL, &error);
 	g_assert_no_error(error);
 	g_assert_nonnull(strstr(response, "\"files\""));
@@ -109,7 +111,7 @@ adapter_argv(gconstpointer data){
 		g_test_trap_assert_passed();
 		return;
 	}
-	argv = generate_argv(adapter, &output_cap);
+	argv = generate_argv(adapter, NULL, &output_cap);
 	g_assert_cmpstr(output_cap, ==, adapter->output_cap);
 	if (adapter->bypass == NULL) {
 		assert_answer_only(argv);
@@ -118,6 +120,29 @@ adapter_argv(gconstpointer data){
 	g_assert_cmpint(argv_index(argv, adapter->bypass), >=, 0);
 	g_assert_cmpint(argv_index(argv, "--safe-mode"), ==, -1);
 	g_assert_cmpint(argv_index(argv, "--tools"), ==, -1);
+}
+
+/* Spec steps pass their own response schema; bundle steps keep the default. */
+static void
+schema_override(void){
+	g_auto(GStrv) argv = NULL;
+	g_auto(GStrv) plain = NULL;
+	g_autofree gchar *cap = NULL, *cap_plain = NULL;
+	const gchar *schema = "{\"type\":\"object\",\"required\":[\"sections\"]}";
+	gint index;
+	if (!g_test_subprocess()) {
+		g_test_trap_subprocess(NULL, 0, G_TEST_SUBPROCESS_INHERIT_STDERR);
+		g_test_trap_assert_passed();
+		return;
+	}
+	argv = generate_argv(&adapter_cases[0], schema, &cap);
+	index = argv_index(argv, "--json-schema");
+	g_assert_cmpint(index, >=, 0);
+	g_assert_cmpstr(argv[index + 1], ==, schema);
+	plain = generate_argv(&adapter_cases[0], NULL, &cap_plain);
+	index = argv_index(plain, "--json-schema");
+	g_assert_cmpint(index, >=, 0);
+	g_assert_cmpstr(plain[index + 1], !=, schema);
 }
 
 int
@@ -129,5 +154,6 @@ main(int argc, char **argv){
 			adapter_cases[i].provider, adapter_cases[i].max_tokens);
 		g_test_add_data_func(path, &adapter_cases[i], adapter_argv);
 	}
+	g_test_add_func("/ai-provider/schema-override", schema_override);
 	return g_test_run();
 }
