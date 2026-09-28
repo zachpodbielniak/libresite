@@ -12,13 +12,13 @@ The function-by-function embedder catalog is [[file:api.org][api.org]]. This pag
 
 | Directory | Responsibility |
 |-----------+----------------|
-| src/core | Recipe validation, prompt catalog, artifact context, pipeline and published-tree QA |
+| src/core | Recipe validation, prompt catalog, artifact context, pipeline, component library and template renderer, and published-tree QA |
 | src/interfaces | LsProvider transport interface |
 | src/model | Immutable boxed LsArtifact |
 | src/providers | ai-glib CLI transport adapter |
-| src/steps | Abstract LsStep and generate/validate/scaffold/gate subclasses |
+| src/steps | Abstract LsStep and generate/validate/scaffold/gate/prune/plan/pages subclasses |
 | src/cli | GOptionContext CLI, signal delivery and native plugin loading |
-| data | Centralized prompt catalog, embedded resources and design references |
+| data | Centralized prompt catalog, embedded resources, component library and design references |
 | recipes | Executable recipe examples |
 | tests | GTest coverage, subprocess fixtures and external plugin/install checks |
 
@@ -30,7 +30,7 @@ The public umbrella header is =libresite.h=. The build emits a static archive, a
 
 =ls_recipe_set_timeout()= supplies an execution-only deadline override before a run; merged settings reflect it but the parsed recipe tree stays immutable. =ls_recipe_set_unlimited()= additionally disables requested output budgets and takes precedence over a finite timeout override. Both provider configuration and rendered =AI SETTINGS= use the same merged values. This lets =--timeout= and =--unlimited= recover an existing checkpoint without changing the intended project or catalog.
 
-The checkpoint is the source of truth on resume. Partially exported directories do not become input, and failed model output is never reused. Matching fingerprints bind the parsed recipe, prompt catalog and checkpoint format. The fingerprint detects configuration drift, not a malicious user who can rewrite the checkpoint. Workspace ownership/mode checks and an advisory exclusive lock protect normal concurrent use.
+The checkpoint is the source of truth on resume. Partially exported directories do not become input, and failed model output is never reused. Matching fingerprints bind the parsed recipe, prompt catalog and checkpoint format, plus the native scaffold bytes and, for recipes with a =pages= step, the component library digest. The fingerprint detects configuration drift, not a malicious user who can rewrite the checkpoint. Workspace ownership/mode checks and an advisory exclusive lock protect normal concurrent use.
 
 =ls_package_save()= archives the original immutable recipe and catalog text plus a strict versioned YAML manifest carrying their SHA-256 digests and SKU metadata. Recipes selecting native scaffolding also archive its exact file bundle with a separate digest. =ls_package_load()= checks all pins and returns an owned recipe/catalog pair only after complete validation. The recipe carries an optional immutable native snapshot alongside its original text; scaffold execution and CLI preview filter that snapshot against existing seed paths, while the pipeline fingerprints the exact archived bytes. CLI sealing preflights module and prompt compatibility before publication; library callers do the same with their configured pipeline. Archives move independently of source paths and do not depend on later embedded catalogs or native templates. Execution overrides are excluded. This adds durable input retention without changing the existing fingerprint formula or checkpoint format; see [[file:packages.org][sold packages and compatibility limits]].
 
@@ -42,7 +42,7 @@ Optional recipe =seed_artifacts= are validated transactionally during parsing an
 
 =LsRecipe= and =LsPrompts= own their parsed JSON trees. Accessors return borrowed data; do not mutate it. =LsPipeline= references its provider and prompt catalog. =LsContext= owns its artifacts, and =ls_context_lookup()= returns a borrowed immutable artifact. =LsArtifact= is a boxed value with a deep copy operation; strings returned from its accessors live as long as the artifact. All owning public types support automatic scope cleanup.
 
-Pipeline operations are synchronous and intended for a worker thread. Do not call a pipeline concurrently or reenter it from a callback; an active-run guard rejects reentry. Its signals run on the calling thread. The CLI uses one worker plus the default main context for SIGINT/SIGTERM delivery; applications must marshal UI updates to their own UI context. Custom providers and steps must honor =GCancellable= and return a useful =GError=. They must not return success while setting an error.
+Pipeline operations are synchronous and intended for a worker thread. Do not call a pipeline concurrently or reenter it from a callback; an active-run guard rejects reentry. Its signals run on the calling thread. A =pages= step is the one place with internal concurrency: its worker threads only call =ls_provider_dispatch()=, and every check, context change and signal (step, provider and pipeline) stays on the calling thread; see [[file:components.org][composed sites]]. The CLI uses one worker plus the default main context for SIGINT/SIGTERM delivery; applications must marshal UI updates to their own UI context. Custom providers and steps must honor =GCancellable= and return a useful =GError=. They must not return success while setting an error.
 
 * Signals
 

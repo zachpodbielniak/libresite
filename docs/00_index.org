@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-10T20:00:00-04:00
+#+updated: 2026-09-28T16:00:00-04:00
 #+version: 0.1.0
 
 * Guides
@@ -11,6 +11,7 @@
 - [[file:packages.org][Sold SKU catalog, fixed scopes and archived recipe/catalog pins]]
 - [[file:revision.org][Existing-project revisions and incremental file operations]]
 - [[file:recipe-format.org][Recipe reference]]
+- [[file:components.org][Composed sites: plan, parallel pages and the component library]]
 - [[file:scaffold.org][Native static scaffolding and contact contract]]
 - [[file:structured-recipes.org][Structured recipes, platform forms and YAML export]]
 - [[file:copy-lock.org][Lock approved client sentences and contact details]]
@@ -33,5 +34,5 @@
 - [[file:../README.org][README.org]] is the operator getting-started guide
 - [[file:../AGENTS.md][AGENTS.md]] is contributor layout, contracts and verification policy
 - [[file:../skills/libresite-landing/SKILL.md][libresite-landing]] and [[file:../skills/libresite-application/SKILL.md][libresite-application]] drive recipe generation
-- [[file:../data/prompts.yaml][data/prompts.yaml]] is the only runtime prompt catalog; [[file:../data/resources.xml][data/resources.xml]] embeds it with native scaffold files
+- [[file:../data/prompts.yaml][data/prompts.yaml]] is the only runtime prompt catalog; [[file:../data/resources.xml][data/resources.xml]] embeds it with native scaffold files and the [[file:../data/components][component library]]
 - [[file:../recipes][recipes/]] holds the sold SKUs and workflow examples; do not treat fixture output as live design evidence

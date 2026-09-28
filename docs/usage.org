@@ -26,6 +26,10 @@ Byte counts measure the libresite transport interface, not network traffic or to
 
 The =LsStep= public API offers =ls_step_dup_usage()= after success or failure; the caller owns its independent =JsonObject=. Provider implementations retain their existing =generate= vfunc. The wrapper emits =LsProvider::usage= synchronously with provider, model, input bytes and output bytes after each dispatched call. Steps collect this signal while executing. Do not share a provider concurrently between executions. Custom steps must route calls through the supplied provider wrapper for those calls to be counted. Multiple provider/model identities within one execution become =(mixed)= and cannot be priced as one identity. For custom steps, =retries= means additional calls and may represent distinct subrequests.
 
+* Parallel steps
+
+A composed =pages= step makes many provider calls, several at once. Its record counts every call: =attempts= is the number of calls, and =retries= is =attempts - 1= by the record invariant, not the number of rejected answers. =elapsed_us= is the step's wall time, so it is shorter than the sum of the calls.
+
 * Failure and resume
 
 Normal failure and cancellation save the consumed usage with the previous successful artifact snapshot and unchanged next-step index. Resuming appends a fresh execution record for the failed step; it retains earlier failed records and skips completed steps. Repeated step identifiers are intentional and all records contribute to pricing. Native validation steps also receive records with zero provider bytes.

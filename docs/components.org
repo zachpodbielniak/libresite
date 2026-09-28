@@ -1,0 +1,128 @@
+#+title: Composed sites: plan, pages and the component library
+#+description: How the component pipeline builds a static site in a few minutes
+#+authors: Zach Podbielniak
+#+categories: libresite
+#+created: 2026-09-28T16:00:00-04:00
+#+updated: 2026-09-28T16:00:00-04:00
+#+version: 0.1.0
+
+* Why it exists
+
+Measured on the eight-page studio recipe, the file-bundle pipeline spent 28 to 37 minutes to ship 69 KB. Almost none of that was writing the site: it went to hidden thinking, resending rejected whole-site bundles, retyping pages in later passes, and eight model calls in a row. Only a quarter of what the model wrote was unique, visitor-facing work.
+
+The component pipeline keeps the model on what is specific to a customer (the design system, the words, the art and the composition) and lets the builder produce the rest deterministically. The same studio recipe now completes in about a minute of model time, with every page and artwork written at the same time. See [[*Measured runs][measured runs]] for current numbers.
+
+* The pipeline
+
+#+begin_src yaml
+pipeline:
+  steps:
+    - {id: plan, type: plan, instructions: ...}
+    - {id: pages, type: pages, options: {parallel: 12}, instructions: ...}
+    - id: acceptance
+      type: validate
+      options: {required: [...], checks: [...]}
+    - {id: build-notes, type: prune, options: {prefixes: [site/]}}
+#+end_src
+
+1. =plan= makes one model call and stores =site/plan.json=: design tokens, optional web fonts, brand, navigation, footer, voice, the artwork list and every route with a title, meta description and a short brief. Mechanical token misses are repaired natively (see [[*Plan repair][plan repair]]); anything else is rejected with every problem listed, and retried.
+2. =pages= reads the plan and writes one page specification per route and one SVG per planned artwork, all at once on worker threads, up to =options.parallel= (1 to 16, default 6) in flight. Each answer is checked on the step thread; a rejected answer is retried alone with its exact rejection. When every job is accepted the builder composes the whole site, runs the immediately following =validate= steps on the candidate, and sends a failure back to the one page that caused it. Nothing reaches the project until the composed site passes.
+3. =validate= checks the composed files as with any recipe.
+4. =prune= with =prefixes: [site/]= removes the plan and specifications before publication.
+
+=pages= with =options.mode: review= is an optional second pass: each writer receives its current specification and returns an improved one. Artwork is kept.
+
+Both steps are AI steps. They use the recipe's =ai= settings and a per-step =ai= override, like generation steps. They need a catalog with =spec_system= and the =plan=, =page=, =art= and =page-review= stages; replacement catalogs without them fail preflight. They generate new sites only; revise an existing project with generation steps.
+
+* What the builder produces
+
+From the plan, one specification per route and the artwork, =ls_components_compose()= renders:
+
+- every planned page from the shared layout: skip link, header, visible primary navigation with =aria-current=, one =h1= (the first section's heading), footer, title, meta description, Open Graph tags and, when a site address is known, a canonical URL;
+- the built-in =404.html=, =privacy.html= and =terms.html=, marked =noindex=, with honest draft wording;
+- =styles.css=: tokens as custom properties, the base stylesheet, only the components that pages use, then the plan's signature CSS;
+- =site.js=: the navigation enhancement plus the scripts of components that pages use;
+- =robots.txt=, and =sitemap.xml= with the site address.
+
+The site address comes from =options.base_url= on the pages step, else an =https://= =site.contact.url=. Without one there are no canonicals and no sitemap.
+
+Navigation is visible without JavaScript at every width; =site.js= only adds a menu button on narrow screens after it initializes. A page never ships a folded-away desktop menu.
+
+* The component library
+
+Files live in =data/components/= and are embedded by =data/resources.xml=:
+
+| File | Role |
+|------+------|
+| =catalog.yaml= | Components, variants and typed slots; the source of the model-facing reference |
+| =NAME.html= | Section template in the Mustache subset below |
+| =NAME.css=, =NAME.js= | Optional styles and behavior, included only when a page uses the component |
+| =layout.html=, =section.html= | Page shell and section wrapper |
+| =base.css=, =nav.js= | Shared styles and the navigation enhancement |
+| =plan.schema.json= | Response schema for a plan |
+| =pages/*.json= | Built-in utility page specifications |
+
+Components: =hero=, =text=, =article=, =features=, =cards=, =filter=, =media=, =quote=, =cta=, =faq=, =facts=, =pricing=, =gallery=, =form=, =links= and =custom=. =libresite --preview pages -r RECIPE= prints the full reference each writer receives.
+
+** Slot types
+
+| Type | Value | Rendering |
+|------+-------+-----------|
+| text | string | HTML-escaped |
+| rich | string in the rich-text subset | paragraphs, lists, strong, emphasis, code and checked links |
+| link | ={href, label}= | =href= must be a planned route, =#id= on the page, =mailto:=, =tel:= or =https://= |
+| links | list of link objects | the first is the primary action |
+| image | ={src, alt}= | =src= must be planned art; width and height come from its ratio |
+| items | list of objects with declared fields | converted recursively |
+| fields | form fields | labeled controls with hints, errors and =aria-describedby= |
+| choice, flag | listed value, boolean | as given |
+| html | well-formed XHTML fragment (=custom= only) | sanitized: no scripts, forms, =h1=, style attributes, handlers or remote URLs |
+
+Model text is data: plain slots are always escaped and rich text cannot emit raw HTML.
+
+** Adding a component
+
+Add an entry to =catalog.yaml=, write =NAME.html= and optional =NAME.css= and =NAME.js=, and list the files in =data/resources.xml=. No C changes are needed. Rules that span slots (for example "split heroes need art") belong in =check_component_rules()= in =src/core/ls-components.c=. Run =make tests=: the catalog is validated at load, and =/components/catalog= checks that the reference names every component.
+
+Templates receive, besides the converted slots: =component=, =variant=, =v_VARIANT= (true), =id=, =htag= (=h1= for the first section, else =h2=), =subtag=, =has_SLOT= for list slots, =has_text=, the interface strings (for example =required_label=), and per-component helpers: =n= and =n2= on items, =part_id= on article parts, =key= and =category_key= in =filter=, and the form view (=form_id=, =local=, =mailto=, =endpoint=, and per field =fid=, =describedby=, =is_input= and friends). Headings use =id="{{id}}-h"= so the section wrapper can label itself.
+
+** Template subset
+
+=ls_template_render()= supports ={{name}}= (escaped), ={{{name}}}= and ={{&name}}= (verbatim), ={{#name}}= sections over lists, objects and truthy values, ={{^name}}= inverted sections, ={{! comments }}=, ={{.}}= and dotted names resolved outward through the context stack. Malformed templates fail as =LS_ERROR_INVALID= and never produce partial output. There are no partials, lambdas or delimiter changes.
+
+* Plan contract
+
+Required: =name=, =tokens=, =nav=, =pages=, =art= (may be empty). Optional: =tagline=, =lang=, =fonts=, =brand=, =action=, =footer=, =voice=, =css= and =ui= (interface strings for a non-English site).
+
+- Tokens: seven =#rrggbb= colors with WCAG AA text pairs (ink and muted on paper and surface, accent_ink on accent, all 4.5:1), three font stacks of installed or generic families, and numeric scale, spacing, border, radius and heading settings within documented ranges.
+- Fonts: up to three open-source families served by Bunny Fonts; the builder writes the stylesheet URL. Omit them when a brief forbids remote fonts.
+- Routes are flat lowercase =.html= names including =index.html=; utility routes are built in and cannot be planned. Every =.html= path named by a =validate= step must be planned.
+- Art is =assets/NAME.svg= with a ratio and a brief. Artwork must be a standalone SVG with a =viewBox= and the SVG namespace, under 256 KiB, with no scripts, foreign content, handlers, embedded images, stylesheets or external references.
+- Plan and page CSS may not use =@import=, =</=, script URLs or =url()= outside =assets/= and =#ids=; braces must balance.
+
+** Plan repair
+
+=ls_components_repair_plan()= fixes mechanical misses before the plan is checked, so they never cost a model call: failing text colors move toward black or white only as far as 4.5:1 needs (a mid-tone accent is deepened when its text color cannot reach it), and numeric tokens clamp into range. The step reports repairs as progress. Everything else is the model's to fix.
+
+* Parallel execution and threads
+
+Worker threads only call =ls_provider_dispatch()=, which performs the transport call without emitting signals. The step thread pops each result, records usage with =ls_provider_record_usage()=, checks the answer and emits =progress=, so every pipeline, step and provider signal still runs on the calling thread. The first job to exhaust its retries cancels the rest, and the step returns only after every worker has finished. A cancelled run leaves the project untouched.
+
+A provider used by a parallel =pages= step must support concurrent =generate= calls. The bundled =LsAiProvider= does: each call has its own client and ai-glib waits on a private main context. Set =parallel: 1= for a transport that cannot.
+
+Usage for a pages step counts every call, so =attempts= is the number of calls and =retries= is =attempts - 1= by the usage record invariant, not the number of rejected answers. Elapsed time is the step's wall time.
+
+* Checkpoints
+
+A composed recipe's checkpoint fingerprint includes the component library digest, so changed templates or styles cannot resume against output rendered by an older library. Sealed packages do not yet archive the component library the way they archive scaffold bytes; a package whose recipe uses =pages= renders with the installed library.
+
+* Measured runs
+
+| Date | Recipe | Wall time | Notes |
+|------+--------+-----------+-------|
+| 2026-09-28 | studio (bundle pipeline) | 28 to 37 min | eight serial calls; resends and retyping |
+| 2026-09-28 | studio (composed) | 6 min 50 s | first attempt: 18 KB plan with long briefs and a contrast retry (now repaired natively); pages 76 s, bounded by one artwork |
+| 2026-09-28 | studio (composed) | 60 s | compact briefs: plan 35 s, pages and art 24 s, native steps under 1 s; no retries |
+| 2026-09-28 | studio (bundled recipe, gate approved) | 53 s | final code; slowest page 16 s |
+
+These are single live runs on Claude Code with the default model. They establish timing, not design quality; a person must still look at every delivered site.

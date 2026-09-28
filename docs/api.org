@@ -68,6 +68,8 @@ Timeout, unlimited and approvals are execution-only: they do not change =ls_reci
 | =ls_prompts_get_system(self)= | none | Shared system prompt |
 | =ls_prompts_set_max_bytes(self, max_bytes)= | — | Admission cap; =0= unlimited; not part of identity |
 | =ls_prompts_render(self, recipe, step, context, error)= | full, nullable | Task prompt for one generation step |
+| =ls_prompts_get_spec_system(self)= | none, nullable | System prompt for component steps, or NULL |
+| =ls_prompts_render_spec(self, recipe, step, stage, reference, task, error)= | full, nullable | Compact component-step prompt; see [[file:prompts.org][prompts.org]] |
 
 A replacement catalog is complete: there is no merge with embedded styles, stages or stacks. Catalog schema lives in [[file:prompts.org][prompts.org]].
 
@@ -122,7 +124,9 @@ Signals (calling thread, zero-based indices): =step-started= (id, index), =step-
 
 Implement =LsProviderInterface.generate=: return an owned UTF-8 JSON file-bundle string or NULL with an error. Eight reserved vtable slots exist for ABI growth. Call through =ls_provider_generate()= so dispatch wrapping, cancellation precedence and usage accounting apply.
 
-=LsProvider::usage= fires after each dispatched call with borrowed provider, model, input-byte and output-byte values. Do not share a provider across concurrent executions. Custom steps that bypass the wrapper are not counted.
+=LsProvider::usage= fires after each dispatched call with borrowed provider, model, input-byte and output-byte values. Do not share a provider across concurrent pipeline executions. Custom steps that bypass the wrapper are not counted.
+
+=ls_provider_dispatch(self, settings, system, prompt, &bytes_in, &bytes_out, cancellable, error)= performs the same call and normalization without emitting =usage=, for worker threads; report the bytes afterwards with =ls_provider_record_usage(self, settings, bytes_in, bytes_out)= on the step thread. A parallel =pages= step calls =generate= concurrently from worker threads, so a provider used with =parallel= above 1 must allow that; the bundled adapter does. A string =json_schema= member in the settings replaces the file-bundle response schema for adapters that support one.
 
 =ls_ai_provider_new()= constructs the ai-glib CLI adapter (Codex, Claude Code, Grok Build, Cursor, Antigravity). Claude Code calls run answer-only (only the response-schema tool; no MCP servers, hooks, skills, user configuration or permission bypass); the other adapters keep their permission bypass. See [[file:operations.org][operations.org]]. =ls_ai_provider_set_debug()= is transport configuration, not recipe state. The stock CLI uses this adapter; embedders may inject any =LsProvider=.
 
@@ -145,7 +149,30 @@ Built-in final types and helpers:
 | =ls_gate_step_check_options(options, error)= | Optional =message= and =review= paths |
 | =ls_gate_step_preview(options, error)= | Human-readable review text |
 | =LS_TYPE_PRUNE_STEP= | Removes listed files that exist; no provider call |
-| =ls_prune_step_check_options(options, error)= | Required =paths=: 1..4096 unique safe relative paths |
+| =ls_prune_step_check_options(options, error)= | =paths= (1..4096 unique safe relative paths) and/or =prefixes= (safe directories ending in =/=) |
+| =LS_TYPE_PLAN_STEP=, =LS_TYPE_PAGES_STEP= | Component steps; see [[file:components.org][composed sites]] |
+| =ls_pages_step_check_options(options, error)= | =parallel= 1..16, =mode= write or review, =base_url= https |
+| =ls_spec_step_check(prompts, recipe, step, error)= | Preflight: catalog stages, options and a preceding plan |
+| =ls_spec_step_preview(prompts, recipe, step, error)= | Plan prompt, or the writers' contract and reference |
+
+* Components
+
+=LsComponents= is the immutable, thread-safe component library ([[file:components.org][components.org]]).
+
+| Function | Transfer | Role |
+|----------+----------+------|
+| =ls_components_new(error)= | full, nullable | Load and validate the embedded catalog |
+| =ls_components_get_digest(self)= | none | SHA-256 of every component byte, bound into checkpoints |
+| =ls_components_describe(self)= | full | Model-facing component reference |
+| =ls_components_get_plan_schema(self)= | none | Plan response schema |
+| =ls_components_dup_page_schema(self)=, =ls_components_dup_art_schema(self)= | full | Page and artwork response schemas |
+| =ls_components_repair_plan(self, plan)= | full, nullable | Fix contrast and numeric ranges in place; NULL when nothing changed |
+| =ls_components_check_plan(self, plan, error)= | — | Every plan problem, one per line |
+| =ls_components_check_page(self, plan, path, page, error)= | — | Every page-specification problem, one per line |
+| =ls_components_check_art(svg, error)= | — | Standalone, safe SVG |
+| =ls_components_compose(self, plan, pages, base_url, error)= | full, nullable | File bundle for the whole site |
+| =ls_components_render_rich(text, error)= | full, nullable | Rich-text subset to escaped HTML |
+| =ls_template_render(source, view, error)=, =ls_template_escape(text)= | full | Mustache subset and HTML escaping |
 
 CLI plugins export =gboolean ls_plugin_register(LsPipeline *pipeline, GError **error)=. See [[file:architecture.org][architecture.org]] for the complete plugin example and trust model.
 
