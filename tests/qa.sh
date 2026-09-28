@@ -14,7 +14,7 @@ trap 'rm -rf -- "$test_dir"' EXIT
 "$binary" --help | rg -q -- '--approve'
 "$binary" -r "$root/recipes/landing.yaml" --preview design-gate > "$test_dir/gate-preview"
 rg -q '^GATE$' "$test_dir/gate-preview"
-rg -q 'docs/design.org' "$test_dir/gate-preview"
+rg -q 'site/plan.json' "$test_dir/gate-preview"
 mkdir -p "$test_dir/bad" "$test_dir/good"
 printf '%s\n' '<html><title>x</title></html>' > "$test_dir/bad/index.html"
 if "$binary" --qa "$test_dir/bad" > "$test_dir/bad-report"

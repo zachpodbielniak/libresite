@@ -62,7 +62,15 @@ do
 	# A valid recipe alone does not establish that its prompt keys exist.
 	while IFS=$'\t' read -r _ step module _ _
 	do
-		if [[ "$module" != validate && "$module" != scaffold && "$module" != gate && "$module" != prune ]]
+		if [[ "$module" == plan || "$module" == pages ]]
+		then
+			# Component steps carry their own compact contract and the catalog.
+			"$binary" --recipe "$recipe" --preview "$step" > "$test_dir/preview"
+			rg -q 'RESPONSE PROTOCOL' "$test_dir/preview"
+			rg -q 'TRUTHFULNESS' "$test_dir/preview"
+			rg -q 'COMPONENTS' "$test_dir/preview"
+			rg -q 'ACCESSIBILITY' "$test_dir/preview"
+		elif [[ "$module" != validate && "$module" != scaffold && "$module" != gate && "$module" != prune ]]
 		then
 			"$binary" --recipe "$recipe" --preview "$step" > "$test_dir/preview"
 			rg -q 'CURRENT PROJECT' "$test_dir/preview"
@@ -79,7 +87,7 @@ do
 		fi
 	done < "$test_dir/plan"
 done
-"$binary" --recipe "$root/recipes/landing.yaml" --preview design > "$test_dir/preview"
+"$binary" --recipe "$root/recipes/landing.yaml" --preview plan > "$test_dir/preview"
 rg -q 'DESIGN DIRECTION' "$test_dir/preview"
 "$binary" --recipe "$root/recipes/application.yaml" --preview backend > "$test_dir/app-backend"
 rg -q 'localhost' "$test_dir/app-backend"

@@ -29,7 +29,13 @@ do
 	(cd /tmp && "$binary" --recipe "$recipe" --plan) > "$test_dir/plan"
 	while IFS=$'\t' read -r _ step module _ _
 	do
-		if [[ "$module" != validate && "$module" != scaffold && "$module" != gate && "$module" != prune ]]
+		if [[ "$module" == plan || "$module" == pages ]]
+		then
+			(cd /tmp && "$binary" --recipe "$recipe" --preview "$step") > "$test_dir/preview"
+			rg -q 'RESPONSE PROTOCOL' "$test_dir/preview"
+			rg -Fq 'SUPPLIED DATA' "$test_dir/preview"
+			rg -q 'COMPONENTS' "$test_dir/preview"
+		elif [[ "$module" != validate && "$module" != scaffold && "$module" != gate && "$module" != prune ]]
 		then
 			(cd /tmp && "$binary" --recipe "$recipe" --preview "$step") > "$test_dir/preview"
 			rg -q 'CURRENT PROJECT' "$test_dir/preview"
@@ -42,7 +48,7 @@ do
 		fi
 	done < "$test_dir/plan"
 done
-(cd /tmp && "$binary" --recipe "$root/recipes/landing.yaml" --preview design) > "$test_dir/preview"
+(cd /tmp && "$binary" --recipe "$root/recipes/landing.yaml" --preview plan) > "$test_dir/preview"
 rg -q 'RESPONSE PROTOCOL' "$test_dir/preview"
 # The shipped catalog must match the embedded defaults outside the checkout,
 # including styles absent from bundled recipes and the generic generate stage.

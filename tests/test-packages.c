@@ -379,8 +379,12 @@ sku_acceptance(gconstpointer data){
 	g_assert_no_error(error);
 	g_assert_true(ls_validate_step_check_options(options, &error));
 	check_scope(sku, required);
-	if (!g_str_equal(sku, "application"))
-		g_assert_cmpstr(ls_string(json_array_get_object_element(steps, 0), "type"), ==, "scaffold");
+	/* Static SKUs start from native files: the scaffold, or a plan whose
+	 * composed site includes the built-in utility pages. */
+	if (!g_str_equal(sku, "application")) {
+		const gchar *first = ls_string(json_array_get_object_element(steps, 0), "type");
+		g_assert_true(g_str_equal(first, "scaffold") || g_str_equal(first, "plan"));
+	}
 	for (i = 0; i < json_array_get_length(required); i++) {
 		const gchar *file_path = json_array_get_string_element(required, i);
 		g_autoptr(GString) content = g_string_new("Positive native fixture\n");
