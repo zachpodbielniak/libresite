@@ -28,8 +28,9 @@ ls_scaffold_step_check_options(JsonObject *options, GError **error){
  * size and directory conflicts transactionally; seeds always retain ownership. */
 gchar *
 ls_scaffold_step_render(JsonObject *options, LsContext *context, GError **error){
-	const gchar *paths[] = {"Makefile", "404.html", "privacy.html", "terms.html",
-		"docs/contact.org", "AGENTS.md", "tests/scaffold.sh"};
+	/* Visitor-facing utility pages only: a static site ships no build, test or
+	 * agent files, so no model tokens are spent maintaining them either. */
+	const gchar *paths[] = {"404.html", "privacy.html", "terms.html"};
 	g_autoptr(JsonBuilder) builder = json_builder_new();
 	g_autoptr(JsonNode) root = NULL;
 	guint i;

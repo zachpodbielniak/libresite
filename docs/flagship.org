@@ -42,14 +42,13 @@ make -j4
 ./build/release/libresite -r recipes/flagship.yaml -o ./fieldwork-site
 #+end_src
 
-After reading the generated README.org, docs/testing.org and tests/check.sh:
+The site has no build step. Preview it locally:
 
 #+begin_src bash
-bash ./fieldwork-site/tests/check.sh
 python3 -m http.server 8000 --bind 127.0.0.1 --directory ./fieldwork-site
 #+end_src
 
-Open =http://127.0.0.1:8000=. Generated code is not executed by libresite. Read the generated script before running it. Python is only a convenient local HTTP preview server, not a build dependency or generated backend. Fedora package =python3= supplies it. The builder packages are listed in [[file:building.org][building.org]].
+Open =http://127.0.0.1:8000=. Generated code is not executed by libresite. Python is only a convenient local HTTP preview server, not a build dependency or generated backend. Fedora package =python3= supplies it. The builder packages are listed in [[file:building.org][building.org]].
 
 * Stages, contracts and size
 

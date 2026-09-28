@@ -1,0 +1,35 @@
+#+title: What a generated site delivers
+#+description: The visitor-facing file boundary for static sites, build notes, and why applications differ
+#+authors: Libresite
+#+categories: libresite, product, generation
+#+created: 2026-09-28T00:00:00-04:00
+#+updated: 2026-09-28T00:00:00-04:00
+#+version: 0.1.0
+
+* The boundary
+
+A generated static site ships only what visitors load: HTML pages, stylesheets, scripts, images, fonts and =robots.txt=, plus =sitemap.xml= when the brief supplies a real deployment URL. It contains no =README.org=, =AGENTS.md=, =LICENSE=, =Makefile=, test or build scripts, configuration files or project documentation.
+
+The catalog's =DELIVERABLE BOUNDARY= section tells every stage this, and the bundled static recipes' acceptance lists no longer require those files. The native =scaffold= step emits only =404.html=, =privacy.html= and =terms.html=.
+
+* Why
+
+The first live runs (2026-09-26/27) measured what the model spent its time on. In a finished eight-page studio site, documentation and configuration were 41% of the bytes and model-written test scripts another 16%. Only about a quarter of what the model wrote was unique, visitor-facing work. Generation time follows output length at roughly 110 tokens a second, so those files cost most of the wait.
+
+They also did not work. In every live run at least one model-written test was broken: an accessibility test calling a non-existent =pa11y --viewport= option, a route check expecting a link that did not exist, and an SEO test with a syntax error in its embedded Python. Quality checking belongs to the builder (native =validate= predicates, =--qa=), not to scripts the model writes about its own output.
+
+* Build notes
+
+=docs/product.org= and =docs/design.org= are still produced. They are the review material for the design gate and the contract later steps read. A final native =prune= step removes them, and any model-written =docs/polish.org= or =docs/review.org=, before publication. They remain in the checkpoint, so resume and the gate's review export are unaffected. See [[file:recipe-format.org::*Prune][the prune module]].
+
+* What still ships quality
+
+Customer-visible quality requirements are unchanged: accessible semantics and ARIA, mobile and desktop layouts, per-page titles, descriptions, canonicals when a URL is known, structured data, noindex previews, and the honest noindex privacy/terms drafts. Only the files a visitor never loads are gone.
+
+* Applications differ
+
+The C/GLib application SKU is software that someone builds, runs and maintains. Its stack contract (=stacks.c-glib= in the catalog) keeps README, =AGENTS.md=, =docs/*.org=, =config/seo.yaml=, =tests/seo.sh=, accessibility tests and the rest. =recipes/application.yaml= is unchanged by this boundary.
+
+* Compatibility
+
+The static SKU recipes moved to release =1.1.0=: their acceptance contract changed. Sealed packages keep their pinned recipe, catalog and scaffold bytes, so an order sealed on =1.0.0= still generates and resumes with the old deliverables. Checkpoints started with an earlier catalog or template set must restart, per the normal fingerprint rules.

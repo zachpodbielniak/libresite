@@ -166,7 +166,7 @@ step_started(LsPipeline *pipeline, const gchar *id, guint index, gpointer data){
 	g_autoptr(JsonObject) settings = ls_recipe_resolve_ai(events->recipe, config);
 	const gchar *type = ls_string(config, "type");
 	gboolean native = g_str_equal(type, "validate") || g_str_equal(type, "gate") ||
-		g_str_equal(type, "scaffold");
+		g_str_equal(type, "scaffold") || g_str_equal(type, "prune");
 	(void)pipeline;
 	events->id = ls_string(config, "id");
 	events->index = index;
@@ -533,7 +533,7 @@ main(int argc, char **argv){
 		return finish_events(&events, 0);
 	}
 	if (list) {
-		g_print("brief\ndesign\nfrontend\nbackend\ndatabase\nreview\ngenerate\nvalidate\nscaffold\ngate\n");
+		g_print("brief\ndesign\nfrontend\nbackend\ndatabase\nreview\ngenerate\nvalidate\nscaffold\ngate\nprune\n");
 		return finish_events(&events, 0);
 	}
 	if (form_path != NULL) {
@@ -642,7 +642,8 @@ main(int argc, char **argv){
 			g_autoptr(JsonObject) settings = ls_recipe_resolve_ai(recipe, step);
 			gboolean native = g_str_equal(ls_string(step, "type"), "validate") ||
 				g_str_equal(ls_string(step, "type"), "scaffold") ||
-				g_str_equal(ls_string(step, "type"), "gate");
+				g_str_equal(ls_string(step, "type"), "gate") ||
+				g_str_equal(ls_string(step, "type"), "prune");
 			/* Preview deterministic predecessors without running AI stages. This
 			 * is the same bundle the native step commits during execution. */
 			if (preview != NULL && g_str_equal(ls_string(step, "type"), "scaffold")) {
@@ -671,6 +672,22 @@ main(int argc, char **argv){
 				if (text == NULL)
 					goto fail;
 				g_print("%s", text);
+				return finish_events(&events, 0);
+			}
+			/* A prune is fully described by its path list; there is no prompt. */
+			if (preview != NULL && g_str_equal(ls_string(step, "type"), "prune") &&
+				g_str_equal(preview, ls_string(step, "id"))) {
+				JsonNode *node = json_object_get_member(step, "options");
+				JsonObject *prune = node != NULL && JSON_NODE_HOLDS_OBJECT(node)
+					? json_node_get_object(node) : NULL;
+				JsonArray *paths;
+				guint j;
+				if (!ls_prune_step_check_options(prune, &error))
+					goto fail;
+				paths = json_object_get_array_member(prune, "paths");
+				g_print("PRUNE\nRemoved before publication when present:\n");
+				for (j = 0; j < json_array_get_length(paths); j++)
+					g_print("%s\n", json_array_get_string_element(paths, j));
 				return finish_events(&events, 0);
 			}
 			if (preview != NULL && g_str_equal(preview, ls_string(step, "id"))) {

@@ -106,7 +106,7 @@ A replacement catalog is complete: there is no merge with embedded styles, stage
 
 * Pipeline
 
-=ls_pipeline_new(provider, prompts)= returns a pipeline with the ten built-in module names already registered: =brief=, =design=, =frontend=, =backend=, =database=, =review=, =generate=, =scaffold=, =validate= and =gate=. Duplicate names and abstract types are errors.
+=ls_pipeline_new(provider, prompts)= returns a pipeline with the eleven built-in module names already registered: =brief=, =design=, =frontend=, =backend=, =database=, =review=, =generate=, =scaffold=, =validate=, =gate= and =prune=. Duplicate names and abstract types are errors.
 
 | Function | Role |
 |----------|------|
@@ -144,6 +144,8 @@ Built-in final types and helpers:
 | =LS_TYPE_GATE_STEP= | Stops until =ls_recipe_approve()= / =ls_recipe_set_approve_all()= |
 | =ls_gate_step_check_options(options, error)= | Optional =message= and =review= paths |
 | =ls_gate_step_preview(options, error)= | Human-readable review text |
+| =LS_TYPE_PRUNE_STEP= | Removes listed files that exist; no provider call |
+| =ls_prune_step_check_options(options, error)= | Required =paths=: 1..4096 unique safe relative paths |
 
 CLI plugins export =gboolean ls_plugin_register(LsPipeline *pipeline, GError **error)=. See [[file:architecture.org][architecture.org]] for the complete plugin example and trust model.
 

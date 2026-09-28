@@ -78,14 +78,13 @@ pipeline:
       type: generate
       prompt: interactions
       options:
-        files: [site.js, tests/check.sh, docs/testing.org, README.org]
+        files: [site.js]
       instructions: >-
-        Wire relevant HTML pages to shared deferred site.js, updating markup as needed. Implement category filtering and reset, visible pressed state and polite result count; retain both projects without JS. Implement local brief validation, selectable plain-text preview and a real fieldwork-brief.txt download using Blob/object URLs. Preserve line breaks and use textContent, never user-controlled innerHTML. No localStorage, network requests or clipboard permission. Reset clears preview and feedback. Repeated downloads work; free object URLs without racing downloads. Handle Unicode and whitespace-only required fields; associate errors with fields. Provide a ShellCheck-clean Bash source check for required files, local route/asset references using a documented convention, and script inclusion. It must fail on broken references, not just print success; do not claim it is a browser test. Document steps and expected results for filtering/reset, invalid/valid/repeated export, no JS, keyboard, reduced motion, 360/768/1440px, 200 percent zoom and offline loading. README.org explains python3 -m http.server and static 404 hosting limits.
+        Wire relevant HTML pages to shared deferred site.js, updating markup as needed. Implement category filtering and reset, visible pressed state and polite result count; retain both projects without JS. Implement local brief validation, selectable plain-text preview and a real fieldwork-brief.txt download using Blob/object URLs. Preserve line breaks and use textContent, never user-controlled innerHTML. No localStorage, network requests or clipboard permission. Reset clears preview and feedback. Repeated downloads work; free object URLs without racing downloads. Handle Unicode and whitespace-only required fields; associate errors with fields. Document steps and expected results for filtering/reset, invalid/valid/repeated export, no JS, keyboard, reduced motion, 360/768/1440px, 200 percent zoom and offline loading.
     - id: interaction-check
       type: validate
       options:
-        required: [site.js, tests/check.sh, docs/testing.org, README.org]
-        checks: [{path: tests/check.sh, shellcheck: true}]
+        required: [site.js]
     - id: polish
       type: generate
       prompt: polish
@@ -94,7 +93,7 @@ pipeline:
     - id: review
       type: review
       instructions: >-
-        Audit all required paths and local links, shared assets, filter/export behavior, no-JavaScript fallbacks and the generated source test. Fix defects in full. Check illustrative-work disclosures and no action claims to contact anyone. Separate source-established findings from unexecuted browser tests. Do not report AAA accessibility certification or verified visual quality. Preserve context headroom.
+        Audit all required paths and local links, shared assets, filter/export behavior, no-JavaScript fallbacks and the generated source test. Fix defects in full. Check illustrative-work disclosures and no action claims to contact anyone. Do not report AAA accessibility certification or verified visual quality. Preserve context headroom.
     - id: acceptance
       type: validate
       options:
@@ -112,27 +111,13 @@ pipeline:
           - assets/atlas.svg
           - assets/common.svg
           - assets/mark.svg
-          - tests/check.sh
-          - README.org
-          - AGENTS.md
-          - Makefile
           - privacy.html
           - terms.html
-          - docs/contact.org
-          - tests/scaffold.sh
           - docs/product.org
           - docs/design.org
-          - docs/testing.org
-          - docs/polish.org
-          - docs/review.org
-          - config/seo.yaml
-          - docs/seo.org
-          - tests/seo.sh
           - robots.txt
-          - scripts/prepare-seo.sh
-        # Static analysis of emitted scripts; ShellCheck never runs them.
-        checks:
-          - {path: tests/check.sh, shellcheck: true}
-          - {path: tests/seo.sh, shellcheck: true}
-          - {path: tests/scaffold.sh, shellcheck: true}
-          - {path: scripts/prepare-seo.sh, shellcheck: true}
+    # Build notes guide later steps; the delivered site does not include them.
+    - id: build-notes
+      type: prune
+      options:
+        paths: [docs/product.org, docs/design.org, docs/polish.org, docs/review.org]

@@ -24,7 +24,7 @@ pipeline:
     - id: acceptance
       type: validate
       options:
-        required: [index.html, Makefile, 404.html, privacy.html, terms.html, docs/contact.org, AGENTS.md]
+        required: [index.html, 404.html, privacy.html, terms.html]
 #+end_src
 
 =options= may be omitted or empty. Unknown keys and profiles, including non-string profiles, fail preflight before output workspace creation or provider use. AI settings do not apply to native execution. Put refinements in subsequent generation stages or supply exact files through =seed_artifacts=.
@@ -32,19 +32,15 @@ pipeline:
 * Emitted files
 | Path | Contract |
 |------+----------|
-| =Makefile= | Static all/tests/test, clean, help and license targets; no compiler or package manager |
-| =tests/scaffold.sh= | Anchored, ShellCheck-clean presence check; fails for missing/empty required files |
 | =404.html= | Semantic, noindex recovery page with its own meta description; root-relative home link for nested missing URLs |
 | =privacy.html= | Clearly marked noindex draft with its own meta description, requiring actual operator/data-handling facts |
 | =terms.html= | Clearly marked noindex draft with its own meta description, requiring reviewed operator/service terms |
-| =docs/contact.org= | Optional same-origin POST contract, field bounds, responses, failure and accessibility behavior |
-| =AGENTS.md= | Preserve boilerplate, integrate unique design, extend real commands and report tests honestly |
 
 The legal pages are shells, not jurisdiction-specific advice or completed policies. They assert no invented retention, analytics, liability or service facts. Keep them noindex and out of public sitemaps until reviewed. Supplied legal text at the exact emitted paths is preserved. The model may adapt layout and language but must not replace missing facts with invented policies.
 
-The contact document implements no endpoint and adds no form. A brief excluding contact forms continues to exclude them. Enabling submission requires a configured backend and real delivery or durable acceptance; a static page must not simulate a successful send. The contract specifies POST /contact, name/email/message bounds, HTML redirect and optional JSON acceptance responses, errors, CSRF/origin/rate-limit handling and keyboard/no-JavaScript tests. Adapt an actual backend explicitly rather than silently assuming a service exists.
+The scaffold adds no contact form. The catalog's =CONTACT FORMS= section tells the model to omit submission controls unless a real endpoint and recipient are configured, and never to simulate a successful send. Until 2026-09-28 the scaffold also emitted a =Makefile=, a presence test, =docs/contact.org= and =AGENTS.md=; a static site now ships none of them (see [[file:deliverables.org][deliverables]]). Sealed packages keep their archived template set.
 
-The 404 home link assumes root hosting. A subpath deployment must replace it with the configured base path. A static host must serve this file with status 404; opening the file is not an HTTP routing test. Generated Makefile tests only establish file presence; later generation must add project-specific tests without claiming browser execution. Fedora packages for those baseline checks are =make=, =bash= and =coreutils=; the builder's existing development dependencies are unchanged.
+The 404 home link assumes root hosting. A subpath deployment must replace it with the configured base path. A static host must serve this file with status 404; opening the file is not an HTTP routing test.
 
 * Preservation, failure and resume
 Each exact existing path is left byte-for-byte unchanged, including executable intent. Repeated scaffolding is a no-op when all paths exist. A seed Makefile remains its owner's build contract, so adding the scaffold check to an existing build remains a project integration task. Existing files are not silently repaired or replaced, even if empty.

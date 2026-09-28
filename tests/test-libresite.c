@@ -1082,6 +1082,16 @@ acceptance_sentinel(JsonObject *acceptance, const gchar *path){
 	return ls_json_encode(value);
 }
 
+/* The native acceptance step: the last step that is not a trailing prune. */
+static JsonObject *
+acceptance_step(JsonArray *steps){
+	guint tail = json_array_get_length(steps);
+	while (tail > 1 && g_strcmp0(ls_string(json_array_get_object_element(steps, tail - 1), "type"),
+			"prune") == 0)
+		tail--;
+	return json_array_get_object_element(steps, tail - 1);
+}
+
 /* All stages receive verified API context; the demo rejects each missing or
  * empty required file. These sentinel bundles test presence, not app quality. */
 static void
@@ -1102,7 +1112,7 @@ application_stack_artifacts(void){
 	recipe = ls_recipe_new(yaml, NULL);
 	g_assert_nonnull(recipe);
 	steps = ls_recipe_get_steps(recipe);
-	acceptance = json_array_get_object_element(steps, json_array_get_length(steps) - 1);
+	acceptance = acceptance_step(steps);
 	required = json_object_get_array_member(json_object_get_object_member(acceptance, "options"), "required");
 	for (i = 0; i < G_N_ELEMENTS(contracts); i++) {
 		gboolean found = FALSE;
@@ -1160,10 +1170,14 @@ application_stack_artifacts(void){
 static void
 seo_artifacts(gconstpointer data){
 	const gchar *recipe_path = (const gchar *)data;
-	const gchar *paths[] = {
-		"config/seo.yaml", "docs/seo.org", "tests/seo.sh",
-		"robots.txt", "scripts/prepare-seo.sh"
-	};
+	/* Applications are maintained software and keep their SEO configuration,
+	 * guide and test; static sites ship only the visitor-facing robots.txt. */
+	const gchar *application_paths[] = {"config/seo.yaml", "docs/seo.org", "tests/seo.sh"};
+	const gchar *static_paths[] = {"robots.txt"};
+	const gchar *developer_files[] = {"README.org", "AGENTS.md", "Makefile", "config/seo.yaml",
+		"docs/seo.org", "tests/seo.sh", "tests/check.sh", "scripts/prepare-seo.sh"};
+	gboolean application = g_str_has_suffix(recipe_path, "/application.yaml");
+	const gchar **paths = application ? application_paths : static_paths;
 	g_autoptr(GError) load_error = NULL;
 	g_autofree gchar *yaml = NULL;
 	g_autoptr(LsRecipe) recipe = NULL;
@@ -1172,7 +1186,7 @@ seo_artifacts(gconstpointer data){
 	JsonArray *steps;
 	JsonObject *acceptance;
 	JsonArray *required;
-	guint count = g_str_has_suffix(recipe_path, "/application.yaml") ? 3 : G_N_ELEMENTS(paths);
+	guint count = application ? G_N_ELEMENTS(application_paths) : G_N_ELEMENTS(static_paths);
 	guint i;
 	guint j;
 	g_assert_true(g_file_get_contents(recipe_path, &yaml, NULL, &load_error));
@@ -1181,8 +1195,12 @@ seo_artifacts(gconstpointer data){
 	g_assert_no_error(load_error);
 	g_assert_nonnull(recipe);
 	steps = ls_recipe_get_steps(recipe);
-	acceptance = json_array_get_object_element(steps, json_array_get_length(steps) - 1);
+	acceptance = acceptance_step(steps);
 	required = json_object_get_array_member(json_object_get_object_member(acceptance, "options"), "required");
+	/* A static site must not be made to ship developer files again. */
+	for (i = 0; !application && i < G_N_ELEMENTS(developer_files); i++)
+		for (j = 0; j < json_array_get_length(required); j++)
+			g_assert_cmpstr(developer_files[i], !=, json_array_get_string_element(required, j));
 	/* Removing an SEO deliverable from a recipe must fail this test too. */
 	for (i = 0; i < count; i++) {
 		gboolean found = FALSE;

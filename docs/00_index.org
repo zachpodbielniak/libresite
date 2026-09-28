@@ -17,6 +17,7 @@
 - [[file:architecture.org][Architecture and extension API]]
 - [[file:api.org][Public C API]]
 - [[file:prompts.org][Prompt catalog, accessibility/ARIA, font and mobile/desktop defaults, and design provenance]]
+- [[file:deliverables.org][What a generated site delivers, and why docs and tests are not in it]]
 - [[file:seo.org][SEO defaults, private routes and production preparation]]
 - [[file:flagship.org][FIELDWORK multi-page example and quality checks]]
 - [[file:c-application.org][C applications: YAML, HTMX and ORM providers]]

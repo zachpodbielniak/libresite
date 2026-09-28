@@ -31,7 +31,7 @@ make DEBUG=1 ASAN=1 UBSAN=1 tests
 | =tests/cli.sh= | Five provider fixtures, resume, cancellation, debug, flags |
 | =tests/revision.sh= | Import, preview, publication and source-bound resume |
 | =tests/usage.sh= | =--price-usage= JSON against a fixed rate card |
-| =tests/scaffold.sh= | Native templates, previews and generated Makefile checks |
+| =tests/scaffold.sh= | Native templates and previews; no developer files in static output |
 | =tests/qa.sh= | Gate approval and published-tree QA |
 | =tests/verify.sh= | Clean release/debug builds, warning detector, ShellCheck |
 | =tests/install.sh= | Staged install, plugin, shared-library consumer, installed CLI |
@@ -63,7 +63,7 @@ Acceptance regression tests exercise syntactically valid provider bundles that o
 
 Fixture success establishes the builder's deterministic behavior and its use of ai-glib protocol surfaces. It does not prove that every installed CLI version accepts the same flags, that a particular account has access to an example model, or that a live model will obey a prompt. This implementation has not been evaluated by paying for live generation across all five providers.
 
-The generated site's =validate= stage checks required non-whitespace text (or nonempty binary bytes) and any configured literal-content and byte-size predicates. It is not a compiler, browser, HTML validator or accessibility checker. =libresite --qa DIR= adds a separate published-tree structural scan; it still does not execute generated tests. For a live acceptance run, create a new output with an authenticated provider, read its README, AGENTS.md and review report, compile/test its application, submit the primary form from both =http://127.0.0.1:PORT/= and =http://localhost:PORT/=, inspect narrow and wide viewports, follow the main workflow and verify keyboard/error states. Record actual evidence separately from model claims.
+The generated site's =validate= stage checks required non-whitespace text (or nonempty binary bytes) and any configured literal-content and byte-size predicates. It is not a compiler, browser, HTML validator or accessibility checker. =libresite --qa DIR= adds a separate published-tree structural scan; it still does not execute generated tests. For a live acceptance run, create a new output with an authenticated provider, for an application read its README and AGENTS.md and compile/test it; submit the primary form from both =http://127.0.0.1:PORT/= and =http://localhost:PORT/=, inspect narrow and wide viewports, follow the main workflow and verify keyboard/error states. Record actual evidence separately from model claims.
 
 GTest =/prompt/application-contracts= and CLI preview checks pin the loopback Host/Origin, =AGENTS.md= and first-start database instructions in the embedded catalog and =recipes/application.yaml=. They do not compile a generated application. A generated project's own HTTP tests must POST successfully with =Host: localhost:PORT=.
 

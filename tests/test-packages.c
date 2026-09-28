@@ -278,6 +278,33 @@ metadata_invalid(void){
 	}
 }
 
+/* A sold scope still ends at native acceptance; only prune steps, which can
+ * remove build notes but never add content, may follow it. */
+static void
+package_tail(void){
+	const gchar *tails[] = {
+		"    - {id: notes, type: prune, options: {paths: [docs/design.org]}}\n",
+		"    - {id: notes, type: prune, options: {paths: [docs/design.org]}}\n"
+		"    - {id: more, type: prune, options: {paths: [docs/product.org]}}\n",
+		"    - {id: late, type: generate}\n",
+		"    - {id: late, type: generate}\n"
+		"    - {id: notes, type: prune, options: {paths: [docs/design.org]}}\n"
+	};
+	guint i;
+	for (i = 0; i < G_N_ELEMENTS(tails); i++) {
+		g_autoptr(GError) error = NULL;
+		g_autofree gchar *text = g_strconcat(recipe_text, tails[i], NULL);
+		g_autoptr(LsRecipe) recipe = ls_recipe_new(text, &error);
+		if (i < 2) {
+			g_assert_no_error(error);
+			g_assert_nonnull(recipe);
+		} else {
+			g_assert_null(recipe);
+			g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+		}
+	}
+}
+
 /* Keep the promised route inventory independent of the recipes so deleting a
  * route from both site.pages and acceptance cannot make a scope regression pass. */
 static void
@@ -317,6 +344,16 @@ check_scope(const gchar *sku, JsonArray *required){
 	}
 }
 
+/* The native acceptance step: the last step that is not a trailing prune. */
+static JsonObject *
+acceptance_step(JsonArray *steps){
+	guint tail = json_array_get_length(steps);
+	while (tail > 1 && g_strcmp0(ls_string(json_array_get_object_element(steps, tail - 1), "type"),
+			"prune") == 0)
+		tail--;
+	return json_array_get_object_element(steps, tail - 1);
+}
+
 /* Exercise the actual final native validator on a positive text fixture, then
  * remove each promised file and break every literal predicate independently.
  * This proves source acceptance wiring, not model or browser quality. */
@@ -331,7 +368,7 @@ sku_acceptance(gconstpointer data){
 	g_autoptr(LsStep) step = g_object_new(LS_TYPE_VALIDATE_STEP, NULL);
 	g_autoptr(LsProvider) provider = LS_PROVIDER(g_object_new(package_provider_get_type(), NULL));
 	JsonArray *steps = ls_recipe_get_steps(recipe);
-	JsonObject *config = json_array_get_object_element(steps, json_array_get_length(steps) - 1);
+	JsonObject *config = acceptance_step(steps);
 	JsonObject *options = json_object_get_object_member(config, "options");
 	JsonArray *required = json_object_get_array_member(options, "required");
 	JsonArray *checks = json_object_get_array_member(options, "checks");
@@ -409,6 +446,7 @@ main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
 	g_test_add_func("/package/roundtrip", roundtrip);
 	g_test_add_func("/package/metadata-invalid", metadata_invalid);
+	g_test_add_func("/package/tail", package_tail);
 	g_test_add_func("/package/resume", resume_package);
 	g_test_add_func("/package/native-snapshot", native_snapshot);
 	for (i = 0; i < G_N_ELEMENTS(skus); i++) {

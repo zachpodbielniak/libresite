@@ -39,7 +39,7 @@ pipeline:
     - id: verify
       type: validate
       options:
-        required: [index.html, README.org]
+        required: [index.html, styles.css]
 #+end_src
 
 * Top-level fields
@@ -109,7 +109,20 @@ The native =validate= module calls no provider. It requires =options.required=, 
 
 The native =gate= module also calls no provider. It stops the pipeline, with CLI exit status 7 and library error =LS_ERROR_APPROVAL=, until =--approve STEP-ID= or =--approve-all= is supplied on a later resume. Optional =options.message= is the review prompt. Optional =options.review= lists unique existing files exported to =OUTPUT.libresite-work/review/STEP-ID/= when the gate fires. Approvals are execution-only and do not change checkpoint identity. Bundled recipes place =design-gate= between design/planning-check and implementation so a rejected direction cannot burn a frontend. Unattended runs use =--approve-all=.
 
-Generated sites must include =AGENTS.md= so a later coding agent can maintain and troubleshoot the output. Bundled recipes require that path in the final =validate= step. The file is Markdown on purpose: it is an agent instruction file, not project documentation. Project docs remain Org. For a loopback application, =AGENTS.md= and =README.org= must document both =127.0.0.1= and =localhost= as accepted Host/Origin names on the listening port.
+** Prune
+
+The native =prune= module removes files from the project without a provider call. =options.paths= is required: 1..4096 unique safe relative file paths, and no other keys. Listed files that exist are deleted through the ordinary transactional delete path; absent files are skipped, so the step is repeatable on resume and with seeds. =--preview STEP-ID= prints the path list.
+
+Bundled static recipes end with a =build-notes= prune of =docs/product.org=, =docs/design.org=, =docs/polish.org= and =docs/review.org=, so the design notes guide generation and the design gate but are not published. A sold package must end with native =validate= acceptance with nonempty checks, followed only by =prune= steps; prune can remove files but never add them. See [[file:deliverables.org][deliverables]].
+
+#+begin_src yaml
+    - id: build-notes
+      type: prune
+      options:
+        paths: [docs/product.org, docs/design.org]
+#+end_src
+
+Generated applications must include =AGENTS.md= so a later coding agent can maintain and troubleshoot the output; the application recipe requires that path in its final =validate= step. Static sites do not ship it (see [[file:deliverables.org][deliverables]]). The file is Markdown on purpose: it is an agent instruction file, not project documentation. Project docs remain Org. For a loopback application, =AGENTS.md= and =README.org= must document both =127.0.0.1= and =localhost= as accepted Host/Origin names on the listening port.
 
 For a generation step, =options= is open-ended task data understood by the model; it is not an executable instruction language. Two keys are also engine-enforced for prompt size: =files=, when it is a sequence of strings, and =context=, a sequence of 1..4096 unique nonempty glob strings. When either is present, the model receives a complete path manifest plus UTF-8 contents only for those paths, =docs/=, =config/=, =AGENTS.md= and =README.org=. Binary files stay in the manifest unless =context= names them. Stages without those keys still inline every UTF-8 file and keep binaries as manifest entries. For a plugin, its author defines and validates =options=. A native plugin can use the same artifact store as built-in generation.
 
@@ -158,7 +171,7 @@ Native =validate= steps accept optional =options.checks= alongside the mandatory
 
 #+begin_src yaml
 options:
-  required: [index.html, styles.css, README.org, AGENTS.md]
+  required: [index.html, styles.css, 404.html]
   checks:
     - path: index.html
       contains: ['lang="en"', 'name="viewport"', '<main']

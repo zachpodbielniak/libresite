@@ -120,4 +120,17 @@ gboolean ls_gate_step_check_options(JsonObject *options, GError **error);
  * Returns: (transfer full) (nullable): human-readable gate description
  */
 gchar *ls_gate_step_preview(JsonObject *options, GError **error);
+#define LS_TYPE_PRUNE_STEP (ls_prune_step_get_type())
+G_DECLARE_FINAL_TYPE(LsPruneStep, ls_prune_step, LS, PRUNE_STEP, LsStep)
+/**
+ * ls_prune_step_check_options:
+ * @options: (nullable) (transfer none): prune options
+ * @error: return location for an error
+ *
+ * Requires options.paths: 1..4096 unique safe relative file paths and no
+ * other keys. Does not access artifacts or mutate @options.
+ *
+ * Returns: whether native prune options are valid
+ */
+gboolean ls_prune_step_check_options(JsonObject *options, GError **error);
 G_END_DECLS

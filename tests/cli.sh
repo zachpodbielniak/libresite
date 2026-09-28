@@ -62,7 +62,7 @@ do
 	# A valid recipe alone does not establish that its prompt keys exist.
 	while IFS=$'\t' read -r _ step module _ _
 	do
-		if [[ "$module" != validate && "$module" != scaffold && "$module" != gate ]]
+		if [[ "$module" != validate && "$module" != scaffold && "$module" != gate && "$module" != prune ]]
 		then
 			"$binary" --recipe "$recipe" --preview "$step" > "$test_dir/preview"
 			rg -q 'CURRENT PROJECT' "$test_dir/preview"
@@ -74,8 +74,8 @@ do
 			rg -q 'ACCESSIBILITY AND ARIA DEFAULTS' "$test_dir/preview"
 			rg -q 'Native artifact validation does not certify ARIA compliance' "$test_dir/preview"
 			rg -q 'SEO DEFAULTS' "$test_dir/preview"
-			rg -q 'config/seo.yaml' "$test_dir/preview"
-			rg -q 'tests/seo.sh' "$test_dir/preview"
+			rg -q 'DELIVERABLE BOUNDARY' "$test_dir/preview"
+			rg -q 'robots.txt' "$test_dir/preview"
 		fi
 	done < "$test_dir/plan"
 done
@@ -141,7 +141,7 @@ YAML
 			# may carry them in argv or temporary prompt files instead.
 			rg -q 'MOBILE AND DESKTOP DEFAULTS' "$test_dir/input"
 			rg -q 'ACCESSIBILITY AND ARIA DEFAULTS' "$test_dir/input"
-			rg -q 'manual keyboard and screen-reader checks' "$test_dir/input"
+			rg -q 'DELIVERABLE BOUNDARY' "$test_dir/input"
 			rg -q 'SEO DEFAULTS' "$test_dir/input"
 			rg -q 'sitemap.xml' "$test_dir/input"
 			rg -q 'noindex' "$test_dir/input"

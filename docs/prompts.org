@@ -8,7 +8,7 @@
 
 * Flagship quality is the default
 
-The shared =system= contract applies flagship quality to every style and stage. It requires an authored visual identity, substantive route-specific content, complete interactions and interior pages, plus =docs/acceptance.org= and failing source/browser checks with honest execution status. Scope stays fixed by the recipe; a smaller scope is not permission to lower finish quality. =landing.yaml= now carries the full studio SKU. [[file:packages.org][Sold packages]] pin the exact catalog bytes, so existing sold jobs can keep the old contract while new orders adopt improvements. Native artifact predicates and archived pins do not certify browser behavior or visual quality.
+The shared =system= contract applies flagship quality to every style and stage. It requires an authored visual identity, substantive route-specific content, complete interactions and interior pages, and a static-site =DELIVERABLE BOUNDARY=: visitor-facing files only, no model-written docs or tests (see [[file:deliverables.org][deliverables]]). Scope stays fixed by the recipe; a smaller scope is not permission to lower finish quality. =landing.yaml= now carries the full studio SKU. [[file:packages.org][Sold packages]] pin the exact catalog bytes, so existing sold jobs can keep the old contract while new orders adopt improvements. Native artifact predicates and archived pins do not certify browser behavior or visual quality.
 
 * One maintained prompt catalog
 
@@ -46,7 +46,7 @@ The bundled catalog makes mobile and desktop first-class design targets for ever
 
 Implementation guidance requires a device-width viewport with zoom enabled, mobile-first CSS, content-driven breakpoints, fluid type/spacing/media, bounded reading measures and logical reading/focus order. Navigation, forms, tables, dialogs and sticky controls must remain reachable. Standalone controls have at least 44 by 44 CSS pixels of target area; inline text links remain readable and distinguishable. Wide tables/code may use labeled keyboard-accessible local scrolling; page overflow, hidden content and hover-only actions are defects.
 
-Generated project documentation and =AGENTS.md= carry a responsive acceptance matrix with expected results and manual browser procedures:
+Design notes plan, and review checks, a responsive acceptance matrix (applications also document it in their project docs and =AGENTS.md=):
 
 | Target | CSS viewport |
 |--------+--------------|
@@ -66,7 +66,7 @@ The bundled catalog requires conforming WAI-ARIA 1.2 and HTML semantics for ever
 
 Keyboard behavior follows the applicable Authoring Practices widget pattern. Navigation disclosures must not acquire menu semantics without menu behavior. Focus stays logical and visible through dialogs, filtering, deletion, viewport changes and fragment replacement. Only modal dialogs contain focus and make background content inert. Hidden content must not retain focusable descendants. Dynamic feedback needs deliberate announcements, and full-page/no-JavaScript responses retain accessible labels and error relationships.
 
-Generated test documentation and =AGENTS.md= must include runnable browser accessibility audits using a version-pinned FOSS tool appropriate to the output stack, exact setup/run commands, and nonzero exit status for detected violations. Tests cover every route and relevant interactive state on phone and desktop, rather than only the initial page. Missing dependencies must fail explicitly. Manual keyboard and screen-reader procedures specify expected names, roles, states, reading order, focus and announcements; contrast, zoom and reduced-motion checks accompany them. Generated review documentation separates concrete source fixes, actual supplied execution evidence and unexecuted checks. No specific browser framework becomes a builder dependency.
+Applications (through the =c-glib= stack contract) must include runnable browser accessibility audits using a version-pinned FOSS tool appropriate to the output stack, exact setup/run commands, and nonzero exit status for detected violations. Tests cover every route and relevant interactive state on phone and desktop, rather than only the initial page. Missing dependencies must fail explicitly. Manual keyboard and screen-reader procedures specify expected names, roles, states, reading order, focus and announcements; contrast, zoom and reduced-motion checks accompany them. Generated review documentation separates concrete source fixes, actual supplied execution evidence and unexecuted checks. No specific browser framework becomes a builder dependency.
 
 These are generation requirements, not a deterministic publication gate for rendered accessibility. Libresite's native =validate= checks non-whitespace artifacts and configured literal-content/byte-size predicates; it does not parse the accessibility tree, run generated browser tests or operate assistive technology. The generation protocol prohibits model tool execution. Offline regression tests prove that the catalog requirements reach every bundled stage, all five styles, provider transport and installed previews; they cannot prove model compliance or certify generated sites. A real output needs its generated audits and manual acceptance procedure executed and failures repaired before a conformance claim; automated scans alone are insufficient.
 
@@ -122,7 +122,7 @@ The bundled =stages= mapping is the complete runtime catalog. Built-in generatio
 | frontend | Complete frontend or static site against the product/design contracts | =type: frontend= |
 | backend | Routes, validation, encoding, configuration and HTTP tests | =type: backend= |
 | database | Schema, migrations, parameterized access and persistence tests | =type: database= |
-| review | Source-level product, a11y, SEO and responsive repair plus =docs/review.org= | =type: review= |
+| review | Source-level product, a11y, SEO and responsive repair; returns only changed files | =type: review= |
 | generate | Custom instructions against the current project | =type: generate= |
 | foundation | Shared styles, art, component hooks and reference home page | =type: generate=, =prompt: foundation= |
 | pages | Scoped batches of complete interior routes | =type: generate=, =prompt: pages= |

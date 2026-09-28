@@ -35,7 +35,7 @@
 | =--timeout SECONDS= | Per-attempt deadline; =0= unlimited, omitted uses the recipe |
 | =--max-prompt-bytes BYTES= | System plus task cap; =0= unlimited (default) |
 | =--debug= | Persist provider sessions and log diagnostic metadata |
-| =--list-modules= | Print the ten built-in step names |
+| =--list-modules= | Print the eleven built-in step names |
 | =--license= | Print the AGPLv3 license |
 | =--version= | Print =LS_VERSION= |
 

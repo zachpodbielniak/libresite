@@ -3,7 +3,7 @@ version: 1
 name: professional-services-site
 package:
   sku: professional-services
-  release: '1.0.0'
+  release: '1.1.0'
   kind: site
 site:
   brief: >-
@@ -41,7 +41,7 @@ site:
   backend: none
   database: none
   requirements: >-
-    Give every route complete original content and a distinct composition within one recognizable visual system. Use relative links between flat HTML files and a shared header, navigation and footer; preserve every primary action without JavaScript. Display a clear illustrative-business disclosure on every page. Do not invent credibility or facts to fill missing inputs. No tracking or remote services; open-source font defaults may progressively enhance system fallbacks. Implement docs/acceptance.org with fixed route and behavior matrices and tests/check.sh with failing negative controls for missing routes and broken local references. Supply runnable browser accessibility checks as tests/accessibility.sh plus a manual keyboard/screen-reader procedure; do not claim execution. The final acceptance checks are exact source predicates, not browser certification. Implement a local project brief worksheet with a required problem statement, optional team context and constraints, selectable preview and a real TXT download. No network, clipboard permission or persistence. Validate whitespace and lengths, preserve Unicode, reset explicitly and release Blob URLs safely. State exactly: Nothing is sent. Download your brief and contact the consultancy separately. Do not invent a working contact endpoint.
+    Give every route complete original content and a distinct composition within one recognizable visual system. Use relative links between flat HTML files and a shared header, navigation and footer; preserve every primary action without JavaScript. Display a clear illustrative-business disclosure on every page. Do not invent credibility or facts to fill missing inputs. No tracking or remote services; open-source font defaults may progressively enhance system fallbacks. The final acceptance checks are exact source predicates, not browser certification. Implement a local project brief worksheet with a required problem statement, optional team context and constraints, selectable preview and a real TXT download. No network, clipboard permission or persistence. Validate whitespace and lengths, preserve Unicode, reset explicitly and release Blob URLs safely. State exactly: Nothing is sent. Download your brief and contact the consultancy separately. Do not invent a working contact endpoint.
 ai:
   provider: codex
   timeout: 0
@@ -55,7 +55,7 @@ pipeline:
     - id: brief
       type: brief
       instructions: >-
-        Define the exact page/content/interaction contract and paid scope in docs/product.org. Explain exclusions and supplied-versus-missing facts. Draft docs/acceptance.org with each route, primary action, expected behavior, source check and unexecuted browser check. Do not expand the sold scope. Home must link to contact.html as a primary next action.
+        Define the exact page/content/interaction contract and paid scope in docs/product.org. Explain exclusions and supplied-versus-missing facts. Do not expand the sold scope. Home must link to contact.html as a primary next action.
     - id: design
       type: design
       instructions: >-
@@ -63,7 +63,7 @@ pipeline:
     - id: planning-check
       type: validate
       options:
-        required: [docs/product.org, docs/design.org, docs/acceptance.org]
+        required: [docs/product.org, docs/design.org]
     - id: design-gate
       type: gate
       options:
@@ -87,14 +87,14 @@ pipeline:
       type: generate
       prompt: interactions
       instructions: >-
-        Implement a local project brief worksheet with a required problem statement, optional team context and constraints, selectable preview and a real TXT download. No network, clipboard permission or persistence. Validate whitespace and lengths, preserve Unicode, reset explicitly and release Blob URLs safely. State exactly: Nothing is sent. Download your brief and contact the consultancy separately. Do not invent a working contact endpoint. Wire a shared deferred site.js and update HTML as needed. Deliver ShellCheck-clean tests/check.sh, tests/accessibility.sh, tests/seo.sh with --help examples and --license, README.org, AGENTS.md, docs/testing.org and docs/acceptance.org. Source tests verify every route, local asset and primary action and must fail on deliberate missing-route and broken-link fixtures. Browser tests require a documented FOSS toolchain and must perform real assertions. Record responsive, keyboard, screen-reader, no-JS, offline and negative/valid/repeated-action procedures with expected results and unexecuted status.
+        Implement a local project brief worksheet with a required problem statement, optional team context and constraints, selectable preview and a real TXT download. No network, clipboard permission or persistence. Validate whitespace and lengths, preserve Unicode, reset explicitly and release Blob URLs safely. State exactly: Nothing is sent. Download your brief and contact the consultancy separately. Do not invent a working contact endpoint. Wire a shared deferred site.js and update HTML as needed.
     - id: polish
       type: generate
       prompt: polish
     - id: review
       type: review
       instructions: >-
-        Repair all missing routes, broken local links, incomplete interaction states and invented claims. Check the route-to-acceptance matrix and missing-input disclosures. Preserve the fixed sold scope. Native predicates only establish artifact text; document all unexecuted browser/build checks honestly.
+        Repair all missing routes, broken local links, incomplete interaction states and invented claims. Check every route, primary action and missing-input disclosure. Preserve the fixed sold scope.
     - id: acceptance
       type: validate
       options:
@@ -110,26 +110,11 @@ pipeline:
           - site.js
           - assets/mark.svg
           - assets/illustration.svg
-          - README.org
-          - AGENTS.md
-          - Makefile
           - privacy.html
           - terms.html
-          - docs/contact.org
-          - tests/scaffold.sh
           - docs/product.org
           - docs/design.org
-          - docs/acceptance.org
-          - docs/testing.org
-          - docs/polish.org
-          - docs/review.org
-          - tests/check.sh
-          - tests/accessibility.sh
-          - config/seo.yaml
-          - docs/seo.org
-          - tests/seo.sh
           - robots.txt
-          - scripts/prepare-seo.sh
         checks:
           - path: index.html
             contains: ['<main', '</html>', 'href="contact.html"']
@@ -145,9 +130,12 @@ pipeline:
             contains: ['<main', '</html>', 'Nothing is sent. Download your brief and contact the consultancy separately.']
           - path: 404.html
             contains: ['<main', '</html>']
-          - path: docs/acceptance.org
-            contains: ['#+title:', '360', '768', '1440']
           - path: privacy.html
             contains: ['<main', 'noindex']
           - path: terms.html
             contains: ['<main', 'noindex']
+    # Build notes guide later steps; the delivered site does not include them.
+    - id: build-notes
+      type: prune
+      options:
+        paths: [docs/product.org, docs/design.org, docs/polish.org, docs/review.org]

@@ -20,25 +20,29 @@ pipeline:
     - id: check
       type: validate
       options:
-        required: [Makefile, 404.html, privacy.html, terms.html, docs/contact.org, AGENTS.md, tests/scaffold.sh]
+        required: [404.html, privacy.html, terms.html]
 YAML
 # No provider executable is configured: all generation is native.
 (cd /tmp && "$binary" -r "$test_dir/native.yaml" --preview scaffold) > "$test_dir/preview"
-rg -Fq 'docs/contact.org' "$test_dir/preview"
+rg -Fq 'privacy.html' "$test_dir/preview"
+# Static sites ship no build, test or agent files.
+for developer_file in Makefile AGENTS.md docs/contact.org tests/scaffold.sh
+do
+	if rg -Fq "\"$developer_file\"" "$test_dir/preview"
+	then
+		exit 1
+	fi
+done
 "$binary" --list-modules | rg -x scaffold
 "$binary" -r "$test_dir/native.yaml" --plan > "$test_dir/plan"
 rg -q $'scaffold\tscaffold\tnative\t\(none\)' "$test_dir/plan"
 (cd /tmp && "$binary" -r "$test_dir/native.yaml" -o "$test_dir/site")
-make -C "$test_dir/site" all tests clean help license
-shellcheck "$test_dir/site/tests/scaffold.sh"
-# The generated test must actually reject an incomplete project.
-mv "$test_dir/site/index.html" "$test_dir/index.html"
-if make -C "$test_dir/site" tests > "$test_dir/missing.log" 2>&1
-then
-	exit 1
-fi
-rg -Fq 'Missing or empty required file: index.html' "$test_dir/missing.log"
-mv "$test_dir/index.html" "$test_dir/site/index.html"
+for page in 404.html privacy.html terms.html
+do
+	test -s "$test_dir/site/$page"
+done
+test ! -e "$test_dir/site/Makefile"
+test ! -e "$test_dir/site/AGENTS.md"
 # Invalid native options fail preflight before workspace creation.
 for options in 'profile: unknown' 'profile: true' 'overwrite: true'
 do
@@ -53,8 +57,8 @@ done
 # Later model previews include the native files, without any provider call.
 sed 's/type: validate/type: frontend/' "$test_dir/native.yaml" > "$test_dir/generate.yaml"
 "$binary" -r "$test_dir/generate.yaml" --preview check > "$test_dir/prompt"
-rg -Fq 'contact.org' "$test_dir/prompt"
-rg -Fq 'Native scaffolding already supplies' "$test_dir/prompt"
+rg -Fq 'privacy.html' "$test_dir/prompt"
+rg -Fq 'CONTACT FORMS' "$test_dir/prompt"
 # A completed output is never overwritten, even with resume requested.
 "$binary" -r "$test_dir/native.yaml" -o "$test_dir/site" --resume > "$test_dir/resume.log" 2>&1 && exit 1
 rg -q 'already exists' "$test_dir/resume.log"

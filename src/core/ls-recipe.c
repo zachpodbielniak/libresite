@@ -378,16 +378,24 @@ ls_recipe_new(const gchar *yaml, GError **error){
 			return NULL;
 	}
 	/* A sold scope ends with actual native acceptance, not a model's review.
-	 * The pipeline validates the complete predicate schema before execution. */
+	 * Trailing prune steps may follow: they remove build notes and cannot add
+	 * content. The pipeline validates the complete predicate schema later. */
 	if (json_object_has_member(root, "package")) {
-		JsonObject *last = json_array_get_object_element(steps, json_array_get_length(steps) - 1);
-		JsonObject *options = json_object_has_member(last, "options")
+		guint tail = json_array_get_length(steps);
+		JsonObject *last;
+		JsonObject *options;
+		JsonNode *checks;
+		while (tail > 1 && g_strcmp0(ls_string(
+				json_array_get_object_element(steps, tail - 1), "type"), "prune") == 0)
+			tail--;
+		last = json_array_get_object_element(steps, tail - 1);
+		options = json_object_has_member(last, "options")
 			? json_object_get_object_member(last, "options") : NULL;
-		JsonNode *checks = options != NULL ? json_object_get_member(options, "checks") : NULL;
+		checks = options != NULL ? json_object_get_member(options, "checks") : NULL;
 		if (g_strcmp0(ls_string(last, "type"), "validate") != 0 || checks == NULL ||
 			!JSON_NODE_HOLDS_ARRAY(checks) || json_array_get_length(json_node_get_array(checks)) == 0) {
 			g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID,
-				"Sold package must end with native validate acceptance and nonempty checks");
+				"Sold package must end with native validate acceptance with nonempty checks, followed only by prune steps");
 			return NULL;
 		}
 	}
@@ -604,7 +612,12 @@ ls_recipe_from_form(const gchar *json, GError **error){
 			"  - id: acceptance\n"
 			"    type: validate\n"
 			"    options:\n"
-			"      required: [index.html, README.org, AGENTS.md, Makefile, 404.html, privacy.html, terms.html, docs/contact.org, tests/scaffold.sh, config/seo.yaml, docs/seo.org, tests/seo.sh, robots.txt, scripts/prepare-seo.sh]\n",
+			"      required: [index.html, 404.html, privacy.html, terms.html, robots.txt]\n"
+			/* Design notes steer generation but are not delivered. */
+			"  - id: build-notes\n"
+			"    type: prune\n"
+			"    options:\n"
+			"      paths: [docs/product.org, docs/design.org, docs/polish.org, docs/review.org]\n",
 			error);
 		if (defaults == NULL)
 			return NULL;

@@ -70,8 +70,8 @@ YAML
 	rg -Fq 'when font requests are blocked or offline' "$test_dir/embedded"
 	rg -q 'MOBILE AND DESKTOP DEFAULTS' "$test_dir/embedded"
 	# All styles inherit SEO in generic generate stages, with no recipe opt-in.
-	for contract in 'SEO DEFAULTS' 'config/seo.yaml' 'docs/seo.org' 'tests/seo.sh' \
-		'scripts/prepare-seo.sh' 'noindex' 'JSON-LD' 'hreflang' 'sitemap.xml'
+	for contract in 'SEO DEFAULTS' 'DELIVERABLE BOUNDARY' 'robots.txt' \
+		'noindex' 'JSON-LD' 'hreflang' 'sitemap.xml'
 	do
 		rg -Fq "$contract" "$test_dir/embedded"
 	done

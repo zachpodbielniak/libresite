@@ -141,6 +141,7 @@ ls_pipeline_new(LsProvider *provider, LsPrompts *prompts){
 	ls_pipeline_register(self, "validate", LS_TYPE_VALIDATE_STEP, NULL);
 	ls_pipeline_register(self, "scaffold", LS_TYPE_SCAFFOLD_STEP, NULL);
 	ls_pipeline_register(self, "gate", LS_TYPE_GATE_STEP, NULL);
+	ls_pipeline_register(self, "prune", LS_TYPE_PRUNE_STEP, NULL);
 	return self;
 }
 /* Registration is instance-local, avoiding global initialization ordering. */
@@ -186,7 +187,7 @@ ls_pipeline_validate_context(LsPipeline *self, LsRecipe *recipe,
 			if (rendered == NULL)
 				return FALSE;
 		} else if (type == LS_TYPE_VALIDATE_STEP || type == LS_TYPE_SCAFFOLD_STEP ||
-			type == LS_TYPE_GATE_STEP) {
+			type == LS_TYPE_GATE_STEP || type == LS_TYPE_PRUNE_STEP) {
 			JsonNode *node = json_object_get_member(config, "options");
 			JsonObject *options = node != NULL && JSON_NODE_HOLDS_OBJECT(node)
 				? json_node_get_object(node) : NULL;
@@ -194,7 +195,9 @@ ls_pipeline_validate_context(LsPipeline *self, LsRecipe *recipe,
 				? ls_validate_step_check_options(options, error)
 				: type == LS_TYPE_SCAFFOLD_STEP
 					? ls_scaffold_step_check_options(options, error)
-					: ls_gate_step_check_options(options, error);
+					: type == LS_TYPE_PRUNE_STEP
+						? ls_prune_step_check_options(options, error)
+						: ls_gate_step_check_options(options, error);
 			if (!okay) {
 				g_prefix_error(error, "Step '%s': ", ls_string(config, "id"));
 				return FALSE;

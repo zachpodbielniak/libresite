@@ -46,4 +46,9 @@ pipeline:
     - id: acceptance
       type: validate
       options:
-        required: [index.html, 404.html, styles.css, README.org, AGENTS.md, Makefile, privacy.html, terms.html, docs/contact.org, tests/scaffold.sh, config/seo.yaml, docs/seo.org, tests/seo.sh, robots.txt, scripts/prepare-seo.sh]
+        required: [index.html, 404.html, styles.css, privacy.html, terms.html, robots.txt]
+    # Build notes guide later steps; the delivered site does not include them.
+    - id: build-notes
+      type: prune
+      options:
+        paths: [docs/product.org, docs/design.org, docs/polish.org, docs/review.org]

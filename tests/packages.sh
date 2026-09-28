@@ -27,7 +27,7 @@ do
 	(cd /tmp && "$binary" --package "$test_dir/$sku" --preview design) > "$test_dir/preview"
 	rg -Fq 'FLAGSHIP QUALITY DEFAULT' "$test_dir/preview"
 	rg -Fq 'APPLICATION SKU BOUNDARY' "$test_dir/preview"
-	rg -Fq 'docs/acceptance.org' "$test_dir/preview"
+	rg -Fq 'DELIVERABLE BOUNDARY' "$test_dir/preview"
 	# A second seal cannot replace an existing sale, including an empty target.
 	if "$binary" -r "$root/recipes/$sku.yaml" --seal-package "$test_dir/$sku" > "$test_dir/error" 2>&1
 	then

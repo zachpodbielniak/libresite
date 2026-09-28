@@ -17,7 +17,6 @@ site:
   requirements: >-
     Provide keyboard navigation, visible focus, reduced-motion support and
     responsive layouts. Use lang="en" and name="viewport" in index.html.
-    Include README.org and AGENTS.md with accurate preview and review commands.
 ai:
   provider: codex
   timeout: 0
@@ -40,7 +39,7 @@ pipeline:
     - id: acceptance
       type: validate
       options:
-        required: [index.html, 404.html, styles.css, README.org, AGENTS.md, Makefile, privacy.html, terms.html, docs/contact.org, tests/scaffold.sh, config/seo.yaml, docs/seo.org, tests/seo.sh, robots.txt, scripts/prepare-seo.sh]
+        required: [index.html, 404.html, styles.css, privacy.html, terms.html, robots.txt]
         checks:
           - path: index.html
             contains:
@@ -58,5 +57,8 @@ pipeline:
             contains: [':focus-visible', 'prefers-reduced-motion']
             min_bytes: 128
             max_bytes: 131072
-          - path: README.org
-            contains: ['#+title:']
+    # Build notes guide later steps; the delivered site does not include them.
+    - id: build-notes
+      type: prune
+      options:
+        paths: [docs/product.org, docs/design.org, docs/polish.org, docs/review.org]

@@ -10,9 +10,9 @@
 
 Libresite turns a YAML recipe into a website project in a new output directory. A pipeline can define the product, establish its design, implement a frontend, backend and database, review the result, and check required artifacts. Every AI step can use a different provider, model, effort level, timeout and retry limit. The generated project includes its own build/run documentation; libresite does not host, deploy or execute generated code.
 
-The implementation is a reusable GLib/GObject library plus a CLI, with the =config.mk= / =rules.mk= / =Makefile= layout used by ai-glib and clawtilla. Extend it with a native =LsStep= subclass or an alternative =LsProvider= transport. Ten built-in step names cover the common workflows, including a native design =gate=; arbitrary module options and prompt overrides support additional tasks without changing the recipe grammar.
+The implementation is a reusable GLib/GObject library plus a CLI, with the =config.mk= / =rules.mk= / =Makefile= layout used by ai-glib and clawtilla. Extend it with a native =LsStep= subclass or an alternative =LsProvider= transport. Eleven built-in step names cover the common workflows, including a native design =gate= and a native =prune=; arbitrary module options and prompt overrides support additional tasks without changing the recipe grammar.
 
-Bundled static recipes start with a native =scaffold= step: a Makefile, 404 page, privacy/terms draft shells, contact-form contract and =AGENTS.md= are emitted without a model call. Existing seed artifacts win; subsequent model steps focus on design and integration. See [[file:docs/scaffold.org][native scaffolding]] for the exact files, preview behavior and static-only scope.
+A generated static site ships only what visitors load: pages, styles, scripts, images, fonts and =robots.txt=, with no docs, tests, build scripts or agent files. See [[file:docs/deliverables.org][what a generated site delivers]]. Bundled static recipes start with a native =scaffold= step that emits the 404 page and privacy/terms draft shells without a model call, and end with a native =prune= step that removes the internal design notes. Existing seed artifacts win; subsequent model steps focus on design and integration. See [[file:docs/scaffold.org][native scaffolding]] for the exact files, preview behavior and static-only scope.
 
 Mobile and desktop are first-class generation defaults for every site, application and design profile; no recipe flag is needed. The shared prompts require deliberate layouts and complete workflows on phones, tablets and desktops, with responsive acceptance steps in the generated documentation and =AGENTS.md=. These are generation requirements, not a claim of verified browser rendering; see [[file:docs/prompts.org::*Mobile and desktop defaults][the responsive contract and verification limits]].
 
@@ -20,7 +20,7 @@ Accessibility and conforming WAI-ARIA 1.2 usage are also generation defaults acr
 
 Generated sites use open-source fonts from Bunny Fonts by default, with system fallback stacks for offline or blocked requests. Explicit font families, sources and hosting requirements take precedence; no recipe flag is needed. See [[file:docs/prompts.org::*Font defaults][font defaults and overrides]].
 
-Search-engine optimization is also a generation default: public-route metadata, canonical URLs, structured data, social cards, sitemap/robots handling and project SEO tests. Generated projects include maintained SEO configuration and a guide; sites without a supplied production URL remain usable noindex previews, and private applications keep their data out of sitemaps. Static projects include a local production-preparation command. See [[file:docs/seo.org][SEO defaults, deployment modes and verification limits]].
+Search-engine optimization is also a generation default: public-route metadata, canonical URLs, structured data, social cards and robots/sitemap handling. Sites without a supplied production URL remain usable noindex previews, and private applications keep their data out of sitemaps. Applications also ship SEO configuration, a guide and tests. See [[file:docs/seo.org][SEO defaults, deployment modes and verification limits]].
 
 * Getting started
 
@@ -50,7 +50,7 @@ Generation requires Git (Fedora =git-core=) and an installed and authenticated C
 
 The requested output directory contains a standalone Git repository on =master= with the initial Conventional Commit =chore: initial generated project=. Generated =.gitignore= rules are preserved and extended with defaults for local metadata, secrets, build output, caches and databases; source files, dependency lockfiles and environment examples remain eligible for tracking. The automated commit is attributed to =Libresite <libresite@localhost>= without changing your Git configuration. No remote is created and nothing is pushed. See [[file:docs/operations.org][operations.org]] for publication and recovery details.
 
-Open a generated static =index.html= directly, or follow the output's =README.org= and =AGENTS.md= for application build/run instructions. A loopback application must work from both =http://127.0.0.1:PORT/= and =http://localhost:PORT/=; the database file is created on first start. From cmacs, =M-x compile= can run the builder, and =C-x C-f= opens the output's org documentation or source files.
+Open a generated static =index.html= directly. For an application, follow its =README.org= and =AGENTS.md= for build/run instructions. A loopback application must work from both =http://127.0.0.1:PORT/= and =http://localhost:PORT/=; the database file is created on first start. From cmacs, =M-x compile= can run the builder, and =C-x C-f= opens the output's org documentation or source files.
 
 ** Revise an existing project
 
@@ -124,8 +124,6 @@ For the fuller example, use a fresh output directory:
 ./build/release/libresite -r recipes/flagship.yaml --plan
 ./build/release/libresite -r recipes/flagship.yaml --preview foundation
 ./build/release/libresite -r recipes/flagship.yaml -o ./fieldwork-site
-# Inspect the generated test script before executing generated code.
-bash ./fieldwork-site/tests/check.sh
 python3 -m http.server 8000 --bind 127.0.0.1 --directory ./fieldwork-site
 #+end_src
 

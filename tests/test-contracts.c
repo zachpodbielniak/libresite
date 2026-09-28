@@ -410,6 +410,22 @@ structured_form(void){
 	g_assert_nonnull(strstr(rendered, "001234"));
 	g_assert_nonnull(strstr(rendered, "supplied brand asset"));
 	g_assert_nonnull(strstr(ls_prompts_get_system(prompts), "STRUCTURED SITE CONTRACT"));
+	/* The default form pipeline delivers a static site: no developer files in
+	 * acceptance, and build notes pruned after it. */
+	{
+		JsonArray *steps = ls_recipe_get_steps(reloaded);
+		guint count = json_array_get_length(steps);
+		JsonObject *last = json_array_get_object_element(steps, count - 1);
+		JsonObject *acceptance = json_array_get_object_element(steps, count - 2);
+		g_autofree gchar *required = ls_json_encode(json_object_get_member(
+			json_object_get_object_member(acceptance, "options"), "required"));
+		g_assert_cmpstr(ls_string(last, "type"), ==, "prune");
+		g_assert_cmpstr(ls_string(acceptance, "type"), ==, "validate");
+		g_assert_null(strstr(required, "AGENTS.md"));
+		g_assert_null(strstr(required, "README.org"));
+		g_assert_null(strstr(required, "tests/"));
+		g_assert_nonnull(strstr(required, "robots.txt"));
+	}
 }
 /* Mutate one valid form at a time so every failure exercises a schema rule. */
 static void
@@ -474,8 +490,9 @@ scaffold_contract(void){
 	g_autofree gchar *before = NULL;
 	g_autofree gchar *after = NULL;
 	JsonObject *config = json_array_get_object_element(ls_recipe_get_steps(recipe), 0);
-	const gchar *paths[] = {"Makefile", "404.html", "privacy.html", "terms.html",
-		"docs/contact.org", "AGENTS.md", "tests/scaffold.sh"};
+	const gchar *paths[] = {"404.html", "privacy.html", "terms.html"};
+	/* Static sites ship only visitor-facing files; no build, test or agent docs. */
+	const gchar *absent[] = {"Makefile", "AGENTS.md", "docs/contact.org", "tests/scaffold.sh"};
 	guint i;
 	g_assert_no_error(error);
 	g_assert_true(ls_context_apply(context, "{\"files\":["
@@ -485,6 +502,9 @@ scaffold_contract(void){
 	g_assert_no_error(error);
 	for (i = 0; i < G_N_ELEMENTS(paths); i++)
 		g_assert_nonnull(ls_context_lookup(context, paths[i]));
+	for (i = 1; i < G_N_ELEMENTS(absent); i++)
+		g_assert_null(ls_context_lookup(context, absent[i]));
+	/* A seeded file at a formerly scaffolded path is still the client's. */
 	g_assert_cmpstr(ls_artifact_get_content(ls_context_lookup(context, "Makefile")), ==, "client build\n");
 	g_assert_cmpstr(ls_artifact_get_content(ls_context_lookup(context, "terms.html")), ==, "Approved client terms");
 	before = ls_context_snapshot(context);
@@ -502,7 +522,7 @@ scaffold_contract(void){
 	g_clear_error(&error);
 	g_assert_null(ls_context_lookup(context, "Makefile"));
 	g_assert_true(ls_context_apply(context,
-		"{\"files\":[{\"path\":\"docs\",\"content\":\"client file\"}]}", &error));
+		"{\"files\":[{\"path\":\"404.html/client\",\"content\":\"client file\"}]}", &error));
 	g_clear_pointer(&before, g_free);
 	before = ls_context_snapshot(context);
 	g_assert_false(ls_step_execute(step, recipe, config, prompts, context, provider, NULL, &error));
