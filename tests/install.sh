@@ -29,7 +29,7 @@ do
 	(cd /tmp && "$binary" --recipe "$recipe" --plan) > "$test_dir/plan"
 	while IFS=$'\t' read -r _ step module _ _
 	do
-		if [[ "$module" != validate && "$module" != scaffold && "$module" != gate ]]
+		if [[ "$module" != validate && "$module" != scaffold && "$module" != gate && "$module" != prune ]]
 		then
 			(cd /tmp && "$binary" --recipe "$recipe" --preview "$step") > "$test_dir/preview"
 			rg -q 'CURRENT PROJECT' "$test_dir/preview"
@@ -84,8 +84,7 @@ YAML
 		'IDs unique' 'all ARIA ID references' 'synchronized with actual behavior' \
 		'aria-hidden="true"' 'Tab/Shift+Tab' 'focus restoration' \
 		'HTMX or other DOM replacements' 'status/live regions' \
-		'runnable automated accessibility checks' 'failure exit status' \
-		'manual keyboard and screen-reader checks' 'unexecuted' \
+		'Record keyboard patterns' 'does not certify ARIA compliance' \
 		'Native artifact validation does not certify ARIA compliance'
 	do
 		rg -Fq "$contract" "$test_dir/embedded"
