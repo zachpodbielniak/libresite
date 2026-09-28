@@ -127,10 +127,52 @@ G_DECLARE_FINAL_TYPE(LsPruneStep, ls_prune_step, LS, PRUNE_STEP, LsStep)
  * @options: (nullable) (transfer none): prune options
  * @error: return location for an error
  *
- * Requires options.paths: 1..4096 unique safe relative file paths and no
- * other keys. Does not access artifacts or mutate @options.
+ * Requires options.paths (1..4096 unique safe relative file paths),
+ * options.prefixes (unique safe directories ending in "/", removing every
+ * file below them) or both, and no other keys. Does not access artifacts or
+ * mutate @options.
  *
  * Returns: whether native prune options are valid
  */
 gboolean ls_prune_step_check_options(JsonObject *options, GError **error);
+#define LS_TYPE_PLAN_STEP (ls_plan_step_get_type())
+G_DECLARE_FINAL_TYPE(LsPlanStep, ls_plan_step, LS, PLAN_STEP, LsStep)
+#define LS_TYPE_PAGES_STEP (ls_pages_step_get_type())
+G_DECLARE_FINAL_TYPE(LsPagesStep, ls_pages_step, LS, PAGES_STEP, LsStep)
+/**
+ * ls_pages_step_check_options:
+ * @options: (nullable) (transfer none): pages step options
+ * @error: return location for an error
+ *
+ * Accepts parallel (1..16, default 6), mode (write or review, default write)
+ * and base_url (an absolute https:// site address). Does not access
+ * artifacts, a provider or the plan.
+ * Returns: whether the options are valid
+ */
+gboolean ls_pages_step_check_options(JsonObject *options, GError **error);
+/**
+ * ls_spec_step_check:
+ * @prompts: catalog
+ * @recipe: recipe containing @config
+ * @config: a plan or pages step
+ * @error: return location for an error
+ *
+ * Preflight for component steps: a spec_system prompt and the needed stage
+ * contracts exist, pages options are valid and a plan step precedes every
+ * pages step. Never calls a provider.
+ * Returns: whether the step can run
+ */
+gboolean ls_spec_step_check(LsPrompts *prompts, LsRecipe *recipe, JsonObject *config, GError **error);
+/**
+ * ls_spec_step_preview:
+ * @prompts: catalog
+ * @recipe: recipe containing @config
+ * @config: a plan or pages step
+ * @error: return location for an error
+ *
+ * The plan step's complete prompt, or for a pages step the stage contract
+ * and component reference each page writer receives with its own task.
+ * Returns: (transfer full) (nullable): preview text
+ */
+gchar *ls_spec_step_preview(LsPrompts *prompts, LsRecipe *recipe, JsonObject *config, GError **error);
 G_END_DECLS

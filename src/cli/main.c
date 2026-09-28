@@ -533,7 +533,7 @@ main(int argc, char **argv){
 		return finish_events(&events, 0);
 	}
 	if (list) {
-		g_print("brief\ndesign\nfrontend\nbackend\ndatabase\nreview\ngenerate\nvalidate\nscaffold\ngate\nprune\n");
+		g_print("brief\ndesign\nfrontend\nbackend\ndatabase\nreview\ngenerate\nvalidate\nscaffold\ngate\nprune\nplan\npages\n");
 		return finish_events(&events, 0);
 	}
 	if (form_path != NULL) {
@@ -684,10 +684,22 @@ main(int argc, char **argv){
 				guint j;
 				if (!ls_prune_step_check_options(prune, &error))
 					goto fail;
-				paths = json_object_get_array_member(prune, "paths");
+				paths = json_object_has_member(prune, "paths") ? json_object_get_array_member(prune, "paths") : NULL;
 				g_print("PRUNE\nRemoved before publication when present:\n");
-				for (j = 0; j < json_array_get_length(paths); j++)
+				for (j = 0; paths != NULL && j < json_array_get_length(paths); j++)
 					g_print("%s\n", json_array_get_string_element(paths, j));
+				paths = json_object_has_member(prune, "prefixes") ? json_object_get_array_member(prune, "prefixes") : NULL;
+				for (j = 0; paths != NULL && j < json_array_get_length(paths); j++)
+					g_print("%s (every file below)\n", json_array_get_string_element(paths, j));
+				return finish_events(&events, 0);
+			}
+			/* Component steps build their own compact prompts from the plan. */
+			if (preview != NULL && g_str_equal(preview, ls_string(step, "id")) &&
+				(g_str_equal(ls_string(step, "type"), "plan") || g_str_equal(ls_string(step, "type"), "pages"))) {
+				g_autofree gchar *text = ls_spec_step_preview(prompts, recipe, step, &error);
+				if (text == NULL)
+					goto fail;
+				g_print("%s", text);
 				return finish_events(&events, 0);
 			}
 			if (preview != NULL && g_str_equal(preview, ls_string(step, "id"))) {

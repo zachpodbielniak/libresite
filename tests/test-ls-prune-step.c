@@ -98,10 +98,47 @@ prune_publish(void){
 	g_assert_false(g_file_test(notes, G_FILE_TEST_EXISTS));
 }
 
+/* Component specifications live under site/; one prefix removes all of them. */
+static void
+prune_prefixes(void){
+	const gchar *invalid[] = {"{\"prefixes\":[]}", "{\"prefixes\":[\"site\"]}", "{\"prefixes\":[\"../\"]}",
+		"{\"prefixes\":[\"/\"]}", "{\"prefixes\":[\"site/\",\"site/\"]}"};
+	g_autoptr(GError) error = NULL;
+	g_autoptr(LsStep) step = g_object_new(LS_TYPE_PRUNE_STEP, NULL);
+	g_autoptr(LsContext) context = ls_context_new();
+	g_autoptr(JsonNode) config = ls_json_parse("{\"id\":\"prune\",\"type\":\"prune\","
+		"\"options\":{\"prefixes\":[\"site/\"],\"paths\":[\"docs/design.org\"]}}", NULL);
+	g_autoptr(JsonNode) only = ls_json_parse("{\"prefixes\":[\"site/\"]}", NULL);
+	guint i;
+	for (i = 0; i < G_N_ELEMENTS(invalid); i++) {
+		g_autoptr(JsonNode) options = ls_json_parse(invalid[i], NULL);
+		g_assert_false(ls_prune_step_check_options(json_node_get_object(options), &error));
+		g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+		g_clear_error(&error);
+	}
+	g_assert_true(ls_prune_step_check_options(json_node_get_object(only), &error));
+	g_assert_no_error(error);
+	g_assert_true(ls_context_apply(context, "{\"files\":["
+		"{\"path\":\"index.html\",\"content\":\"<main>Home</main>\"},"
+		"{\"path\":\"site.js\",\"content\":\"x\"},"
+		"{\"path\":\"site/plan.json\",\"content\":\"{}\"},"
+		"{\"path\":\"site/pages/index.json\",\"content\":\"{}\"},"
+		"{\"path\":\"docs/design.org\",\"content\":\"notes\"}]}", &error));
+	g_assert_no_error(error);
+	g_assert_true(ls_step_execute(step, NULL, json_node_get_object(config), NULL, context, NULL, NULL, &error));
+	g_assert_no_error(error);
+	g_assert_null(ls_context_lookup(context, "site/plan.json"));
+	g_assert_null(ls_context_lookup(context, "site/pages/index.json"));
+	g_assert_null(ls_context_lookup(context, "docs/design.org"));
+	g_assert_nonnull(ls_context_lookup(context, "site.js"));
+	g_assert_nonnull(ls_context_lookup(context, "index.html"));
+}
+
 int
 main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
 	g_test_add_func("/prune/contract", prune_contract);
 	g_test_add_func("/prune/publish", prune_publish);
+	g_test_add_func("/prune/prefixes", prune_prefixes);
 	return g_test_run();
 }

@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
 #include "core/ls-usage.h"
 #include "core/ls-pipeline.h"
+#include "core/ls-components.h"
 #include <glib/gstdio.h>
 #include <sys/file.h>
 #include <sys/stat.h>
@@ -142,6 +143,8 @@ ls_pipeline_new(LsProvider *provider, LsPrompts *prompts){
 	ls_pipeline_register(self, "scaffold", LS_TYPE_SCAFFOLD_STEP, NULL);
 	ls_pipeline_register(self, "gate", LS_TYPE_GATE_STEP, NULL);
 	ls_pipeline_register(self, "prune", LS_TYPE_PRUNE_STEP, NULL);
+	ls_pipeline_register(self, "plan", LS_TYPE_PLAN_STEP, NULL);
+	ls_pipeline_register(self, "pages", LS_TYPE_PAGES_STEP, NULL);
 	return self;
 }
 /* Registration is instance-local, avoiding global initialization ordering. */
@@ -186,6 +189,11 @@ ls_pipeline_validate_context(LsPipeline *self, LsRecipe *recipe,
 				ls_prompts_render(self->prompts, recipe, config, context, error);
 			if (rendered == NULL)
 				return FALSE;
+		} else if (type == LS_TYPE_PLAN_STEP || type == LS_TYPE_PAGES_STEP) {
+			if (!ls_spec_step_check(self->prompts, recipe, config, error)) {
+				g_prefix_error(error, "Step '%s': ", ls_string(config, "id"));
+				return FALSE;
+			}
 		} else if (type == LS_TYPE_VALIDATE_STEP || type == LS_TYPE_SCAFFOLD_STEP ||
 			type == LS_TYPE_GATE_STEP || type == LS_TYPE_PRUNE_STEP) {
 			JsonNode *node = json_object_get_member(config, "options");
@@ -516,6 +524,7 @@ run_pipeline(
 	g_autofree gchar *export_path = NULL, *uuid = NULL;
 	g_autofree gchar *initial = NULL;
 	g_autofree gchar *scaffold = NULL;
+	g_autofree gchar *components_digest = NULL;
 	g_autoptr(JsonNode) recipe_node = json_node_new(JSON_NODE_OBJECT);
 	g_autoptr(GFile) source = NULL, destination = NULL;
 	JsonArray *steps = ls_recipe_get_steps(recipe);
@@ -623,10 +632,21 @@ run_pipeline(
 			break;
 		}
 	}
+	/* Composed pages depend on the component library bytes as well. */
+	for (i = 0; i < json_array_get_length(steps); i++) {
+		if (g_str_equal(ls_string(json_array_get_object_element(steps, i), "type"), "pages")) {
+			g_autoptr(LsComponents) components = ls_components_new(error);
+			if (components == NULL)
+				goto out;
+			components_digest = g_strdup(ls_components_get_digest(components));
+			break;
+		}
+	}
 	fingerprint_input = g_strconcat(
 		"libresite-checkpoint-v1\n", recipe_json, "\n", ls_prompts_get_digest(self->prompts),
 		project != NULL ? "\nrevision-v1\n" : "", initial != NULL ? initial : "",
-		scaffold != NULL ? "\nscaffold-v1\n" : "", scaffold != NULL ? scaffold : "", NULL
+		scaffold != NULL ? "\nscaffold-v1\n" : "", scaffold != NULL ? scaffold : "",
+		components_digest != NULL ? "\ncomponents-v1\n" : "", components_digest != NULL ? components_digest : "", NULL
 	);
 	fingerprint = g_compute_checksum_for_string(G_CHECKSUM_SHA256, fingerprint_input, -1);
 	if (resume && g_lstat(checkpoint, &info) == 0) {
