@@ -1,0 +1,12 @@
+{
+  "path": "privacy.html",
+  "title": "Privacy information (draft)",
+  "description": "Draft privacy information for this site, pending the operator's confirmed data-handling details.",
+  "noindex": true,
+  "sections": [
+    {"component": "text", "variant": "narrow", "content": {
+      "heading": "Privacy information",
+      "body": "This draft is awaiting site-owner review. It is not a published privacy policy.\n\nBefore publication, the owner must describe the actual operator, the data collected, its purposes and recipients, retention, hosting logs, any cookies or analytics, and the contact route for privacy requests, with applicable rights and an effective date.\n\nDo not submit personal information until the site's handling of it has been explained.\n\n[Return to the home page](index.html)"
+    }}
+  ]
+}

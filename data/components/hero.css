@@ -1,0 +1,14 @@
+.hero { padding-block: calc(var(--section-space) * 0.85) var(--section-space); }
+.hero__title { font-size: var(--step-6); max-width: 18ch; margin-bottom: 0.35em; }
+.hero__lede { max-width: 38em; }
+.hero__art { margin: var(--space-7) 0 0; }
+.hero__art img { width: 100%; }
+.hero--statement .hero__title { font-size: var(--step-7); max-width: 14ch; }
+.hero--statement .hero__lede { font-size: var(--step-2); }
+@media (min-width: 56rem) {
+	.hero--split .hero__inner { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: var(--space-7); align-items: center; }
+	.hero--split .hero__art { margin: 0; }
+	.hero--split .hero__title { font-size: var(--step-6); }
+}
+.hero--banner .hero__art { margin-top: var(--space-7); }
+.hero .hero__title--long, .hero--statement .hero__title--long { font-size: var(--step-5); max-width: 24ch; }

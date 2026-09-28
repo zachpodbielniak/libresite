@@ -1,0 +1,6 @@
+.gallery__list { display: grid; gap: var(--space-4); margin: 0; padding: 0; list-style: none; }
+@media (min-width: 40rem) { .gallery__list { grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); } }
+.gallery__item { margin: 0; }
+.gallery__item img { width: 100%; border-radius: var(--radius); background: var(--surface); }
+.gallery__item figcaption { margin-top: var(--space-2); font-size: var(--step--1); }
+@media (min-width: 56rem) { .gallery--mosaic .gallery__list > li:first-child { grid-column: span 2; grid-row: span 2; } }

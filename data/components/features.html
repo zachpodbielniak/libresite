@@ -1,0 +1,15 @@
+<div class="wrap">
+{{#heading}}<div class="section-head">
+<{{htag}} id="{{id}}-h">{{heading}}</{{htag}}>
+{{#intro}}<div class="prose">{{{intro}}}</div>
+{{/intro}}</div>
+{{/heading}}{{^heading}}{{#intro}}<div class="section-head prose">{{{intro}}}</div>
+{{/intro}}{{/heading}}{{#v_numbered}}<ol{{/v_numbered}}{{^v_numbered}}<ul{{/v_numbered}} class="features__list" role="list">
+{{#items}}<li class="features__item">
+{{#v_numbered}}<span class="features__n" aria-hidden="true">{{n2}}</span>
+{{/v_numbered}}<{{subtag}} class="features__title">{{title}}</{{subtag}}>
+{{#body}}<div class="prose">{{{body}}}</div>
+{{/body}}{{#link}}<p class="features__link"><a href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{label}}</a></p>
+{{/link}}</li>
+{{/items}}{{#v_numbered}}</ol>{{/v_numbered}}{{^v_numbered}}</ul>{{/v_numbered}}
+</div>

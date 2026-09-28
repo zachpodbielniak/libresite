@@ -1,0 +1,29 @@
+{
+  "name": "Harbor & Pine",
+  "tagline": "Repair, restore, return",
+  "lang": "en",
+  "tokens": {
+    "paper": "#f4efe6", "ink": "#1b1a17", "muted": "#57524a", "surface": "#e9e1d3", "line": "#cdc3b1",
+    "accent": "#1f5c4a", "accent_ink": "#ffffff",
+    "font_display": "\"Avenir Next\", \"Segoe UI\", system-ui, sans-serif",
+    "font_body": "Charter, \"Iowan Old Style\", Georgia, serif",
+    "font_mono": "ui-monospace, \"SF Mono\", Menlo, monospace",
+    "base_size": 1.0625, "ratio": 1.25, "measure": 64, "radius": 4, "border": 1, "space": 1,
+    "density": "airy", "heading_weight": 700, "heading_tracking": -0.02, "heading_case": "none"
+  },
+  "brand": {"wordmark": "Harbor & Pine", "mark": "assets/mark.svg"},
+  "nav": [{"href": "work.html", "label": "Work"}, {"href": "start.html", "label": "Start"}],
+  "action": {"href": "start.html", "label": "Book a repair"},
+  "footer": {"note": "An illustrative workshop. *No real customers are shown.*", "links": [{"href": "work.html", "label": "Work"}]},
+  "voice": "Plain, warm and exact.",
+  "art": [
+    {"path": "assets/mark.svg", "brief": "Monogram", "ratio": "1:1"},
+    {"path": "assets/bench.svg", "brief": "A workbench in plan view", "ratio": "16:9"}
+  ],
+  "pages": [
+    {"path": "index.html", "title": "Furniture repair in Harbor County", "description": "Harbor & Pine repairs and restores wooden furniture with honest estimates and careful work.", "brief": "Home"},
+    {"path": "work.html", "title": "Recent work", "description": "A filterable record of illustrative repairs, restorations and small commissions from the workshop.", "brief": "Work index"},
+    {"path": "start.html", "title": "Start a repair", "description": "Prepare a repair request in your browser and download it as a text file. Nothing is sent.", "brief": "Local form"}
+  ],
+  "css": ".page--index .hero__title { max-width: 12ch; }"
+}

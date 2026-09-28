@@ -1,0 +1,12 @@
+{
+  "path": "terms.html",
+  "title": "Terms of use (draft)",
+  "description": "Draft terms of use for this site, pending the operator's confirmed legal details and review.",
+  "noindex": true,
+  "sections": [
+    {"component": "text", "variant": "narrow", "content": {
+      "heading": "Terms of use",
+      "body": "This draft is awaiting site-owner and legal review. It is not a published agreement.\n\nBefore publication, the owner must state who operates the site, the governing terms for using it and any services it describes, liability limits, intellectual property, and how to make contact about these terms, with an effective date.\n\n[Return to the home page](index.html)"
+    }}
+  ]
+}

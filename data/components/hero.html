@@ -1,0 +1,9 @@
+<div class="wrap hero__inner">
+<div class="hero__text">
+{{#kicker}}<p class="kicker">{{kicker}}</p>
+{{/kicker}}<{{htag}} class="hero__title{{#long_heading}} hero__title--long{{/long_heading}}" id="{{id}}-h">{{heading}}</{{htag}}>
+{{#lede}}<div class="hero__lede lede prose">{{{lede}}}</div>
+{{/lede}}{{#has_actions}}<p class="actions">{{#actions}}<a class="button{{^primary}} button--ghost{{/primary}}" href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{label}}</a>{{/actions}}</p>
+{{/has_actions}}</div>
+{{#art}}<figure class="hero__art"><img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}"{{#eager}} fetchpriority="high"{{/eager}}{{^eager}} loading="lazy"{{/eager}} decoding="async"></figure>
+{{/art}}</div>

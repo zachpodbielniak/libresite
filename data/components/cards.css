@@ -1,0 +1,18 @@
+.cards__list { display: grid; gap: var(--space-6); margin: 0; padding: 0; list-style: none; }
+.card { position: relative; display: grid; gap: var(--space-4); align-content: start; }
+.card__art { margin: 0; background: var(--surface); border-radius: var(--radius); overflow: hidden; }
+.card__art img { width: 100%; }
+.card__title { font-size: var(--step-2); margin-bottom: 0.3em; }
+.card__title a { text-decoration: none; }
+.card__title a::after { content: ""; position: absolute; inset: 0; }
+.card:hover .card__title a { text-decoration: underline; }
+.card__meta { font-size: var(--step--1); margin-bottom: var(--space-2); }
+.card__more { margin: var(--space-3) 0 0; font-family: var(--font-display); font-weight: 600; color: var(--accent-text); }
+.card:focus-within { outline: 3px solid var(--focus); outline-offset: 6px; }
+.card:focus-within a:focus-visible { outline: none; }
+@media (min-width: 48rem) {
+	.cards--grid .cards__list { grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); }
+	.cards--rows .card, .cards--alternating .card { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: var(--space-7); align-items: center; padding-block: var(--space-6); border-top: var(--border) solid var(--line); }
+	.cards--alternating .card:nth-child(even) .card__art { order: 2; }
+	.cards--rows .card:not(:has(.card__art)), .cards--alternating .card:not(:has(.card__art)) { grid-template-columns: 1fr; }
+}

@@ -9,12 +9,12 @@ $(OUTDIR)/.flags: FORCE | $(OUTDIR)
 $(OBJDIR)/%.o: src/%.c $(OUTDIR)/.flags | $(DEP_TARGET)
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
-$(OUTDIR)/resources.c: data/resources.xml data/prompts.yaml data/file-bundle.schema.json $(wildcard data/scaffold/*) LICENSE | $(OUTDIR)
+$(OUTDIR)/resources.c: data/resources.xml data/prompts.yaml data/file-bundle.schema.json $(wildcard data/scaffold/*) $(wildcard data/components/*) $(wildcard data/components/pages/*) LICENSE | $(OUTDIR)
 	glib-compile-resources --sourcedir=data --sourcedir=. --generate-source --c-name=ls_resources --target=$@ $<
 $(OBJDIR)/resources.o: $(OUTDIR)/resources.c $(OUTDIR)/.flags
 	@mkdir -p $(@D)
 	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
--include $(LIB_OBJECTS:.o=.d) $(OBJDIR)/cli/main.d $(OUTDIR)/test-libresite.d $(OUTDIR)/test-contracts.d $(OUTDIR)/test-packages.d $(OUTDIR)/test-ls-ai-provider.d $(OUTDIR)/test-ls-prune-step.d
+-include $(LIB_OBJECTS:.o=.d) $(OBJDIR)/cli/main.d $(UNIT_BINS:=.d)
 # Recursion is once per make invocation; changed upstream archives relink users.
 $(DEP_ARCHIVES): bundled-deps
 	@test -f $@

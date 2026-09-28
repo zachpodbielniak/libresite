@@ -1,0 +1,23 @@
+<div class="wrap" data-filter>
+{{#heading}}<div class="section-head">
+<{{htag}} id="{{id}}-h">{{heading}}</{{htag}}>
+{{#intro}}<div class="prose">{{{intro}}}</div>
+{{/intro}}</div>
+{{/heading}}<div class="filter__controls" role="group" aria-label="{{filter_label}}" hidden>
+<button class="filter__button" type="button" data-filter-value="" aria-pressed="true">{{all_label}}</button>
+{{#categories}}<button class="filter__button" type="button" data-filter-value="{{key}}" aria-pressed="false">{{label}}</button>
+{{/categories}}</div>
+<p class="filter__status muted" role="status" aria-live="polite" data-filter-status data-template-one="{{count_one}}" data-template-many="{{count_many}}"></p>
+<ul class="cards__list filter__list" role="list">
+{{#items}}<li class="card" data-filter-item="{{category_key}}">
+{{#art}}<figure class="card__art"><img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}" loading="lazy" decoding="async"></figure>
+{{/art}}<div class="card__text">
+<p class="kicker card__tag">{{category}}</p>
+<{{subtag}} class="card__title">{{#link}}<a href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{title}}</a>{{/link}}{{^link}}{{title}}{{/link}}</{{subtag}}>
+{{#meta}}<p class="card__meta muted">{{meta}}</p>
+{{/meta}}{{#body}}<div class="prose">{{{body}}}</div>
+{{/body}}</div>
+</li>
+{{/items}}</ul>
+<p class="filter__empty" data-filter-empty hidden>{{empty}}</p>
+</div>

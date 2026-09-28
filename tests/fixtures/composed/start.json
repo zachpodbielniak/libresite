@@ -1,0 +1,19 @@
+{
+  "path": "start.html",
+  "sections": [
+    {"component": "form", "variant": "aside", "content": {
+      "heading": "Start a repair",
+      "mode": "local",
+      "fields": [
+        {"name": "piece", "label": "What is the piece?", "required": true, "maxlength": 120},
+        {"name": "problem", "label": "What is wrong?", "type": "textarea", "required": true, "maxlength": 2000, "hint": "Joints, finish, veneer or structure."},
+        {"name": "kind", "label": "Type", "type": "select", "options": ["Chair", "Table", "Other"]},
+        {"name": "photos", "label": "I can send photos later", "type": "checkbox"}
+      ],
+      "submit": "Prepare request",
+      "note": "Nothing is sent. Your request stays in this page until you download it.",
+      "download_name": "repair-request.txt",
+      "fallback": "Without JavaScript, copy these questions into an email by hand."
+    }}
+  ]
+}

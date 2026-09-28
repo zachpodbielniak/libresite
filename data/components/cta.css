@@ -1,0 +1,14 @@
+.cta__title { font-size: var(--step-4); max-width: 20ch; }
+.cta--band { background: var(--accent); color: var(--accent-ink); padding-block: var(--section-space); }
+.block.cta--band { padding-top: var(--section-space); }
+.cta--band a:not(.button) { color: inherit; }
+.cta--band .button { background: var(--accent-ink); color: var(--accent); border-color: var(--accent-ink); }
+.cta--band .button--ghost { background: transparent; color: var(--accent-ink); }
+.cta--band .button:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.cta--band .prose { color: inherit; }
+.cta--quiet .cta__inner { padding-top: var(--space-6); border-top: var(--border) solid var(--line); }
+.cta--quiet .cta__title { font-size: var(--step-3); }
+@media (min-width: 56rem) {
+	.cta--split .cta__inner { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: var(--space-7); align-items: end; }
+	.cta--split .actions { justify-content: flex-end; }
+}

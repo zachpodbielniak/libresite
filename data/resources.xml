@@ -6,5 +6,48 @@
     <file>scaffold/404.html</file>
     <file>scaffold/privacy.html</file>
     <file>scaffold/terms.html</file>
+    <file>components/article.css</file>
+    <file>components/article.html</file>
+    <file>components/base.css</file>
+    <file>components/cards.css</file>
+    <file>components/cards.html</file>
+    <file>components/catalog.yaml</file>
+    <file>components/cta.css</file>
+    <file>components/cta.html</file>
+    <file>components/custom.css</file>
+    <file>components/custom.html</file>
+    <file>components/facts.css</file>
+    <file>components/facts.html</file>
+    <file>components/faq.css</file>
+    <file>components/faq.html</file>
+    <file>components/features.css</file>
+    <file>components/features.html</file>
+    <file>components/filter.css</file>
+    <file>components/filter.html</file>
+    <file>components/filter.js</file>
+    <file>components/form.css</file>
+    <file>components/form.html</file>
+    <file>components/form.js</file>
+    <file>components/gallery.css</file>
+    <file>components/gallery.html</file>
+    <file>components/hero.css</file>
+    <file>components/hero.html</file>
+    <file>components/layout.html</file>
+    <file>components/links.css</file>
+    <file>components/links.html</file>
+    <file>components/media.css</file>
+    <file>components/media.html</file>
+    <file>components/nav.js</file>
+    <file>components/plan.schema.json</file>
+    <file>components/pages/404.json</file>
+    <file>components/pages/privacy.json</file>
+    <file>components/pages/terms.json</file>
+    <file>components/pricing.css</file>
+    <file>components/pricing.html</file>
+    <file>components/quote.css</file>
+    <file>components/quote.html</file>
+    <file>components/section.html</file>
+    <file>components/text.css</file>
+    <file>components/text.html</file>
   </gresource>
 </gresources>

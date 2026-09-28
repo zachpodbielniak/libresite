@@ -1,0 +1,15 @@
+<div class="wrap">
+{{#heading}}<div class="section-head">
+<{{htag}} id="{{id}}-h">{{heading}}</{{htag}}>
+{{#intro}}<div class="prose">{{{intro}}}</div>
+{{/intro}}</div>
+{{/heading}}<ul class="pricing__list" role="list">
+{{#tiers}}<li class="pricing__tier{{#highlight}} pricing__tier--highlight{{/highlight}}">
+<{{subtag}} class="pricing__name">{{name}}</{{subtag}}>
+<p class="pricing__price"><span>{{price}}</span>{{#period}} <span class="muted">{{period}}</span>{{/period}}</p>
+{{#summary}}<div class="prose">{{{summary}}}</div>
+{{/summary}}{{#has_features}}<ul class="pricing__features">{{#features}}<li>{{text}}</li>{{/features}}</ul>
+{{/has_features}}{{#action}}<p class="actions"><a class="button{{^highlight}} button--ghost{{/highlight}}" href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{label}}</a></p>
+{{/action}}</li>
+{{/tiers}}</ul>
+</div>

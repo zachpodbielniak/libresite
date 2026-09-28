@@ -1,0 +1,37 @@
+<div class="wrap form__inner">
+<div class="form__head">
+<{{htag}} id="{{id}}-h">{{heading}}</{{htag}}>
+{{#intro}}<div class="prose">{{{intro}}}</div>
+{{/intro}}{{#v_aside}}{{#note}}<div class="form__note prose">{{{note}}}</div>
+{{/note}}{{/v_aside}}</div>
+<form class="form__form" id="{{form_id}}" aria-labelledby="{{id}}-h"{{#local}} method="dialog" novalidate data-local-form data-download-name="{{download_name}}" data-error-required="{{error_required}}" data-error-invalid="{{error_invalid}}" data-error-summary="{{error_summary}}"{{/local}}{{#mailto}} action="{{target}}" method="post" enctype="text/plain"{{/mailto}}{{#endpoint}} action="{{target}}" method="post"{{/endpoint}}>
+{{#fields}}{{#is_checkbox}}<div class="field field--check">
+<input type="checkbox" id="{{fid}}" name="{{name}}" value="yes"{{#required}} required{{/required}} aria-describedby="{{describedby}}">
+<label for="{{fid}}">{{label}}{{#required}} <span class="required">({{required_label}})</span>{{/required}}</label>
+{{#hint}}<p class="hint" id="{{fid}}-hint">{{hint}}</p>
+{{/hint}}<p class="field-error" id="{{fid}}-error" data-field-error></p>
+</div>
+{{/is_checkbox}}{{^is_checkbox}}<div class="field">
+<label for="{{fid}}">{{label}}{{#required}} <span class="required">({{required_label}})</span>{{/required}}</label>
+{{#hint}}<p class="hint" id="{{fid}}-hint">{{hint}}</p>
+{{/hint}}{{#is_textarea}}<textarea id="{{fid}}" name="{{name}}" rows="5"{{#required}} required{{/required}}{{#maxlength}} maxlength="{{maxlength}}"{{/maxlength}} aria-describedby="{{describedby}}"></textarea>
+{{/is_textarea}}{{#is_select}}<select id="{{fid}}" name="{{name}}"{{#required}} required{{/required}} aria-describedby="{{describedby}}">
+{{#options}}<option value="{{value}}">{{label}}</option>
+{{/options}}</select>
+{{/is_select}}{{#is_input}}<input type="{{type}}" id="{{fid}}" name="{{name}}"{{#required}} required{{/required}}{{#maxlength}} maxlength="{{maxlength}}"{{/maxlength}}{{#autocomplete}} autocomplete="{{autocomplete}}"{{/autocomplete}} aria-describedby="{{describedby}}">
+{{/is_input}}<p class="field-error" id="{{fid}}-error" data-field-error></p>
+</div>
+{{/is_checkbox}}{{/fields}}<div class="form__summary" role="alert" data-form-summary hidden></div>
+<div class="form__actions"{{#local}} data-form-actions hidden{{/local}}>
+<button class="button" type="submit">{{submit}}</button>
+{{#local}}<button class="button button--ghost" type="reset">{{reset_label}}</button>
+{{/local}}</div>
+{{^v_aside}}{{#note}}<div class="form__note prose">{{{note}}}</div>
+{{/note}}{{/v_aside}}{{#local}}<div class="form__output" data-form-output hidden>
+<p class="kicker" id="{{form_id}}-preview-label">{{preview_label}}</p>
+<pre class="form__preview" data-form-preview tabindex="0" aria-labelledby="{{form_id}}-preview-label"></pre>
+<p><a class="button" data-form-download href="#" download="{{download_name}}">{{download_label}}</a></p>
+</div>
+{{#fallback}}<div class="form__fallback prose" data-form-fallback>{{{fallback}}}</div>
+{{/fallback}}{{/local}}</form>
+</div>

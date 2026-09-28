@@ -12,4 +12,6 @@
 #include "steps/ls-step.h"
 #include "core/ls-usage.h"
 #include "core/ls-qa.h"
+#include "core/ls-template.h"
+#include "core/ls-components.h"
 #define LS_VERSION "0.1.0"

@@ -1,0 +1,14 @@
+{
+  "path": "404.html",
+  "title": "Page not found",
+  "description": "The page you asked for is not here. Use these links to find your way back into the site.",
+  "noindex": true,
+  "sections": [
+    {"component": "hero", "variant": "statement", "content": {
+      "kicker": "Error 404",
+      "heading": "This page is not here",
+      "lede": "The address may be mistyped, or the page may have moved. Nothing is broken on your side.",
+      "actions": [{"href": "index.html", "label": "Go to the home page"}]
+    }}
+  ]
+}

@@ -1,0 +1,18 @@
+<div class="wrap">
+{{#heading}}<div class="section-head">
+<{{htag}} id="{{id}}-h">{{heading}}</{{htag}}>
+{{#intro}}<div class="prose">{{{intro}}}</div>
+{{/intro}}</div>
+{{/heading}}<ul class="cards__list" role="list">
+{{#items}}<li class="card">
+{{#art}}<figure class="card__art"><img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}" loading="lazy" decoding="async"></figure>
+{{/art}}<div class="card__text">
+{{#tag}}<p class="kicker card__tag">{{tag}}</p>
+{{/tag}}<{{subtag}} class="card__title">{{#link}}<a href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{title}}</a>{{/link}}{{^link}}{{title}}{{/link}}</{{subtag}}>
+{{#meta}}<p class="card__meta muted">{{meta}}</p>
+{{/meta}}{{#body}}<div class="prose">{{{body}}}</div>
+{{/body}}{{#link}}<p class="card__more" aria-hidden="true">{{label}} <span>&rarr;</span></p>
+{{/link}}</div>
+</li>
+{{/items}}</ul>
+</div>

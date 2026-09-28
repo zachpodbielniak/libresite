@@ -1,0 +1,23 @@
+{
+  "path": "index.html",
+  "sections": [
+    {"component": "hero", "variant": "split", "content": {
+      "kicker": "Workshop",
+      "heading": "Old furniture, made useful again",
+      "lede": "We repair joints, finishes and **structure** so a piece can go back to work. See [recent work](work.html).",
+      "actions": [{"href": "start.html", "label": "Book a repair"}, {"href": "#how", "label": "How it works"}],
+      "art": {"src": "assets/bench.svg", "alt": "Plan drawing of a workbench"}
+    }},
+    {"component": "features", "variant": "numbered", "id": "how", "content": {
+      "heading": "How a repair works",
+      "items": [
+        {"title": "Describe the piece", "body": "Tell us what is wrong."},
+        {"title": "Get an estimate", "body": "We reply with a written estimate.\n\n- Parts\n- Labor"}
+      ]
+    }},
+    {"component": "cta", "variant": "band", "content": {
+      "heading": "Ready to start?",
+      "actions": [{"href": "start.html", "label": "Start a repair"}]
+    }}
+  ]
+}

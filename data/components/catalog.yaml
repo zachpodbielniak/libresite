@@ -1,0 +1,230 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Component catalog for composed sites. Each component has <name>.html (a
+# Mustache-subset template) and optionally <name>.css and <name>.js in this
+# directory. Slot types: text, rich, link, links, image, items, fields, choice,
+# flag. See docs/components.org before adding or changing a component.
+version: 1
+components:
+  hero:
+    summary: The page opening. The first section of every page renders its heading as the page h1.
+    variants:
+      statement: Oversized headline with generous space and no artwork; the most typographic opening.
+      split: Headline and lede beside one artwork, stacking on small screens.
+      banner: Headline and lede above one full-width artwork.
+    slots:
+      kicker: {type: text, max: 80, note: "Short label above the heading; omit rather than repeat the site name."}
+      heading: {type: text, required: true, max: 140}
+      lede: {type: rich, max: 800}
+      actions: {type: links, max_items: 2, note: "The first link is the primary action."}
+      art: {type: image, note: "Required by split and banner."}
+  text:
+    summary: A block of prose.
+    variants:
+      narrow: A single readable column.
+      wide: A wider measure for short, broad passages.
+      aside: Heading in a side column and prose beside it on wide screens.
+    slots:
+      heading: {type: text, max: 140}
+      body: {type: rich, required: true, max: 6000}
+  article:
+    summary: Longform writing split into headed parts, such as an essay or case study.
+    variants:
+      plain: Parts one after another.
+      contents: Adds an in-page table of contents linking to each part.
+    slots:
+      heading: {type: text, max: 140}
+      meta: {type: text, max: 160, note: "A byline, date or reading time. Never invent authors or dates."}
+      lede: {type: rich, max: 1200}
+      parts:
+        type: items
+        min_items: 1
+        max_items: 16
+        fields:
+          heading: {type: text, required: true, max: 140}
+          body: {type: rich, required: true, max: 6000}
+  features:
+    summary: A set of short points, principles or offerings.
+    variants:
+      columns: Two or three columns on wide screens.
+      numbered: An ordered sequence, such as a process.
+      list: A compact stacked list with rules between items.
+    slots:
+      heading: {type: text, max: 140}
+      intro: {type: rich, max: 1200}
+      items:
+        type: items
+        min_items: 2
+        max_items: 12
+        fields:
+          title: {type: text, required: true, max: 120}
+          body: {type: rich, max: 1200}
+          link: {type: link}
+  cards:
+    summary: Linked entries such as projects, services, articles or locations.
+    variants:
+      grid: An even grid of cards.
+      rows: Wide rows with artwork and text side by side.
+      alternating: Rows whose artwork alternates sides for an editorial rhythm.
+    slots:
+      heading: {type: text, max: 140}
+      intro: {type: rich, max: 1200}
+      items:
+        type: items
+        min_items: 1
+        max_items: 24
+        fields:
+          title: {type: text, required: true, max: 120}
+          tag: {type: text, max: 40}
+          meta: {type: text, max: 120}
+          body: {type: rich, max: 1200}
+          link: {type: link}
+          art: {type: image}
+  filter:
+    summary: Linked entries with category buttons that filter the list. Every entry stays visible without JavaScript.
+    variants:
+      grid: Entries in a grid.
+      rows: Entries as wide rows.
+    slots:
+      heading: {type: text, max: 140}
+      intro: {type: rich, max: 1200}
+      all_label: {type: text, required: true, max: 40, note: "Label of the button that shows every entry."}
+      categories: {type: items, min_items: 2, max_items: 8, fields: {label: {type: text, required: true, max: 40}}}
+      empty: {type: text, required: true, max: 200, note: "Message shown when a category has no entries."}
+      items:
+        type: items
+        min_items: 1
+        max_items: 48
+        fields:
+          title: {type: text, required: true, max: 120}
+          category: {type: text, required: true, max: 40, note: "Must equal one category label."}
+          meta: {type: text, max: 120}
+          body: {type: rich, max: 1200}
+          link: {type: link}
+          art: {type: image}
+  media:
+    summary: One artwork with a caption, optionally with text.
+    variants:
+      full: Artwork across the full content width.
+      inset: Artwork at reading width.
+      split: Artwork beside a heading and body.
+    slots:
+      art: {type: image, required: true}
+      caption: {type: text, max: 300}
+      heading: {type: text, max: 140}
+      body: {type: rich, max: 2000}
+  quote:
+    summary: A pull quote from the page's own material. Never a fabricated testimonial.
+    variants:
+      pull: Large display quotation.
+      plain: Quiet inline quotation.
+    slots:
+      quote: {type: text, required: true, max: 400}
+      source: {type: text, max: 120, note: "Only a real, supplied attribution."}
+  cta:
+    summary: A call to action that closes a page or section.
+    variants:
+      band: A full-width accent band.
+      quiet: A restrained closing line with links.
+      split: Heading on one side and actions on the other.
+    slots:
+      heading: {type: text, required: true, max: 140}
+      body: {type: rich, max: 800}
+      actions: {type: links, min_items: 1, max_items: 2}
+  faq:
+    summary: Questions with expandable answers.
+    variants:
+      list: Stacked questions.
+    slots:
+      heading: {type: text, max: 140}
+      items:
+        type: items
+        min_items: 1
+        max_items: 20
+        fields:
+          question: {type: text, required: true, max: 200}
+          answer: {type: rich, required: true, max: 2000}
+  facts:
+    summary: Labeled facts such as hours, location, scope or service terms. Never invented metrics.
+    variants:
+      grid: Facts in a grid of tiles.
+      list: A definition list.
+    slots:
+      heading: {type: text, max: 140}
+      intro: {type: rich, max: 800}
+      items:
+        type: items
+        min_items: 1
+        max_items: 16
+        fields:
+          label: {type: text, required: true, max: 60}
+          value: {type: rich, required: true, max: 400}
+  pricing:
+    summary: Offer tiers or packages with prices supplied by the client.
+    variants:
+      columns: Tiers side by side.
+    slots:
+      heading: {type: text, max: 140}
+      intro: {type: rich, max: 800}
+      tiers:
+        type: items
+        min_items: 1
+        max_items: 4
+        fields:
+          name: {type: text, required: true, max: 60}
+          price: {type: text, required: true, max: 40}
+          period: {type: text, max: 40}
+          summary: {type: rich, max: 400}
+          features: {type: items, max_items: 10, fields: {text: {type: text, required: true, max: 140}}}
+          action: {type: link}
+          highlight: {type: flag}
+  gallery:
+    summary: A set of artworks with captions.
+    variants:
+      grid: An even grid.
+      mosaic: A grid where the first artwork is larger.
+    slots:
+      heading: {type: text, max: 140}
+      items:
+        type: items
+        min_items: 2
+        max_items: 24
+        fields:
+          art: {type: image, required: true}
+          caption: {type: text, max: 200}
+  form:
+    summary: A labeled form. Local mode builds a downloadable text file in the browser and sends nothing.
+    variants:
+      stacked: Fields in one column.
+      aside: Heading and notes beside the form on wide screens.
+    slots:
+      heading: {type: text, required: true, max: 140}
+      intro: {type: rich, max: 1200}
+      mode: {type: choice, required: true, values: [local, mailto, endpoint], note: "local sends nothing; mailto opens the visitor's mail client; endpoint posts to a supplied URL."}
+      target: {type: text, max: 300, note: "The supplied email address for mailto, or HTTPS URL for endpoint. Never invent one."}
+      fields: {type: fields, required: true, min_items: 1, max_items: 20}
+      submit: {type: text, required: true, max: 60, note: "Button label, such as Download brief."}
+      note: {type: rich, max: 600, note: "Shown beside the button; state plainly what happens to entered data."}
+      download_name: {type: text, max: 60, note: "Local mode file name ending in .txt."}
+      fallback: {type: rich, max: 1200, note: "Shown without JavaScript in local mode, such as how to copy the questions by hand."}
+  links:
+    summary: Onward links to related pages.
+    variants:
+      list: A simple list.
+      tiles: Large linked tiles.
+    slots:
+      heading: {type: text, max: 140}
+      items:
+        type: items
+        min_items: 1
+        max_items: 8
+        fields:
+          link: {type: link, required: true}
+          body: {type: text, max: 200}
+  custom:
+    summary: An escape hatch for one signature moment the catalog cannot express. Well-formed XHTML using the site's CSS variables; style it through the page css. No scripts, forms, iframes, inline event handlers, style attributes or remote URLs.
+    variants:
+      contained: Inside the content width.
+      bleed: Across the full viewport width.
+    slots:
+      label: {type: text, required: true, max: 120, note: "Accessible name for the region."}
+      html: {type: html, required: true, max: 12000}

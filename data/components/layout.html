@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="{{lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{full_title}}</title>
+<meta name="description" content="{{description}}">
+{{#noindex}}<meta name="robots" content="noindex">
+{{/noindex}}{{#canonical}}<link rel="canonical" href="{{canonical}}">
+<meta property="og:url" content="{{canonical}}">
+{{/canonical}}<meta property="og:type" content="website">
+<meta property="og:title" content="{{title}}">
+<meta property="og:description" content="{{description}}">
+<meta property="og:site_name" content="{{site}}">
+<meta name="twitter:card" content="summary">
+<meta name="color-scheme" content="{{color_scheme}}">
+<meta name="theme-color" content="{{theme_color}}">
+{{#font_href}}<link rel="preconnect" href="https://fonts.bunny.net">
+<link rel="stylesheet" href="{{font_href}}">
+{{/font_href}}<link rel="stylesheet" href="styles.css">
+{{#page_css}}<style>
+{{{page_css}}}
+</style>
+{{/page_css}}<script src="site.js" defer></script>
+</head>
+<body class="page page--{{slug}}">
+<a class="skip-link" href="#main">{{skip_label}}</a>
+<header class="site-header">
+<div class="wrap site-header__inner">
+<a class="brand" href="index.html"{{#home}} aria-current="page"{{/home}}>{{#mark}}<img src="{{src}}" alt="" width="32" height="32">{{/mark}}<span>{{wordmark}}</span></a>
+<button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" hidden>{{menu_label}}</button>
+<nav class="site-nav" id="site-nav" aria-label="{{nav_label}}">
+<ul>
+{{#nav}}<li><a href="{{href}}"{{#current}} aria-current="page"{{/current}}>{{label}}</a></li>
+{{/nav}}</ul>
+{{#action}}<a class="button button--small" href="{{href}}">{{label}}</a>
+{{/action}}</nav>
+</div>
+</header>
+<main id="main" tabindex="-1">
+{{{main}}}
+</main>
+<footer class="site-footer">
+<div class="wrap site-footer__inner">
+<div>
+<p class="brand">{{wordmark}}</p>
+{{#footer_note}}<div class="site-footer__note prose">{{{footer_note}}}</div>
+{{/footer_note}}</div>
+<nav aria-label="{{footer_label}}">
+<ul>
+{{#footer_links}}<li><a href="{{href}}"{{#current}} aria-current="page"{{/current}}>{{label}}</a></li>
+{{/footer_links}}</ul>
+</nav>
+</div>
+</footer>
+</body>
+</html>

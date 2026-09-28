@@ -1,0 +1,17 @@
+<div class="wrap article__inner">
+{{#heading}}<header class="article__head">
+<{{htag}} class="article__title" id="{{id}}-h">{{heading}}</{{htag}}>
+{{#meta}}<p class="article__meta kicker">{{meta}}</p>
+{{/meta}}</header>
+{{/heading}}{{#lede}}<div class="article__lede lede prose">{{{lede}}}</div>
+{{/lede}}{{#v_contents}}<nav class="article__contents" aria-label="{{contents_label}}">
+<p class="kicker">{{contents_label}}</p>
+<ol>{{#parts}}<li><a href="#{{part_id}}">{{heading}}</a></li>{{/parts}}</ol>
+</nav>
+{{/v_contents}}<div class="article__body">
+{{#parts}}<section class="article__part" id="{{part_id}}" aria-labelledby="{{part_id}}-h">
+<{{subtag}} id="{{part_id}}-h">{{heading}}</{{subtag}}>
+<div class="prose">{{{body}}}</div>
+</section>
+{{/parts}}</div>
+</div>
