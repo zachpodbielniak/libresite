@@ -1,0 +1,44 @@
+# Composed-site example: a fictional late-night ramen counter with supplied
+# menu prices, hours and address. Same components as studio.yaml, opposite look.
+version: 1
+name: moth-and-moon
+site:
+  brief: >-
+    Create the website for MOTH & MOON, an illustrative late-night ramen counter under a railway arch in the fictional harbor city of Vell. Twelve stools, one pot of pork-and-kombu broth started at noon, open until the broth runs out. The mood is neon on wet pavement, steam, a paper lantern and the last train. The business is fictional; disclose that in the footer. Do not invent reviews, awards, press, staff names, delivery services or online ordering.
+  audience: Night-shift workers, musicians after a set, and people who missed the last train and want something hot and honest.
+  style: cinematic
+  frontend: Static pages from the Libresite component library with original local SVG artwork. Open-source web fonts are welcome.
+  backend: none
+  database: none
+  requirements: >-
+    Five routes: index.html, menu.html, story.html, visit.html, events.html. Dark, warm palette: near-black night blue paper, lantern amber accent, steam-grey text. A bold condensed display face against a friendly humanist body. Artwork language: a single-line neon illustration style (a moth, a moon, a bowl, the railway arch). Supplied facts, use exactly: hours Wednesday to Sunday, 9 pm until the broth runs out (usually around 2 am); closed Monday and Tuesday. Address: Arch 7, Tidewater Viaduct, Vell. Menu: Moon Shoyu 14; Moth Miso (spicy) 15; Kombu Shio (vegan) 13; Midnight Egg 2; Extra Noodles 3; Pickled Cucumbers 4; Barley Tea 3; Yuzu Soda 4. Cash and card. No reservations for the counter. Private late parties for up to 12 people can be requested by email at arch7@moth-moon.example (illustrative address).
+ai:
+  provider: claude-code
+  timeout: 0
+  retries: 2
+  max_tokens: 0
+pipeline:
+  steps:
+    - id: plan
+      type: plan
+      instructions: >-
+        Home opens with the counter at night and the one-line promise "Hot until the last bowl." with actions to see the menu and find the arch. Menu presents every supplied item and price exactly, grouped as Bowls, Extras and Drinks, with vegan and spicy marked in words. Story tells how a single pot and twelve stools shape the night, without inventing people. Visit gives hours, address, payment and the no-reservations rule as facts, a short FAQ (late arrival, broth running out, dietary needs, walking from the last train) and a clear next step. Events explains private late parties for up to 12 and offers the mailto link. Plan art: a neon moth-and-moon mark, a steaming bowl, the railway arch at night.
+    - id: pages
+      type: pages
+      options: {parallel: 12}
+    - id: acceptance
+      type: validate
+      options:
+        required: [index.html, menu.html, story.html, visit.html, events.html, styles.css, site.js, robots.txt]
+        checks:
+          - path: index.html
+            contains: ['Hot until the last bowl.', 'href="menu.html"', 'href="visit.html"']
+          - path: menu.html
+            contains: ['Moon Shoyu', 'Moth Miso', 'Kombu Shio', 'Midnight Egg', 'Yuzu Soda']
+          - path: visit.html
+            contains: ['Arch 7, Tidewater Viaduct, Vell', 'Wednesday to Sunday']
+          - path: events.html
+            contains: ['mailto:arch7@moth-moon.example']
+    - id: build-notes
+      type: prune
+      options: {prefixes: [site/]}

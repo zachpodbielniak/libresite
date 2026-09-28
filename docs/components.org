@@ -124,5 +124,6 @@ A composed recipe's checkpoint fingerprint includes the component library digest
 | 2026-09-28 | studio (composed) | 6 min 50 s | first attempt: 18 KB plan with long briefs and a contrast retry (now repaired natively); pages 76 s, bounded by one artwork |
 | 2026-09-28 | studio (composed) | 60 s | compact briefs: plan 35 s, pages and art 24 s, native steps under 1 s; no retries |
 | 2026-09-28 | studio (bundled recipe, gate approved) | 53 s | final code; slowest page 16 s |
+| 2026-09-28 | night-ramen (composed example) | 50 s | dark cinematic site, five pages and three artworks; plan 32 s, pages 17 s; no retries |
 
 These are single live runs on Claude Code with the default model. They establish timing, not design quality; a person must still look at every delivered site.
