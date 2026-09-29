@@ -165,6 +165,7 @@ Built-in final types and helpers:
 | =ls_components_get_digest(self)= | none | SHA-256 of every component byte, bound into checkpoints |
 | =ls_components_describe(self)= | full | Model-facing component reference |
 | =ls_components_suggest_look(self, seed)= | full | Stable per-site starting look: axis name to value |
+| =ls_components_suggest_opening(self, seed)= | full, nullable | Stable per-site home opening as component/variant |
 | =ls_components_list_themes(self)= | full | Theme names |
 | =ls_components_get_theme_summary(self, name)= | none, nullable | One-line theme description |
 | =ls_components_apply_theme(self, plan, name, error)= | none | Replace a plan's tokens, fonts, look, css and restyle with a theme's |

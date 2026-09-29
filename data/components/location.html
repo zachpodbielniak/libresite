@@ -1,6 +1,6 @@
 <div class="wrap location__inner">
 <div class="location__text">
-{{#heading}}<{{htag}} id="{{id}}-h">{{heading}}</{{htag}}>
+{{#heading}}<{{htag}} id="{{id}}-h">{{{heading_html}}}</{{htag}}>
 {{/heading}}<address class="location__address">{{{address}}}</address>
 {{#directions}}<div class="location__directions prose">{{{directions}}}</div>
 {{/directions}}{{#has_actions}}<p class="actions">{{#actions}}<a class="button{{^primary}} button--ghost{{/primary}}" href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{label}}</a>{{/actions}}</p>

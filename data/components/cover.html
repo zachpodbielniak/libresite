@@ -3,7 +3,7 @@
 <div class="cover__text">
 <div class="wrap">
 {{#kicker}}<p class="kicker">{{kicker}}</p>
-{{/kicker}}<{{htag}} class="cover__title{{#long_heading}} cover__title--long{{/long_heading}}" id="{{id}}-h">{{heading}}</{{htag}}>
+{{/kicker}}<{{htag}} class="cover__title{{#long_heading}} cover__title--long{{/long_heading}}" id="{{id}}-h">{{{heading_html}}}</{{htag}}>
 {{#lede}}<div class="cover__lede lede prose">{{{lede}}}</div>
 {{/lede}}{{#has_actions}}<p class="actions">{{#actions}}<a class="button{{^primary}} button--ghost{{/primary}}" href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{label}}</a>{{/actions}}</p>
 {{/has_actions}}</div>

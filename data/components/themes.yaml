@@ -57,6 +57,10 @@ themes:
       footer: big
       texture: grain
       motion: none
+      emphasis: italic
+      ornament: rule
+      kicker: line
+      backdrop: none
     css: '.hero__title, .page-header__title { font-variation-settings: ''opsz'' 144; } .lede { font-style: italic; }'
   brutalist:
     summary: 'Raw and loud: white, black, electric yellow, square edges, hard shadows and a drafting grid.'
@@ -104,6 +108,10 @@ themes:
       footer: inverted
       texture: grid
       motion: none
+      emphasis: block
+      ornament: zigzag
+      kicker: number
+      backdrop: stripes
     css: '.site-header { border-bottom-width: 3px; border-bottom-color: var(--ink); } a:hover { background: var(--accent); color: var(--accent-ink); } ::selection { background: var(--ink); color: var(--accent);
       }'
   midnight:
@@ -156,6 +164,10 @@ themes:
       footer: simple
       texture: dots
       motion: rise
+      emphasis: accent
+      ornament: star
+      kicker: pill
+      backdrop: glow
     css: '.hero__title, .poster__title { color: var(--accent); } .kicker { color: var(--accent); }'
   soft:
     summary: 'Friendly and calm: cream, sage, rounded everything, soft shadows and centered headings.'
@@ -202,6 +214,10 @@ themes:
       footer: simple
       texture: none
       motion: rise
+      emphasis: highlight
+      ornament: dots
+      kicker: pill
+      backdrop: mesh
     css: '.site-footer { border-radius: 2rem 2rem 0 0; }'
   civic:
     summary: 'Clear and trustworthy: white, institutional blue, plain sans type, outlined panels and an ink footer.'
@@ -248,6 +264,10 @@ themes:
       footer: inverted
       texture: none
       motion: none
+      emphasis: accent
+      ornament: none
+      kicker: accent
+      backdrop: block
     css: '.site-header { border-top: 0.35rem solid var(--accent); }'
   atelier:
     summary: 'Quiet luxury: ivory and black, a spaced capital serif, centered headings, framed art and wide air.'
@@ -295,6 +315,10 @@ themes:
       footer: big
       texture: none
       motion: rise
+      emphasis: italic
+      ornament: star
+      kicker: number
+      backdrop: none
     css: 'body { font-weight: 300; } .brand { letter-spacing: 0.3em; }'
   workshop:
     summary: 'Made by hand: chalk paper, green-black ink, signal red, numbered sections, pressed buttons and a drafting grid.'
@@ -344,6 +368,10 @@ themes:
       footer: inverted
       texture: grid
       motion: none
+      emphasis: underline
+      ornament: zigzag
+      kicker: mono
+      backdrop: halftone
     css: '.brand { text-transform: uppercase; letter-spacing: 0.08em; }'
   neon:
     summary: 'Club night: near-black, acid lime, a wide display face, giant headings, hard lime shadows and ruled lines.'
@@ -393,4 +421,354 @@ themes:
       footer: big
       texture: lines
       motion: rise
+      emphasis: outline
+      ornament: wave
+      kicker: accent
+      backdrop: glow
     css: '.site-footer .brand, .hero__title, .poster__title { color: var(--accent); }'
+  terracotta:
+    summary: 'Sun-baked Mediterranean: clay, cream and olive, a soft serif display, highlighted words and warm glows.'
+    tokens:
+      paper: '#faf3ea'
+      ink: '#2b1d16'
+      muted: '#6a5548'
+      surface: '#f1e4d3'
+      line: '#e1cdb6'
+      accent: '#b4502e'
+      accent_ink: '#ffffff'
+      font_display: '"DM Serif Display", Georgia, serif'
+      font_body: '"DM Sans", system-ui, sans-serif'
+      font_mono: ui-monospace, monospace
+      base_size: 1.0625
+      ratio: 1.3
+      measure: 66
+      radius: 14
+      border: 1
+      space: 1
+      density: regular
+      heading_weight: 400
+      heading_tracking: -0.01
+      heading_leading: 1.05
+      heading_case: none
+    fonts:
+    - family: DM Serif Display
+      weights:
+      - 400
+      italic: true
+    - family: DM Sans
+      weights:
+      - 400
+      - 500
+      - 700
+    look:
+      header: centered
+      nav: pill
+      heads: plain
+      buttons: pill
+      panels: flat
+      rhythm: bands
+      align: center
+      images: rounded
+      footer: big
+      texture: grain
+      motion: rise
+      emphasis: italic
+      ornament: wave
+      kicker: pill
+      backdrop: glow
+  nordic:
+    summary: 'Scandinavian calm: pale fog, slate ink, one cold blue, generous air and thin rules.'
+    tokens:
+      paper: '#f5f7f8'
+      ink: '#1c2429'
+      muted: '#55616a'
+      surface: '#e9eef1'
+      line: '#d3dce2'
+      accent: '#2d5f86'
+      accent_ink: '#ffffff'
+      font_display: '"Manrope", system-ui, sans-serif'
+      font_body: '"Manrope", system-ui, sans-serif'
+      font_mono: '"IBM Plex Mono", ui-monospace, monospace'
+      base_size: 1.0625
+      ratio: 1.22
+      measure: 66
+      radius: 6
+      border: 1
+      space: 1.15
+      density: airy
+      heading_weight: 600
+      heading_tracking: -0.03
+      heading_leading: 1.08
+      heading_case: none
+    fonts:
+    - family: Manrope
+      weights:
+      - 400
+      - 500
+      - 600
+      - 800
+    - family: IBM Plex Mono
+      weights:
+      - 400
+    look:
+      header: bar
+      nav: underline
+      heads: split
+      buttons: underline
+      panels: rules
+      rhythm: divided
+      align: left
+      images: plain
+      footer: simple
+      texture: none
+      motion: rise
+      emphasis: accent
+      ornament: none
+      kicker: line
+      backdrop: none
+  retro:
+    summary: 'Seventies warmth: mustard, rust and brown, a fat display face, rounded pills and sunny stripes.'
+    tokens:
+      paper: '#fbf1dc'
+      ink: '#3a2415'
+      muted: '#6b4d36'
+      surface: '#f3e2bd'
+      line: '#e3c890'
+      accent: '#b8431c'
+      accent_ink: '#ffffff'
+      font_display: '"Abril Fatface", Georgia, serif'
+      font_body: '"Karla", system-ui, sans-serif'
+      font_mono: ui-monospace, monospace
+      base_size: 1.0625
+      ratio: 1.32
+      measure: 66
+      radius: 24
+      border: 1
+      space: 1
+      density: regular
+      heading_weight: 400
+      heading_tracking: 0
+      heading_leading: 1.02
+      heading_case: none
+    fonts:
+    - family: Abril Fatface
+      weights:
+      - 400
+    - family: Karla
+      weights:
+      - 400
+      - 600
+      - 700
+    look:
+      header: floating
+      nav: pill
+      heads: giant
+      buttons: pill
+      panels: raised
+      rhythm: bands
+      align: center
+      images: rounded
+      footer: inverted
+      texture: none
+      motion: none
+      emphasis: highlight
+      ornament: wave
+      kicker: pill
+      backdrop: stripes
+  zine:
+    summary: 'Photocopied zine: stark black and white, hot pink, typewriter body, stamped words and halftone.'
+    tokens:
+      paper: '#ffffff'
+      ink: '#111111'
+      muted: '#454545'
+      surface: '#f0f0f0'
+      line: '#111111'
+      accent: '#e0197d'
+      accent_ink: '#ffffff'
+      font_display: '"Archivo Black", system-ui, sans-serif'
+      font_body: '"Courier Prime", ui-monospace, monospace'
+      font_mono: '"Courier Prime", ui-monospace, monospace'
+      base_size: 1.0625
+      ratio: 1.35
+      measure: 66
+      radius: 0
+      border: 2
+      space: 1
+      density: regular
+      heading_weight: 400
+      heading_tracking: -0.02
+      heading_leading: 0.95
+      heading_case: uppercase
+    fonts:
+    - family: Archivo Black
+      weights:
+      - 400
+    - family: Courier Prime
+      weights:
+      - 400
+      - 700
+    look:
+      header: stacked
+      nav: slashes
+      heads: rule
+      buttons: offset
+      panels: outlined
+      rhythm: divided
+      align: left
+      images: print
+      footer: big
+      texture: dots
+      motion: none
+      emphasis: block
+      ornament: star
+      kicker: number
+      backdrop: halftone
+  botanical:
+    summary: 'Garden and apothecary: deep leaf green, cream, a classic serif, framed art and quiet ornaments.'
+    tokens:
+      paper: '#f6f3e8'
+      ink: '#1f2a20'
+      muted: '#4f5a4c'
+      surface: '#e8e6d3'
+      line: '#cfccb2'
+      accent: '#2f5d3a'
+      accent_ink: '#ffffff'
+      font_display: '"Playfair Display", Georgia, serif'
+      font_body: '"Lora", Georgia, serif'
+      font_mono: ui-monospace, monospace
+      base_size: 1.0625
+      ratio: 1.28
+      measure: 66
+      radius: 2
+      border: 1
+      space: 1
+      density: regular
+      heading_weight: 600
+      heading_tracking: -0.01
+      heading_leading: 1.08
+      heading_case: none
+    fonts:
+    - family: Playfair Display
+      weights:
+      - 500
+      - 700
+      italic: true
+    - family: Lora
+      weights:
+      - 400
+      - 600
+      italic: true
+    look:
+      header: centered
+      nav: caps
+      heads: plain
+      buttons: square
+      panels: rules
+      rhythm: even
+      align: center
+      images: framed
+      footer: simple
+      texture: grain
+      motion: rise
+      emphasis: italic
+      ornament: dots
+      kicker: accent
+      backdrop: none
+  noir:
+    summary: 'Evening luxury: charcoal, champagne gold, a wide geometric display and floating header.'
+    tokens:
+      paper: '#121212'
+      ink: '#f1ece2'
+      muted: '#b5ab9a'
+      surface: '#1c1c1c'
+      line: '#33302b'
+      accent: '#d9b36c'
+      accent_ink: '#161109'
+      font_display: '"Syne", system-ui, sans-serif'
+      font_body: '"Inter", system-ui, sans-serif'
+      font_mono: ui-monospace, monospace
+      base_size: 1.0625
+      ratio: 1.3
+      measure: 66
+      radius: 2
+      border: 1
+      space: 1
+      density: airy
+      heading_weight: 700
+      heading_tracking: -0.02
+      heading_leading: 1.0
+      heading_case: none
+    fonts:
+    - family: Syne
+      weights:
+      - 500
+      - 700
+      - 800
+    - family: Inter
+      weights:
+      - 300
+      - 400
+      - 500
+    look:
+      header: floating
+      nav: caps
+      heads: giant
+      buttons: underline
+      panels: outlined
+      rhythm: tight
+      align: left
+      images: framed
+      footer: big
+      texture: none
+      motion: rise
+      emphasis: italic
+      ornament: rule
+      kicker: line
+      backdrop: glow
+  sunrise:
+    summary: 'Bright and optimistic: peach, violet and white, rounded geometric type and a gradient mesh.'
+    tokens:
+      paper: '#fffaf6'
+      ink: '#231a33'
+      muted: '#5b5070'
+      surface: '#fbeee6'
+      line: '#eddcd0'
+      accent: '#6a3fd1'
+      accent_ink: '#ffffff'
+      font_display: '"Outfit", system-ui, sans-serif'
+      font_body: '"Outfit", system-ui, sans-serif'
+      font_mono: ui-monospace, monospace
+      base_size: 1.0625
+      ratio: 1.28
+      measure: 66
+      radius: 20
+      border: 1
+      space: 1
+      density: regular
+      heading_weight: 700
+      heading_tracking: -0.03
+      heading_leading: 1.02
+      heading_case: none
+    fonts:
+    - family: Outfit
+      weights:
+      - 300
+      - 400
+      - 600
+      - 800
+    look:
+      header: floating
+      nav: pill
+      heads: plain
+      buttons: pill
+      panels: raised
+      rhythm: even
+      align: center
+      images: rounded
+      footer: simple
+      texture: none
+      motion: rise
+      emphasis: highlight
+      ornament: none
+      kicker: pill
+      backdrop: mesh

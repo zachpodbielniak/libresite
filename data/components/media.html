@@ -1,7 +1,7 @@
 <div class="wrap media__inner">
 {{#art}}<figure class="media__figure"><img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}"{{#eager}} fetchpriority="high"{{/eager}}{{^eager}} loading="lazy"{{/eager}} decoding="async">{{#caption}}<figcaption class="muted">{{caption}}</figcaption>{{/caption}}</figure>
 {{/art}}{{#has_text}}<div class="media__text">
-{{#heading}}<{{htag}} id="{{id}}-h">{{heading}}</{{htag}}>
+{{#heading}}<{{htag}} id="{{id}}-h">{{{heading_html}}}</{{htag}}>
 {{/heading}}{{#body}}<div class="prose">{{{body}}}</div>
 {{/body}}</div>
 {{/has_text}}</div>

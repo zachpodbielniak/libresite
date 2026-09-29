@@ -285,6 +285,8 @@ test_plan(void){
 	g_assert_cmpuint(prompts->len, ==, 2);
 	g_assert_nonnull(strstr(g_ptr_array_index(prompts, 0), "COMPONENTS"));
 	g_assert_nonnull(strstr(g_ptr_array_index(prompts, 0), "Plan three pages."));
+	g_assert_nonnull(strstr(g_ptr_array_index(prompts, 0), "\"suggested_opening\":\""));
+	g_assert_nonnull(strstr(g_ptr_array_index(prompts, 0), "\"suggested_look\":{"));
 	g_assert_nonnull(strstr(g_ptr_array_index(prompts, 0), "Nothing is sent."));
 	g_assert_nonnull(strstr(g_ptr_array_index(prompts, 1), "PREVIOUS ATTEMPT REJECTED"));
 	g_assert_nonnull(strstr(g_ptr_array_index(prompts, 1), "index.html"));

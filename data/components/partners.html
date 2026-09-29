@@ -1,5 +1,5 @@
 <div class="wrap">
-{{#heading}}<div class="section-head"><{{htag}} id="{{id}}-h">{{heading}}</{{htag}}></div>
+{{#heading}}<div class="section-head"><{{htag}} id="{{id}}-h">{{{heading_html}}}</{{htag}}></div>
 {{/heading}}<ul class="partners__list" role="list">
 {{#items}}<li class="partners__item"><span class="partners__name">{{#link}}<a href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{name}}</a>{{/link}}{{^link}}{{name}}{{/link}}</span>{{#note}}<span class="partners__note muted">{{note}}</span>{{/note}}</li>
 {{/items}}</ul>

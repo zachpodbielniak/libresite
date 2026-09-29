@@ -846,7 +846,7 @@ test_suggest_look(void){
 	g_autoptr(GList) axes = json_object_get_members(first);
 	GList *axis;
 	guint i;
-	g_assert_cmpuint(g_list_length(axes), ==, 11);
+	g_assert_cmpuint(g_list_length(axes), ==, 15);
 	for (axis = axes; axis != NULL; axis = axis->next)
 		g_assert_cmpstr(ls_string(first, axis->data), ==, ls_string(again, axis->data));
 	json_object_set_object_member(json_node_get_object(plan), "look", json_object_ref(first));
@@ -872,7 +872,7 @@ test_themes(void){
 	g_autoptr(GHashTable) sheets = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 	g_autoptr(GError) error = NULL;
 	guint i;
-	g_assert_cmpuint(g_strv_length(names), >=, 8);
+	g_assert_cmpuint(g_strv_length(names), >=, 15);
 	for (i = 0; names[i] != NULL; i++) {
 		g_autoptr(JsonNode) plan = load("plan.json");
 		g_autoptr(JsonObject) pages = fixture_pages();
@@ -912,6 +912,53 @@ test_themes(void){
 	g_assert_nonnull(strstr(ls_components_get_plan_schema(components), "\"tokens\""));
 }
 
+
+/* Heading emphasis renders as markup only where the heading is shown;
+ * everywhere else the markers are dropped, and stray markers stay text. */
+static void
+test_heading_emphasis(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(JsonNode) plan = load("plan.json");
+	g_autoptr(JsonObject) pages = fixture_pages();
+	g_autoptr(GError) error = NULL;
+	g_autofree gchar *text = NULL;
+	g_autoptr(JsonNode) bundle = NULL;
+	const gchar *html;
+	json_object_set_member(pages, "journal.html", json(
+		"{'path':'journal.html','sections':[{'component':'page-header','content':{'heading':'Notes from the *bench*'}},"
+		"{'component':'text','content':{'heading':'Glue <b> and *clamps* at 5 * 3','body':'Body.'}},"
+		"{'component':'text','content':{'heading':'A * lone and ** empty marker','body':'More.'}}]}"));
+	text = ls_components_compose(components, plan, pages, NULL, &error);
+	g_assert_no_error(error);
+	bundle = ls_json_parse(text, NULL);
+	html = file_content(bundle, "journal.html");
+	contains(html, ">Notes from the <em class=\"em\">bench</em></h1>");
+	contains(html, ">Glue &lt;b&gt; and <em class=\"em\">clamps</em> at 5 * 3</h2>");
+	contains(html, ">A * lone and ** empty marker</h2>");
+	contains(html, "<a href=\"#glue-b-and-clamps-at-5-3\">Glue &lt;b&gt; and clamps at 5 * 3</a>");
+	lacks(html, "*bench*");
+	lacks(html, "<b>");
+}
+
+/* Home openings rotate between sites, stay stable per site and are real. */
+static void
+test_suggest_opening(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(GHashTable) seen = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+	g_autofree gchar *first = ls_components_suggest_opening(components, "harbor");
+	g_autofree gchar *again = ls_components_suggest_opening(components, "harbor");
+	guint i;
+	g_assert_cmpstr(first, ==, again);
+	for (i = 0; i < 40; i++) {
+		g_autofree gchar *seed = g_strdup_printf("site-%u", i);
+		gchar *opening = ls_components_suggest_opening(components, seed);
+		g_autofree gchar *component = g_strndup(opening, strcspn(opening, "/"));
+		g_assert_true(g_strv_contains((const gchar *[]){"hero", "cover", "poster", "manifesto", NULL}, component));
+		g_hash_table_add(seen, opening);
+	}
+	g_assert_cmpuint(g_hash_table_size(seen), >=, 8);
+}
+
 int
 main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
@@ -935,6 +982,8 @@ main(int argc, char **argv){
 	g_test_add_func("/components/every-look", test_every_look);
 	g_test_add_func("/components/suggest-look", test_suggest_look);
 	g_test_add_func("/components/themes", test_themes);
+	g_test_add_func("/components/heading-emphasis", test_heading_emphasis);
+	g_test_add_func("/components/suggest-opening", test_suggest_opening);
 	g_test_add_func("/components/directory-tabs", test_directory_and_tabs);
 	g_test_add_func("/components/schema-kinds", test_schema_kinds);
 	return g_test_run();

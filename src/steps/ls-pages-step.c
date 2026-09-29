@@ -237,6 +237,15 @@ plan_prompt(LsPrompts *prompts, LsRecipe *recipe, JsonObject *config, LsComponen
 		if (!is_utility_route(item->data))
 			json_array_add_string_element(routes, item->data);
 	json_object_set_array_member(task, "required_routes", routes);
+	{
+		JsonObject *root = ls_recipe_get_root(recipe);
+		const gchar *name = ls_string(root, "name");
+		const gchar *brief = ls_string(member_object_of(root, "site"), "brief");
+		g_autofree gchar *seed = g_strconcat(name != NULL ? name : "", "\n", brief != NULL ? brief : "", NULL);
+		g_autofree gchar *opening = ls_components_suggest_opening(components, seed);
+		if (opening != NULL)
+			json_object_set_string_member(task, "suggested_opening", opening);
+	}
 	if (plan_theme(config) != NULL) {
 		JsonObject *theme = json_object_new();
 		json_object_set_string_member(theme, "name", plan_theme(config));

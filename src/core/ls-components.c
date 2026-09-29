@@ -919,6 +919,42 @@ ls_components_get_digest(LsComponents *self){
 }
 
 
+/* Hash @seed with @salt into [0, n). */
+static guint
+seed_pick(const gchar *seed, const gchar *salt, guint n){
+	g_autoptr(GChecksum) checksum = g_checksum_new(G_CHECKSUM_SHA256);
+	guint8 bytes[32];
+	gsize length = sizeof bytes;
+	g_checksum_update(checksum, (const guchar *)seed, -1);
+	g_checksum_update(checksum, (const guchar *)"\n", 1);
+	g_checksum_update(checksum, (const guchar *)salt, -1);
+	g_checksum_get_digest(checksum, bytes, &length);
+	return n == 0 ? 0 : ((guint32)bytes[0] << 24 | (guint32)bytes[1] << 16 | (guint32)bytes[2] << 8 | bytes[3]) % n;
+}
+
+gchar *
+ls_components_suggest_opening(LsComponents *self, const gchar *seed){
+	JsonArray *openings;
+	g_autoptr(GPtrArray) choices = g_ptr_array_new_with_free_func(g_free);
+	guint i;
+	g_return_val_if_fail(LS_IS_COMPONENTS(self), NULL);
+	g_return_val_if_fail(seed != NULL, NULL);
+	openings = member_array(member_object(self->kinds, "home"), "openings");
+	for (i = 0; openings != NULL && i < json_array_get_length(openings); i++) {
+		const gchar *name = json_array_get_string_element(openings, i);
+		g_autoptr(GList) variants = NULL;
+		GList *variant;
+		if (g_str_equal(name, "custom"))
+			continue;
+		variants = json_object_get_members(member_object(member_object(self->components, name), "variants"));
+		for (variant = variants; variant != NULL; variant = variant->next)
+			g_ptr_array_add(choices, g_strdup_printf("%s/%s", name, (const gchar *)variant->data));
+	}
+	if (choices->len == 0)
+		return NULL;
+	return g_strdup(g_ptr_array_index(choices, seed_pick(seed, "opening", choices->len)));
+}
+
 JsonObject *
 ls_components_suggest_look(LsComponents *self, const gchar *seed){
 	JsonObject *look;
@@ -1026,7 +1062,8 @@ ls_components_describe(LsComponents *self){
 		"anchor id, \"content\": {slot: value}}. The first section's heading becomes the page h1, "
 		"so the first section must have a heading. Section ids default to a slug of the heading.\n\n"
 		"SLOT TYPES\n"
-		"text: plain text; never markup.\n"
+		"text: plain text; never markup. Exception: a section heading may mark one or two key words "
+		"as *emphasis*, drawn by the site's look; never a whole heading.\n"
 		"Rich text: paragraphs separated by a blank line; lines starting \"- \" form a list and "
 		"\"1. \" a numbered list; inline **strong**, *emphasis*, `code` and [label](href). No HTML.\n"
 		"link: {\"href\": target, \"label\": text}. links: a list of link objects.\n"
@@ -2486,6 +2523,35 @@ directory_view(JsonObject *view, const gchar *id){
 	json_object_set_array_member(view, "groups", groups);
 }
 
+/* Headings may mark one or more words as *emphasis*; the look decides how
+ * emphasis is drawn. Unpaired or empty markers stay literal text. */
+static gchar *
+heading_markup(const gchar *text, gboolean html){
+	GString *out = g_string_new(NULL);
+	const gchar *p = text != NULL ? text : "";
+	while (*p != '\0') {
+		const gchar *open = strchr(p, '*');
+		const gchar *close = open != NULL ? strchr(open + 1, '*') : NULL;
+		g_autofree gchar *before = NULL, *inner = NULL;
+		if (open == NULL || close == NULL || close == open + 1 || g_ascii_isspace(open[1]) ||
+			g_ascii_isspace(close[-1])) {
+			g_autofree gchar *rest = html ? ls_template_escape(p) : g_strdup(p);
+			g_string_append(out, rest);
+			break;
+		}
+		before = g_strndup(p, (gsize)(open - p));
+		inner = g_strndup(open + 1, (gsize)(close - open - 1));
+		if (html) {
+			g_autofree gchar *escaped_before = ls_template_escape(before);
+			g_autofree gchar *escaped_inner = ls_template_escape(inner);
+			g_string_append_printf(out, "%s<em class=\"em\">%s</em>", escaped_before, escaped_inner);
+		} else
+			g_string_append_printf(out, "%s%s", before, inner);
+		p = close + 1;
+	}
+	return g_string_free(out, FALSE);
+}
+
 static void
 render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArray *toc){
 	g_autoptr(GHashTable) anchors = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
@@ -2520,6 +2586,12 @@ render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArra
 				json_object_set_boolean_member(view, has, json_array_get_length(json_node_get_array(value)) > 0);
 			}
 		}
+		if (ls_string(content, "heading") != NULL) {
+			g_autofree gchar *plain = heading_markup(ls_string(content, "heading"), FALSE);
+			g_autofree gchar *marked = heading_markup(ls_string(content, "heading"), TRUE);
+			json_object_set_string_member(view, "heading", plain);
+			json_object_set_string_member(view, "heading_html", marked);
+		}
 		for (k = 0; k < G_N_ELEMENTS(ui_keys); k++) {
 			g_autofree gchar *ui_name = g_strconcat(ui_keys[k], "_label", NULL);
 			json_object_set_string_member(view, ui_name, ui_text(render, ui_keys[k]));
@@ -2538,8 +2610,8 @@ render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArra
 		json_object_set_string_member(view, "htag", i == 0 ? "h1" : "h2");
 		json_object_set_string_member(view, "subtag", i == 0 ? "h2" : "h3");
 		/* Display sizes suit short headlines; long ones step down natively. */
-		json_object_set_boolean_member(view, "long_heading", ls_string(content, "heading") != NULL &&
-			g_utf8_strlen(ls_string(content, "heading"), -1) > 38);
+		json_object_set_boolean_member(view, "long_heading", ls_string(view, "heading") != NULL &&
+			g_utf8_strlen(ls_string(view, "heading"), -1) > 38);
 		json_object_set_boolean_member(view, "has_text", json_object_has_member(content, "heading") ||
 			json_object_has_member(content, "body"));
 		json_object_set_boolean_member(view, "has_caption", json_object_has_member(content, "caption") ||
@@ -2564,7 +2636,7 @@ render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArra
 		if (i > 0 && !blank(ls_string(content, "heading")) && !g_str_equal(name, "article")) {
 			JsonObject *entry = json_object_new();
 			json_object_set_string_member(entry, "id", id);
-			json_object_set_string_member(entry, "label", ls_string(content, "heading"));
+			json_object_set_string_member(entry, "label", ls_string(view, "heading"));
 			json_array_add_object_element(toc, entry);
 		}
 		if (g_str_equal(name, "menu")) {

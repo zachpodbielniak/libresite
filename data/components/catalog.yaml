@@ -86,6 +86,41 @@ looks:
     values:
       none: Static.
       rise: Sections rise gently into view where the browser supports it; never with reduced motion.
+  emphasis:
+    summary: How words marked *like this* in a heading are drawn.
+    values:
+      accent: In the accent color.
+      italic: In italic display type.
+      highlight: Over a highlighter stroke in the accent.
+      underline: With a thick hand-drawn underline in the accent.
+      outline: In outline letters.
+      block: On a solid accent block, like a stamp.
+  ornament:
+    summary: A small decorative mark between sections.
+    values:
+      none: Nothing.
+      wave: A short wave in the accent.
+      zigzag: A short zigzag in the accent.
+      dots: Three dots.
+      star: A small four-point star.
+      rule: A short double rule.
+  kicker:
+    summary: The small label above headings.
+    values:
+      mono: Small monospace capitals.
+      pill: A rounded pill with a border.
+      line: Led by a short accent line.
+      accent: Accent-colored capitals.
+      number: Tracked capitals with a leading slash.
+  backdrop:
+    summary: A background behind the page's opening section.
+    values:
+      none: The page background.
+      glow: Soft glows of the accent and surface colors.
+      mesh: A soft multi-color gradient mesh from the tokens.
+      stripes: Fine diagonal stripes.
+      halftone: A halftone dot fade.
+      block: A solid surface band with an accent edge.
 # Every planned page has a kind. A kind fixes which components may open the
 # page and whether wide screens get an in-page contents sidebar. Only home
 # may open with a hero: interior pages open with a page header.

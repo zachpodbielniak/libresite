@@ -1,5 +1,5 @@
 <div class="wrap">
-{{#heading}}<div class="section-head"><{{htag}} id="{{id}}-h">{{heading}}</{{htag}}></div>
+{{#heading}}<div class="section-head"><{{htag}} id="{{id}}-h">{{{heading_html}}}</{{htag}}></div>
 {{/heading}}</div>
 <ul class="strip__row" role="list" tabindex="0" aria-label="{{#heading}}{{heading}}{{/heading}}{{^heading}}{{scroll_label}}{{/heading}}">
 {{#items}}<li class="strip__item"><figure>{{#art}}<img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}" loading="lazy" decoding="async">{{/art}}{{#title}}<figcaption><span class="strip__title">{{#link}}<a href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{title}}</a>{{/link}}{{^link}}{{title}}{{/link}}</span>{{#caption}}<span class="strip__caption muted">{{caption}}</span>{{/caption}}</figcaption>{{/title}}{{^title}}{{#caption}}<figcaption>{{#caption}}<span class="strip__caption muted">{{caption}}</span>{{/caption}}</figcaption>{{/caption}}{{/title}}</figure></li>

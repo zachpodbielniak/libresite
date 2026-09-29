@@ -2,7 +2,7 @@
 {{#art}}<img class="poster__art" src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}"{{#eager}} fetchpriority="high"{{/eager}}{{^eager}} loading="lazy"{{/eager}} decoding="async">
 {{/art}}<div class="wrap poster__inner">
 {{#kicker}}<p class="kicker poster__kicker">{{kicker}}</p>
-{{/kicker}}<{{htag}} class="poster__title" id="{{id}}-h">{{heading}}</{{htag}}>
+{{/kicker}}<{{htag}} class="poster__title" id="{{id}}-h">{{{heading_html}}}</{{htag}}>
 <div class="poster__foot">
 {{#lede}}<div class="poster__lede lede prose">{{{lede}}}</div>
 {{/lede}}{{#has_actions}}<p class="actions">{{#actions}}<a class="button{{^primary}} button--ghost{{/primary}}" href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{label}}</a>{{/actions}}</p>

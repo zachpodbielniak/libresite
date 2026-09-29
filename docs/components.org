@@ -73,6 +73,14 @@ Colors and fonts alone do not make two sites different: the skeleton does. The p
 - footer: simple, big, inverted
 - texture: none, grain, grid, dots, lines
 - motion: none, rise (scroll-linked, off for reduced motion)
+- emphasis (words marked =*like this*= in section headings): accent, italic, highlight, underline, outline, block
+- ornament between sections: none, wave, zigzag, dots, star, rule
+- kicker labels: mono, pill, line, accent, number
+- backdrop behind the opening section: none, glow, mesh, stripes, halftone, block
+
+Section headings may mark one or two words as =*emphasis*=. The builder renders them as =<em class="em">= inside the heading only; contents entries, breadcrumbs, labels and anchors get the plain text, and unpaired or empty markers stay literal.
+
+Home pages rotate openings: the plan task carries a =suggested_opening= (component/variant among the home openings) that =ls_components_suggest_opening()= hashes from the recipe name and brief, so home pages do not all open with the same hero.
 
 The first value of each axis is the default, and plan repair fills a missing axis with it. Inverted areas swap the working color tokens locally, so every component inside them keeps its contrast pairs. So that sites do not converge on a favorite set, the plan task carries a =suggested_look= that =ls_components_suggest_look()= derives from a hash of the recipe name and brief: different sites start from different skeletons, and the same site always gets the same suggestion. The plan keeps a suggested value unless the subject argues against it.
 
@@ -88,7 +96,7 @@ The model-facing reference lists the axes and the override rules (LOOK and OVERR
 
 * Themes
 
-A theme is a complete design applied to the whole site: every token, the web fonts, one value for every look axis and signature CSS. =data/components/themes.yaml= bundles eight: editorial, brutalist, midnight, soft, civic, atelier, workshop and neon. Every component draws only on tokens and look classes, so applying a theme changes every component on every page together, while content, routes, navigation, art and component choices stay as they are.
+A theme is a complete design applied to the whole site: every token, the web fonts, one value for every look axis and signature CSS. =data/components/themes.yaml= bundles fifteen: editorial, brutalist, midnight, soft, civic, atelier, workshop, neon, terracotta, nordic, retro, zine, botanical, noir and sunrise. Every component draws only on tokens and look classes, so applying a theme changes every component on every page together, while content, routes, navigation, art and component choices stay as they are.
 
 Name one on the plan step:
 

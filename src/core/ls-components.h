@@ -62,6 +62,17 @@ gchar *ls_components_dup_art_schema(LsComponents *self);
  */
 JsonObject *ls_components_suggest_look(LsComponents *self, const gchar *seed);
 /**
+ * ls_components_suggest_opening:
+ * @self: a component library
+ * @seed: stable text identifying the site
+ *
+ * Picks one home-page opening as "component/variant" from a hash of @seed,
+ * so home pages rotate between heroes, covers, posters and manifestos.
+ * Returns: (transfer full) (nullable): the suggestion, or %NULL when the
+ *   home kind lists no component openings
+ */
+gchar *ls_components_suggest_opening(LsComponents *self, const gchar *seed);
+/**
  * ls_components_list_themes:
  * @self: a component library
  *

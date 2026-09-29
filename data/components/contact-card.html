@@ -1,6 +1,6 @@
 <div class="wrap">
 <div class="contact-card__box">
-<{{htag}} class="contact-card__title" id="{{id}}-h">{{heading}}</{{htag}}>
+<{{htag}} class="contact-card__title" id="{{id}}-h">{{{heading_html}}}</{{htag}}>
 {{#body}}<div class="prose">{{{body}}}</div>
 {{/body}}<dl class="contact-card__items">
 {{#items}}<div><dt>{{label}}</dt><dd>{{#link}}<a href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{value}}</a>{{/link}}{{^link}}{{value}}{{/link}}</dd></div>
