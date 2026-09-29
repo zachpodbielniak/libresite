@@ -6,7 +6,9 @@
 version: 1
 # Site-wide look. Each axis changes structure shared by every component
 # (look.css); the plan picks one value per axis so two sites that use the same
-# components do not share a skeleton. The first value is the default.
+# components do not share a skeleton. The first value is the default. An axis
+# with plain: N deals its default to about N percent of sites, so busy
+# backgrounds stay occasional.
 looks:
   header:
     summary: How the site header is laid out.
@@ -16,6 +18,7 @@ looks:
       stacked: A large wordmark on its own row, navigation in a ruled row beneath.
       inverted: A solid ink-colored bar with paper-colored text.
       floating: An inset rounded bar that floats over the page edge.
+      glass: A frosted translucent bar that stays at the top while the page scrolls under it.
   nav:
     summary: How navigation links look.
     values:
@@ -39,6 +42,8 @@ looks:
       pill: Fully rounded.
       underline: Text with a heavy underline and an arrow; no box.
       offset: A hard offset shadow that presses in on hover.
+      glass: Luminous pills with a glassy highlight and a soft colored glow.
+      hud: Cut-corner monospace capitals, like controls on a heads-up display.
   panels:
     summary: How cards, tiles and boxed items are surfaced.
     values:
@@ -47,6 +52,8 @@ looks:
       raised: Paper with a soft shadow.
       rules: No box; items are divided by rules.
       inverted: Solid ink panels with paper text.
+      glass: Frosted translucent glass that blurs the page behind it, with a bright edge.
+      hud: Cut-corner frames with accent corner brackets and an inner glow, like a sci-fi readout.
   rhythm:
     summary: How sections follow one another.
     values:
@@ -75,12 +82,16 @@ looks:
       inverted: Solid ink with paper text.
   texture:
     summary: Background texture on the page.
+    plain: 50
     values:
       none: Plain.
       grain: Fine paper grain.
       grid: A faint drafting grid.
       dots: A faint dot grid.
       lines: Faint horizontal ruled lines.
+      aurora: Soft, fixed color fields from the accent and surface that glass panels blur.
+      scanlines: Very fine horizontal scanlines, like a display.
+      stars: A faint scatter of tiny stars.
   motion:
     summary: Scroll motion.
     values:
@@ -114,6 +125,7 @@ looks:
       number: Tracked capitals with a leading slash.
   backdrop:
     summary: A background behind the page's opening section.
+    plain: 50
     values:
       none: The page background.
       glow: Soft glows of the accent and surface colors.
@@ -121,6 +133,8 @@ looks:
       stripes: Fine diagonal stripes.
       halftone: A halftone dot fade.
       block: A solid surface band with an accent edge.
+      aurora: Large luminous color fields in the accent, like light through glass.
+      horizon: A glowing horizon with a receding perspective grid.
 # Every planned page has a kind. A kind fixes which components may open the
 # page and whether wide screens get an in-page contents sidebar. Only home
 # may open with a hero: interior pages open with a page header.

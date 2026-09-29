@@ -714,6 +714,7 @@ copy_theme(JsonObject *theme, JsonObject *plan){
 }
 
 static void check_plan_into(Problems *problems, LsComponents *self, JsonNode *node);
+static void check_photos(Problems *problems, JsonObject *plan);
 static gboolean load_themes(LsComponents *self, GChecksum *digest, GError **error);
 static gboolean load_identities(LsComponents *self, GChecksum *digest, GError **error);
 
@@ -729,9 +730,13 @@ check_look_definitions(JsonObject *looks, GError **error){
 		JsonObject *values = member_object(definition, "values");
 		g_autoptr(GList) names = NULL;
 		GList *name;
-		if (definition == NULL || !ls_object_keys(definition, "|summary|values|", NULL) ||
+		JsonNode *plain = definition != NULL ? json_object_get_member(definition, "plain") : NULL;
+		if (definition == NULL || !ls_object_keys(definition, "|summary|values|plain|", NULL) ||
 			ls_string(definition, "summary") == NULL || values == NULL || json_object_get_size(values) < 2)
 			return catalog_invalid(error, axis->data, "look axes need a summary and two or more values");
+		if (plain != NULL && (!JSON_NODE_HOLDS_VALUE(plain) || json_node_get_value_type(plain) != G_TYPE_INT64 ||
+			json_node_get_int(plain) < 0 || json_node_get_int(plain) > 100))
+			return catalog_invalid(error, axis->data, "plain is a percentage from 0 to 100");
 		names = json_object_get_members(values);
 		for (name = names; name != NULL; name = name->next) {
 			const gchar *p;
@@ -973,18 +978,19 @@ ls_components_suggest_look(LsComponents *self, const gchar *seed){
 	look = json_object_new();
 	axes = json_object_get_members(self->looks);
 	for (axis = axes; axis != NULL; axis = axis->next) {
-		JsonObject *values = member_object(member_object(self->looks, axis->data), "values");
+		JsonObject *definition = member_object(self->looks, axis->data);
+		JsonObject *values = member_object(definition, "values");
 		g_autoptr(GList) names = json_object_get_members(values);
-		g_autoptr(GChecksum) checksum = g_checksum_new(G_CHECKSUM_SHA256);
-		guint8 bytes[32];
-		gsize length = sizeof bytes;
-		guint32 pick;
-		g_checksum_update(checksum, (const guchar *)seed, -1);
-		g_checksum_update(checksum, (const guchar *)"\n", 1);
-		g_checksum_update(checksum, (const guchar *)axis->data, -1);
-		g_checksum_get_digest(checksum, bytes, &length);
-		pick = ((guint32)bytes[0] << 24 | (guint32)bytes[1] << 16 | (guint32)bytes[2] << 8 | bytes[3]) %
-			g_list_length(names);
+		guint pick;
+		/* An axis with plain: N deals its default to about N percent of sites. */
+		if (json_object_has_member(definition, "plain")) {
+			g_autofree gchar *salt = g_strconcat((const gchar *)axis->data, ":plain", NULL);
+			if (seed_pick(seed, salt, 100) < (guint)json_object_get_int_member(definition, "plain")) {
+				json_object_set_string_member(look, axis->data, names->data);
+				continue;
+			}
+		}
+		pick = seed_pick(seed, axis->data, g_list_length(names));
 		json_object_set_string_member(look, axis->data, g_list_nth_data(names, pick));
 	}
 	return look;
@@ -1077,7 +1083,7 @@ ls_components_describe(LsComponents *self){
 		"link: {\"href\": target, \"label\": text}. links: a list of link objects.\n"
 		"Targets (href): a planned page such as work.html or work.html#part-id, #id on the same page, "
 		"mailto:, tel: or https:// URLs. Nothing else.\n"
-		"image: {\"src\": a planned art path, \"alt\": text, or \"\" when purely decorative}.\n"
+		"image: {\"src\": a planned art path or a plan photos path, \"alt\": text (a photo's own alt), or \"\" when purely decorative}.\n"
 		"items: a list of objects with the listed fields. choice: one listed value. flag: true or false.\n"
 		"fields (forms): [{\"name\": id-like, \"label\": text, \"type\": text|email|tel|url|number|"
 		"date|textarea|select|checkbox, \"required\": bool, \"hint\": text, \"options\": [text] "
@@ -1236,6 +1242,7 @@ static void
 plan_scope(JsonObject *plan, LinkScope *scope){
 	JsonArray *pages = member_array(plan, "pages");
 	JsonArray *art = member_array(plan, "art");
+	JsonArray *photos = member_array(plan, "photos");
 	guint i;
 	scope->routes = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 	scope->art = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
@@ -1253,6 +1260,41 @@ plan_scope(JsonObject *plan, LinkScope *scope){
 		const gchar *path = JSON_NODE_HOLDS_OBJECT(node) ? ls_string(json_node_get_object(node), "path") : NULL;
 		if (path != NULL)
 			g_hash_table_add(scope->art, g_strdup(path));
+	}
+	/* Supplied photographs are images the pages may use, like planned art. */
+	for (i = 0; photos != NULL && i < json_array_get_length(photos); i++) {
+		JsonNode *node = json_array_get_element(photos, i);
+		const gchar *path = JSON_NODE_HOLDS_OBJECT(node) ? ls_string(json_node_get_object(node), "path") : NULL;
+		if (path != NULL)
+			g_hash_table_add(scope->art, g_strdup(path));
+	}
+}
+
+/* photos is written by the builder from the recipe and the seeded images:
+ * {path, alt, credit, width, height}. */
+static void
+check_photos(Problems *problems, JsonObject *plan){
+	JsonArray *photos = member_array(plan, "photos");
+	guint i;
+	if (!json_object_has_member(plan, "photos"))
+		return;
+	if (photos == NULL || json_array_get_length(photos) > 48) {
+		problem(problems, "photos must list at most 48 supplied photographs");
+		return;
+	}
+	for (i = 0; i < json_array_get_length(photos); i++) {
+		JsonNode *node = json_array_get_element(photos, i);
+		JsonObject *photo = JSON_NODE_HOLDS_OBJECT(node) ? json_node_get_object(node) : NULL;
+		const gchar *path = photo != NULL ? ls_string(photo, "path") : NULL;
+		JsonNode *width = photo != NULL ? json_object_get_member(photo, "width") : NULL;
+		JsonNode *height = photo != NULL ? json_object_get_member(photo, "height") : NULL;
+		if (photo == NULL || !ls_object_keys(photo, "|path|alt|credit|width|height|", NULL) || path == NULL ||
+			!g_str_has_prefix(path, "assets/") || strstr(path, "..") != NULL || strpbrk(path, " \"'<>\\") != NULL ||
+			ls_string(photo, "alt") == NULL || width == NULL || height == NULL ||
+			json_node_get_value_type(width) != G_TYPE_INT64 || json_node_get_value_type(height) != G_TYPE_INT64 ||
+			json_node_get_int(width) < 1 || json_node_get_int(height) < 1 ||
+			json_node_get_int(width) > 20000 || json_node_get_int(height) > 20000)
+			problem(problems, "photos[%u] must be {path under assets/, alt, credit, width, height}", i);
 	}
 }
 
@@ -1459,9 +1501,10 @@ check_plan_into(Problems *problems, LsComponents *self, JsonNode *node){
 		return;
 	}
 	if (!ls_object_keys(plan, "|name|tagline|lang|character|tokens|fonts|brand|nav|action|footer|voice|look|art|"
-		"pages|css|restyle|ui|", NULL))
+		"photos|pages|css|restyle|ui|", NULL))
 		problem(problems, "unknown top-level key; allowed: name, tagline, lang, character, tokens, fonts, brand, "
-			"nav, action, footer, voice, look, art, pages, css, restyle, ui");
+			"nav, action, footer, voice, look, art, photos, pages, css, restyle, ui");
+	check_photos(problems, plan);
 	check_look(problems, self, plan);
 	check_restyle(problems, self, plan);
 	check_fonts(problems, plan);
@@ -2568,8 +2611,18 @@ ui_text(Render *render, const gchar *key){
 static void
 art_size(JsonObject *plan, const gchar *src, gint64 *width, gint64 *height){
 	JsonArray *art = member_array(plan, "art");
+	JsonArray *photos = member_array(plan, "photos");
 	const gchar *ratio = "16:9";
 	guint i;
+	/* A photograph keeps its own pixel size. */
+	for (i = 0; photos != NULL && i < json_array_get_length(photos); i++) {
+		JsonObject *photo = json_array_get_object_element(photos, i);
+		if (g_strcmp0(ls_string(photo, "path"), src) == 0) {
+			*width = json_object_get_int_member(photo, "width");
+			*height = json_object_get_int_member(photo, "height");
+			return;
+		}
+	}
 	for (i = 0; art != NULL && i < json_array_get_length(art); i++) {
 		JsonObject *work = json_array_get_object_element(art, i);
 		if (g_strcmp0(ls_string(work, "path"), src) == 0 && ls_string(work, "ratio") != NULL)

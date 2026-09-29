@@ -83,6 +83,50 @@
 	background: transparent; border: 0; border-top: var(--border-strong) solid var(--ink); border-radius: 0; box-shadow: none; padding-inline: 0;
 }
 .look-panels-inverted :is(.bento__tile, .pricing__tier, .split__panel) { border-radius: max(var(--radius), 0.5rem); }
+/* Liquid glass: translucent frosted surfaces over soft color fields. Without
+ * backdrop-filter, or when the reader asks for less transparency, panels are
+ * solid so text contrast never depends on what lies behind them. */
+.look-header-glass .site-header { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--paper) 62%, transparent); -webkit-backdrop-filter: blur(16px) saturate(170%); backdrop-filter: blur(16px) saturate(170%); border-bottom: 1px solid color-mix(in srgb, var(--ink) 10%, transparent); }
+.look-panels-glass :is(.features--boxed .features__item, .cards--bordered .card, .pricing__tier, .bento__tile, .split__panel, .voices__item, .services--grid .services__item, .locations--cards .locations__item, .contact-card--card .contact-card__box, .facts--grid .facts__item, .team--cards .team__person, .entries--cards .entries__item, .steps--grid .steps__item, .links--cards .links__item a, .quote--boxed .quote__figure, .menu--board .menu__section, .cta--card .cta__inner, .form--card .form__inner, .location--card .location__inner, .hours--grid .hours__row, .faq--boxed .faq__item, .details--bordered .details__item) {
+	background: color-mix(in srgb, var(--paper) 58%, transparent); -webkit-backdrop-filter: blur(18px) saturate(160%); backdrop-filter: blur(18px) saturate(160%);
+	border: 1px solid color-mix(in srgb, var(--ink) 12%, transparent); border-radius: max(var(--radius), 1.25rem);
+	box-shadow: inset 0 1px 0 color-mix(in srgb, #ffffff 50%, transparent), 0 1rem 2.5rem color-mix(in srgb, var(--ink) 10%, transparent);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+	.look-header-glass .site-header { background: var(--paper); }
+	.look-panels-glass :is(.features--boxed .features__item, .cards--bordered .card, .pricing__tier, .bento__tile, .split__panel, .voices__item, .services--grid .services__item, .locations--cards .locations__item, .contact-card--card .contact-card__box, .facts--grid .facts__item, .team--cards .team__person, .entries--cards .entries__item, .steps--grid .steps__item, .links--cards .links__item a, .quote--boxed .quote__figure, .menu--board .menu__section, .cta--card .cta__inner, .form--card .form__inner, .location--card .location__inner, .hours--grid .hours__row, .faq--boxed .faq__item, .details--bordered .details__item) { background: var(--paper); }
+}
+@media (prefers-reduced-transparency: reduce) {
+	.look-header-glass .site-header { background: var(--paper); }
+	.look-panels-glass :is(.features--boxed .features__item, .cards--bordered .card, .pricing__tier, .bento__tile, .split__panel, .voices__item, .services--grid .services__item, .locations--cards .locations__item, .contact-card--card .contact-card__box, .facts--grid .facts__item, .team--cards .team__person, .entries--cards .entries__item, .steps--grid .steps__item, .links--cards .links__item a, .quote--boxed .quote__figure, .menu--board .menu__section, .cta--card .cta__inner, .form--card .form__inner, .location--card .location__inner, .hours--grid .hours__row, .faq--boxed .faq__item, .details--bordered .details__item) { background: var(--paper); }
+}
+.look-buttons-glass .button { border-radius: 999px; border-color: color-mix(in srgb, #ffffff 30%, var(--accent)); box-shadow: inset 0 1px 0 color-mix(in srgb, #ffffff 45%, transparent), 0 0.6rem 1.6rem color-mix(in srgb, var(--accent) 32%, transparent); }
+.look-buttons-glass .button--ghost { background: color-mix(in srgb, var(--paper) 55%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-color: color-mix(in srgb, var(--ink) 18%, transparent); box-shadow: inset 0 1px 0 color-mix(in srgb, #ffffff 45%, transparent); }
+.look-buttons-glass .nav-toggle { border-radius: 999px; }
+.look-texture-aurora { background: radial-gradient(42rem 32rem at 10% 6%, color-mix(in srgb, var(--accent) 28%, transparent), transparent 70%), radial-gradient(38rem 30rem at 92% 24%, color-mix(in srgb, var(--surface) 85%, var(--accent)), transparent 70%), radial-gradient(46rem 36rem at 55% 100%, color-mix(in srgb, var(--accent) 16%, var(--surface)), transparent 70%), var(--paper); background-attachment: fixed; }
+.look-backdrop-aurora main > .block:first-child { background: radial-gradient(ellipse 50% 65% at 18% 30%, color-mix(in srgb, var(--accent) 34%, transparent), transparent 70%), radial-gradient(ellipse 45% 55% at 82% 18%, color-mix(in srgb, var(--accent) 16%, var(--surface)), transparent 70%), radial-gradient(ellipse 60% 50% at 60% 100%, var(--surface), transparent 70%); }
+
+/* Sci-fi: cut corners, bracketed readouts, scanlines and a glowing horizon. */
+.look-panels-hud :is(.features--boxed .features__item, .cards--bordered .card, .pricing__tier, .bento__tile, .split__panel, .voices__item, .services--grid .services__item, .locations--cards .locations__item, .contact-card--card .contact-card__box, .facts--grid .facts__item, .team--cards .team__person, .entries--cards .entries__item, .steps--grid .steps__item, .links--cards .links__item a, .quote--boxed .quote__figure, .menu--board .menu__section, .cta--card .cta__inner, .form--card .form__inner, .location--card .location__inner, .hours--grid .hours__row, .faq--boxed .faq__item, .details--bordered .details__item) {
+	background-color: color-mix(in srgb, var(--surface) 72%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent); border-radius: 0;
+	background-image: linear-gradient(var(--accent), var(--accent)), linear-gradient(var(--accent), var(--accent)), linear-gradient(var(--accent), var(--accent)), linear-gradient(var(--accent), var(--accent));
+	background-size: 1.25rem 2px, 2px 1.25rem, 1.25rem 2px, 2px 1.25rem; background-position: top left, top left, bottom right, bottom right; background-repeat: no-repeat;
+	clip-path: polygon(0 0, calc(100% - 0.9rem) 0, 100% 0.9rem, 100% 100%, 0.9rem 100%, 0 calc(100% - 0.9rem));
+	box-shadow: inset 0 0 2.5rem color-mix(in srgb, var(--accent) 10%, transparent);
+}
+.look-buttons-hud .button, .look-buttons-hud .nav-toggle { border-radius: 0; clip-path: polygon(0.55rem 0, 100% 0, 100% calc(100% - 0.55rem), calc(100% - 0.55rem) 100%, 0 100%, 0 0.55rem); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.12em; font-size: var(--step--1); }
+.look-buttons-hud .button--ghost { box-shadow: inset 0 0 0 1px var(--accent); }
+.look-texture-scanlines { background-image: repeating-linear-gradient(to bottom, color-mix(in srgb, var(--ink) 5%, transparent) 0 1px, transparent 1px 3px); }
+.look-texture-stars { background-image: radial-gradient(1px 1px at 18px 26px, color-mix(in srgb, var(--ink) 55%, transparent), transparent), radial-gradient(1px 1px at 132px 78px, color-mix(in srgb, var(--ink) 40%, transparent), transparent), radial-gradient(1.5px 1.5px at 210px 160px, color-mix(in srgb, var(--accent) 60%, transparent), transparent), radial-gradient(1px 1px at 72px 190px, color-mix(in srgb, var(--ink) 35%, transparent), transparent); background-size: 240px 240px; }
+.look-backdrop-horizon main > .block:first-child { position: relative; overflow: hidden; background: radial-gradient(ellipse 70% 45% at 50% 100%, color-mix(in srgb, var(--accent) 28%, transparent), transparent 70%); }
+.look-backdrop-horizon main > .block:first-child::after {
+	content: ""; position: absolute; inset: auto -25% 0; height: 42%; z-index: 0; pointer-events: none;
+	background-image: linear-gradient(color-mix(in srgb, var(--accent) 32%, transparent) 1px, transparent 1px), linear-gradient(90deg, color-mix(in srgb, var(--accent) 32%, transparent) 1px, transparent 1px);
+	background-size: 3rem 3rem; transform: perspective(24rem) rotateX(62deg); transform-origin: bottom;
+	-webkit-mask-image: linear-gradient(to top, #000, transparent); mask-image: linear-gradient(to top, #000, transparent);
+}
+.look-backdrop-horizon main > .block:first-child > * { position: relative; z-index: 1; }
+
 /* A panel whose variant paints it in the accent keeps that fill under every
  * panel look; the look rules above would otherwise clear the background and
  * leave accent-ink text on the page. */

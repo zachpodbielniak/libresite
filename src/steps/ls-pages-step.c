@@ -47,6 +47,94 @@ plan_sector(JsonObject *config){
 	return options != NULL ? ls_string(options, "sector") : NULL;
 }
 
+/* Pixel size of a PNG, JPEG or WebP image, read from its header. */
+static gboolean
+image_size(const guint8 *data, gsize size, gint64 *width, gint64 *height){
+	gsize i;
+	if (size >= 24 && memcmp(data, "\x89PNG\r\n\x1a\n", 8) == 0 && memcmp(data + 12, "IHDR", 4) == 0) {
+		*width = (gint64)data[16] << 24 | data[17] << 16 | data[18] << 8 | data[19];
+		*height = (gint64)data[20] << 24 | data[21] << 16 | data[22] << 8 | data[23];
+		return *width > 0 && *height > 0;
+	}
+	if (size >= 30 && memcmp(data, "RIFF", 4) == 0 && memcmp(data + 8, "WEBP", 4) == 0) {
+		if (memcmp(data + 12, "VP8X", 4) == 0) {
+			*width = 1 + (data[24] | data[25] << 8 | data[26] << 16);
+			*height = 1 + (data[27] | data[28] << 8 | data[29] << 16);
+			return TRUE;
+		}
+		if (memcmp(data + 12, "VP8L", 4) == 0 && data[20] == 0x2f) {
+			*width = 1 + ((data[22] & 0x3f) << 8 | data[21]);
+			*height = 1 + ((data[24] & 0x0f) << 10 | data[23] << 2 | (data[22] & 0xc0) >> 6);
+			return TRUE;
+		}
+		if (memcmp(data + 12, "VP8 ", 4) == 0 && data[23] == 0x9d && data[24] == 0x01 && data[25] == 0x2a) {
+			*width = (data[26] | data[27] << 8) & 0x3fff;
+			*height = (data[28] | data[29] << 8) & 0x3fff;
+			return *width > 0 && *height > 0;
+		}
+		return FALSE;
+	}
+	if (size < 4 || data[0] != 0xff || data[1] != 0xd8)
+		return FALSE;
+	/* Walk JPEG segments to the first start-of-frame marker. */
+	for (i = 2; i + 9 < size;) {
+		guint8 marker;
+		gsize length;
+		if (data[i] != 0xff)
+			return FALSE;
+		marker = data[i + 1];
+		if (marker == 0xff) {
+			i++;
+			continue;
+		}
+		length = (gsize)data[i + 2] << 8 | data[i + 3];
+		if (marker >= 0xc0 && marker <= 0xcf && marker != 0xc4 && marker != 0xc8 && marker != 0xcc) {
+			*height = data[i + 5] << 8 | data[i + 6];
+			*width = data[i + 7] << 8 | data[i + 8];
+			return *width > 0 && *height > 0;
+		}
+		if (length < 2)
+			return FALSE;
+		i += 2 + length;
+	}
+	return FALSE;
+}
+
+/* The recipe's supplied photographs with their pixel sizes, read from the
+ * seeded images in @context. %NULL context (a preview) omits the sizes. */
+static JsonArray *
+plan_photos(LsRecipe *recipe, LsContext *context, GError **error){
+	JsonObject *site = member_object_of(ls_recipe_get_root(recipe), "site");
+	JsonNode *node = site != NULL ? json_object_get_member(site, "photos") : NULL;
+	JsonArray *photos = node != NULL && JSON_NODE_HOLDS_ARRAY(node) ? json_node_get_array(node) : NULL;
+	g_autoptr(JsonArray) out = json_array_new();
+	guint i;
+	for (i = 0; photos != NULL && i < json_array_get_length(photos); i++) {
+		JsonObject *photo = json_array_get_object_element(photos, i);
+		JsonObject *entry = json_object_new();
+		json_object_set_string_member(entry, "path", ls_string(photo, "path"));
+		json_object_set_string_member(entry, "alt", ls_string(photo, "alt"));
+		if (ls_string(photo, "credit") != NULL)
+			json_object_set_string_member(entry, "credit", ls_string(photo, "credit"));
+		json_array_add_object_element(out, entry);
+		if (context != NULL) {
+			const LsArtifact *artifact = ls_context_lookup(context, ls_string(photo, "path"));
+			const guint8 *data;
+			gsize size = 0;
+			gint64 width = 0, height = 0;
+			data = artifact != NULL && ls_artifact_is_binary(artifact) ? ls_artifact_get_data(artifact, &size) : NULL;
+			if (data == NULL || !image_size(data, size, &width, &height)) {
+				g_set_error(error, LS_ERROR, LS_ERROR_INVALID,
+					"site.photos %s must be a seeded binary PNG, JPEG or WebP image", ls_string(photo, "path"));
+				return NULL;
+			}
+			json_object_set_int_member(entry, "width", width);
+			json_object_set_int_member(entry, "height", height);
+		}
+	}
+	return g_steal_pointer(&out);
+}
+
 /* The identity dealt to this site: stable for its recipe name and brief. */
 static JsonObject *
 plan_identity(LsComponents *components, LsRecipe *recipe, JsonObject *config){
@@ -254,7 +342,7 @@ spec_settings(LsRecipe *recipe, JsonObject *config, const gchar *schema){
 
 static gchar *
 plan_prompt(LsPrompts *prompts, LsRecipe *recipe, JsonObject *config, LsComponents *components,
-	JsonObject *identity, GError **error){
+	JsonObject *identity, JsonArray *photos, GError **error){
 	g_autoptr(JsonObject) literals = acceptance_literals(recipe);
 	g_autoptr(JsonObject) task = json_object_new();
 	g_autoptr(JsonNode) node = json_node_new(JSON_NODE_OBJECT);
@@ -267,6 +355,8 @@ plan_prompt(LsPrompts *prompts, LsRecipe *recipe, JsonObject *config, LsComponen
 		if (!is_utility_route(item->data))
 			json_array_add_string_element(routes, item->data);
 	json_object_set_array_member(task, "required_routes", routes);
+	if (photos != NULL && json_array_get_length(photos) > 0)
+		json_object_set_array_member(task, "supplied_photos", json_array_ref(photos));
 	{
 		JsonObject *root = ls_recipe_get_root(recipe);
 		const gchar *name = ls_string(root, "name");
@@ -334,6 +424,7 @@ plan_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *prom
 	g_autoptr(LsComponents) components = NULL;
 	g_autoptr(JsonObject) settings = NULL;
 	g_autoptr(JsonObject) identity = NULL;
+	g_autoptr(JsonArray) photos = NULL;
 	g_autofree gchar *prompt = NULL, *retry = NULL;
 	const gchar *system = ls_prompts_get_spec_system(prompts);
 	const gchar *theme;
@@ -351,7 +442,10 @@ plan_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *prom
 		: ls_components_get_plan_schema(components));
 	retries = json_object_get_int_member(settings, "retries");
 	identity = plan_identity(components, recipe, config);
-	prompt = plan_prompt(prompts, recipe, config, components, identity, error);
+	photos = plan_photos(recipe, context, error);
+	if (photos == NULL)
+		return FALSE;
+	prompt = plan_prompt(prompts, recipe, config, components, identity, photos, error);
 	if (prompt == NULL)
 		return FALSE;
 	for (attempt = 0; attempt <= retries; attempt++) {
@@ -368,6 +462,19 @@ plan_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *prom
 		if (response != NULL && (plan = parse_object(response, &local_error)) != NULL &&
 			theme != NULL && !ls_components_apply_theme(components, plan, theme, &local_error))
 			g_clear_pointer(&plan, json_node_unref);
+		/* Supplied photographs are the builder's facts, never the model's. */
+		if (plan != NULL && JSON_NODE_HOLDS_OBJECT(plan)) {
+			JsonObject *root = json_node_get_object(plan);
+			if (json_object_has_member(root, "photos"))
+				json_object_remove_member(root, "photos");
+			if (json_array_get_length(photos) > 0) {
+				g_autoptr(JsonNode) copy = json_node_new(JSON_NODE_ARRAY);
+				g_autofree gchar *text = NULL;
+				json_node_set_array(copy, photos);
+				text = ls_json_encode(copy);
+				json_object_set_member(root, "photos", ls_json_parse(text, NULL));
+			}
+		}
 		if (plan != NULL) {
 			g_autofree gchar *repairs = ls_components_repair_plan(components, plan);
 			if (repairs != NULL) {
@@ -907,7 +1014,8 @@ ls_spec_step_preview(LsPrompts *prompts, LsRecipe *recipe, JsonObject *config, G
 		return NULL;
 	if (g_strcmp0(ls_string(config, "type"), "plan") == 0) {
 		g_autoptr(JsonObject) identity = plan_identity(components, recipe, config);
-		body = plan_prompt(prompts, recipe, config, components, identity, error);
+		g_autoptr(JsonArray) photos = plan_photos(recipe, NULL, NULL);
+		body = plan_prompt(prompts, recipe, config, components, identity, photos, error);
 	} else {
 		g_autofree gchar *reference = ls_components_describe(components);
 		body = ls_prompts_render_spec(prompts, recipe, config,

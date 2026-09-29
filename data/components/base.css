@@ -15,6 +15,9 @@ body {
 	overflow-wrap: break-word;
 }
 img, svg { display: block; max-width: 100%; height: auto; }
+/* Photographs never outgrow the screen: a tall one crops to cover its box. */
+img:is([src$=".jpg"], [src$=".jpeg"], [src$=".png"], [src$=".webp"]) { width: 100%; max-height: min(80vh, 52rem); object-fit: cover; }
+.brand img { max-height: none; }
 a { color: inherit; text-decoration-thickness: max(1px, 0.08em); text-underline-offset: 0.18em; }
 a:hover { color: var(--accent-text); }
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }

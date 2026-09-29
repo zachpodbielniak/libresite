@@ -249,6 +249,49 @@ palettes:
       line: '#f3c4dc'
       accent: '#c21f64'
       accent_ink: '#ffffff'
+  glass-dawn:
+    summary: Pale dawn light with lilac and sky tints behind frosted glass.
+    fits:
+    - wellness
+    - software
+    - retail
+    - creative
+    tokens:
+      paper: '#f4f6fb'
+      ink: '#161a2e'
+      muted: '#4a5170'
+      surface: '#e7ebf7'
+      line: '#c9d0ea'
+      accent: '#4b4fd6'
+      accent_ink: '#ffffff'
+  deep-space:
+    summary: Deep space navy with an electric cyan signal.
+    fits:
+    - software
+    - creative
+    - advisory
+    tokens:
+      paper: '#070b18'
+      ink: '#e6f1ff'
+      muted: '#93a4c3'
+      surface: '#0f1730'
+      line: '#243257'
+      accent: '#35d4ff'
+      accent_ink: '#070b18'
+  plasma:
+    summary: Violet-black with a hot plasma magenta.
+    fits:
+    - software
+    - creative
+    - retail
+    tokens:
+      paper: '#0d0716'
+      ink: '#f4ecff'
+      muted: '#b3a3cc'
+      surface: '#170d26'
+      line: '#34224d'
+      accent: '#ff4fd8'
+      accent_ink: '#0d0716'
   forest-dark:
     summary: Dark pine with warm lamp-yellow, grounded and outdoorsy.
     fits:
@@ -564,6 +607,59 @@ typefaces:
     - family: JetBrains Mono
       weights:
       - 400
+      italic: false
+  orbitron-exo:
+    summary: Squared sci-fi capitals over a technical sans, with a terminal mono.
+    fits:
+    - software
+    - creative
+    tokens:
+      font_display: Orbitron, Eurostile, sans-serif
+      font_body: '''Exo 2'', system-ui, sans-serif'
+      font_mono: '''Share Tech Mono'', ui-monospace, monospace'
+      heading_weight: 800
+      heading_tracking: 0.04
+      heading_leading: 1.05
+      heading_case: uppercase
+    fonts:
+    - family: Orbitron
+      weights:
+      - 600
+      - 800
+      italic: false
+    - family: Exo 2
+      weights:
+      - 400
+      - 600
+      italic: false
+    - family: Share Tech Mono
+      weights:
+      - 400
+      italic: false
+  sora-inter:
+    summary: Smooth geometric display over a clear interface sans, made for glass.
+    fits:
+    - wellness
+    - software
+    - retail
+    tokens:
+      font_display: Sora, system-ui, sans-serif
+      font_body: Inter, system-ui, sans-serif
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 600
+      heading_tracking: -0.03
+      heading_leading: 1.02
+      heading_case: none
+    fonts:
+    - family: Sora
+      weights:
+      - 300
+      - 600
+      italic: false
+    - family: Inter
+      weights:
+      - 400
+      - 500
       italic: false
   archivo:
     summary: Heavy grotesk headlines over the same family for text.

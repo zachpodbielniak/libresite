@@ -228,6 +228,38 @@ language_valid(const gchar *tag){
 	}
 	return TRUE;
 }
+/* Supplied photographs: seeded raster images under assets/ with alt text.
+ * The component steps read their pixel sizes from the seeds. */
+static gboolean
+photo_list(JsonObject *site, GError **error){
+	JsonNode *node = json_object_get_member(site, "photos");
+	JsonArray *photos = node != NULL && JSON_NODE_HOLDS_ARRAY(node) ? json_node_get_array(node) : NULL;
+	g_autoptr(GHashTable) seen = g_hash_table_new(g_str_hash, g_str_equal);
+	guint i;
+	if (photos == NULL || json_array_get_length(photos) == 0 || json_array_get_length(photos) > 48)
+		goto invalid;
+	for (i = 0; i < json_array_get_length(photos); i++) {
+		JsonNode *entry = json_array_get_element(photos, i);
+		JsonObject *photo = JSON_NODE_HOLDS_OBJECT(entry) ? json_node_get_object(entry) : NULL;
+		const gchar *path = photo != NULL ? ls_string(photo, "path") : NULL;
+		g_autofree gchar *lower = path != NULL ? g_ascii_strdown(path, -1) : NULL;
+		if (photo == NULL || !ls_object_keys(photo, "|path|alt|credit|", NULL) ||
+			!text_member(photo, "alt", TRUE, NULL) || !text_member(photo, "credit", FALSE, NULL) ||
+			path == NULL || !g_str_has_prefix(path, "assets/") || strstr(path, "..") != NULL ||
+			strpbrk(path, " \"'<>\\") != NULL ||
+			!(g_str_has_suffix(lower, ".jpg") || g_str_has_suffix(lower, ".jpeg") ||
+			g_str_has_suffix(lower, ".png") || g_str_has_suffix(lower, ".webp")) ||
+			g_utf8_strlen(ls_string(photo, "alt"), -1) > 300 || strspn(ls_string(photo, "alt"), " \t\r\n") ==
+			strlen(ls_string(photo, "alt")) || !g_hash_table_add(seen, (gpointer)path))
+			goto invalid;
+	}
+	return TRUE;
+invalid:
+	g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID,
+		"site.photos needs 1 to 48 unique {path, alt, credit} entries: path an assets/ .jpg, .jpeg, .png or "
+		".webp seed without spaces or quotes, alt text up to 300 characters, credit optional text");
+	return FALSE;
+}
 /* No synthesized prose: structured facts remain in the immutable recipe tree. */
 static gboolean
 validate_site(JsonObject *site, GError **error){
@@ -236,7 +268,8 @@ validate_site(JsonObject *site, GError **error){
 	GList *item;
 	guint i;
 	if (!ls_object_keys(site,
-		"|brief|audience|style|stack|frontend|backend|database|requirements|pages|offers|contact|brand|copy_lock|languages|",
+		"|brief|audience|style|stack|frontend|backend|database|requirements|pages|offers|contact|brand|copy_lock|languages|"
+		"photos|",
 		error))
 		return FALSE;
 	if (!json_object_has_member(site, "brief")) {
@@ -251,6 +284,9 @@ validate_site(JsonObject *site, GError **error){
 		const gchar *key = (const gchar *)item->data;
 		if (g_str_equal(key, "pages") || g_str_equal(key, "offers")) {
 			if (!records(site, key, g_str_equal(key, "pages"), error))
+				return FALSE;
+		} else if (g_str_equal(key, "photos")) {
+			if (!photo_list(site, error))
 				return FALSE;
 		} else if (g_str_equal(key, "copy_lock")) {
 			if (!text_list(site, key, 0, error))

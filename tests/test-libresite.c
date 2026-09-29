@@ -1495,6 +1495,15 @@ main(int argc, char **argv){
 		"version: 1\nname: test\nsite: {brief: hi}\npipeline: {steps: [{id: a, type: frontend}, "
 		"{id: a, type: review}]}",
 		"version: 1\nname: test\nsite: {brief: true}\npipeline: {steps: [{id: a, type: frontend}]}",
+		"version: 1\nname: test\nsite: {brief: hi, photos: []}\npipeline: {steps: [{id: a, type: frontend}]}",
+		"version: 1\nname: test\nsite: {brief: hi, photos: [{path: assets/a.gif, alt: x}]}\npipeline: {steps: [{id: a, type: frontend}]}",
+		"version: 1\nname: test\nsite: {brief: hi, photos: [{path: a.jpg, alt: x}]}\npipeline: {steps: [{id: a, type: frontend}]}",
+		"version: 1\nname: test\nsite: {brief: hi, photos: [{path: assets/a.jpg}]}\npipeline: {steps: [{id: a, type: frontend}]}",
+		"version: 1\nname: test\nsite: {brief: hi, photos: [{path: assets/../a.jpg, alt: x}]}\npipeline: {steps: [{id: a, type: frontend}]}",
+		"version: 1\nname: test\nsite: {brief: hi, photos: [{path: 'assets/a b.jpg', alt: x}]}\npipeline: {steps: [{id: a, type: frontend}]}",
+		"version: 1\nname: test\nsite: {brief: hi, photos: [{path: assets/a.jpg, alt: x, size: 3}]}\npipeline: {steps: [{id: a, type: frontend}]}",
+		"version: 1\nname: test\nsite: {brief: hi, photos: [{path: assets/a.jpg, alt: x}, {path: assets/a.jpg, alt: y}]}\npipeline: {steps: [{id: a, type: frontend}]}",
+		"version: 1\nname: test\nsite: {brief: hi, photos: [{path: assets/a.jpg, alt: '   '}]}\npipeline: {steps: [{id: a, type: frontend}]}",
 		"version: 1\nname: test\nsite: {brief: hi}\npipeline: {steps: [{id: a, type: frontend, "
 		"options: []}]}"
 	};

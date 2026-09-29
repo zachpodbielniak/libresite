@@ -62,27 +62,27 @@ Every planned page has a =kind=, defined in =catalog.yaml=. A kind fixes which c
 
 Colors and fonts alone do not make two sites different: the skeleton does. The plan's =look= picks one value for each axis in =catalog.yaml= (=looks=), and the builder puts one class per axis on every page's =body=, for example =look-header-stacked=. =look.css= reshapes every component through those classes.
 
-- header: bar, centered, stacked, inverted, floating
+- header: bar, centered, stacked, inverted, floating, glass (sticky frosted bar)
 - nav: underline, pill, caps, slashes
 - heads: plain, rule, numbered, bar, split, giant
-- buttons: square, pill, underline, offset
-- panels (cards, tiles, boxed items across components): flat, outlined, raised, rules, inverted
+- buttons: square, pill, underline, offset, glass, hud (cut-corner monospace)
+- panels (cards, tiles, boxed items across components): flat, outlined, raised, rules, inverted, glass (frosted translucent, solid without backdrop-filter or with reduced transparency), hud (cut corners, accent brackets, inner glow)
 - rhythm: even, bands, divided, tight
 - align: left, center
 - images: plain, rounded, framed, print, shadow
 - footer: simple, big, inverted
-- texture: none, grain, grid, dots, lines
+- texture: none, grain, grid, dots, lines, aurora (fixed color fields for glass), scanlines, stars
 - motion: none, rise (scroll-linked, off for reduced motion)
 - emphasis (words marked =*like this*= in section headings): accent, italic, highlight, underline, outline, block
 - ornament between sections: none, wave, zigzag, dots, star, rule
 - kicker labels: mono, pill, line, accent, number
-- backdrop behind the opening section: none, glow, mesh, stripes, halftone, block
+- backdrop behind the opening section: none, glow, mesh, stripes, halftone, block, aurora, horizon (glowing perspective grid)
 
 Section headings may mark one or two words as =*emphasis*=. The builder renders them as =<em class="em">= inside the heading only; contents entries, breadcrumbs, labels and anchors get the plain text, and unpaired or empty markers stay literal.
 
 Home pages rotate openings: the plan task carries a =suggested_opening= (component/variant among the home openings) that =ls_components_suggest_opening()= hashes from the recipe name and brief, so home pages do not all open with the same hero.
 
-The first value of each axis is the default, and plan repair fills a missing axis with it. Inverted areas swap the working color tokens locally, so every component inside them keeps its contrast pairs. So that sites do not converge on a favorite set, the plan task carries a =suggested_look= that =ls_components_suggest_look()= derives from a hash of the recipe name and brief: different sites start from different skeletons, and the same site always gets the same suggestion. The plan keeps a suggested value unless the subject argues against it.
+The first value of each axis is the default, and plan repair fills a missing axis with it. An axis may set =plain: N= in the catalog: the builder then deals its default to about N percent of sites. Texture and backdrop use 50, so busy backgrounds stay occasional instead of appearing on every site (=/components/plain-share=). Inverted areas swap the working color tokens locally, so every component inside them keeps its contrast pairs. So that sites do not converge on a favorite set, the plan task carries a =suggested_look= that =ls_components_suggest_look()= derives from a hash of the recipe name and brief: different sites start from different skeletons, and the same site always gets the same suggestion. The plan keeps a suggested value unless the subject argues against it.
 
 Every component can be overridden. =styles.css= declares =@layer ls-base, ls-components, ls-look=; the base stylesheet, each component's styles and the look sit in those layers, and everything a site writes is unlayered after them:
 
@@ -96,7 +96,7 @@ The model-facing reference lists the axes and the override rules (LOOK and OVERR
 
 * Themes
 
-A theme is a complete design applied to the whole site: every token, the web fonts, one value for every look axis and signature CSS. =data/components/themes.yaml= bundles fifteen: editorial, brutalist, midnight, soft, civic, atelier, workshop, neon, terracotta, nordic, retro, zine, botanical, noir and sunrise. Every component draws only on tokens and look classes, so applying a theme changes every component on every page together, while content, routes, navigation, art and component choices stay as they are.
+A theme is a complete design applied to the whole site: every token, the web fonts, one value for every look axis and signature CSS. =data/components/themes.yaml= bundles eighteen: editorial, brutalist, midnight, soft, civic, atelier, workshop, neon, terracotta, nordic, retro, zine, botanical, noir, sunrise, liquid-glass (frosted glass over dawn color fields), orbital (sci-fi mission control: HUD panels, scanlines, a horizon grid) and hologram (glass panels glowing over a violet starfield). Every component draws only on tokens and look classes, so applying a theme changes every component on every page together, while content, routes, navigation, art and component choices stay as they are.
 
 Name one on the plan step:
 
@@ -114,7 +114,7 @@ Recomposing an already delivered site needs its plan and page specifications. Co
 
 Without a theme the model designs each site itself, and left alone it converges: five live packages on 2026-09-28 all came back with warm cream paper, a rust accent and Fraunces headlines, and nearly the same home page order. Nothing tied the design to the business. Identities fix that without extra calls.
 
-=data/components/identities.yaml= defines business sectors (trades, food, community, advisory, software, creative, retail and wellness), eighteen palettes, thirteen type pairings and twelve home-page section sequences, each listing the sectors it fits. Name the sector on the plan step:
+=data/components/identities.yaml= defines business sectors (trades, food, community, advisory, software, creative, retail and wellness), twenty-one palettes, fifteen type pairings and twelve home-page section sequences, each listing the sectors it fits. Name the sector on the plan step:
 
 #+begin_src yaml
 - {id: plan, type: plan, options: {sector: trades}}
@@ -125,6 +125,20 @@ The builder deals one fitting palette, type pairing and home sequence from a has
 The plan starts with =character=: one or two sentences on what the business looks like in the real world (materials, tools, place, era, mood). Its colors and type start from the dealt identity and move toward that character; the model departs from them only when the character needs it. =ls_components_check_identity()= then rejects a plan that falls back on the house default, warm cream paper with a rust or orange accent or Fraunces over Source Sans, unless the dealt identity was itself that warm; the rejection goes back to the model like any other. No palette or type pairing in the catalog may be the default, and each is checked like a plan when the library loads (contrast, fonts, token ranges). =character= is required by the plan schema and optional natively, up to 600 characters.
 
 To add a palette, type pairing or home sequence, add an entry with its =fits=; a sector needs at least one of each. =/components/identities= checks fit, stability and spread; =/pages/plan-identity= checks the prompt and the rejection.
+
+* Photographs
+
+A recipe can supply real photographs, such as the customer's own or licensed stock. Each is a binary seed artifact under =assets/= (=encoding: base64=) listed in =site.photos= with its alt text and an optional credit:
+
+#+begin_src yaml
+site:
+  photos:
+    - {path: assets/photos/dining-room.jpg, alt: A candlelit table set for dinner., credit: 'Name, Unsplash'}
+seed_artifacts:
+  - {path: assets/photos/dining-room.jpg, encoding: base64, content: ...}
+#+end_src
+
+The plan step reads each photo's pixel size from its PNG, JPEG or WebP header and passes the list to the model as =supplied_photos=; a photo whose seed is missing or unreadable stops the step before any call. The builder then writes the list into the plan as =photos= (the model cannot change it), so any image slot may use a photo path as well as a planned art path, and pages render it at its real size. The prompts ask the plan to feature the photos where they fit and to draw art only for marks, motifs and diagrams. Photos never grow taller than the screen: a tall one crops to cover its box. Credits are kept in the plan for the operator; licensed stock such as Unsplash and Pexels needs no on-page credit, and the model may still show one in a caption.
 
 * What the builder produces
 
@@ -240,6 +254,10 @@ A composed recipe's checkpoint fingerprint includes the component library digest
 | 2026-09-28 | nonprofit, with identities | 45 s | harbor, Archivo Black over Archivo; no retries |
 | 2026-09-28 | professional-services, with identities | 47 s | clay-sky, Libre Caslon over Libre Franklin; no retries |
 | 2026-09-28 | small-saas, with identities | 53 s | terminal-mint, Outfit over Inter; no retries |
+| 2026-09-28 | restaurant, three photos | 41 s | Unsplash and Pexels photos in the story and visit pages; no retries |
+| 2026-09-28 | trades, two photos | 63 s | photos beside drawn gauge diagrams; no retries |
+| 2026-09-28 | farside (test), orbital theme, three photos | 45 s | sci-fi HUD look; rerun 41 s after the tall-photo cap; no retries |
+| 2026-09-28 | stillwater (test), liquid-glass theme, three photos | 46 s | frosted glass over aurora fields; no retries |
 | 2026-09-28 | studio, 53-component library | 60 s | no retries |
 | 2026-09-28 | night-ramen, 53-component library | 51 s | events kind; marquee, statement, notice, big facts; no retries |
 | 2026-09-28 | studio, looks and restyles | 51 s | stacked-free look from its suggestion: caps nav, split heads, outlined panels, framed images, lines texture; showcase used; no retries |

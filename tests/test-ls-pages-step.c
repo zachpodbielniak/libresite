@@ -586,6 +586,87 @@ test_plan_identity(void){
 	fixture_teardown(&fixture);
 }
 
+/* Supplied photographs reach the plan prompt with their pixel sizes read
+ * from the seeds (PNG, JPEG and WebP headers), and the builder writes them
+ * into the stored plan; a photo without a readable seed stops the step. */
+static const gchar *photo_recipe =
+	"version: 1\n"
+	"name: harbor\n"
+	"site:\n"
+	"  brief: An illustrative furniture repair workshop\n"
+	"  style: editorial\n"
+	"  photos:\n"
+	"    - {path: assets/bench.png, alt: A workbench with clamps, credit: Test}\n"
+	"    - {path: assets/chair.jpg, alt: A repaired chair}\n"
+	"    - {path: assets/shop.webp, alt: The shop front}\n"
+	"seed_artifacts:\n"
+	"  - {path: assets/bench.png, encoding: base64, content: iVBORw0KGgoAAAANSUhEUgAAAoAAAAHgCAIAAAAAAAAA}\n"
+	"  - {path: assets/chair.jpg, encoding: base64, content: /9j/4AAQSkZJRgABAQAAAQABAAD/wgARCASwBwgDAAAAAAAAAAAA}\n"
+	"  - {path: assets/shop.webp, encoding: base64, content: UklGRh4AAABXRUJQVlA4WAoAAAAAAAAAPwYAgwMA}\n"
+	"ai: {provider: claude-code, retries: 1}\n"
+	"pipeline:\n"
+	"  steps:\n"
+	"    - {id: plan, type: plan, instructions: Plan three pages.}\n"
+	"    - {id: pages, type: pages}\n"
+	"    - id: acceptance\n"
+	"      type: validate\n"
+	"      options: {required: [index.html]}\n";
+
+static void
+test_plan_photos(void){
+	g_autoptr(GError) error = NULL;
+	g_autoptr(LsRecipe) recipe = ls_recipe_new(photo_recipe, &error);
+	g_autoptr(LsPrompts) prompts = ls_prompts_new(NULL, &error);
+	g_autoptr(LsContext) context = NULL;
+	FakeProvider *provider = g_object_new(fake_provider_get_type(), NULL);
+	g_autoptr(LsStep) step = g_object_new(LS_TYPE_PLAN_STEP, NULL);
+	g_autoptr(JsonNode) plan = NULL;
+	g_autofree gchar *preview = NULL;
+	JsonArray *photos;
+	const gchar *task;
+	g_assert_no_error(error);
+	context = ls_recipe_create_context(recipe, &error);
+	g_assert_no_error(error);
+	g_assert_true(ls_step_execute(step, recipe, json_array_get_object_element(ls_recipe_get_steps(recipe), 0),
+		prompts, context, LS_PROVIDER(provider), NULL, &error));
+	g_assert_no_error(error);
+	task = strstr(g_ptr_array_index(prompts_for(provider, "plan"), 0), "TASK (JSON)");
+	g_assert_nonnull(strstr(task, "\"supplied_photos\":[{\"path\":\"assets/bench.png\",\"alt\":\"A workbench with clamps\","
+		"\"credit\":\"Test\",\"width\":640,\"height\":480}"));
+	g_assert_nonnull(strstr(task, "\"path\":\"assets/chair.jpg\",\"alt\":\"A repaired chair\",\"width\":1800,\"height\":1200}"));
+	g_assert_nonnull(strstr(task, "\"path\":\"assets/shop.webp\",\"alt\":\"The shop front\",\"width\":1600,\"height\":900}"));
+	plan = ls_json_parse(ls_artifact_get_content(ls_context_lookup(context, "site/plan.json")), NULL);
+	photos = json_object_get_array_member(json_node_get_object(plan), "photos");
+	g_assert_cmpuint(json_array_get_length(photos), ==, 3);
+	g_assert_cmpint(json_object_get_int_member(json_array_get_object_element(photos, 1), "width"), ==, 1800);
+	/* A preview lists the photos without reading any seed. */
+	preview = ls_spec_step_preview(prompts, recipe, json_array_get_object_element(ls_recipe_get_steps(recipe), 0), &error);
+	g_assert_no_error(error);
+	g_assert_nonnull(strstr(preview, "\"supplied_photos\":[{\"path\":\"assets/bench.png\""));
+	/* A photo whose seed is not an image stops the step before any call. */
+	{
+		g_autofree gchar *broken = g_strdup(photo_recipe);
+		g_autoptr(LsRecipe) bad = NULL;
+		g_autoptr(LsContext) bad_context = NULL;
+		FakeProvider *quiet = g_object_new(fake_provider_get_type(), NULL);
+		g_autoptr(LsStep) bad_step = g_object_new(LS_TYPE_PLAN_STEP, NULL);
+		gchar *png = strstr(broken, "iVBORw0KGgo");
+		memcpy(png, "aGVsbG8gd2", 10);
+		bad = ls_recipe_new(broken, &error);
+		g_assert_no_error(error);
+		bad_context = ls_recipe_create_context(bad, &error);
+		g_assert_no_error(error);
+		g_assert_false(ls_step_execute(bad_step, bad, json_array_get_object_element(ls_recipe_get_steps(bad), 0),
+			prompts, bad_context, LS_PROVIDER(quiet), NULL, &error));
+		g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+		g_assert_nonnull(strstr(error->message, "assets/bench.png"));
+		g_assert_cmpint(quiet->calls, ==, 0);
+		g_clear_error(&error);
+		g_object_unref(quiet);
+	}
+	g_object_unref(provider);
+}
+
 int
 main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
@@ -593,6 +674,7 @@ main(int argc, char **argv){
 	g_test_add_func("/pages/plan-theme", test_plan_theme);
 	g_test_add_func("/pages/plan-options", test_plan_options);
 	g_test_add_func("/pages/plan-identity", test_plan_identity);
+	g_test_add_func("/pages/plan-photos", test_plan_photos);
 	g_test_add_func("/pages/parallel", test_parallel);
 	g_test_add_func("/pages/sequential", test_sequential);
 	g_test_add_func("/pages/retry-one", test_retry_one);

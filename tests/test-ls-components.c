@@ -1040,6 +1040,68 @@ test_contrast_panel(void){
 	contains(file_content(bundle, "work.html"), "split--contrast");
 }
 
+/* A supplied photograph is an image the pages may use, rendered at its own
+ * pixel size; anything else that is not planned art is still rejected. */
+static void
+test_photos(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(JsonNode) plan = load("plan.json");
+	g_autoptr(JsonObject) pages = fixture_pages();
+	g_autoptr(GError) error = NULL;
+	g_autofree gchar *text = NULL;
+	g_autoptr(JsonNode) bundle = NULL;
+	JsonObject *root = json_node_get_object(plan);
+	json_object_set_member(root, "photos", json(
+		"[{'path':'assets/bench.jpg','alt':'A workbench','credit':'Test','width':1800,'height':1200}]"));
+	g_assert_true(ls_components_check_plan(components, plan, &error));
+	g_assert_no_error(error);
+	json_object_set_member(pages, "work.html", json(
+		"{'path':'work.html','sections':[{'component':'page-header','content':{'heading':'Work'}},"
+		"{'component':'media','content':{'art':{'src':'assets/bench.jpg','alt':'A workbench'},'caption':'The bench.'}}]}"));
+	text = ls_components_compose(components, plan, pages, NULL, &error);
+	g_assert_no_error(error);
+	bundle = ls_json_parse(text, NULL);
+	contains(file_content(bundle, "work.html"), "<img src=\"assets/bench.jpg\" alt=\"A workbench\" width=\"1800\" height=\"1200\"");
+	contains(file_content(bundle, "styles.css"), "max-height: min(80vh, 52rem); object-fit: cover;");
+	/* An unsupplied raster is neither art nor a photo. */
+	g_clear_pointer(&text, g_free);
+	json_object_set_member(pages, "work.html", json(
+		"{'path':'work.html','sections':[{'component':'page-header','content':{'heading':'Work'}},"
+		"{'component':'media','content':{'art':{'src':'assets/other.jpg','alt':'x'}}}]}"));
+	text = ls_components_compose(components, plan, pages, NULL, &error);
+	g_assert_null(text);
+	g_assert_nonnull(error);
+	g_assert_nonnull(strstr(error->message, "assets/other.jpg is not planned art"));
+	g_clear_error(&error);
+	/* The builder writes photos; malformed entries fail the plan check. */
+	json_object_set_member(root, "photos", json("[{'path':'x.jpg','alt':'a','width':1,'height':1}]"));
+	g_assert_false(ls_components_check_plan(components, plan, &error));
+	g_assert_nonnull(strstr(error->message, "photos[0]"));
+	g_clear_error(&error);
+	json_object_set_member(root, "photos", json("[{'path':'assets/x.jpg','alt':'a','width':0,'height':1}]"));
+	g_assert_false(ls_components_check_plan(components, plan, &error));
+	g_clear_error(&error);
+}
+
+/* Axes with plain: N deal their default to about N percent of sites, so
+ * textures and backdrops stay occasional; other axes spread evenly. */
+static void
+test_plain_share(void){
+	g_autoptr(LsComponents) components = library();
+	guint plain_texture = 0, plain_backdrop = 0, i;
+	for (i = 0; i < 400; i++) {
+		g_autofree gchar *seed = g_strdup_printf("site %u", i);
+		g_autoptr(JsonObject) look = ls_components_suggest_look(components, seed);
+		plain_texture += g_str_equal(ls_string(look, "texture"), "none");
+		plain_backdrop += g_str_equal(ls_string(look, "backdrop"), "none");
+	}
+	/* 50 percent plain plus an even share of the rest: about 56 percent. */
+	g_assert_cmpuint(plain_texture, >=, 180);
+	g_assert_cmpuint(plain_texture, <=, 270);
+	g_assert_cmpuint(plain_backdrop, >=, 180);
+	g_assert_cmpuint(plain_backdrop, <=, 270);
+}
+
 /* Identities fit their sector, stay stable for a site and vary between
  * sites; the house-default check rejects only an undealt default. */
 static void
@@ -1160,6 +1222,8 @@ main(int argc, char **argv){
 	g_test_add_func("/components/directory-tabs", test_directory_and_tabs);
 	g_test_add_func("/components/menu-filter", test_menu_filter);
 	g_test_add_func("/components/identities", test_identities);
+	g_test_add_func("/components/photos", test_photos);
+	g_test_add_func("/components/plain-share", test_plain_share);
 	g_test_add_func("/components/contrast-panel", test_contrast_panel);
 	g_test_add_func("/components/schema-kinds", test_schema_kinds);
 	return g_test_run();
