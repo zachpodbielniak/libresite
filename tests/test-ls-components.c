@@ -757,6 +757,52 @@ test_directory_and_tabs(void){
 	lacks(file_content(bundle, "index.html"), "data-tabs");
 }
 
+/* A menu with all_label gets one filter button per section, reusing the
+ * filter script and styles; without it the menu stays script-free. */
+static void
+test_menu_filter(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(JsonNode) plan = load("plan.json");
+	g_autoptr(JsonObject) pages = fixture_pages();
+	g_autoptr(GError) error = NULL;
+	g_autofree gchar *text = NULL;
+	g_autoptr(JsonNode) bundle = NULL;
+	const gchar *html;
+	json_object_set_member(pages, "work.html", json(
+		"{'path':'work.html','sections':[{'component':'page-header','content':{'heading':'Menu'}},"
+		"{'component':'menu','content':{'heading':'Food','all_label':'Everything','sections':["
+		"{'name':'Small plates','items':[{'name':'Olives','price':'4'}]},"
+		"{'name':'Mains','items':[{'name':'Stew','price':'14'},{'name':'Pie'}]}]}}]}"));
+	text = ls_components_compose(components, plan, pages, NULL, &error);
+	g_assert_no_error(error);
+	bundle = ls_json_parse(text, NULL);
+	html = file_content(bundle, "work.html");
+	contains(html, "<div class=\"wrap\" data-filter>");
+	contains(html, "class=\"filter__controls\" role=\"group\" aria-label=\"Filter entries\" hidden>");
+	contains(html, "data-filter-value=\"\" aria-pressed=\"true\">Everything</button>");
+	g_assert_cmpuint(count(html, "class=\"filter__button\""), ==, 3);
+	g_assert_cmpuint(count(html, "data-filter-item=\"food-1-small-plates\""), ==, 1);
+	contains(html, "data-filter-value=\"food-2-mains\" aria-pressed=\"false\">Mains</button>");
+	contains(html, "data-filter-empty hidden");
+	/* Every dish is in the page source, so nothing depends on the script. */
+	contains(html, ">Olives<");
+	contains(html, ">Pie<");
+	contains(file_content(bundle, "site.js"), "[data-filter]");
+	contains(file_content(bundle, "styles.css"), ".filter__controls");
+	/* Without all_label the menu renders no controls and pulls in no filter. */
+	json_object_set_member(pages, "work.html", json(
+		"{'path':'work.html','sections':[{'component':'page-header','content':{'heading':'Menu'}},"
+		"{'component':'menu','content':{'heading':'Food','sections':["
+		"{'name':'Mains','items':[{'name':'Stew','price':'14'}]}]}}]}"));
+	g_clear_pointer(&text, g_free);
+	g_clear_pointer(&bundle, json_node_unref);
+	text = ls_components_compose(components, plan, pages, NULL, &error);
+	g_assert_no_error(error);
+	bundle = ls_json_parse(text, NULL);
+	html = file_content(bundle, "work.html");
+	lacks(html, "data-filter");
+	lacks(file_content(bundle, "site.js"), "[data-filter]");
+}
 
 /* The plan's look reaches every page as body classes, library styles sit in
  * cascade layers, and restyles follow them only for components in use. */
@@ -985,6 +1031,7 @@ main(int argc, char **argv){
 	g_test_add_func("/components/heading-emphasis", test_heading_emphasis);
 	g_test_add_func("/components/suggest-opening", test_suggest_opening);
 	g_test_add_func("/components/directory-tabs", test_directory_and_tabs);
+	g_test_add_func("/components/menu-filter", test_menu_filter);
 	g_test_add_func("/components/schema-kinds", test_schema_kinds);
 	return g_test_run();
 }

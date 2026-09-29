@@ -1,13 +1,15 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
+# Composed from the component library in two AI steps: one plan call, then every
+# page and artwork in parallel. --provider switches every AI step to another agent.
 version: 1
 name: nonprofit-site
 package:
   sku: nonprofit
-  release: '1.1.0'
+  release: '2.0.0'
   kind: site
 site:
   brief: >-
-    Build Common Ground Collective. An illustrative community nonprofit. Explain mission, programs and ways to participate with transparent limits. Do not invent charitable registration, tax deductibility, impact metrics, beneficiaries, donors, accounts or payment destinations. This is a fixed-scope sold package: implement exactly the listed pages and acceptance deliverables, at the shared flagship-quality bar. Replace example identity and facts with approved client content before sealing a real sale.
+    Build Common Ground Collective. An illustrative community nonprofit. Explain mission, programs and ways to participate with transparent limits. Do not invent charitable registration, tax deductibility, impact metrics, beneficiaries, donors, accounts or payment destinations. This is a fixed-scope sold package: build exactly the listed pages. Replace example identity and facts with approved client content before sealing a real sale.
   pages:
     - path: /index.html
       title: Home
@@ -27,94 +29,39 @@ site:
     - path: /support.html
       title: Support the mission
       purpose: Explain how to verify a nonprofit and its approved donation channel; explicitly state no donations are collected here.
-    - path: /404.html
-      title: Page not found
-      purpose: Provide recovery links to home and programs.
-    - path: /privacy.html
-      title: Privacy draft
-      purpose: Preserve the noindex draft until approved operator and data-handling facts are supplied.
-    - path: /terms.html
-      title: Terms draft
-      purpose: Preserve the noindex draft until reviewed service terms are supplied.
   style: editorial
-  frontend: Semantic HTML, shared native CSS, minimal local JavaScript and original SVG assets. No frontend framework or package manager.
+  frontend: Static pages from the Libresite component library with original local SVG artwork. No framework, package manager, CDN or external font request.
   backend: none
   database: none
   requirements: >-
-    Give every route complete original content and a distinct composition within one recognizable visual system. Use relative links between flat HTML files and a shared header, navigation and footer; preserve every primary action without JavaScript. Display a clear illustrative-business disclosure on every page. Do not invent credibility or facts to fill missing inputs. No tracking or remote services; open-source font defaults may progressively enhance system fallbacks. The final acceptance checks are exact source predicates, not browser certification. Implement a local volunteer-interest worksheet with required interest area and optional availability, selectable plain text preview and a real TXT download. No personal data required, storage, network or pretend application submission. Validate whitespace, handle Unicode, reset explicitly and release Blob URLs safely. State exactly: Nothing is sent. Download your interests and contact the organization separately. On support.html state exactly: This demonstration site does not collect donations. Do not invent payment links or tax claims.
+    6 planned routes: index.html, mission.html, programs.html, impact.html, get-involved.html, support.html (404, privacy and terms are built in). Plan a warm, credible community look with its own original motif (shared ground, hands, paths), not a generic charity template. Programs are clearly illustrative. Impact describes an evaluation plan and proposed measures, never measured outcomes. Support explains how to verify a nonprofit and its approved donation channel. No registration numbers, tax claims, beneficiaries, donors or payment links. Disclose in the shared footer that the business is illustrative. Do not invent credibility or facts to fill missing inputs; say plainly what was not supplied. No tracking, remote services, signup or pretend submission.
 ai:
-  provider: codex
+  provider: claude-code
   timeout: 0
   retries: 2
   max_tokens: 0
 pipeline:
   steps:
-    - id: scaffold
-      type: scaffold
-      options: {profile: static}
-    - id: brief
-      type: brief
+    - id: plan
+      type: plan
       instructions: >-
-        Define the exact page/content/interaction contract and paid scope in docs/product.org. Explain exclusions and supplied-versus-missing facts. Do not expand the sold scope. Home must link to get-involved.html as a primary next action.
-    - id: design
-      type: design
-      instructions: >-
-        Establish a brand-specific visual thesis, original SVG motif, exact tokens and shared components. Design all page types and interaction states at 360, 768 and 1440px and 200 percent zoom. Give interior pages as much care as home, with readable longform and honest content. Avoid repeated hero-and-card layouts.
-    - id: planning-check
-      type: validate
-      options:
-        required: [docs/product.org, docs/design.org]
+        Home introduces the mission with a hopeful opening; its actions are "Get involved" (get-involved.html) and "Our programs" (programs.html). Mission explains the illustrative mission and responsible governance questions, without trustees or registration. Programs explains two clearly illustrative activities with audience, scope and participation needs. Impact describes the evaluation plan and proposed measures. Get involved is a form page with a volunteer-interest worksheet. Support explains how to verify a nonprofit and its donation channel. Plan art: a mark, a community home composition and one program illustration.
     - id: design-gate
       type: gate
       options:
         message: >-
-          Review docs/product.org and docs/design.org before implementing the frontend.
+          Review the site plan (design tokens, fonts, navigation, art briefs and page outlines) before the pages are written.
           Resume with --approve design-gate when the direction is accepted.
-        review: [docs/product.org, docs/design.org]
-    - id: foundation
-      type: generate
-      prompt: foundation
-      options:
-        files: [index.html, styles.css, assets/mark.svg, assets/illustration.svg]
-      instructions: >-
-        Implement the complete home and shared visual system using the approved contract. The home primary action uses the literal relative href="get-involved.html". Deliver original SVG identity assets and working static navigation. Preserve selected font defaults with offline fallback. Match exact flat file routes; no empty anchors or future-service claims.
+        review: [site/plan.json]
     - id: pages
-      type: generate
-      prompt: pages
+      type: pages
+      options: {parallel: 12}
       instructions: >-
-        Complete every remaining page in site.pages and its stated purpose, including 404 recovery. Use native main landmarks and complete HTML documents on every route. Match shared styles and navigation exactly. Finish substantive route-specific copy and static fallbacks before enhancement; do not add pages or replace routes with home-page sections.
-    - id: interactions
-      type: generate
-      prompt: interactions
-      instructions: >-
-        Implement a local volunteer-interest worksheet with required interest area and optional availability, selectable plain text preview and a real TXT download. No personal data required, storage, network or pretend application submission. Validate whitespace, handle Unicode, reset explicitly and release Blob URLs safely. State exactly: Nothing is sent. Download your interests and contact the organization separately. On support.html state exactly: This demonstration site does not collect donations. Do not invent payment links or tax claims. Wire a shared deferred site.js and update HTML as needed.
-    - id: polish
-      type: generate
-      prompt: polish
-    - id: review
-      type: review
-      instructions: >-
-        Repair all missing routes, broken local links, incomplete interaction states and invented claims. Check every route, primary action and missing-input disclosure. Preserve the fixed sold scope.
+        Write final copy at the planned depth. The get-involved page uses a local form with fields interest area (required, select: events, mentoring, outreach or behind the scenes) and availability (optional textarea, up to 1000 characters); no personal data; the download file is volunteer-interests.txt; its note reads exactly "Nothing is sent. Download your interests and contact the organization separately." and its fallback explains copying the questions by hand. The support page states exactly "This demonstration site does not collect donations."
     - id: acceptance
       type: validate
       options:
-        required:
-          - index.html
-          - mission.html
-          - programs.html
-          - impact.html
-          - get-involved.html
-          - support.html
-          - 404.html
-          - styles.css
-          - site.js
-          - assets/mark.svg
-          - assets/illustration.svg
-          - privacy.html
-          - terms.html
-          - docs/product.org
-          - docs/design.org
-          - robots.txt
+        required: [index.html, mission.html, programs.html, impact.html, get-involved.html, support.html, 404.html, privacy.html, terms.html, styles.css, site.js, robots.txt]
         checks:
           - path: index.html
             contains: ['<main', '</html>', 'href="get-involved.html"']
@@ -129,13 +76,12 @@ pipeline:
           - path: support.html
             contains: ['<main', '</html>', 'This demonstration site does not collect donations.']
           - path: 404.html
-            contains: ['<main', '</html>']
+            contains: ['<main', 'href="index.html"']
           - path: privacy.html
             contains: ['<main', 'noindex']
           - path: terms.html
             contains: ['<main', 'noindex']
-    # Build notes guide later steps; the delivered site does not include them.
+    # Outlines move to the run record so delivered sites can be recomposed.
     - id: build-notes
       type: prune
-      options:
-        paths: [docs/product.org, docs/design.org, docs/polish.org, docs/review.org]
+      options: {prefixes: [site/], archive: true}

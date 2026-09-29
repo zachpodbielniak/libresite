@@ -1,0 +1,35 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# A sealed static SKU that starts from the native scaffold. Every bundled
+# website SKU is now composed, so this fixture keeps scaffold archiving tested.
+version: 1
+name: scaffold-fixture
+package:
+  sku: scaffold-fixture
+  release: '1.0.0'
+  kind: site
+site:
+  brief: >-
+    Build an illustrative one-page site for testing sealed scaffold archives.
+  style: editorial
+  frontend: Semantic HTML and shared native CSS.
+  backend: none
+  database: none
+ai:
+  provider: codex
+pipeline:
+  steps:
+    - id: scaffold
+      type: scaffold
+      options: {profile: static}
+    - id: pages
+      type: generate
+      prompt: pages
+      instructions: >-
+        Write index.html using the shared scaffold styles.
+    - id: acceptance
+      type: validate
+      options:
+        required: [index.html, 404.html, privacy.html, terms.html, robots.txt]
+        checks:
+          - path: index.html
+            contains: ['<main']

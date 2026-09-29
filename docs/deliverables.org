@@ -32,4 +32,4 @@ The C/GLib application SKU is software that someone builds, runs and maintains. 
 
 * Compatibility
 
-The static SKU recipes moved to release =1.1.0=: their acceptance contract changed. Sealed packages keep their pinned recipe, catalog and scaffold bytes, so an order sealed on =1.0.0= still generates and resumes with the old deliverables. Checkpoints started with an earlier catalog or template set must restart, per the normal fingerprint rules.
+The static SKU recipes moved to release =1.1.0=: their acceptance contract changed. Release =2.0.0= composes them from the component library (see [[file:packages.org][packages]]). Sealed packages keep their pinned recipe, catalog and scaffold bytes, so an order sealed on =1.0.0= still generates and resumes with the old deliverables. Checkpoints started with an earlier catalog or template set must restart, per the normal fingerprint rules.

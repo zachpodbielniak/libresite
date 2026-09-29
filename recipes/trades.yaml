@@ -1,13 +1,15 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
+# Composed from the component library in two AI steps: one plan call, then every
+# page and artwork in parallel. --provider switches every AI step to another agent.
 version: 1
 name: trades-site
 package:
   sku: trades
-  release: '1.1.0'
+  release: '2.0.0'
   kind: site
 site:
   brief: >-
-    Build Copper & Gauge. An illustrative independent plumbing and heating business. Help homeowners understand service scope, coverage questions and the information needed to request an estimate. No emergency availability, licenses, service areas, prices, addresses or phone numbers may be invented. This is a fixed-scope sold package: implement exactly the listed pages and acceptance deliverables, at the shared flagship-quality bar. Replace example identity and facts with approved client content before sealing a real sale.
+    Build Copper & Gauge. An illustrative independent plumbing and heating business. Help homeowners understand service scope, coverage questions and the information needed to request an estimate. No emergency availability, licenses, service areas, prices, addresses or phone numbers may be invented. This is a fixed-scope sold package: build exactly the listed pages. Replace example identity and facts with approved client content before sealing a real sale.
   pages:
     - path: /index.html
       title: Home
@@ -27,94 +29,39 @@ site:
     - path: /estimate.html
       title: Prepare an estimate request
       purpose: Local worksheet for job description and access constraints; export plain text and state that nothing is sent.
-    - path: /404.html
-      title: Page not found
-      purpose: Provide recovery links to home and services.
-    - path: /privacy.html
-      title: Privacy draft
-      purpose: Preserve the noindex draft until approved operator and data-handling facts are supplied.
-    - path: /terms.html
-      title: Terms draft
-      purpose: Preserve the noindex draft until reviewed service terms are supplied.
   style: editorial
-  frontend: Semantic HTML, shared native CSS, minimal local JavaScript and original SVG assets. No frontend framework or package manager.
+  frontend: Static pages from the Libresite component library with original local SVG artwork. No framework, package manager, CDN or external font request.
   backend: none
   database: none
   requirements: >-
-    Give every route complete original content and a distinct composition within one recognizable visual system. Use relative links between flat HTML files and a shared header, navigation and footer; preserve every primary action without JavaScript. Display a clear illustrative-business disclosure on every page. Do not invent credibility or facts to fill missing inputs. No tracking or remote services; open-source font defaults may progressively enhance system fallbacks. The final acceptance checks are exact source predicates, not browser certification. Implement an estimate-preparation worksheet with required job description, optional access constraints and selectable text plus a working TXT download. Keep it local, clear input only on explicit reset, reject whitespace-only required text, preserve Unicode, use textContent and release Blob URLs safely. No personal information is required. State exactly: Nothing is sent. Download your request and contact the business separately. No booking confirmation or emergency promise.
+    6 planned routes: index.html, services.html, service-detail.html, coverage.html, about.html, estimate.html (404, privacy and terms are built in). Warm practical tone for homeowners. Plan a sturdy, trustworthy trade look with its own original pipe-and-gauge line motif, not a generic blue contractor template. Services and the repair-visit page explain scope, exclusions and preparation, never prices, licenses, areas served, hours or phone numbers. Coverage uses a checklist of what to confirm with the business, each unsupplied detail marked as not provided. Disclose in the shared footer that the business is illustrative. Do not invent credibility or facts to fill missing inputs; say plainly what was not supplied. No tracking, remote services, signup or pretend submission.
 ai:
-  provider: codex
+  provider: claude-code
   timeout: 0
   retries: 2
   max_tokens: 0
 pipeline:
   steps:
-    - id: scaffold
-      type: scaffold
-      options: {profile: static}
-    - id: brief
-      type: brief
+    - id: plan
+      type: plan
       instructions: >-
-        Define the exact page/content/interaction contract and paid scope in docs/product.org. Explain exclusions and supplied-versus-missing facts. Do not expand the sold scope. Home must link to estimate.html as a primary next action.
-    - id: design
-      type: design
-      instructions: >-
-        Establish a brand-specific visual thesis, original SVG motif, exact tokens and shared components. Design all page types and interaction states at 360, 768 and 1440px and 200 percent zoom. Give interior pages as much care as home, with readable longform and honest content. Avoid repeated hero-and-card layouts.
-    - id: planning-check
-      type: validate
-      options:
-        required: [docs/product.org, docs/design.org]
+        Home introduces the business with a confident opening, then what a visit covers and how estimates work; its primary action is "Prepare an estimate request" linking to estimate.html, with a second action to services.html. Services lists repair and maintenance scopes (services component, no prices) with exclusions and preparation steps. Service detail explains a diagnostic visit step by step and the factors that change an estimate. Coverage explains how to confirm location and scheduling. About explains care for the property and clear written scope without staff biographies or credentials. Estimate is a form page. Plan art: a mark, a pipe-and-gauge home composition and one service illustration.
     - id: design-gate
       type: gate
       options:
         message: >-
-          Review docs/product.org and docs/design.org before implementing the frontend.
+          Review the site plan (design tokens, fonts, navigation, art briefs and page outlines) before the pages are written.
           Resume with --approve design-gate when the direction is accepted.
-        review: [docs/product.org, docs/design.org]
-    - id: foundation
-      type: generate
-      prompt: foundation
-      options:
-        files: [index.html, styles.css, assets/mark.svg, assets/illustration.svg]
-      instructions: >-
-        Implement the complete home and shared visual system using the approved contract. The home primary action uses the literal relative href="estimate.html". Deliver original SVG identity assets and working static navigation. Preserve selected font defaults with offline fallback. Match exact flat file routes; no empty anchors or future-service claims.
+        review: [site/plan.json]
     - id: pages
-      type: generate
-      prompt: pages
+      type: pages
+      options: {parallel: 12}
       instructions: >-
-        Complete every remaining page in site.pages and its stated purpose, including 404 recovery. Use native main landmarks and complete HTML documents on every route. Match shared styles and navigation exactly. Finish substantive route-specific copy and static fallbacks before enhancement; do not add pages or replace routes with home-page sections.
-    - id: interactions
-      type: generate
-      prompt: interactions
-      instructions: >-
-        Implement an estimate-preparation worksheet with required job description, optional access constraints and selectable text plus a working TXT download. Keep it local, clear input only on explicit reset, reject whitespace-only required text, preserve Unicode, use textContent and release Blob URLs safely. No personal information is required. State exactly: Nothing is sent. Download your request and contact the business separately. No booking confirmation or emergency promise. Wire a shared deferred site.js and update HTML as needed.
-    - id: polish
-      type: generate
-      prompt: polish
-    - id: review
-      type: review
-      instructions: >-
-        Repair all missing routes, broken local links, incomplete interaction states and invented claims. Check every route, primary action and missing-input disclosure. Preserve the fixed sold scope.
+        Write final copy at the planned depth. The estimate page uses a local form with fields job description (required textarea, up to 2000 characters) and access constraints (optional textarea, up to 1000 characters); no personal data; the download file is estimate-request.txt; its note reads exactly "Nothing is sent. Download your request and contact the business separately." and its fallback explains copying the questions by hand. Never promise emergency availability or booking confirmation.
     - id: acceptance
       type: validate
       options:
-        required:
-          - index.html
-          - services.html
-          - service-detail.html
-          - coverage.html
-          - about.html
-          - estimate.html
-          - 404.html
-          - styles.css
-          - site.js
-          - assets/mark.svg
-          - assets/illustration.svg
-          - privacy.html
-          - terms.html
-          - docs/product.org
-          - docs/design.org
-          - robots.txt
+        required: [index.html, services.html, service-detail.html, coverage.html, about.html, estimate.html, 404.html, privacy.html, terms.html, styles.css, site.js, robots.txt]
         checks:
           - path: index.html
             contains: ['<main', '</html>', 'href="estimate.html"']
@@ -129,13 +76,12 @@ pipeline:
           - path: estimate.html
             contains: ['<main', '</html>', 'Nothing is sent. Download your request and contact the business separately.']
           - path: 404.html
-            contains: ['<main', '</html>']
+            contains: ['<main', 'href="index.html"']
           - path: privacy.html
             contains: ['<main', 'noindex']
           - path: terms.html
             contains: ['<main', 'noindex']
-    # Build notes guide later steps; the delivered site does not include them.
+    # Outlines move to the run record so delivered sites can be recomposed.
     - id: build-notes
       type: prune
-      options:
-        paths: [docs/product.org, docs/design.org, docs/polish.org, docs/review.org]
+      options: {prefixes: [site/], archive: true}

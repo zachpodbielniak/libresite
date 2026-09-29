@@ -1,13 +1,15 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
+# Composed from the component library in two AI steps: one plan call, then every
+# page and artwork in parallel. --provider switches every AI step to another agent.
 version: 1
 name: professional-services-site
 package:
   sku: professional-services
-  release: '1.1.0'
+  release: '2.0.0'
   kind: site
 site:
   brief: >-
-    Build Plainspoken Advisory. An illustrative independent operations consultancy. Explain scoped discovery, process mapping and documentation engagements for small teams. Do not invent clients, qualifications, testimonials, outcomes, fees or contact details. This is a fixed-scope sold package: implement exactly the listed pages and acceptance deliverables, at the shared flagship-quality bar. Replace example identity and facts with approved client content before sealing a real sale.
+    Build Plainspoken Advisory. An illustrative independent operations consultancy. Explain scoped discovery, process mapping and documentation engagements for small teams. Do not invent clients, qualifications, testimonials, outcomes, fees or contact details. This is a fixed-scope sold package: build exactly the listed pages. Replace example identity and facts with approved client content before sealing a real sale.
   pages:
     - path: /index.html
       title: Home
@@ -27,94 +29,39 @@ site:
     - path: /contact.html
       title: Prepare a project brief
       purpose: Local brief worksheet for problem, team context and constraints; export text without sending.
-    - path: /404.html
-      title: Page not found
-      purpose: Provide recovery links to home and engagements.
-    - path: /privacy.html
-      title: Privacy draft
-      purpose: Preserve the noindex draft until approved operator and data-handling facts are supplied.
-    - path: /terms.html
-      title: Terms draft
-      purpose: Preserve the noindex draft until reviewed service terms are supplied.
   style: editorial
-  frontend: Semantic HTML, shared native CSS, minimal local JavaScript and original SVG assets. No frontend framework or package manager.
+  frontend: Static pages from the Libresite component library with original local SVG artwork. No framework, package manager, CDN or external font request.
   backend: none
   database: none
   requirements: >-
-    Give every route complete original content and a distinct composition within one recognizable visual system. Use relative links between flat HTML files and a shared header, navigation and footer; preserve every primary action without JavaScript. Display a clear illustrative-business disclosure on every page. Do not invent credibility or facts to fill missing inputs. No tracking or remote services; open-source font defaults may progressively enhance system fallbacks. The final acceptance checks are exact source predicates, not browser certification. Implement a local project brief worksheet with a required problem statement, optional team context and constraints, selectable preview and a real TXT download. No network, clipboard permission or persistence. Validate whitespace and lengths, preserve Unicode, reset explicitly and release Blob URLs safely. State exactly: Nothing is sent. Download your brief and contact the consultancy separately. Do not invent a working contact endpoint.
+    6 planned routes: index.html, services.html, engagement.html, approach.html, insights.html, contact.html (404, privacy and terms are built in). Plan a calm, precise advisory look with its own original diagram motif (process maps, flow lines), not a generic corporate template. Engagements explain deliverables, boundaries and client responsibilities. No clients, qualifications, testimonials, outcomes, fees or contact details. Disclose in the shared footer that the business is illustrative. Do not invent credibility or facts to fill missing inputs; say plainly what was not supplied. No tracking, remote services, signup or pretend submission.
 ai:
-  provider: codex
+  provider: claude-code
   timeout: 0
   retries: 2
   max_tokens: 0
 pipeline:
   steps:
-    - id: scaffold
-      type: scaffold
-      options: {profile: static}
-    - id: brief
-      type: brief
+    - id: plan
+      type: plan
       instructions: >-
-        Define the exact page/content/interaction contract and paid scope in docs/product.org. Explain exclusions and supplied-versus-missing facts. Do not expand the sold scope. Home must link to contact.html as a primary next action.
-    - id: design
-      type: design
-      instructions: >-
-        Establish a brand-specific visual thesis, original SVG motif, exact tokens and shared components. Design all page types and interaction states at 360, 768 and 1440px and 200 percent zoom. Give interior pages as much care as home, with readable longform and honest content. Avoid repeated hero-and-card layouts.
-    - id: planning-check
-      type: validate
-      options:
-        required: [docs/product.org, docs/design.org]
+        Home explains the offer with a clear, confident opening; its actions are "Prepare a project brief" (contact.html) and "See engagements" (services.html). Services explains discovery and process-mapping engagements with deliverables and what is excluded. Engagement describes the discovery engagement: inputs, workshop agenda as steps, concrete outputs and excluded implementation work. Approach explains intake, review, decisions, handoff and maintenance. Insights is a complete article of roughly 500 words, "An operating process people can use", with worked illustrative examples, stated limits and in-page contents. Contact is a form page with a project-brief worksheet. Plan art: a mark, a process-map home composition and one engagement diagram.
     - id: design-gate
       type: gate
       options:
         message: >-
-          Review docs/product.org and docs/design.org before implementing the frontend.
+          Review the site plan (design tokens, fonts, navigation, art briefs and page outlines) before the pages are written.
           Resume with --approve design-gate when the direction is accepted.
-        review: [docs/product.org, docs/design.org]
-    - id: foundation
-      type: generate
-      prompt: foundation
-      options:
-        files: [index.html, styles.css, assets/mark.svg, assets/illustration.svg]
-      instructions: >-
-        Implement the complete home and shared visual system using the approved contract. The home primary action uses the literal relative href="contact.html". Deliver original SVG identity assets and working static navigation. Preserve selected font defaults with offline fallback. Match exact flat file routes; no empty anchors or future-service claims.
+        review: [site/plan.json]
     - id: pages
-      type: generate
-      prompt: pages
+      type: pages
+      options: {parallel: 12}
       instructions: >-
-        Complete every remaining page in site.pages and its stated purpose, including 404 recovery. Use native main landmarks and complete HTML documents on every route. Match shared styles and navigation exactly. Finish substantive route-specific copy and static fallbacks before enhancement; do not add pages or replace routes with home-page sections.
-    - id: interactions
-      type: generate
-      prompt: interactions
-      instructions: >-
-        Implement a local project brief worksheet with a required problem statement, optional team context and constraints, selectable preview and a real TXT download. No network, clipboard permission or persistence. Validate whitespace and lengths, preserve Unicode, reset explicitly and release Blob URLs safely. State exactly: Nothing is sent. Download your brief and contact the consultancy separately. Do not invent a working contact endpoint. Wire a shared deferred site.js and update HTML as needed.
-    - id: polish
-      type: generate
-      prompt: polish
-    - id: review
-      type: review
-      instructions: >-
-        Repair all missing routes, broken local links, incomplete interaction states and invented claims. Check every route, primary action and missing-input disclosure. Preserve the fixed sold scope.
+        Write final copy at the planned depth. The contact page uses a local form with fields problem statement (required textarea, up to 2000 characters), team context (optional textarea, up to 1000 characters) and constraints (optional textarea, up to 1000 characters); no personal data; the download file is project-brief.txt; its note reads exactly "Nothing is sent. Download your brief and contact the consultancy separately." and its fallback explains copying the questions by hand.
     - id: acceptance
       type: validate
       options:
-        required:
-          - index.html
-          - services.html
-          - engagement.html
-          - approach.html
-          - insights.html
-          - contact.html
-          - 404.html
-          - styles.css
-          - site.js
-          - assets/mark.svg
-          - assets/illustration.svg
-          - privacy.html
-          - terms.html
-          - docs/product.org
-          - docs/design.org
-          - robots.txt
+        required: [index.html, services.html, engagement.html, approach.html, insights.html, contact.html, 404.html, privacy.html, terms.html, styles.css, site.js, robots.txt]
         checks:
           - path: index.html
             contains: ['<main', '</html>', 'href="contact.html"']
@@ -129,13 +76,12 @@ pipeline:
           - path: contact.html
             contains: ['<main', '</html>', 'Nothing is sent. Download your brief and contact the consultancy separately.']
           - path: 404.html
-            contains: ['<main', '</html>']
+            contains: ['<main', 'href="index.html"']
           - path: privacy.html
             contains: ['<main', 'noindex']
           - path: terms.html
             contains: ['<main', 'noindex']
-    # Build notes guide later steps; the delivered site does not include them.
+    # Outlines move to the run record so delivered sites can be recomposed.
     - id: build-notes
       type: prune
-      options:
-        paths: [docs/product.org, docs/design.org, docs/polish.org, docs/review.org]
+      options: {prefixes: [site/], archive: true}

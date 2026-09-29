@@ -146,7 +146,7 @@ Components (60, with 177 variants):
 - Offers: =offer= (one highlighted package or ticket with its supplied price).
 - Lists and navigation: =cards= (now also overlap, polaroid and minimal), =bento= (tiles of four sizes), =strip= (horizontally scrolling cards), =entries=, =filter=, =directory= (entries grouped by initial letter with a jump list), =links=, =pager=.
 - Sequences: =features=, =split= (two panels), =steps=, =timeline=, =schedule=.
-- Business facts: =facts=, =numbers=, =specs= (grouped specification sheets), =hours=, =location= (with a drawn map, never an embedded map service), =locations=, =areas= (places served), =contact-card=, =notice=, =menu= (sections, dotted leaders, supplied prices, tags), =services=, =pricing=, =checklist= (included and not included), =team= (supplied people only), =voices= and =partners= (supplied quotes and names only).
+- Business facts: =facts=, =numbers=, =specs= (grouped specification sheets), =hours=, =location= (with a drawn map, never an embedded map service), =locations=, =areas= (places served), =contact-card=, =notice=, =menu= (sections, dotted leaders, supplied prices, tags; =all_label= adds a filter button per section, reusing the =filter= script and styles, and every dish stays visible without JavaScript), =services=, =pricing=, =checklist= (included and not included), =team= (supplied people only), =voices= and =partners= (supplied quotes and names only).
 - Media and actions: =media=, =gallery=, =compare= (two artworks side by side), =marquee= (a scrolling band that stops for reduced motion and wraps instead), =cta=, =faq=, =form= and the =custom= escape hatch. =libresite --preview pages -r RECIPE= prints the full reference each writer receives.
 
 Scripted components work without JavaScript: =tabs= shows every panel under its own heading until =site.js= turns them into an arrow-key tab list, and =filter= and =form= keep their fallbacks. =/components/every-variant= renders every component in every variant and requires styles for each non-default variant.
@@ -171,7 +171,7 @@ Model text is data: plain slots are always escaped and rich text cannot emit raw
 
 Add an entry to =catalog.yaml=, write =NAME.html= and optional =NAME.css= and =NAME.js=, and list the files in =data/resources.xml=. No C changes are needed. Rules that span slots (for example "split heroes need art") belong in =check_component_rules()= in =src/core/ls-components.c=. Run =make tests=: the catalog is validated at load, and =/components/catalog= checks that the reference names every component.
 
-Within an item, every declared field the model left out is set explicitly empty, so a template can never pick up an outer value of the same name (for example a menu-wide note inside a section). Templates receive, besides the converted slots: =component=, =variant=, =v_VARIANT= (true), =id=, =htag= (=h1= for the first section, else =h2=), =subtag=, =has_SLOT= for list slots, =has_text=, the interface strings (for example =required_label=), and per-component helpers: =n= and =n2= on items, =part_id= on article parts, =key= and =category_key= in =filter=, =groups= (=letter=, =group_id=, =entries=) in =directory=, and the form view (=form_id=, =local=, =mailto=, =endpoint=, and per field =fid=, =describedby=, =is_input= and friends). Headings use =id="{{id}}-h"= so the section wrapper can label itself.
+Within an item, every declared field the model left out is set explicitly empty, so a template can never pick up an outer value of the same name (for example a menu-wide note inside a section). Templates receive, besides the converted slots: =component=, =variant=, =v_VARIANT= (true), =id=, =htag= (=h1= for the first section, else =h2=), =subtag=, =has_SLOT= for list slots, =has_text=, the interface strings (for example =required_label=), and per-component helpers: =n= and =n2= on items, =part_id= on article parts, =key= and =category_key= in =filter=, =section_id= and =section_key= on menu sections with =filtered= when =all_label= is set, =groups= (=letter=, =group_id=, =entries=) in =directory=, and the form view (=form_id=, =local=, =mailto=, =endpoint=, and per field =fid=, =describedby=, =is_input= and friends). Headings use =id="{{id}}-h"= so the section wrapper can label itself.
 
 ** Template subset
 
@@ -214,6 +214,11 @@ A composed recipe's checkpoint fingerprint includes the component library digest
 | 2026-09-28 | night-ramen (composed example) | 50 s | dark cinematic site, five pages and three artworks; plan 32 s, pages 17 s; no retries |
 | 2026-09-28 | studio, with page kinds | 46 s | kinds: home, index, article (x3), general, form; no retries |
 | 2026-09-28 | night-ramen, with page kinds | 49 s | kinds: home, menu, about, visit, general; five artworks; no retries |
+| 2026-09-28 | trades 2.0.0 | 52 s | first live run after conversion, claude-code; published, no retries |
+| 2026-09-28 | restaurant 2.0.0 | 44 s | first live run after conversion, claude-code; published, no retries |
+| 2026-09-28 | nonprofit 2.0.0 | 45 s | first live run after conversion, claude-code; published, no retries |
+| 2026-09-28 | professional-services 2.0.0 | 43 s | first live run after conversion, claude-code; published, no retries |
+| 2026-09-28 | small-saas 2.0.0 | 50 s | first live run after conversion, claude-code; published, no retries |
 | 2026-09-28 | studio, 53-component library | 60 s | no retries |
 | 2026-09-28 | night-ramen, 53-component library | 51 s | events kind; marquee, statement, notice, big facts; no retries |
 | 2026-09-28 | studio, looks and restyles | 51 s | stacked-free look from its suggestion: caps nav, split heads, outlined panels, framed images, lines texture; showcase used; no retries |

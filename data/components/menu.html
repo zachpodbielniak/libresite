@@ -1,10 +1,15 @@
-<div class="wrap">
+<div class="wrap"{{#filtered}} data-filter{{/filtered}}>
 {{#heading}}<div class="section-head">
 <{{htag}} id="{{id}}-h">{{{heading_html}}}</{{htag}}>
 {{#intro}}<div class="prose">{{{intro}}}</div>
 {{/intro}}</div>
-{{/heading}}<div class="menu__sections">
-{{#sections}}<section class="menu__section" aria-labelledby="{{section_id}}">
+{{/heading}}{{#filtered}}<div class="filter__controls" role="group" aria-label="{{filter_label}}" hidden>
+<button class="filter__button" type="button" data-filter-value="" aria-pressed="true">{{all_label}}</button>
+{{#sections}}<button class="filter__button" type="button" data-filter-value="{{section_key}}" aria-pressed="false">{{name}}</button>
+{{/sections}}</div>
+<p class="filter__status muted" role="status" aria-live="polite" data-filter-status data-template-one="{{count_one}}" data-template-many="{{count_many}}"></p>
+{{/filtered}}<div class="menu__sections">
+{{#sections}}<section class="menu__section" aria-labelledby="{{section_id}}"{{#filtered}} data-filter-item="{{section_key}}"{{/filtered}}>
 <{{subtag}} class="menu__name" id="{{section_id}}">{{name}}</{{subtag}}>
 {{#note}}<p class="menu__note muted">{{note}}</p>
 {{/note}}<ul class="menu__items" role="list">
@@ -16,5 +21,6 @@
 {{/items}}</ul>
 </section>
 {{/sections}}</div>
-{{#note}}<div class="menu__footnote prose muted">{{{note}}}</div>
+{{#filtered}}<p class="filter__empty" data-filter-empty hidden></p>
+{{/filtered}}{{#note}}<div class="menu__footnote prose muted">{{{note}}}</div>
 {{/note}}</div>

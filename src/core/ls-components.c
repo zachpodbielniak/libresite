@@ -2647,6 +2647,12 @@ render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArra
 				g_autofree gchar *slug = slugify(ls_string(menu_section, "name"), 32);
 				g_autofree gchar *section_id = g_strdup_printf("%s-%u-%s", id, j + 1, slug);
 				json_object_set_string_member(menu_section, "section_id", section_id);
+				json_object_set_string_member(menu_section, "section_key", section_id);
+			}
+			/* Section buttons reuse the filter component's script and styles. */
+			if (!blank(ls_string(content, "all_label"))) {
+				json_object_set_boolean_member(view, "filtered", TRUE);
+				g_hash_table_add(render->used, g_strdup("filter"));
 			}
 		}
 		if (g_str_equal(name, "article")) {

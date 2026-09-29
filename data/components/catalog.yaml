@@ -504,6 +504,7 @@ components:
               description: {type: text, max: 240}
               tags: {type: items, max_items: 4, fields: {label: {type: text, required: true, max: 24}}}
       note: {type: rich, max: 400, note: "Allergens, payment or other supplied notes."}
+      all_label: {type: text, max: 40, note: "Set to add a button per section that filters the menu; this is the label of the button showing every section. Every dish stays visible without JavaScript."}
   timeline:
     summary: Dated milestones or phases in order. Only supplied dates.
     variants:

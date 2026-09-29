@@ -72,19 +72,23 @@ then
 fi
 rg -Fq 'catalog SHA-256 mismatch' "$test_dir/error"
 [[ ! -e "$test_dir/site.libresite-work" ]]
-# Missing native inputs are an error, never a fallback to installed templates.
-mv "$test_dir/nonprofit/scaffold.json" "$test_dir/saved-scaffold"
-if "$binary" --package "$test_dir/nonprofit" -o "$test_dir/native-site" > "$test_dir/error" 2>&1
+# Every bundled website SKU is composed, so a fixture SKU keeps the sealed
+# scaffold archive covered. Missing native inputs are an error, never a
+# fallback to installed templates.
+"$binary" -r "$root/tests/fixtures/scaffold-package.yaml" --seal-package "$test_dir/scaffolded"
+[[ -s "$test_dir/scaffolded/scaffold.json" ]]
+mv "$test_dir/scaffolded/scaffold.json" "$test_dir/saved-scaffold"
+if "$binary" --package "$test_dir/scaffolded" -o "$test_dir/native-site" > "$test_dir/error" 2>&1
 then
 	exit 1
 fi
 [[ ! -e "$test_dir/native-site.libresite-work" ]]
-mv "$test_dir/saved-scaffold" "$test_dir/nonprofit/scaffold.json"
+mv "$test_dir/saved-scaffold" "$test_dir/scaffolded/scaffold.json"
 # Simulate an intact older archive with different native template contents.
-printf '%s' '{"files":[{"path":"Makefile","content":"Archived native template 2026"}]}' > "$test_dir/nonprofit/scaffold.json"
-read -r native_digest _ < <(sha256sum "$test_dir/nonprofit/scaffold.json")
-sed -i "s/^scaffold_sha256:.*/scaffold_sha256: '$native_digest'/" "$test_dir/nonprofit/package.yaml"
-"$binary" --package "$test_dir/nonprofit" --preview scaffold > "$test_dir/native-preview"
+printf '%s' '{"files":[{"path":"Makefile","content":"Archived native template 2026"}]}' > "$test_dir/scaffolded/scaffold.json"
+read -r native_digest _ < <(sha256sum "$test_dir/scaffolded/scaffold.json")
+sed -i "s/^scaffold_sha256:.*/scaffold_sha256: '$native_digest'/" "$test_dir/scaffolded/package.yaml"
+"$binary" --package "$test_dir/scaffolded" --preview scaffold > "$test_dir/native-preview"
 rg -Fq 'Archived native template 2026' "$test_dir/native-preview"
 # A caller cannot relabel a different stack as the supported application SKU.
 for stack in react tailwind
