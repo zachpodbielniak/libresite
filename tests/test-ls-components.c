@@ -997,6 +997,36 @@ test_heading_emphasis(void){
 	lacks(html, "<b>");
 }
 
+/* Numbered heading looks read their numbers from the page, since the main
+ * container would scope CSS counters to each section. Only labelled
+ * sections after the opening are numbered, in order. */
+static void
+test_section_numbers(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(JsonNode) plan = load("plan.json");
+	g_autoptr(JsonObject) pages = fixture_pages();
+	g_autoptr(GError) error = NULL;
+	g_autofree gchar *text = NULL;
+	g_autoptr(JsonNode) bundle = NULL;
+	const gchar *html;
+	const gchar *css;
+	json_object_set_member(pages, "journal.html", json(
+		"{'path':'journal.html','sections':[{'component':'page-header','content':{'heading':'Notes'}},"
+		"{'component':'text','content':{'heading':'First part','body':'Body.'}},"
+		"{'component':'text','content':{'body':'No heading here.'}},"
+		"{'component':'text','content':{'heading':'Second part','body':'More.'}}]}"));
+	text = ls_components_compose(components, plan, pages, NULL, &error);
+	g_assert_no_error(error);
+	bundle = ls_json_parse(text, NULL);
+	html = file_content(bundle, "journal.html");
+	css = file_content(bundle, "styles.css");
+	contains(html, "id=\"first-part\" style=\"--ls-n: '01'\"");
+	contains(html, "id=\"second-part\" style=\"--ls-n: '02'\"");
+	lacks(html, "--ls-n: '03'");
+	contains(css, "content: var(--ls-n)");
+	lacks(css, "counter(ls-section");
+}
+
 /* Home openings rotate between sites, stay stable per site and are real. */
 static void
 test_suggest_opening(void){
@@ -1600,6 +1630,7 @@ main(int argc, char **argv){
 	g_test_add_func("/components/suggest-look", test_suggest_look);
 	g_test_add_func("/components/themes", test_themes);
 	g_test_add_func("/components/heading-emphasis", test_heading_emphasis);
+	g_test_add_func("/components/section-numbers", test_section_numbers);
 	g_test_add_func("/components/suggest-opening", test_suggest_opening);
 	g_test_add_func("/components/directory-tabs", test_directory_and_tabs);
 	g_test_add_func("/components/menu-filter", test_menu_filter);

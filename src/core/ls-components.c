@@ -3286,6 +3286,7 @@ render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArra
 	const gchar *last_tone = NULL;
 	g_autoptr(GHashTable) anchors = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 	g_autoptr(GPtrArray) ids = section_ids(sections, anchors);
+	guint numbered = 0;
 	guint i;
 	for (i = 0; i < json_array_get_length(sections); i++) {
 		JsonObject *section = json_array_get_object_element(sections, i);
@@ -3453,6 +3454,12 @@ render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArra
 			json_object_set_string_member(wrapper, "structure", structure_classes);
 		json_object_set_boolean_member(wrapper, "labelled", !blank(ls_string(content, "heading")) &&
 			!g_str_equal(name, "custom"));
+		/* Section numbers for numbered heading looks are written into the
+		 * page: CSS counters would be scoped by the main container. */
+		if (i > 0 && json_object_get_boolean_member(wrapper, "labelled")) {
+			g_autofree gchar *number = g_strdup_printf("%02u", ++numbered);
+			json_object_set_string_member(wrapper, "number", number);
+		}
 		if (g_str_equal(name, "custom")) {
 			json_object_set_string_member(wrapper, "label", ls_string(content, "label"));
 			json_object_set_boolean_member(wrapper, "bleed", g_strcmp0(variant, "bleed") == 0);
