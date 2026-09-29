@@ -116,6 +116,8 @@ plan_photos(LsRecipe *recipe, LsContext *context, GError **error){
 		json_object_set_string_member(entry, "alt", ls_string(photo, "alt"));
 		if (ls_string(photo, "credit") != NULL)
 			json_object_set_string_member(entry, "credit", ls_string(photo, "credit"));
+		if (ls_string(photo, "focus") != NULL)
+			json_object_set_string_member(entry, "focus", ls_string(photo, "focus"));
 		json_array_add_object_element(out, entry);
 		if (context != NULL) {
 			const LsArtifact *artifact = ls_context_lookup(context, ls_string(photo, "path"));
@@ -736,8 +738,8 @@ page_prompt(LsPrompts *prompts, LsRecipe *recipe, JsonObject *config, const gcha
 }
 
 static gchar *
-art_prompt(LsPrompts *prompts, LsRecipe *recipe, JsonObject *config, JsonObject *plan,
-	JsonObject *entry, GError **error){
+art_prompt(LsPrompts *prompts, LsRecipe *recipe, JsonObject *config, LsComponents *components,
+	JsonObject *plan, JsonObject *entry, GError **error){
 	g_autoptr(JsonObject) task = json_object_new();
 	g_autoptr(JsonNode) node = json_node_new(JSON_NODE_OBJECT);
 	g_autofree gchar *task_json = NULL;
@@ -749,6 +751,13 @@ art_prompt(LsPrompts *prompts, LsRecipe *recipe, JsonObject *config, JsonObject 
 		if (ls_string(plan, keys[i]) != NULL)
 			json_object_set_string_member(task, keys[i], ls_string(plan, keys[i]));
 	json_object_set_object_member(task, "tokens", json_object_ref(json_object_get_object_member(plan, "tokens")));
+	/* The site's art style: every artwork on the site is drawn the same way. */
+	{
+		const gchar *style = ls_string(member_object_of(plan, "look"), "art");
+		const gchar *how = style != NULL ? ls_components_get_look_description(components, "art", style) : NULL;
+		if (how != NULL && g_strcmp0(style, "open") != 0)
+			json_object_set_string_member(task, "style", how);
+	}
 	json_node_set_object(node, task);
 	task_json = ls_json_encode(node);
 	return ls_prompts_render_spec(prompts, recipe, config, "art", NULL, task_json, error);
@@ -901,7 +910,7 @@ pages_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *pro
 		job->kind = JOB_ART;
 		job->path = g_strdup(ls_string(entry, "path"));
 		job->settings = spec_settings(recipe, config, art_schema);
-		job->prompt = art_prompt(prompts, recipe, config, plan_object, entry, error);
+		job->prompt = art_prompt(prompts, recipe, config, components, plan_object, entry, error);
 		art_jobs++;
 		if (job->prompt == NULL)
 			return FALSE;

@@ -28,6 +28,8 @@ gchar *ls_read_text(const gchar *path, GError **error);
 gboolean ls_object_keys(JsonObject *object, const gchar *keys, GError **error);
 const gchar *ls_string(JsonObject *object, const gchar *key);
 gboolean ls_path_valid(const gchar *path);
+/* A CSS object-position: one or two of left/center/right/top/bottom, or two 0-100% values. */
+gboolean ls_focus_valid(const gchar *focus);
 gchar *ls_json_encode(JsonNode *node);
 /* Strict JSON boundary: rejects duplicate members, NUL escapes and deep trees. */
 JsonNode *ls_json_parse(const gchar *text, GError **error);

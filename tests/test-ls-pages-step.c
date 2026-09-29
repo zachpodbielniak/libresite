@@ -332,6 +332,9 @@ test_parallel(void){
 	/* Each writer sees its own brief, the page's required literals and the catalog. */
 	g_assert_nonnull(strstr(g_ptr_array_index(prompts_for(fixture.provider, "start.html"), 0), "Nothing is sent."));
 	g_assert_nonnull(strstr(g_ptr_array_index(prompts_for(fixture.provider, "work.html"), 0), "COMPONENTS"));
+	/* Every artwork is drawn in the site's art style. */
+	g_assert_nonnull(strstr(g_ptr_array_index(prompts_for(fixture.provider, "assets/bench.svg"), 0),
+		"\"style\":\"Bold carved marks"));
 	g_assert_null(strstr(g_ptr_array_index(prompts_for(fixture.provider, "work.html"), 0), "Local form"));
 	fixture_teardown(&fixture);
 }

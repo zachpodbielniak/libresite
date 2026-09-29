@@ -56,7 +56,10 @@
 {{/sidebar}}{{^sidebar}}{{{main}}}
 {{/sidebar}}</main>
 <footer class="site-footer">
-<div class="wrap site-footer__inner">
+{{#has_sitemap}}<div class="wrap"><ul class="site-footer__map" role="list">
+{{#sitemap}}<li><a href="{{href}}"{{#current}} aria-current="page"{{/current}}>{{label}}</a></li>
+{{/sitemap}}</ul></div>
+{{/has_sitemap}}<div class="wrap site-footer__inner">
 <div>
 <p class="brand">{{wordmark}}</p>
 {{#footer_note}}<div class="site-footer__note prose">{{{footer_note}}}</div>

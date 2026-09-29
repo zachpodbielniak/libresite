@@ -62,6 +62,16 @@ gchar *ls_components_dup_art_schema(LsComponents *self);
  */
 JsonObject *ls_components_suggest_look(LsComponents *self, const gchar *seed);
 /**
+ * ls_components_get_look_description:
+ * @self: a component library
+ * @axis: a look axis, such as "art"
+ * @value: one of its values
+ *
+ * Returns: (transfer none) (nullable): the catalog's description of the
+ *   value, which prompts quote, or %NULL for an unknown axis or value
+ */
+const gchar *ls_components_get_look_description(LsComponents *self, const gchar *axis, const gchar *value);
+/**
  * ls_components_suggest_opening:
  * @self: a component library
  * @seed: stable text identifying the site

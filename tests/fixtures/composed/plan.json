@@ -29,7 +29,8 @@
     "heads": "numbered",
     "panels": "outlined",
     "rhythm": "bands",
-    "footer": "big"
+    "footer": "big",
+    "art": "woodcut"
   },
   "brand": {
     "wordmark": "Harbor & Pine",

@@ -44,6 +44,7 @@ looks:
       offset: A hard offset shadow that presses in on hover.
       glass: Luminous pills with a glassy highlight and a soft colored glow.
       hud: Cut-corner monospace capitals, like controls on a heads-up display.
+      chrome: Polished metallic gradients with a bright rim, Y2K style.
   panels:
     summary: How cards, tiles and boxed items are surfaced.
     values:
@@ -54,6 +55,7 @@ looks:
       inverted: Solid ink panels with paper text.
       glass: Frosted translucent glass that blurs the page behind it, with a bright edge.
       hud: Cut-corner frames with accent corner brackets and an inner glow, like a sci-fi readout.
+      deco: Double-rule frames with stepped corners, like art deco.
   rhythm:
     summary: How sections follow one another.
     values:
@@ -74,12 +76,14 @@ looks:
       framed: A thin frame with a mat.
       print: Printed-ink look, blended into the paper.
       shadow: A hard offset shadow in the accent.
+      taped: Slightly turned, held on with strips of tape, like a collage.
   footer:
     summary: Footer layout.
     values:
       simple: A quiet surface band with links.
       big: An oversized wordmark across the footer.
       inverted: Solid ink with paper text.
+      sitemap: A full sitemap of every page in columns above the fine print.
   texture:
     summary: Background texture on the page.
     plain: 50
@@ -97,6 +101,8 @@ looks:
     values:
       none: Static.
       rise: Sections rise gently into view where the browser supports it; never with reduced motion.
+      reveal: The opening fades up once as the page loads; never with reduced motion.
+      lift: Cards, tiles and images lift slightly under the pointer; never with reduced motion.
   emphasis:
     summary: How words marked *like this* in a heading are drawn.
     values:
@@ -135,6 +141,58 @@ looks:
       block: A solid surface band with an accent edge.
       aurora: Large luminous color fields in the accent, like light through glass.
       horizon: A glowing horizon with a receding perspective grid.
+  art:
+    summary: The drawing style of every original artwork; the artist follows it.
+    values:
+      open: Whatever suits the plan's motif.
+      line: Fine single-weight line drawing with plenty of open space and one accent.
+      flat: Flat geometric shapes in solid token colors, no outlines or gradients.
+      cutpaper: Layered cut-paper shapes with soft edges and small offset shadows.
+      woodcut: Bold carved marks, hatching and high contrast, like a woodcut print.
+      blueprint: Technical drawing with thin lines, dimension marks and short labels.
+      neon: Glowing strokes in the accent on dark fields, like neon tubes.
+  photos:
+    summary: Treatment of supplied photographs.
+    plain: 40
+    values:
+      natural: As shot.
+      duotone: Two-tone in the ink and accent colors.
+      mono: Black and white with lifted contrast.
+      grain: A warm film finish with slightly muted color.
+      print: A white-bordered print, slightly turned, like a photo on a table.
+      soft: A soft, generously rounded mask.
+  edges:
+    summary: The edge between sections that have their own background.
+    plain: 50
+    values:
+      straight: Straight.
+      wave: A gentle wave.
+      slant: A slanted edge.
+      torn: A torn-paper edge.
+      steps: A stepped edge.
+  lettering:
+    summary: Typographic flourishes.
+    plain: 50
+    values:
+      plain: None.
+      dropcap: A large drop cap opens the first paragraph of reading text.
+      smallcaps: Small capitals for labels, navigation and table headings.
+      gradient: The page's main headline fades from ink into the accent.
+      outline: The page's main headline in outline letters.
+  links:
+    summary: How links in running text are marked.
+    values:
+      underline: A thin underline.
+      thick: A thick underline in the accent.
+      highlight: A low accent highlight behind the words.
+      wavy: A wavy underline.
+      dotted: A dotted underline.
+  scheme:
+    summary: Light and dark.
+    plain: 70
+    values:
+      fixed: One scheme, as designed.
+      auto: Follows the visitor's device, with a matching dark or light version built from the tokens.
 # Every planned page has a kind. A kind fixes which components may open the
 # page and whether wide screens get an in-page contents sidebar. Only home
 # may open with a hero: interior pages open with a page header.

@@ -2,6 +2,7 @@
 #include "core/ls-components.h"
 #include "core/ls-util.h"
 #include <string.h>
+#include <math.h>
 
 #define FIXTURE "tests/fixtures/composed/"
 
@@ -892,7 +893,7 @@ test_suggest_look(void){
 	g_autoptr(GList) axes = json_object_get_members(first);
 	GList *axis;
 	guint i;
-	g_assert_cmpuint(g_list_length(axes), ==, 15);
+	g_assert_cmpuint(g_list_length(axes), ==, 21);
 	for (axis = axes; axis != NULL; axis = axis->next)
 		g_assert_cmpstr(ls_string(first, axis->data), ==, ls_string(again, axis->data));
 	json_object_set_object_member(json_node_get_object(plan), "look", json_object_ref(first));
@@ -1102,6 +1103,81 @@ test_plain_share(void){
 	g_assert_cmpuint(plain_backdrop, <=, 270);
 }
 
+/* WCAG contrast of two #rrggbb colors, for checking generated tokens. */
+static gdouble
+test_contrast(const gchar *a, const gchar *b){
+	gdouble l[2];
+	const gchar *c[2] = {a, b};
+	guint i, j;
+	for (i = 0; i < 2; i++) {
+		gdouble ch[3];
+		for (j = 0; j < 3; j++) {
+			gchar pair[3] = {c[i][1 + j * 2], c[i][2 + j * 2], 0};
+			gdouble v = g_ascii_strtoull(pair, NULL, 16) / 255.0;
+			ch[j] = v <= 0.04045 ? v / 12.92 : pow((v + 0.055) / 1.055, 2.4);
+		}
+		l[i] = 0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2];
+	}
+	return (MAX(l[0], l[1]) + 0.05) / (MIN(l[0], l[1]) + 0.05);
+}
+
+/* Dark mode, a sitemap footer, photo focus and page transitions come from
+ * the plan's look and photos, not from anything a page writes. */
+static void
+test_scheme_sitemap_focus(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(JsonNode) plan = load("plan.json");
+	g_autoptr(JsonObject) pages = fixture_pages();
+	g_autoptr(GError) error = NULL;
+	g_autofree gchar *text = NULL;
+	g_autoptr(JsonNode) bundle = NULL;
+	JsonObject *root = json_node_get_object(plan);
+	JsonObject *look = json_object_get_object_member(root, "look");
+	const gchar *css, *html, *dark;
+	json_object_set_string_member(look, "scheme", "auto");
+	json_object_set_string_member(look, "footer", "sitemap");
+	json_object_set_member(root, "photos", json(
+		"[{'path':'assets/bench.jpg','alt':'A bench','focus':'70% 30%','width':1600,'height':900}]"));
+	text = ls_components_compose(components, plan, pages, NULL, &error);
+	g_assert_no_error(error);
+	bundle = ls_json_parse(text, NULL);
+	css = file_content(bundle, "styles.css");
+	html = file_content(bundle, "index.html");
+	contains(css, "@view-transition { navigation: auto; }");
+	contains(css, "img[src=\"assets/bench.jpg\"] { object-position: 70% 30%; }");
+	/* The fixture is light, so auto adds a dark version whose pairs pass AA. */
+	dark = strstr(css, "@media (prefers-color-scheme: dark) {");
+	g_assert_nonnull(dark);
+	contains(html, "<meta name=\"color-scheme\" content=\"light dark\">");
+	{
+		gchar paper[8] = {0}, ink[8] = {0}, muted[8] = {0};
+		const gchar *p = strstr(dark, "--paper: #"), *i = strstr(dark, "--ink: #"), *m = strstr(dark, "--muted: #");
+		g_assert_true(p != NULL && i != NULL && m != NULL);
+		memcpy(paper, p + 9, 7);
+		memcpy(ink, i + 7, 7);
+		memcpy(muted, m + 9, 7);
+		g_assert_true(test_contrast(ink, paper) >= 4.5);
+		g_assert_true(test_contrast(muted, paper) >= 4.5);
+	}
+	/* The footer lists every planned page. */
+	contains(html, "<ul class=\"site-footer__map\" role=\"list\">");
+	contains(html, "<li><a href=\"journal.html\">");
+	/* A fixed scheme adds nothing, and focus rejects anything but a position. */
+	json_object_set_string_member(look, "scheme", "fixed");
+	g_clear_pointer(&text, g_free);
+	g_clear_pointer(&bundle, json_node_unref);
+	text = ls_components_compose(components, plan, pages, NULL, &error);
+	bundle = ls_json_parse(text, NULL);
+	lacks(file_content(bundle, "styles.css"), "prefers-color-scheme");
+	g_assert_true(ls_focus_valid("top"));
+	g_assert_true(ls_focus_valid("bottom right"));
+	g_assert_true(ls_focus_valid("70% 30%"));
+	g_assert_false(ls_focus_valid("70%"));
+	g_assert_false(ls_focus_valid("120% 5%"));
+	g_assert_false(ls_focus_valid("top; color: red"));
+	g_assert_false(ls_focus_valid(""));
+}
+
 /* Identities fit their sector, stay stable for a site and vary between
  * sites; the house-default check rejects only an undealt default. */
 static void
@@ -1223,6 +1299,7 @@ main(int argc, char **argv){
 	g_test_add_func("/components/menu-filter", test_menu_filter);
 	g_test_add_func("/components/identities", test_identities);
 	g_test_add_func("/components/photos", test_photos);
+	g_test_add_func("/components/scheme-sitemap-focus", test_scheme_sitemap_focus);
 	g_test_add_func("/components/plain-share", test_plain_share);
 	g_test_add_func("/components/contrast-panel", test_contrast_panel);
 	g_test_add_func("/components/schema-kinds", test_schema_kinds);

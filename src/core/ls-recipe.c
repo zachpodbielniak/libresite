@@ -243,7 +243,8 @@ photo_list(JsonObject *site, GError **error){
 		JsonObject *photo = JSON_NODE_HOLDS_OBJECT(entry) ? json_node_get_object(entry) : NULL;
 		const gchar *path = photo != NULL ? ls_string(photo, "path") : NULL;
 		g_autofree gchar *lower = path != NULL ? g_ascii_strdown(path, -1) : NULL;
-		if (photo == NULL || !ls_object_keys(photo, "|path|alt|credit|", NULL) ||
+		if (photo == NULL || !ls_object_keys(photo, "|path|alt|credit|focus|", NULL) ||
+			(json_object_has_member(photo, "focus") && !ls_focus_valid(ls_string(photo, "focus"))) ||
 			!text_member(photo, "alt", TRUE, NULL) || !text_member(photo, "credit", FALSE, NULL) ||
 			path == NULL || !g_str_has_prefix(path, "assets/") || strstr(path, "..") != NULL ||
 			strpbrk(path, " \"'<>\\") != NULL ||
@@ -256,8 +257,9 @@ photo_list(JsonObject *site, GError **error){
 	return TRUE;
 invalid:
 	g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID,
-		"site.photos needs 1 to 48 unique {path, alt, credit} entries: path an assets/ .jpg, .jpeg, .png or "
-		".webp seed without spaces or quotes, alt text up to 300 characters, credit optional text");
+		"site.photos needs 1 to 48 unique {path, alt, credit, focus} entries: path an assets/ .jpg, .jpeg, .png or "
+		".webp seed without spaces or quotes, alt text up to 300 characters, credit optional text, focus an optional "
+		"position such as 'top', 'bottom right' or '70% 40%'");
 	return FALSE;
 }
 /* No synthesized prose: structured facts remain in the immutable recipe tree. */

@@ -997,6 +997,13 @@ ls_components_suggest_look(LsComponents *self, const gchar *seed){
 }
 
 const gchar *
+ls_components_get_look_description(LsComponents *self, const gchar *axis, const gchar *value){
+	g_return_val_if_fail(LS_IS_COMPONENTS(self), NULL);
+	g_return_val_if_fail(axis != NULL && value != NULL, NULL);
+	return ls_string(member_object(member_object(self->looks, axis), "values"), value);
+}
+
+const gchar *
 ls_components_get_plan_schema(LsComponents *self){
 	g_return_val_if_fail(LS_IS_COMPONENTS(self), NULL);
 	return self->plan_schema;
@@ -1288,7 +1295,8 @@ check_photos(Problems *problems, JsonObject *plan){
 		const gchar *path = photo != NULL ? ls_string(photo, "path") : NULL;
 		JsonNode *width = photo != NULL ? json_object_get_member(photo, "width") : NULL;
 		JsonNode *height = photo != NULL ? json_object_get_member(photo, "height") : NULL;
-		if (photo == NULL || !ls_object_keys(photo, "|path|alt|credit|width|height|", NULL) || path == NULL ||
+		if (photo == NULL || !ls_object_keys(photo, "|path|alt|credit|focus|width|height|", NULL) || path == NULL ||
+			(json_object_has_member(photo, "focus") && !ls_focus_valid(ls_string(photo, "focus"))) ||
 			!g_str_has_prefix(path, "assets/") || strstr(path, "..") != NULL || strpbrk(path, " \"'<>\\") != NULL ||
 			ls_string(photo, "alt") == NULL || width == NULL || height == NULL ||
 			json_node_get_value_type(width) != G_TYPE_INT64 || json_node_get_value_type(height) != G_TYPE_INT64 ||
@@ -3126,7 +3134,25 @@ render_page(Render *render, const gchar *path, const gchar *title, const gchar *
 	}
 	json_object_set_boolean_member(view, "home", g_str_equal(path, "index.html"));
 	parse_color(ls_string(tokens, "paper"), paper);
-	json_object_set_string_member(view, "color_scheme", luminance(paper) < 0.2 ? "dark" : "light");
+	json_object_set_string_member(view, "color_scheme",
+		g_strcmp0(ls_string(member_object(plan, "look"), "scheme"), "auto") == 0
+		? (luminance(paper) < 0.2 ? "dark light" : "light dark") : luminance(paper) < 0.2 ? "dark" : "light");
+	/* A footer sitemap lists every planned page and the built-in ones. */
+	if (g_strcmp0(ls_string(member_object(plan, "look"), "footer"), "sitemap") == 0) {
+		JsonArray *map = json_array_new();
+		JsonArray *planned = member_array(plan, "pages");
+		guint m;
+		for (m = 0; planned != NULL && m < json_array_get_length(planned); m++) {
+			JsonObject *entry = json_array_get_object_element(planned, m);
+			JsonObject *link = json_object_new();
+			json_object_set_string_member(link, "href", ls_string(entry, "path"));
+			json_object_set_string_member(link, "label", ls_string(entry, "title"));
+			json_object_set_boolean_member(link, "current", g_strcmp0(ls_string(entry, "path"), path) == 0);
+			json_array_add_object_element(map, link);
+		}
+		json_object_set_array_member(view, "sitemap", map);
+		json_object_set_boolean_member(view, "has_sitemap", json_array_get_length(map) > 0);
+	}
 	json_object_set_string_member(view, "theme_color", ls_string(tokens, "paper"));
 	json_object_set_string_member(view, "skip_label", ui_text(render, "skip"));
 	json_object_set_string_member(view, "menu_label", ui_text(render, "menu"));
@@ -3269,6 +3295,84 @@ token_css(JsonObject *tokens){
 	return g_string_free(out, FALSE);
 }
 
+/* @a moved toward @b by @t (0..1), as #rrggbb. */
+static gchar *
+mix_color(const gchar *a, const gchar *b, gdouble t){
+	gdouble x[3], y[3], out[3];
+	guint i;
+	if (!parse_color(a, x) || !parse_color(b, y))
+		return g_strdup(a);
+	for (i = 0; i < 3; i++)
+		out[i] = x[i] + (y[i] - x[i]) * t;
+	return format_color(out);
+}
+
+/* look.scheme auto: the other scheme's working colors, derived from the
+ * tokens and repaired to the same AA pairs, for visitors whose device asks
+ * for it. A light site gains a dark version and a dark site a light one. */
+static gchar *
+scheme_css(JsonObject *tokens){
+	const gchar *paper = ls_string(tokens, "paper"), *ink = ls_string(tokens, "ink");
+	const gchar *accent = ls_string(tokens, "accent");
+	g_autoptr(JsonObject) alt = json_object_new();
+	gdouble rgb[3];
+	gboolean light;
+	GString *out;
+	guint round;
+	if (paper == NULL || ink == NULL || accent == NULL || !parse_color(paper, rgb))
+		return g_strdup("");
+	light = luminance(rgb) >= 0.2;
+	{
+		g_autofree gchar *base = mix_color(ink, light ? "#000000" : "#ffffff", light ? 0.2 : 0.04);
+		g_autofree gchar *surface = mix_color(base, paper, 0.07);
+		g_autofree gchar *line = mix_color(base, paper, 0.22);
+		g_autofree gchar *muted = mix_color(paper, base, 0.3);
+		json_object_set_string_member(alt, "paper", base);
+		json_object_set_string_member(alt, "ink", paper);
+		json_object_set_string_member(alt, "surface", surface);
+		json_object_set_string_member(alt, "line", line);
+		json_object_set_string_member(alt, "muted", muted);
+	}
+	for (round = 0; round < 2; round++) {
+		const gchar *keys[] = {"ink", "muted"};
+		const gchar *grounds[] = {"paper", "surface"};
+		guint k, g;
+		for (k = 0; k < G_N_ELEMENTS(keys); k++)
+			for (g = 0; g < G_N_ELEMENTS(grounds); g++)
+				if (contrast(ls_string(alt, keys[k]), ls_string(alt, grounds[g])) < 4.5) {
+					g_autofree gchar *ground = g_strdup(ls_string(alt, grounds[g]));
+					nudge(alt, keys[k], ground, 4.5);
+				}
+	}
+	out = g_string_new(NULL);
+	g_string_append_printf(out, "@media (prefers-color-scheme: %s) {\n:root {\n", light ? "dark" : "light");
+	g_string_append_printf(out, "\t--paper: %s;\n\t--ink: %s;\n\t--muted: %s;\n\t--surface: %s;\n\t--line: %s;\n",
+		ls_string(alt, "paper"), ls_string(alt, "ink"), ls_string(alt, "muted"), ls_string(alt, "surface"),
+		ls_string(alt, "line"));
+	g_string_append_printf(out, "\t--accent-text: %s;\n", contrast(accent, ls_string(alt, "paper")) >= 4.5
+		? accent : ls_string(alt, "ink"));
+	g_string_append_printf(out, "\t--focus: %s;\n", contrast(accent, ls_string(alt, "paper")) >= 3
+		? accent : ls_string(alt, "ink"));
+	g_string_append_printf(out, "\t--line-strong: %s;\n", ls_string(alt, "muted"));
+	g_string_append(out, "}\n}\n");
+	return g_string_free(out, FALSE);
+}
+
+/* Supplied photographs keep their subject in frame when a box crops them. */
+static gchar *
+focus_css(JsonObject *plan){
+	JsonArray *photos = member_array(plan, "photos");
+	GString *out = g_string_new(NULL);
+	guint i;
+	for (i = 0; photos != NULL && i < json_array_get_length(photos); i++) {
+		JsonObject *photo = json_array_get_object_element(photos, i);
+		if (ls_string(photo, "focus") != NULL)
+			g_string_append_printf(out, "img[src=\"%s\"] { object-position: %s; }\n",
+				ls_string(photo, "path"), ls_string(photo, "focus"));
+	}
+	return g_string_free(out, FALSE);
+}
+
 static void
 add_file(JsonArray *files, const gchar *path, const gchar *content){
 	JsonObject *file = json_object_new();
@@ -3369,10 +3473,17 @@ ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages
 	/* Library styles sit in cascade layers; the plan's restyles and CSS are
 	 * unlayered, so any rule a site writes overrides any library rule. */
 	css = g_string_new("/* Generated by libresite from the site plan and component library. */\n"
-		"@layer ls-base, ls-components, ls-look;\n");
+		"@layer ls-base, ls-components, ls-look;\n"
+		"@media (prefers-reduced-motion: no-preference) { @view-transition { navigation: auto; } }\n");
 	{
 		g_autofree gchar *tokens = token_css(member_object(plan, "tokens"));
+		g_autofree gchar *focus = focus_css(plan);
 		g_string_append(css, tokens);
+		if (g_strcmp0(ls_string(member_object(plan, "look"), "scheme"), "auto") == 0) {
+			g_autofree gchar *scheme = scheme_css(member_object(plan, "tokens"));
+			g_string_append(css, scheme);
+		}
+		g_string_append(css, focus);
 	}
 	g_string_append_printf(css, "@layer ls-base {\n%s}\n", file_text(self, "base.css"));
 	js = g_string_new("/* Generated by libresite from the component library. */\n");

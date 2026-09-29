@@ -127,6 +127,75 @@
 }
 .look-backdrop-horizon main > .block:first-child > * { position: relative; z-index: 1; }
 
+/* Art styles: the artist draws in the style; these finish it on the page. */
+.look-art-line main img[src$=".svg"] { padding: clamp(0.25rem, 1.5vw, 1rem); }
+.look-art-flat main img[src$=".svg"] { border-radius: 0; }
+.look-art-cutpaper main img[src$=".svg"] { filter: drop-shadow(0.3rem 0.35rem 0 color-mix(in srgb, var(--ink) 16%, transparent)); }
+.look-art-woodcut main img[src$=".svg"] { filter: contrast(1.12); }
+.look-art-blueprint main img[src$=".svg"] { background: var(--surface); outline: 1px dashed var(--line-strong); outline-offset: -0.6rem; }
+.look-art-neon main img[src$=".svg"] { filter: drop-shadow(0 0 0.45rem color-mix(in srgb, var(--accent) 55%, transparent)); }
+
+/* Photo treatments. */
+.look-photos-duotone main :is(figure, picture, a, div, li):has(> img:is([src$=".jpg"], [src$=".jpeg"], [src$=".png"], [src$=".webp"])) { background: var(--accent); isolation: isolate; }
+.look-photos-duotone main img:is([src$=".jpg"], [src$=".jpeg"], [src$=".png"], [src$=".webp"]) { filter: grayscale(1) contrast(1.1); mix-blend-mode: luminosity; }
+.look-photos-mono main img:is([src$=".jpg"], [src$=".jpeg"], [src$=".png"], [src$=".webp"]) { filter: grayscale(1) contrast(1.12); }
+.look-photos-grain main img:is([src$=".jpg"], [src$=".jpeg"], [src$=".png"], [src$=".webp"]) { filter: saturate(0.8) contrast(1.06) sepia(0.14); }
+.look-photos-print main img:is([src$=".jpg"], [src$=".jpeg"], [src$=".png"], [src$=".webp"]) { padding: 0.55rem 0.55rem 1.6rem; background: #fbfaf7; border-radius: 2px; box-shadow: 0 0.5rem 1.4rem color-mix(in srgb, #000 22%, transparent); transform: rotate(-1.2deg); }
+.look-photos-print main :nth-child(even) > img:is([src$=".jpg"], [src$=".jpeg"], [src$=".png"], [src$=".webp"]) { transform: rotate(1deg); }
+.look-photos-soft main img:is([src$=".jpg"], [src$=".jpeg"], [src$=".png"], [src$=".webp"]) { border-radius: 42% 58% 55% 45% / 45% 40% 60% 55%; }
+/* A big photo in the opening never pushes the headline off the first screen. */
+main > .block:first-child img:is([src$=".jpg"], [src$=".jpeg"], [src$=".png"], [src$=".webp"]) { max-height: min(60vh, 36rem); }
+
+/* Section edges, visible where a section has its own background. */
+.look-edges-wave main > .block:not(:last-child) { -webkit-mask: linear-gradient(#000, #000) top / 100% calc(100% - 1.4rem) no-repeat, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 24' preserveAspectRatio='none'%3E%3Cpath d='M0 0h120v12c-15 0-15 12-30 12S75 12 60 12 45 24 30 24 15 12 0 12z'/%3E%3C/svg%3E") bottom / 8rem 1.4rem repeat-x; mask: linear-gradient(#000, #000) top / 100% calc(100% - 1.4rem) no-repeat, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 24' preserveAspectRatio='none'%3E%3Cpath d='M0 0h120v12c-15 0-15 12-30 12S75 12 60 12 45 24 30 24 15 12 0 12z'/%3E%3C/svg%3E") bottom / 8rem 1.4rem repeat-x; }
+.look-edges-torn main > .block:not(:last-child) { -webkit-mask: linear-gradient(#000, #000) top / 100% calc(100% - 1.2rem) no-repeat, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 24' preserveAspectRatio='none'%3E%3Cpath d='M0 0h120v14l-8 6-10-8-9 9-11-7-8 8-12-9-9 7-10-6-11 9-9-7-8 6-15-9z'/%3E%3C/svg%3E") bottom / 7rem 1.2rem repeat-x; mask: linear-gradient(#000, #000) top / 100% calc(100% - 1.2rem) no-repeat, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 24' preserveAspectRatio='none'%3E%3Cpath d='M0 0h120v14l-8 6-10-8-9 9-11-7-8 8-12-9-9 7-10-6-11 9-9-7-8 6-15-9z'/%3E%3C/svg%3E") bottom / 7rem 1.2rem repeat-x; }
+.look-edges-slant main > .block:not(:last-child) { clip-path: polygon(0 0, 100% 0, 100% calc(100% - 3vw), 0 100%); }
+.look-edges-steps main > .block:not(:last-child) { clip-path: polygon(0 0, 100% 0, 100% calc(100% - 1.5rem), 75% calc(100% - 1.5rem), 75% calc(100% - 0.75rem), 50% calc(100% - 0.75rem), 50% 100%, 0 100%); }
+
+/* Lettering. */
+.look-lettering-dropcap main :is(.block--text, .block--article, .block--story, .block--lead):first-of-type .prose > p:first-of-type::first-letter { float: left; margin: 0.08em 0.12em 0 0; font-family: var(--font-display); font-size: 3.4em; font-weight: var(--heading-weight); line-height: 0.82; color: var(--accent-text); }
+.look-lettering-smallcaps :is(.kicker, .site-nav a, th, .card__meta, .site-footer nav a) { font-variant-caps: all-small-caps; letter-spacing: 0.06em; }
+.look-lettering-gradient main h1 { background: linear-gradient(100deg, var(--ink) 30%, var(--accent-text)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+@supports not ((background-clip: text) or (-webkit-background-clip: text)) { .look-lettering-gradient main h1 { color: var(--ink); background: none; } }
+.look-lettering-outline main h1 { color: transparent; -webkit-text-stroke: max(1px, 0.025em) var(--ink); }
+@supports not (-webkit-text-stroke: 1px black) { .look-lettering-outline main h1 { color: var(--ink); } }
+
+/* Links in running text. */
+.look-links-thick main .prose a { text-decoration-color: var(--accent); text-decoration-thickness: 0.18em; text-underline-offset: 0.2em; }
+.look-links-highlight main .prose a { text-decoration: none; background: linear-gradient(transparent 58%, color-mix(in srgb, var(--accent) 34%, transparent) 58%); }
+.look-links-wavy main .prose a { text-decoration-style: wavy; text-decoration-thickness: 1px; text-underline-offset: 0.22em; text-decoration-color: var(--accent); }
+.look-links-dotted main .prose a { text-decoration-style: dotted; text-decoration-thickness: 0.12em; text-underline-offset: 0.2em; }
+
+/* Light and dark: the builder writes the other scheme's tokens. */
+.look-scheme-auto { color-scheme: light dark; }
+
+/* More motion; none of it with reduced motion. */
+@media (prefers-reduced-motion: no-preference) {
+	.look-motion-reveal main > .block:first-child > * { animation: ls-reveal 700ms ease-out both; }
+	.look-motion-lift main :is(.card, .bento__tile, .features__item, .services__item, .links__item a, .strip__item, .gallery__item) { transition: transform 180ms ease, box-shadow 180ms ease; }
+	.look-motion-lift main :is(.card, .bento__tile, .features__item, .services__item, .links__item a, .strip__item, .gallery__item):hover { transform: translateY(-4px); box-shadow: 0 0.8rem 1.6rem color-mix(in srgb, var(--ink) 14%, transparent); }
+}
+@keyframes ls-reveal { from { opacity: 0; transform: translateY(1.25rem); } }
+
+/* Art deco, chrome and collage. */
+.look-buttons-chrome .button { border-radius: 999px; color: #111418; border: 1px solid #7d848f; background: linear-gradient(180deg, #f7f8fa, #cdd2d9 46%, #9ea5af 54%, #e6e9ee); box-shadow: inset 0 1px 0 #ffffff, 0 0.3rem 0.9rem color-mix(in srgb, #000 22%, transparent); }
+.look-buttons-chrome .button--ghost { color: var(--ink); background: transparent; border-color: #9ea5af; box-shadow: inset 0 1px 0 color-mix(in srgb, #ffffff 40%, transparent); }
+.look-buttons-chrome .button:hover { filter: brightness(1.06); }
+.look-images-taped main :is(figure, picture, a, div, li):has(> img) { position: relative; }
+.look-images-taped main :is(figure, picture, a, div, li):has(> img)::before { content: ""; position: absolute; z-index: 1; top: -0.6rem; left: 50%; width: 5rem; height: 1.3rem; transform: translateX(-50%) rotate(-3deg); background: color-mix(in srgb, var(--accent) 30%, #ffffff 45%); opacity: 0.85; pointer-events: none; }
+.look-images-taped main img { transform: rotate(-0.8deg); box-shadow: 0 0.4rem 1rem color-mix(in srgb, #000 16%, transparent); }
+
+/* A full sitemap in the footer. */
+.site-footer__map { display: none; }
+.look-footer-sitemap .site-footer__map { display: grid; grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr)); gap: var(--space-2) var(--space-5); margin: 0 0 var(--space-5); padding: 0 0 var(--space-5); border-bottom: var(--border) solid var(--line); list-style: none; }
+.look-footer-sitemap .site-footer__map a { text-decoration: none; }
+.look-footer-sitemap .site-footer__map a:hover { text-decoration: underline; }
+
+.look-panels-deco :is(.features--boxed .features__item, .cards--bordered .card, .pricing__tier, .bento__tile, .split__panel, .voices__item, .services--grid .services__item, .locations--cards .locations__item, .contact-card--card .contact-card__box, .facts--grid .facts__item, .team--cards .team__person, .entries--cards .entries__item, .steps--grid .steps__item, .links--cards .links__item a, .quote--boxed .quote__figure, .menu--board .menu__section, .cta--card .cta__inner, .form--card .form__inner, .location--card .location__inner, .hours--grid .hours__row, .faq--boxed .faq__item, .details--bordered .details__item) {
+	background: var(--paper); border: 3px double var(--line-strong); border-radius: 0; box-shadow: inset 0 0 0 0.4rem var(--paper), inset 0 0 0 calc(0.4rem + 1px) var(--accent);
+	clip-path: polygon(0.6rem 0, calc(100% - 0.6rem) 0, calc(100% - 0.6rem) 0.6rem, 100% 0.6rem, 100% calc(100% - 0.6rem), calc(100% - 0.6rem) calc(100% - 0.6rem), calc(100% - 0.6rem) 100%, 0.6rem 100%, 0.6rem calc(100% - 0.6rem), 0 calc(100% - 0.6rem), 0 0.6rem, 0.6rem 0.6rem);
+}
+
 /* A panel whose variant paints it in the accent keeps that fill under every
  * panel look; the look rules above would otherwise clear the background and
  * leave accent-ink text on the page. */

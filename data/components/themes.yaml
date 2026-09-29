@@ -61,6 +61,12 @@ themes:
       ornament: rule
       kicker: line
       backdrop: none
+      art: line
+      photos: natural
+      edges: straight
+      lettering: dropcap
+      links: underline
+      scheme: fixed
     css: '.hero__title, .page-header__title { font-variation-settings: ''opsz'' 144; } .lede { font-style: italic; }'
   brutalist:
     summary: 'Raw and loud: white, black, electric yellow, square edges, hard shadows and a drafting grid.'
@@ -112,6 +118,12 @@ themes:
       ornament: zigzag
       kicker: number
       backdrop: stripes
+      art: flat
+      photos: mono
+      edges: straight
+      lettering: plain
+      links: thick
+      scheme: fixed
     css: '.site-header { border-bottom-width: 3px; border-bottom-color: var(--ink); } a:hover { background: var(--accent); color: var(--accent-ink); } ::selection { background: var(--ink); color: var(--accent);
       }'
   midnight:
@@ -168,6 +180,12 @@ themes:
       ornament: star
       kicker: pill
       backdrop: glow
+      art: line
+      photos: grain
+      edges: straight
+      lettering: plain
+      links: highlight
+      scheme: fixed
     css: '.hero__title, .poster__title { color: var(--accent); } .kicker { color: var(--accent); }'
   soft:
     summary: 'Friendly and calm: cream, sage, rounded everything, soft shadows and centered headings.'
@@ -218,6 +236,12 @@ themes:
       ornament: dots
       kicker: pill
       backdrop: mesh
+      art: cutpaper
+      photos: soft
+      edges: wave
+      lettering: plain
+      links: underline
+      scheme: auto
     css: '.site-footer { border-radius: 2rem 2rem 0 0; }'
   civic:
     summary: 'Clear and trustworthy: white, institutional blue, plain sans type, outlined panels and an ink footer.'
@@ -268,6 +292,12 @@ themes:
       ornament: none
       kicker: accent
       backdrop: block
+      art: flat
+      photos: natural
+      edges: straight
+      lettering: smallcaps
+      links: thick
+      scheme: auto
     css: '.site-header { border-top: 0.35rem solid var(--accent); }'
   atelier:
     summary: 'Quiet luxury: ivory and black, a spaced capital serif, centered headings, framed art and wide air.'
@@ -319,6 +349,12 @@ themes:
       ornament: star
       kicker: number
       backdrop: none
+      art: line
+      photos: mono
+      edges: straight
+      lettering: smallcaps
+      links: underline
+      scheme: fixed
     css: 'body { font-weight: 300; } .brand { letter-spacing: 0.3em; }'
   workshop:
     summary: 'Made by hand: chalk paper, green-black ink, signal red, numbered sections, pressed buttons and a drafting grid.'
@@ -372,6 +408,12 @@ themes:
       ornament: zigzag
       kicker: mono
       backdrop: halftone
+      art: woodcut
+      photos: grain
+      edges: torn
+      lettering: plain
+      links: thick
+      scheme: fixed
     css: '.brand { text-transform: uppercase; letter-spacing: 0.08em; }'
   neon:
     summary: 'Club night: near-black, acid lime, a wide display face, giant headings, hard lime shadows and ruled lines.'
@@ -425,6 +467,12 @@ themes:
       ornament: wave
       kicker: accent
       backdrop: glow
+      art: neon
+      photos: duotone
+      edges: slant
+      lettering: gradient
+      links: highlight
+      scheme: fixed
     css: '.site-footer .brand, .hero__title, .poster__title { color: var(--accent); }'
   terracotta:
     summary: 'Sun-baked Mediterranean: clay, cream and olive, a soft serif display, highlighted words and warm glows.'
@@ -476,6 +524,12 @@ themes:
       ornament: wave
       kicker: pill
       backdrop: glow
+      art: cutpaper
+      photos: grain
+      edges: wave
+      lettering: dropcap
+      links: underline
+      scheme: fixed
   nordic:
     summary: 'Scandinavian calm: pale fog, slate ink, one cold blue, generous air and thin rules.'
     tokens:
@@ -526,6 +580,12 @@ themes:
       ornament: none
       kicker: line
       backdrop: none
+      art: line
+      photos: natural
+      edges: straight
+      lettering: plain
+      links: dotted
+      scheme: auto
   retro:
     summary: 'Seventies warmth: mustard, rust and brown, a fat display face, rounded pills and sunny stripes.'
     tokens:
@@ -575,6 +635,12 @@ themes:
       ornament: wave
       kicker: pill
       backdrop: stripes
+      art: flat
+      photos: print
+      edges: steps
+      lettering: outline
+      links: wavy
+      scheme: fixed
   zine:
     summary: 'Photocopied zine: stark black and white, hot pink, typewriter body, stamped words and halftone.'
     tokens:
@@ -623,6 +689,12 @@ themes:
       ornament: star
       kicker: number
       backdrop: halftone
+      art: woodcut
+      photos: mono
+      edges: torn
+      lettering: outline
+      links: highlight
+      scheme: fixed
   botanical:
     summary: 'Garden and apothecary: deep leaf green, cream, a classic serif, framed art and quiet ornaments.'
     tokens:
@@ -674,6 +746,12 @@ themes:
       ornament: dots
       kicker: accent
       backdrop: none
+      art: line
+      photos: soft
+      edges: wave
+      lettering: dropcap
+      links: wavy
+      scheme: auto
   noir:
     summary: 'Evening luxury: charcoal, champagne gold, a wide geometric display and floating header.'
     tokens:
@@ -725,6 +803,12 @@ themes:
       ornament: rule
       kicker: line
       backdrop: glow
+      art: line
+      photos: mono
+      edges: straight
+      lettering: smallcaps
+      links: underline
+      scheme: fixed
   sunrise:
     summary: 'Bright and optimistic: peach, violet and white, rounded geometric type and a gradient mesh.'
     tokens:
@@ -772,6 +856,12 @@ themes:
       ornament: none
       kicker: pill
       backdrop: mesh
+      art: flat
+      photos: natural
+      edges: wave
+      lettering: gradient
+      links: highlight
+      scheme: auto
   liquid-glass:
     summary: 'Liquid glass: frosted translucent panels and a sticky glass bar floating over soft dawn color fields, with smooth geometric type.'
     tokens:
@@ -819,6 +909,12 @@ themes:
       ornament: none
       kicker: pill
       backdrop: aurora
+      art: line
+      photos: natural
+      edges: straight
+      lettering: plain
+      links: underline
+      scheme: auto
     css: '.site-footer { background: color-mix(in srgb, var(--paper) 55%, transparent); -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); } img { border-radius: var(--radius); }'
   orbital:
     summary: 'Sci-fi mission control: deep space navy, electric cyan, squared capitals, cut-corner HUD panels, scanlines and a glowing horizon grid.'
@@ -867,6 +963,12 @@ themes:
       ornament: none
       kicker: mono
       backdrop: horizon
+      art: blueprint
+      photos: duotone
+      edges: slant
+      lettering: plain
+      links: dotted
+      scheme: fixed
     css: '.site-header { border-bottom-color: color-mix(in srgb, var(--accent) 45%, transparent); } h1, .hero__title, .poster__title { text-shadow: 0 0 1.5rem color-mix(in srgb, var(--accent) 45%, transparent); } ::selection { background: var(--accent); color: var(--accent-ink); }'
   hologram:
     summary: 'Hologram: violet-black space with plasma magenta light, glass panels glowing over aurora fields and a starfield.'
@@ -915,4 +1017,325 @@ themes:
       ornament: none
       kicker: accent
       backdrop: aurora
+      art: neon
+      photos: duotone
+      edges: straight
+      lettering: gradient
+      links: highlight
+      scheme: fixed
     css: '.hero__title, .poster__title, .manifesto__title { background: linear-gradient(100deg, var(--ink) 30%, var(--accent)); -webkit-background-clip: text; background-clip: text; color: transparent; }'
+  swiss:
+    summary: 'Swiss grid: white, black and one red, tight heavy grotesk, numbered sections, ruled items and a full sitemap footer.'
+    tokens:
+      paper: '#ffffff'
+      ink: '#0a0a0a'
+      muted: '#4d4d4d'
+      surface: '#f1f1f1'
+      line: '#d0d0d0'
+      accent: '#d7261e'
+      accent_ink: '#ffffff'
+      font_display: '"Inter Tight", "Helvetica Neue", Arial, sans-serif'
+      font_body: '"Inter", "Helvetica Neue", Arial, sans-serif'
+      font_mono: '"JetBrains Mono", ui-monospace, monospace'
+      base_size: 1.0625
+      ratio: 1.4
+      measure: 66
+      radius: 0
+      border: 1
+      space: 1
+      density: 'regular'
+      heading_weight: 800
+      heading_tracking: -0.045
+      heading_leading: 0.95
+      heading_case: 'none'
+    fonts:
+    - family: Inter Tight
+      weights: [500, 800]
+    - family: Inter
+      weights: [400, 600]
+    - family: JetBrains Mono
+      weights: [400]
+    look:
+      header: bar
+      nav: underline
+      heads: numbered
+      buttons: square
+      panels: rules
+      rhythm: divided
+      align: left
+      images: plain
+      footer: sitemap
+      texture: grid
+      motion: none
+      emphasis: accent
+      ornament: none
+      kicker: number
+      backdrop: none
+      art: flat
+      photos: mono
+      edges: straight
+      lettering: plain
+      links: thick
+      scheme: auto
+  magazine:
+    summary: 'Glossy magazine: bright paper, ink-blue accent, high-contrast Didone headlines, split headings, drop caps and a big footer wordmark.'
+    tokens:
+      paper: '#fbfbf9'
+      ink: '#15161a'
+      muted: '#55575e'
+      surface: '#eef0f4'
+      line: '#d4d7de'
+      accent: '#1d3a8a'
+      accent_ink: '#ffffff'
+      font_display: '"Playfair Display", Didot, Georgia, serif'
+      font_body: '"Source Serif 4", Georgia, serif'
+      font_mono: '"IBM Plex Mono", ui-monospace, monospace'
+      base_size: 1.0625
+      ratio: 1.38
+      measure: 66
+      radius: 0
+      border: 1
+      space: 1
+      density: 'regular'
+      heading_weight: 700
+      heading_tracking: -0.02
+      heading_leading: 1.0
+      heading_case: 'none'
+    fonts:
+    - family: Playfair Display
+      weights: [600, 800]
+    - family: Source Serif 4
+      weights: [400, 600]
+    - family: IBM Plex Mono
+      weights: [400]
+    look:
+      header: stacked
+      nav: caps
+      heads: split
+      buttons: underline
+      panels: flat
+      rhythm: even
+      align: left
+      images: framed
+      footer: big
+      texture: none
+      motion: rise
+      emphasis: italic
+      ornament: rule
+      kicker: line
+      backdrop: none
+      art: line
+      photos: natural
+      edges: straight
+      lettering: dropcap
+      links: underline
+      scheme: auto
+  terminal:
+    summary: 'Retro terminal: black screen, phosphor green monospace everywhere, scanlines, outlined boxes and numbered sections.'
+    tokens:
+      paper: '#0b0f0a'
+      ink: '#b9f5a4'
+      muted: '#86b879'
+      surface: '#121a11'
+      line: '#2a3d27'
+      accent: '#7dff5a'
+      accent_ink: '#0b0f0a'
+      font_display: '"IBM Plex Mono", ui-monospace, monospace'
+      font_body: '"IBM Plex Mono", ui-monospace, monospace'
+      font_mono: '"IBM Plex Mono", ui-monospace, monospace'
+      base_size: 1.0
+      ratio: 1.22
+      measure: 72
+      radius: 0
+      border: 1
+      space: 1
+      density: 'regular'
+      heading_weight: 600
+      heading_tracking: 0
+      heading_leading: 1.15
+      heading_case: 'none'
+    fonts:
+    - family: IBM Plex Mono
+      weights: [400, 600]
+    look:
+      header: bar
+      nav: slashes
+      heads: numbered
+      buttons: hud
+      panels: outlined
+      rhythm: divided
+      align: left
+      images: framed
+      footer: simple
+      texture: scanlines
+      motion: reveal
+      emphasis: block
+      ornament: none
+      kicker: mono
+      backdrop: none
+      art: blueprint
+      photos: duotone
+      edges: straight
+      lettering: plain
+      links: dotted
+      scheme: fixed
+    css: 'h1::before { content: "> "; color: var(--accent); } ::selection { background: var(--accent); color: var(--accent-ink); }'
+  collage:
+    summary: 'Collage: blush paper, cobalt ink, taped-on images and tilted prints, torn edges, offset buttons and a friendly grotesk.'
+    tokens:
+      paper: '#f7ece8'
+      ink: '#1b1b1f'
+      muted: '#56545c'
+      surface: '#efdcd5'
+      line: '#dcc3ba'
+      accent: '#2744c9'
+      accent_ink: '#ffffff'
+      font_display: '"Bricolage Grotesque", system-ui, sans-serif'
+      font_body: '"Karla", system-ui, sans-serif'
+      font_mono: '"JetBrains Mono", ui-monospace, monospace'
+      base_size: 1.0625
+      ratio: 1.34
+      measure: 66
+      radius: 6
+      border: 1
+      space: 1
+      density: 'regular'
+      heading_weight: 800
+      heading_tracking: -0.03
+      heading_leading: 1.0
+      heading_case: 'none'
+    fonts:
+    - family: Bricolage Grotesque
+      weights: [500, 800]
+    - family: Karla
+      weights: [400, 700]
+    - family: JetBrains Mono
+      weights: [400]
+    look:
+      header: centered
+      nav: pill
+      heads: plain
+      buttons: offset
+      panels: outlined
+      rhythm: bands
+      align: center
+      images: taped
+      footer: simple
+      texture: grain
+      motion: lift
+      emphasis: highlight
+      ornament: zigzag
+      kicker: pill
+      backdrop: none
+      art: cutpaper
+      photos: print
+      edges: torn
+      lettering: plain
+      links: highlight
+      scheme: fixed
+  deco:
+    summary: 'Art deco: deep green and gold, geometric display capitals, stepped double-rule frames, centered headings and stepped edges.'
+    tokens:
+      paper: '#0f1b1a'
+      ink: '#efe6d2'
+      muted: '#bdb29b'
+      surface: '#16262a'
+      line: '#2c4541'
+      accent: '#d4af37'
+      accent_ink: '#0f1b1a'
+      font_display: '"Poiret One", "Josefin Sans", sans-serif'
+      font_body: '"Josefin Sans", system-ui, sans-serif'
+      font_mono: '"IBM Plex Mono", ui-monospace, monospace'
+      base_size: 1.0625
+      ratio: 1.32
+      measure: 62
+      radius: 0
+      border: 1
+      space: 1.1
+      density: 'airy'
+      heading_weight: 400
+      heading_tracking: 0.06
+      heading_leading: 1.1
+      heading_case: 'uppercase'
+    fonts:
+    - family: Poiret One
+      weights: [400]
+    - family: Josefin Sans
+      weights: [400, 600]
+    - family: IBM Plex Mono
+      weights: [400]
+    look:
+      header: centered
+      nav: caps
+      heads: rule
+      buttons: square
+      panels: deco
+      rhythm: divided
+      align: center
+      images: framed
+      footer: simple
+      texture: none
+      motion: rise
+      emphasis: accent
+      ornament: rule
+      kicker: line
+      backdrop: block
+      art: line
+      photos: mono
+      edges: steps
+      lettering: smallcaps
+      links: underline
+      scheme: fixed
+  chrome:
+    summary: 'Y2K chrome: silver-blue sky, electric blue, wide rounded display type, chrome buttons, glass panels and a color mesh.'
+    tokens:
+      paper: '#e9edf3'
+      ink: '#0b0f1a'
+      muted: '#454b5c'
+      surface: '#dde3ec'
+      line: '#b9c2d0'
+      accent: '#2b4fe6'
+      accent_ink: '#ffffff'
+      font_display: '"Unbounded", system-ui, sans-serif'
+      font_body: '"Inter", system-ui, sans-serif'
+      font_mono: '"JetBrains Mono", ui-monospace, monospace'
+      base_size: 1.0625
+      ratio: 1.3
+      measure: 66
+      radius: 20
+      border: 1
+      space: 1
+      density: 'regular'
+      heading_weight: 700
+      heading_tracking: -0.02
+      heading_leading: 1.05
+      heading_case: 'none'
+    fonts:
+    - family: Unbounded
+      weights: [500, 800]
+    - family: Inter
+      weights: [400, 500]
+    - family: JetBrains Mono
+      weights: [400]
+    look:
+      header: floating
+      nav: pill
+      heads: giant
+      buttons: chrome
+      panels: glass
+      rhythm: even
+      align: center
+      images: rounded
+      footer: simple
+      texture: aurora
+      motion: reveal
+      emphasis: accent
+      ornament: star
+      kicker: pill
+      backdrop: mesh
+      art: flat
+      photos: natural
+      edges: wave
+      lettering: gradient
+      links: highlight
+      scheme: fixed

@@ -257,6 +257,34 @@ ls_path_valid(const gchar *path){
 }
 
 /* Deterministic serialization used by prompts and checkpoint fingerprints. */
+gboolean
+ls_focus_valid(const gchar *focus){
+	g_auto(GStrv) parts = NULL;
+	guint i, n;
+	if (focus == NULL || *focus == '\0' || strlen(focus) > 24)
+		return FALSE;
+	parts = g_strsplit(focus, " ", -1);
+	n = g_strv_length(parts);
+	if (n < 1 || n > 2)
+		return FALSE;
+	if (g_str_has_suffix(parts[0], "%")) {
+		for (i = 0; i < n; i++) {
+			gchar *end = NULL;
+			gdouble value;
+			if (!g_str_has_suffix(parts[i], "%"))
+				return FALSE;
+			value = g_ascii_strtod(parts[i], &end);
+			if (end == parts[i] || *end != '%' || end[1] != '\0' || value < 0 || value > 100)
+				return FALSE;
+		}
+		return n == 2;
+	}
+	for (i = 0; i < n; i++)
+		if (!g_str_equal(parts[i], "left") && !g_str_equal(parts[i], "center") && !g_str_equal(parts[i], "right") &&
+			!g_str_equal(parts[i], "top") && !g_str_equal(parts[i], "bottom"))
+			return FALSE;
+	return TRUE;
+}
 gchar *
 ls_json_encode(JsonNode *node){
 	g_autoptr(JsonGenerator) generator = json_generator_new();
