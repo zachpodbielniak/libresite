@@ -97,6 +97,22 @@ void ls_recipe_set_timeout(LsRecipe *self, gint seconds);
  */
 void ls_recipe_set_unlimited(LsRecipe *self, gboolean unlimited);
 /**
+ * ls_recipe_set_provider:
+ * @self: recipe
+ * @provider: (nullable): CLI agent for every AI step, or %NULL for recipe values
+ * @model: (nullable): model for that agent, or %NULL for its default; requires @provider
+ * @error: return location for a #GError
+ *
+ * Set an execution-only agent override before running. Every AI step uses
+ * @provider; a step whose recipe names another agent drops its model and
+ * effort, as a step-level provider change does. The parsed recipe and
+ * checkpoint fingerprint remain unchanged, so a checkpoint can resume on a
+ * different agent. On failure the previous override is kept.
+ * Returns: whether the override is valid and applied
+ */
+gboolean ls_recipe_set_provider(LsRecipe *self, const gchar *provider, const gchar *model,
+	GError **error);
+/**
  * ls_recipe_approve:
  * @self: recipe
  * @step_id: gate step id

@@ -10,6 +10,8 @@ struct _LsRecipe {
 	gchar *scaffold_source;
 	gint timeout;
 	gboolean unlimited;
+	gchar *provider;
+	gchar *model;
 	GHashTable *approvals;
 	gboolean approve_all;
 };
@@ -21,6 +23,8 @@ ls_recipe_finalize(GObject *object){
 	g_clear_pointer(&self->root, json_node_unref);
 	g_free(self->source);
 	g_free(self->scaffold_source);
+	g_free(self->provider);
+	g_free(self->model);
 	g_clear_pointer(&self->approvals, g_hash_table_unref);
 	G_OBJECT_CLASS(ls_recipe_parent_class)->finalize(object);
 }
@@ -32,6 +36,13 @@ static void
 ls_recipe_init(LsRecipe *self){
 	self->timeout = -1;
 	self->approvals = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+}
+/* The CLI agents that pinned ai-glib can drive. */
+static gboolean
+provider_supported(const gchar *provider){
+	return g_str_equal(provider, "codex") || g_str_equal(provider, "claude-code") ||
+		g_str_equal(provider, "cursor") || g_str_equal(provider, "grok-build") ||
+		g_str_equal(provider, "antigravity");
 }
 /* Test node types before using JSON-GLib's typed accessors. */
 static gboolean
@@ -81,9 +92,7 @@ validate_ai(JsonObject *ai, GError **error){
 			return FALSE;
 	}
 	provider = ls_string(ai, "provider");
-	if (provider != NULL && !g_str_equal(provider, "codex") &&
-		!g_str_equal(provider, "claude-code") && !g_str_equal(provider, "cursor") &&
-		!g_str_equal(provider, "grok-build") && !g_str_equal(provider, "antigravity")) {
+	if (provider != NULL && !provider_supported(provider)) {
 		g_set_error(error, LS_ERROR, LS_ERROR_INVALID, "Unsupported CLI provider '%s'", provider);
 		return FALSE;
 	}
@@ -493,6 +502,17 @@ ls_recipe_resolve_ai(LsRecipe *self, JsonObject *step){
 				json_node_copy(json_object_get_member(sources[i], (const gchar *)item->data))
 			);
 	}
+	/* A run-wide provider replaces every step's choice, with the same model
+	 * reset as a step-level provider change. */
+	if (self->provider != NULL) {
+		if (!g_str_equal(ls_string(result, "provider"), self->provider)) {
+			json_object_remove_member(result, "model");
+			json_object_remove_member(result, "effort");
+			json_object_set_string_member(result, "provider", self->provider);
+		}
+		if (self->model != NULL)
+			json_object_set_string_member(result, "model", self->model);
+	}
 	if (self->timeout >= 0)
 		json_object_set_int_member(result, "timeout", self->timeout);
 	if (self->unlimited) {
@@ -513,6 +533,29 @@ void
 ls_recipe_set_unlimited(LsRecipe *self, gboolean unlimited){
 	g_return_if_fail(LS_IS_RECIPE(self));
 	self->unlimited = unlimited;
+}
+
+/* Provider choice is an execution setting, like the deadline: it never
+ * enters the fingerprinted tree, so a run can resume on another agent. */
+gboolean
+ls_recipe_set_provider(LsRecipe *self, const gchar *provider, const gchar *model, GError **error){
+	g_return_val_if_fail(LS_IS_RECIPE(self), FALSE);
+	g_return_val_if_fail(error == NULL || *error == NULL, FALSE);
+	if (provider != NULL && !provider_supported(provider)) {
+		g_set_error(error, LS_ERROR, LS_ERROR_INVALID, "Unsupported CLI provider '%s'", provider);
+		return FALSE;
+	}
+	if (model != NULL && (provider == NULL || *model == '\0' || !g_utf8_validate(model, -1, NULL) ||
+			strpbrk(model, "\r\n\t") != NULL)) {
+		g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID,
+			"A model override needs a provider override and one line of text");
+		return FALSE;
+	}
+	g_free(self->provider);
+	g_free(self->model);
+	self->provider = g_strdup(provider);
+	self->model = g_strdup(model);
+	return TRUE;
 }
 
 /* Gate approvals are CLI/library run flags, never recipe or catalog bytes. */

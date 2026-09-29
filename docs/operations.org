@@ -33,15 +33,19 @@
 | =--rates FILE= | YAML rate card for =--price-usage= |
 | =--unlimited= | Disable time and requested output budgets for this run |
 | =--timeout SECONDS= | Per-attempt deadline; =0= unlimited, omitted uses the recipe |
+| =--provider NAME= | Run every AI step on one agent: =codex=, =claude-code=, =cursor=, =grok-build= or =antigravity= |
+| =--model NAME= | Model for =--provider=; omitted uses that agent's default |
 | =--max-prompt-bytes BYTES= | System plus task cap; =0= unlimited (default) |
 | =--debug= | Persist provider sessions and log diagnostic metadata |
 | =--list-modules= | Print the eleven built-in step names |
 | =--license= | Print the AGPLv3 license |
 | =--version= | Print =LS_VERSION= |
 
-Positional arguments are errors. =--validate=, =--plan=, =--preview= and =--emit-yaml= are mutually exclusive. =--qa= and =--price-usage= cannot combine with generation or inspection flags. =--package= excludes =--recipe=, =--prompts=, =--from-form= and =--seal-package=. =--from-form= emits YAML and cannot combine with =--recipe= or generation. =--seal-package= cannot also run output, revision or inspection. =--timeout= must be 0 through 86400; =--max-prompt-bytes= must be nonnegative and fit the platform size type.
+Positional arguments are errors. =--validate=, =--plan=, =--preview= and =--emit-yaml= are mutually exclusive. =--qa= and =--price-usage= cannot combine with generation or inspection flags. =--package= excludes =--recipe=, =--prompts=, =--from-form= and =--seal-package=. =--from-form= emits YAML and cannot combine with =--recipe= or generation. =--seal-package= cannot also run output, revision or inspection. =--timeout= must be 0 through 86400; =--model= needs =--provider= and one nonempty line; =--max-prompt-bytes= must be nonnegative and fit the platform size type.
 
 For sold jobs, =--seal-package DIR= archives an approved =-r FILE= recipe and its selected catalog without AI calls. Generate or resume with =--package DIR -o OUTPUT [--resume]= to verify both SHA-256 pins and use the archived inputs. =--package= cannot be combined with recipe/catalog overrides. Archive retention and compatible generator/plugin versions remain operator responsibilities. See [[file:packages.org][package catalog and long-term resume]].
+
+=--provider NAME= moves every AI step to one agent without editing the recipe, including sealed packages and mixed-provider recipes. All five agents run through ai-glib, so a recipe written for Claude runs on Codex with =--provider codex=. A step whose recipe names a different agent drops its model and effort and uses the new agent's defaults, the same rule as a step-level provider change; a step already on that agent keeps them. =--model NAME= then sets one model for every AI step. Like =--timeout=, the switch is execution-only: it is outside the recipe fingerprint, so a checkpoint can resume on another agent. =--plan= shows the resolved agent and model per step. Only =claude-code= runs with no tools; see [[*Provider setup][provider setup]].
 
 =--unlimited= disables provider time and requested output budgets, overriding recipe values and =--timeout=. It is execution-only, so an unchanged old recipe can resume its checkpoint with unlimited budgets. Bundled recipes explicitly set =timeout: 0= and =max_tokens: 0= for testing. Prompt-size limits remain opt-in. Cancellation and finite retry counts still work; this setting does not bypass artifact validation. Provider-native model limits remain outside libresite's control.
 

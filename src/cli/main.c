@@ -297,6 +297,7 @@ main(int argc, char **argv){
 	g_auto(GStrv) plugins = NULL;
 	gint64 max_prompt_bytes = 0;
 	gint timeout = -1, events_fd = -1;
+	g_autofree gchar *agent = NULL, *model = NULL;
 	g_autofree gchar *events_path = NULL, *events_arg = NULL;
 	Events events = {0};
 	gint failure_code = 2;
@@ -345,6 +346,10 @@ main(int argc, char **argv){
 		 "Disable provider time and requested output budgets for this run", NULL},
 		{"timeout", 0, 0, G_OPTION_ARG_INT, &timeout,
 		 "Override each attempt deadline (0 = unlimited, omitted = recipe)", "SECONDS"},
+		{"provider", 0, 0, G_OPTION_ARG_STRING, &agent,
+		 "Run every AI step on this agent: codex, claude-code, cursor, grok-build or antigravity", "NAME"},
+		{"model", 0, 0, G_OPTION_ARG_STRING, &model,
+		 "Model for --provider (omitted = the agent's default)", "NAME"},
 		{"debug", 0, 0, G_OPTION_ARG_NONE, &debug,
 		 "Persist provider sessions and log diagnostic metadata to stderr", NULL},
 		{"recipe", 'r', 0, G_OPTION_ARG_FILENAME, &recipe_path, "YAML recipe", "FILE"},
@@ -411,7 +416,8 @@ main(int argc, char **argv){
 		"  libresite -r site.yaml --emit-yaml\n  libresite -r recipes/landing.yaml --validate\n  libresite -r "
 		"recipes/landing.yaml --plan\n  libresite -r recipes/landing.yaml --preview design\n  "
 		"libresite -r recipes/landing.yaml -o ./my-site\n  libresite -r recipes/landing.yaml -o "
-		"./my-site --resume --approve design-gate\n  libresite --qa ./my-site\n  "
+		"./my-site --resume --approve design-gate\n  libresite -r recipes/studio.yaml -o ./my-site "
+		"--provider codex\n  libresite --qa ./my-site\n  "
 		"libresite -r recipes/revision.yaml --revise ./my-site "
 		"-o ./my-site-v2\n\nProviders: codex, claude-code, grok-build, cursor, "
 		"antigravity.\nGeneration uses your installed and authenticated provider CLI.\nGenerated "
@@ -473,6 +479,7 @@ main(int argc, char **argv){
 			form_path != NULL || output != NULL || project != NULL || resume ||
 			validate || plan || preview != NULL || emit_yaml || license || version || list ||
 			plugins != NULL || catalog != NULL || debug || unlimited || timeout != -1 ||
+			agent != NULL || model != NULL ||
 			max_prompt_bytes != 0 || usage_path != NULL || rates_path != NULL ||
 			approvals != NULL || approve_all) {
 			g_set_error_literal(&error, LS_ERROR, LS_ERROR_INVALID,
@@ -499,6 +506,7 @@ main(int argc, char **argv){
 			form_path != NULL || output != NULL || project != NULL || resume ||
 			validate || plan || preview != NULL || emit_yaml || license || version || list ||
 			plugins != NULL || catalog != NULL || debug || unlimited || timeout != -1 ||
+			agent != NULL || model != NULL ||
 			max_prompt_bytes != 0 || approvals != NULL || approve_all) {
 			g_set_error_literal(&error, LS_ERROR, LS_ERROR_INVALID,
 				"Use --price-usage FILE --rates FILE without generation or inspection options");
@@ -586,6 +594,8 @@ main(int argc, char **argv){
 		guint i;
 		ls_recipe_set_timeout(recipe, timeout);
 		ls_recipe_set_unlimited(recipe, unlimited);
+		if (!ls_recipe_set_provider(recipe, agent, model, &error))
+			goto fail;
 		ls_recipe_set_approve_all(recipe, approve_all);
 		for (i = 0; approvals != NULL && approvals[i] != NULL; i++)
 			ls_recipe_approve(recipe, approvals[i]);

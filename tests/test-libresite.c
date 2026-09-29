@@ -162,6 +162,73 @@ provider_defaults(void){
 	g_assert_null(ls_string(settings, "model"));
 	g_assert_cmpstr(ls_string(settings, "provider"), ==, "cursor");
 }
+/* A run-wide agent replaces every step's choice without touching the recipe,
+ * resets models chosen for another agent, and rejects bad input atomically. */
+static void
+provider_override(void){
+	g_autoptr(GError) error = NULL;
+	g_autofree gchar *text = ls_read_text("recipes/mixed-providers.yaml", &error);
+	g_autoptr(LsRecipe) recipe = ls_recipe_new(text, &error);
+	g_autofree gchar *before = NULL, *after = NULL;
+	g_autoptr(JsonNode) root = json_node_new(JSON_NODE_OBJECT);
+	JsonArray *steps;
+	guint i;
+	g_assert_no_error(error);
+	steps = ls_recipe_get_steps(recipe);
+	/* The node views the live tree, so encoding twice detects mutation. */
+	json_node_set_object(root, ls_recipe_get_root(recipe));
+	before = ls_json_encode(root);
+	g_assert_true(ls_recipe_set_provider(recipe, "claude-code", NULL, &error));
+	g_assert_no_error(error);
+	for (i = 0; i < json_array_get_length(steps); i++) {
+		JsonObject *step = json_array_get_object_element(steps, i);
+		g_autoptr(JsonObject) settings = ls_recipe_resolve_ai(recipe, step);
+		const gchar *id = ls_string(step, "id");
+		g_assert_cmpstr(ls_string(settings, "provider"), ==, "claude-code");
+		/* The brief step already names claude-code, so its model survives;
+		 * the codex step's model belongs to codex and is dropped. */
+		if (g_str_equal(id, "brief"))
+			g_assert_cmpstr(ls_string(settings, "model"), ==, "sonnet");
+		else if (g_str_equal(id, "implementation")) {
+			g_assert_null(ls_string(settings, "model"));
+			g_assert_null(ls_string(settings, "effort"));
+		}
+	}
+	g_assert_true(ls_recipe_set_provider(recipe, "codex", "gpt-test", &error));
+	for (i = 0; i < json_array_get_length(steps); i++) {
+		g_autoptr(JsonObject) settings = ls_recipe_resolve_ai(recipe,
+			json_array_get_object_element(steps, i));
+		g_assert_cmpstr(ls_string(settings, "provider"), ==, "codex");
+		g_assert_cmpstr(ls_string(settings, "model"), ==, "gpt-test");
+	}
+	/* Invalid overrides fail without replacing the previous one. */
+	g_assert_false(ls_recipe_set_provider(recipe, "bogus", NULL, &error));
+	g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+	g_clear_error(&error);
+	g_assert_false(ls_recipe_set_provider(recipe, NULL, "gpt-test", &error));
+	g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+	g_clear_error(&error);
+	g_assert_false(ls_recipe_set_provider(recipe, "codex", "two\nlines", &error));
+	g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+	g_clear_error(&error);
+	g_assert_false(ls_recipe_set_provider(recipe, "codex", "", &error));
+	g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+	g_clear_error(&error);
+	{
+		g_autoptr(JsonObject) settings = ls_recipe_resolve_ai(recipe,
+			json_array_get_object_element(steps, 1));
+		g_assert_cmpstr(ls_string(settings, "model"), ==, "gpt-test");
+	}
+	/* Clearing restores recipe values; the parsed tree never changed. */
+	g_assert_true(ls_recipe_set_provider(recipe, NULL, NULL, &error));
+	{
+		g_autoptr(JsonObject) settings = ls_recipe_resolve_ai(recipe,
+			json_array_get_object_element(steps, 1));
+		g_assert_cmpstr(ls_string(settings, "provider"), ==, "claude-code");
+	}
+	after = ls_json_encode(root);
+	g_assert_cmpstr(before, ==, after);
+}
 static void
 invalid_path(gconstpointer data){
 	g_autoptr(GError) error = NULL;
@@ -1509,6 +1576,7 @@ main(int argc, char **argv){
 	g_test_add_data_func("/pipeline/seeds-initial-resume", GUINT_TO_POINTER(1), seed_pipeline);
 	g_test_add_data_func("/pipeline/seeds-updated-resume", GUINT_TO_POINTER(2), seed_pipeline);
 	g_test_add_func("/recipe/provider-defaults", provider_defaults);
+	g_test_add_func("/recipe/provider-override", provider_override);
 	for (i = 0; i < G_N_ELEMENTS(invalid_recipes); i++) {
 		g_autofree gchar *name = g_strdup_printf("/recipe/invalid/%u", i);
 		g_test_add_data_func(name, invalid_recipes[i], invalid_recipe);

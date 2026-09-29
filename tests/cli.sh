@@ -89,6 +89,32 @@ do
 done
 "$binary" --recipe "$root/recipes/landing.yaml" --preview plan > "$test_dir/preview"
 rg -q 'DESIGN DIRECTION' "$test_dir/preview"
+# One switch moves every AI step to another agent without editing the recipe.
+"$binary" -r "$root/recipes/mixed-providers.yaml" --plan --provider claude-code > "$test_dir/agent-plan"
+[[ $(rg -c 'claude-code' "$test_dir/agent-plan") -eq 5 ]]
+if rg -q 'codex|cursor|grok-build|antigravity' "$test_dir/agent-plan"
+then
+	exit 1
+fi
+"$binary" -r "$root/recipes/studio.yaml" --plan --provider codex --model gpt-test > "$test_dir/agent-plan"
+rg -q $'^1\tplan\tplan\tcodex\tgpt-test$' "$test_dir/agent-plan"
+for bad in bogus-provider model-only empty-model
+do
+	case $bad in
+		bogus-provider) flags=(--provider bogus) ;;
+		model-only) flags=(--model gpt-test) ;;
+		empty-model) flags=(--provider codex --model '') ;;
+	esac
+	if "$binary" -r "$root/recipes/studio.yaml" --plan "${flags[@]}" > /dev/null 2> "$test_dir/error"
+	then
+		exit 1
+	fi
+	rg -q 'provider|model' "$test_dir/error"
+done
+if "$binary" --qa "$root" --provider codex > /dev/null 2>&1
+then
+	exit 1
+fi
 "$binary" --recipe "$root/recipes/application.yaml" --preview backend > "$test_dir/app-backend"
 rg -q 'localhost' "$test_dir/app-backend"
 rg -q 'AGENTS.md' "$test_dir/app-backend"

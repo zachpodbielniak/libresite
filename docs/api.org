@@ -46,6 +46,7 @@ Cancellation after a callback is normalized to =G_IO_ERROR_CANCELLED=. CLI exit 
 | =ls_recipe_seed_context(self, context, error)= | — | Overlay seeds onto an imported revision context |
 | =ls_recipe_set_timeout(self, seconds)= | — | Execution-only deadline: =-1= recipe, =0= unlimited, =1..86400= |
 | =ls_recipe_set_unlimited(self, unlimited)= | — | Disable time and =max_tokens= for this run |
+| =ls_recipe_set_provider(self, provider, model, error)= | — | Execution-only agent (and optional model) for every AI step; =NULL= restores recipe values; invalid input keeps the previous override |
 | =ls_recipe_approve(self, step_id)= | — | Approve one native gate |
 | =ls_recipe_set_approve_all(self, approve_all)= | — | Approve every gate for this run |
 | =ls_recipe_is_approved(self, step_id)= | — | Whether that gate may pass |
