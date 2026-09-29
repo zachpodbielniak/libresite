@@ -11,8 +11,9 @@
 .page-header__meta dd { margin: 0; font-family: var(--font-display); font-weight: 600; }
 .page-header__art { margin: var(--space-6) 0 0; }
 .page-header__art img { width: 100%; border-radius: var(--radius); }
-@media (min-width: 56rem) {
-	.page-header--split .page-header__inner { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 0 var(--space-7); align-items: end; }
+/* Side by side only beside a picture, and when the page column is wide. */
+@container (min-width: 52rem) {
+	.page-header--split .page-header__inner:has(> .page-header__art) { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 0 var(--space-7); align-items: end; }
 	.page-header--split .crumbs { grid-column: 1 / -1; }
 	.page-header--split .page-header__art { margin: 0; }
 }
