@@ -30,7 +30,7 @@ site:
       title: Support the mission
       purpose: Explain how to verify a nonprofit and its approved donation channel; explicitly state no donations are collected here.
   style: editorial
-  frontend: Static pages from the Libresite component library with original local SVG artwork. No framework, package manager, CDN or external font request.
+  frontend: Static pages from the Libresite component library with original local SVG artwork and open-source web fonts over system fallbacks. No framework, package manager or CDN scripts.
   backend: none
   database: none
   requirements: >-
@@ -44,6 +44,7 @@ pipeline:
   steps:
     - id: plan
       type: plan
+      options: {sector: community}
       instructions: >-
         Home introduces the mission with a hopeful opening; its actions are "Get involved" (get-involved.html) and "Our programs" (programs.html). Mission explains the illustrative mission and responsible governance questions, without trustees or registration. Programs explains two clearly illustrative activities with audience, scope and participation needs. Impact describes the evaluation plan and proposed measures. Get involved is a form page with a volunteer-interest worksheet. Support explains how to verify a nonprofit and its donation channel. Plan art: a mark, a community home composition and one program illustration.
     - id: design-gate

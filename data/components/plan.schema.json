@@ -2,6 +2,7 @@
   "type": "object",
   "required": [
     "name",
+    "character",
     "tokens",
     "look",
     "nav",
@@ -17,6 +18,9 @@
       "type": "string"
     },
     "lang": {
+      "type": "string"
+    },
+    "character": {
       "type": "string"
     },
     "tokens": {

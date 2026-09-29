@@ -104,11 +104,27 @@ Name one on the plan step:
 - {id: plan, type: plan, options: {theme: midnight}}
 #+end_src
 
-The plan call then uses a schema without tokens, fonts, look, css and restyle, and TASK carries the theme's name and summary, so the model writes only content and structure and returns a shorter plan. The builder applies the theme to the answer before repairing and checking it. =theme= is the only plan option; an unknown name fails preflight with the list of themes.
+The plan call then uses a schema without tokens, fonts, look, css and restyle, and TASK carries the theme's name and summary, so the model writes only content and structure and returns a shorter plan. The builder applies the theme to the answer before repairing and checking it. The plan options are =theme= and =sector= (see [[*Identities][identities]]); an unknown theme or sector fails preflight with the list of choices.
 
 =ls_components_apply_theme()= does the same to any plan: it replaces the design half and leaves the rest. Themes are checked like plans when the library loads (contrast, token ranges, fonts, CSS), so applying one can never produce a plan that fails its own checks, and the library's copy is never edited. To add a theme, add an entry with a summary, all tokens, fonts, every look axis and optional css or restyle; =/components/themes= composes the fixture site under every theme.
 
 Recomposing an already delivered site needs its plan and page specifications. Composed recipes archive them in the run record (see [[*The pipeline][the pipeline]]); a command that recomposes a delivered site from them is not built yet.
+
+* Identities
+
+Without a theme the model designs each site itself, and left alone it converges: five live packages on 2026-09-28 all came back with warm cream paper, a rust accent and Fraunces headlines, and nearly the same home page order. Nothing tied the design to the business. Identities fix that without extra calls.
+
+=data/components/identities.yaml= defines business sectors (trades, food, community, advisory, software, creative, retail and wellness), eighteen palettes, thirteen type pairings and twelve home-page section sequences, each listing the sectors it fits. Name the sector on the plan step:
+
+#+begin_src yaml
+- {id: plan, type: plan, options: {sector: trades}}
+#+end_src
+
+The builder deals one fitting palette, type pairing and home sequence from a hash of the recipe name and brief, the same way it deals the look, so one site always gets the same suggestion and sites in one sector spread across the choices. TASK carries them as =suggested_palette= (name, summary, the seven color tokens), =suggested_type= (name, summary, font tokens and Bunny Fonts families) and =suggested_home= (component names after the opening). Without a sector, or for a themed plan's palette and type, every entry is eligible or the theme supplies the design; the home sequence is dealt either way.
+
+The plan starts with =character=: one or two sentences on what the business looks like in the real world (materials, tools, place, era, mood). Its colors and type start from the dealt identity and move toward that character; the model departs from them only when the character needs it. =ls_components_check_identity()= then rejects a plan that falls back on the house default, warm cream paper with a rust or orange accent or Fraunces over Source Sans, unless the dealt identity was itself that warm; the rejection goes back to the model like any other. No palette or type pairing in the catalog may be the default, and each is checked like a plan when the library loads (contrast, fonts, token ranges). =character= is required by the plan schema and optional natively, up to 600 characters.
+
+To add a palette, type pairing or home sequence, add an entry with its =fits=; a sector needs at least one of each. =/components/identities= checks fit, stability and spread; =/pages/plan-identity= checks the prompt and the rejection.
 
 * What the builder produces
 
@@ -179,7 +195,7 @@ Within an item, every declared field the model left out is set explicitly empty,
 
 * Plan contract
 
-Required: =name=, =tokens=, =nav=, =pages=, =art= (may be empty). Optional: =tagline=, =lang=, =fonts=, =brand=, =action=, =footer=, =voice=, =css= and =ui= (interface strings for a non-English site).
+Required: =name=, =tokens=, =nav=, =pages=, =art= (may be empty). The schema also requires =character= (see [[*Identities][identities]]). Optional: =tagline=, =lang=, =fonts=, =brand=, =action=, =footer=, =voice=, =css= and =ui= (interface strings for a non-English site).
 
 - Tokens: seven =#rrggbb= colors with WCAG AA text pairs (ink and muted on paper and surface, accent_ink on accent, all 4.5:1), three font stacks of installed or generic families, and numeric scale, spacing, border, radius and heading settings within documented ranges.
 - Fonts: up to three open-source families served by Bunny Fonts; the builder writes the stylesheet URL. Omit them when a brief forbids remote fonts.
@@ -219,6 +235,11 @@ A composed recipe's checkpoint fingerprint includes the component library digest
 | 2026-09-28 | nonprofit 2.0.0 | 45 s | first live run after conversion, claude-code; published, no retries |
 | 2026-09-28 | professional-services 2.0.0 | 43 s | first live run after conversion, claude-code; published, no retries |
 | 2026-09-28 | small-saas 2.0.0 | 50 s | first live run after conversion, claude-code; published, no retries |
+| 2026-09-28 | trades, with identities | 43 s | forest-dark, Zilla Slab over Work Sans; no retries |
+| 2026-09-28 | restaurant, with identities | 38 s | noir-gold, Cormorant Garamond over Lato; no retries |
+| 2026-09-28 | nonprofit, with identities | 45 s | harbor, Archivo Black over Archivo; no retries |
+| 2026-09-28 | professional-services, with identities | 47 s | clay-sky, Libre Caslon over Libre Franklin; no retries |
+| 2026-09-28 | small-saas, with identities | 53 s | terminal-mint, Outfit over Inter; no retries |
 | 2026-09-28 | studio, 53-component library | 60 s | no retries |
 | 2026-09-28 | night-ramen, 53-component library | 51 s | events kind; marquee, statement, notice, big facts; no retries |
 | 2026-09-28 | studio, looks and restyles | 51 s | stacked-free look from its suggestion: caps nav, split heads, outlined panels, framed images, lines texture; showcase used; no retries |

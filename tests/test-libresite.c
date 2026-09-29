@@ -1059,7 +1059,7 @@ stack_profiles(void){
 			g_assert_null(strstr(rendered, "orm_engine_new_sqlite"));
 		else {
 			g_assert_nonnull(strstr(rendered, "orm_engine_new_sqlite"));
-			g_assert_nonnull(strstr(rendered, "warm monochrome"));
+			g_assert_nonnull(strstr(rendered, "near-monochrome palette drawn from the subject"));
 		}
 	}
 	for (i = 0; i < G_N_ELEMENTS(invalid); i++) {

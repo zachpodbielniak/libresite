@@ -29,8 +29,8 @@ site:
     - path: /estimate.html
       title: Prepare an estimate request
       purpose: Local worksheet for job description and access constraints; export plain text and state that nothing is sent.
-  style: editorial
-  frontend: Static pages from the Libresite component library with original local SVG artwork. No framework, package manager, CDN or external font request.
+  style: industrial
+  frontend: Static pages from the Libresite component library with original local SVG artwork and open-source web fonts over system fallbacks. No framework, package manager or CDN scripts.
   backend: none
   database: none
   requirements: >-
@@ -44,6 +44,7 @@ pipeline:
   steps:
     - id: plan
       type: plan
+      options: {sector: trades}
       instructions: >-
         Home introduces the business with a confident opening, then what a visit covers and how estimates work; its primary action is "Prepare an estimate request" linking to estimate.html, with a second action to services.html. Services lists repair and maintenance scopes (services component, no prices) with exclusions and preparation steps. Service detail explains a diagnostic visit step by step and the factors that change an estimate. Coverage explains how to confirm location and scheduling. About explains care for the property and clear written scope without staff biographies or credentials. Estimate is a form page. Plan art: a mark, a pipe-and-gauge home composition and one service illustration.
     - id: design-gate

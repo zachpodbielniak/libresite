@@ -83,6 +83,10 @@
 	background: transparent; border: 0; border-top: var(--border-strong) solid var(--ink); border-radius: 0; box-shadow: none; padding-inline: 0;
 }
 .look-panels-inverted :is(.bento__tile, .pricing__tier, .split__panel) { border-radius: max(var(--radius), 0.5rem); }
+/* A panel whose variant paints it in the accent keeps that fill under every
+ * panel look; the look rules above would otherwise clear the background and
+ * leave accent-ink text on the page. */
+body .split--contrast .split__panel:last-child { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); padding: var(--space-6); }
 .look-panels-outlined .pricing__tier--highlight, .look-panels-raised .pricing__tier--highlight { border-color: var(--accent); }
 
 /* Rhythm. */

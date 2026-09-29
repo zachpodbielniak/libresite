@@ -29,8 +29,8 @@ site:
     - path: /reservations.html
       title: Reservation information
       purpose: Clearly state that reservations are not taken on this demonstration site; link to visit information.
-  style: editorial
-  frontend: Static pages from the Libresite component library with original local SVG artwork. No framework, package manager, CDN or external font request.
+  style: cinematic
+  frontend: Static pages from the Libresite component library with original local SVG artwork and open-source web fonts over system fallbacks. No framework, package manager or CDN scripts.
   backend: none
   database: none
   requirements: >-
@@ -44,6 +44,7 @@ pipeline:
   steps:
     - id: plan
       type: plan
+      options: {sector: food}
       instructions: >-
         Home introduces the dining concept with an inviting opening; its actions are "See the menu" (menu.html) and "Plan a visit" (visit.html). Menu is a menu page: a menu component with four illustrative sections of dishes with short descriptions and no prices, and section filter buttons (set all_label to "Everything"). Story explains the kitchen's approach without invented provenance, people or awards. Visit explains what to confirm before travel, marking address, hours and access as not supplied. Private dining explains questions about party size, format and access without promising capacity. Reservations states that this site takes no reservations and links to visit.html. Plan art: a mark, a hearth-and-table home composition and one dish illustration.
     - id: design-gate

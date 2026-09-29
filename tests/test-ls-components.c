@@ -1005,6 +1005,133 @@ test_suggest_opening(void){
 	g_assert_cmpuint(g_hash_table_size(seen), >=, 8);
 }
 
+/* A variant that paints a panel in the accent keeps it under every panel
+ * look: the look layer comes last, so the restoring rule must be in it. */
+static void
+test_contrast_panel(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(JsonNode) plan = load("plan.json");
+	g_autoptr(JsonObject) pages = fixture_pages();
+	g_autoptr(GError) error = NULL;
+	g_autofree gchar *text = NULL;
+	g_autoptr(JsonNode) bundle = NULL;
+	const gchar *css, *look, *panels, *restore;
+	JsonObject *look_object = json_object_get_object_member(json_node_get_object(plan), "look");
+	if (look_object == NULL) {
+		look_object = json_object_new();
+		json_object_set_object_member(json_node_get_object(plan), "look", look_object);
+	}
+	json_object_set_string_member(look_object, "panels", "rules");
+	json_object_set_member(pages, "work.html", json(
+		"{'path':'work.html','sections':[{'component':'page-header','content':{'heading':'Work'}},"
+		"{'component':'split','variant':'contrast','content':{'heading':'Two ways','panels':["
+		"{'heading':'One','body':'First.'},{'heading':'Two','body':'Second.'}]}}]}"));
+	text = ls_components_compose(components, plan, pages, NULL, &error);
+	g_assert_no_error(error);
+	bundle = ls_json_parse(text, NULL);
+	css = file_content(bundle, "styles.css");
+	look = strstr(css, "@layer ls-look {");
+	g_assert_nonnull(look);
+	panels = strstr(look, ".look-panels-rules :is(");
+	restore = strstr(look, "body .split--contrast .split__panel:last-child { background: var(--accent)");
+	g_assert_nonnull(panels);
+	g_assert_nonnull(restore);
+	g_assert_true(panels < restore);
+	contains(file_content(bundle, "work.html"), "split--contrast");
+}
+
+/* Identities fit their sector, stay stable for a site and vary between
+ * sites; the house-default check rejects only an undealt default. */
+static void
+test_identities(void){
+	g_autoptr(LsComponents) components = library();
+	g_auto(GStrv) sectors = ls_components_list_sectors(components);
+	g_autoptr(GHashTable) palettes = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+	g_autoptr(JsonNode) plan = load("plan.json");
+	g_autoptr(GError) error = NULL;
+	JsonObject *tokens = json_object_get_object_member(json_node_get_object(plan), "tokens");
+	guint i, s;
+	g_assert_true(g_strv_contains((const gchar *const *)sectors, "trades"));
+	g_assert_true(g_strv_contains((const gchar *const *)sectors, "software"));
+	for (s = 0; sectors[s] != NULL; s++)
+		for (i = 0; i < 40; i++) {
+			g_autofree gchar *seed = g_strdup_printf("site %u", i);
+			g_autoptr(JsonObject) a = ls_components_suggest_identity(components, seed, sectors[s]);
+			g_autoptr(JsonObject) b = ls_components_suggest_identity(components, seed, sectors[s]);
+			const gchar *parts[] = {"palette", "type", "home"};
+			guint p;
+			g_assert_true(json_object_equal(a, b));
+			for (p = 0; p < G_N_ELEMENTS(parts); p++) {
+				g_assert_nonnull(ls_string(json_object_get_object_member(a, parts[p]), "name"));
+				g_assert_false(json_object_has_member(json_object_get_object_member(a, parts[p]), "fits"));
+			}
+			g_assert_nonnull(json_object_get_object_member(json_object_get_object_member(a, "palette"), "tokens"));
+			g_assert_nonnull(json_object_get_array_member(json_object_get_object_member(a, "type"), "fonts"));
+			g_assert_cmpuint(json_array_get_length(json_object_get_array_member(
+				json_object_get_object_member(a, "home"), "sections")), >=, 2);
+			/* Olive market fits food, community and wellness, never software. */
+			if (g_str_equal(sectors[s], "software"))
+				g_assert_cmpstr(ls_string(json_object_get_object_member(a, "palette"), "name"), !=, "olive-market");
+			if (g_str_equal(sectors[s], "trades"))
+				g_hash_table_add(palettes, g_strdup(ls_string(json_object_get_object_member(a, "palette"), "name")));
+		}
+	/* Forty trades sites spread over several palettes. */
+	g_assert_cmpuint(g_hash_table_size(palettes), >=, 3);
+	/* An unknown or absent sector deals from every entry. */
+	{
+		g_autoptr(JsonObject) any = ls_components_suggest_identity(components, "x", NULL);
+		g_autoptr(JsonObject) unknown = ls_components_suggest_identity(components, "x", "nope");
+		g_assert_true(json_object_equal(any, unknown));
+	}
+	/* The fixture plan is its own design. */
+	g_assert_true(ls_components_check_identity(components, plan, NULL, &error));
+	g_assert_no_error(error);
+	/* Cream paper with a rust accent is the house default. */
+	json_object_set_string_member(tokens, "paper", "#faf3e7");
+	json_object_set_string_member(tokens, "accent", "#b4471f");
+	g_assert_false(ls_components_check_identity(components, plan, NULL, &error));
+	g_assert_error(error, LS_ERROR, LS_ERROR_VALIDATION);
+	g_assert_nonnull(strstr(error->message, "suggested_palette"));
+	g_clear_error(&error);
+	/* Unless the dealt palette itself is that warm. */
+	{
+		g_autoptr(JsonObject) identity = json_object_new();
+		JsonObject *palette = json_object_new();
+		JsonObject *dealt = json_object_new();
+		json_object_set_string_member(dealt, "paper", "#f8f0e0");
+		json_object_set_string_member(dealt, "accent", "#b04a20");
+		json_object_set_object_member(palette, "tokens", dealt);
+		json_object_set_object_member(identity, "palette", palette);
+		g_assert_true(ls_components_check_identity(components, plan, identity, &error));
+		g_assert_no_error(error);
+	}
+	/* A dark paper with the same accent is not the default. */
+	json_object_set_string_member(tokens, "paper", "#1a1410");
+	g_assert_true(ls_components_check_identity(components, plan, NULL, &error));
+	/* Fraunces over Source Sans is the default pairing. */
+	json_object_set_string_member(tokens, "font_display", "Fraunces, Georgia, serif");
+	json_object_set_string_member(tokens, "font_body", "'Source Sans 3', system-ui, sans-serif");
+	g_assert_false(ls_components_check_identity(components, plan, NULL, &error));
+	g_assert_error(error, LS_ERROR, LS_ERROR_VALIDATION);
+	g_assert_nonnull(strstr(error->message, "suggested_type"));
+	g_clear_error(&error);
+	/* Fraunces as a fallback deep in a stack is not the pairing. */
+	json_object_set_string_member(tokens, "font_display", "Newsreader, Fraunces, serif");
+	g_assert_true(ls_components_check_identity(components, plan, NULL, &error));
+	/* character is optional natively, bounded when present. */
+	{
+		g_autoptr(JsonNode) fresh = load("plan.json");
+		g_autofree gchar *long_text = g_strnfill(601, 'x');
+		json_object_set_string_member(json_node_get_object(fresh), "character", "Copper, gauges and work boots.");
+		g_assert_true(ls_components_check_plan(components, fresh, &error));
+		g_assert_no_error(error);
+		json_object_set_string_member(json_node_get_object(fresh), "character", long_text);
+		g_assert_false(ls_components_check_plan(components, fresh, &error));
+		g_assert_nonnull(strstr(error->message, "character"));
+		g_clear_error(&error);
+	}
+}
+
 int
 main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
@@ -1032,6 +1159,8 @@ main(int argc, char **argv){
 	g_test_add_func("/components/suggest-opening", test_suggest_opening);
 	g_test_add_func("/components/directory-tabs", test_directory_and_tabs);
 	g_test_add_func("/components/menu-filter", test_menu_filter);
+	g_test_add_func("/components/identities", test_identities);
+	g_test_add_func("/components/contrast-panel", test_contrast_panel);
 	g_test_add_func("/components/schema-kinds", test_schema_kinds);
 	return g_test_run();
 }

@@ -21,6 +21,7 @@ pipeline:
   steps:
     - id: plan
       type: plan
+      options: {sector: food}
       instructions: >-
         Home opens with the counter at night and the one-line promise "Hot until the last bowl." with actions to see the menu and find the arch. Menu presents every supplied item and price exactly, grouped as Bowls, Extras and Drinks, with vegan and spicy marked in words. Story tells how a single pot and twelve stools shape the night, without inventing people. Visit gives hours, address, payment and the no-reservations rule as facts, a short FAQ (late arrival, broth running out, dietary needs, walking from the last train) and a clear next step. Events explains private late parties for up to 12 and offers the mailto link. Plan art: a neon moth-and-moon mark, a steaming bowl, the railway arch at night.
     - id: pages

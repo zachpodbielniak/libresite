@@ -29,8 +29,8 @@ site:
     - path: /demo.html
       title: Local walkthrough
       purpose: A working local release-note preview; explicitly no account, persistence or network service.
-  style: editorial
-  frontend: Static pages from the Libresite component library with original local SVG artwork. No framework, package manager, CDN or external font request.
+  style: industrial
+  frontend: Static pages from the Libresite component library with original local SVG artwork and open-source web fonts over system fallbacks. No framework, package manager or CDN scripts.
   backend: none
   database: none
   requirements: >-
@@ -44,6 +44,7 @@ pipeline:
   steps:
     - id: plan
       type: plan
+      options: {sector: software}
       instructions: >-
         Home explains the proposed release-notes workflow with a product-style opening; its actions are "Try the local walkthrough" (demo.html) and "See features" (features.html). Features explains drafting, review and publishing with clear limitations. Pricing compares three illustrative scope tiers with no prices. Docs is a complete worked release-note example as an article with steps: inputs, review decisions and handoff. About explains open-source ownership and questions to resolve before launch. Demo is a form page: a local release-note composer. Plan art: a mark, a release-timeline home composition and one workflow illustration.
     - id: design-gate

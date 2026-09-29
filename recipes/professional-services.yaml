@@ -29,8 +29,8 @@ site:
     - path: /contact.html
       title: Prepare a project brief
       purpose: Local brief worksheet for problem, team context and constraints; export text without sending.
-  style: editorial
-  frontend: Static pages from the Libresite component library with original local SVG artwork. No framework, package manager, CDN or external font request.
+  style: minimalist
+  frontend: Static pages from the Libresite component library with original local SVG artwork and open-source web fonts over system fallbacks. No framework, package manager or CDN scripts.
   backend: none
   database: none
   requirements: >-
@@ -44,6 +44,7 @@ pipeline:
   steps:
     - id: plan
       type: plan
+      options: {sector: advisory}
       instructions: >-
         Home explains the offer with a clear, confident opening; its actions are "Prepare a project brief" (contact.html) and "See engagements" (services.html). Services explains discovery and process-mapping engagements with deliverables and what is excluded. Engagement describes the discovery engagement: inputs, workshop agenda as steps, concrete outputs and excluded implementation work. Approach explains intake, review, decisions, handoff and maintenance. Insights is a complete article of roughly 500 words, "An operating process people can use", with worked illustrative examples, stated limits and in-page contents. Contact is a form page with a project-brief worksheet. Plan art: a mark, a process-map home composition and one engagement diagram.
     - id: design-gate

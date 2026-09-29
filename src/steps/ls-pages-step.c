@@ -34,11 +34,27 @@ step_options(JsonObject *config){
 	return node != NULL && JSON_NODE_HOLDS_OBJECT(node) ? json_node_get_object(node) : NULL;
 }
 
-/* The plan step's one option names a library theme. */
+/* The plan step's options name a library theme and the business sector. */
 static const gchar *
 plan_theme(JsonObject *config){
 	JsonObject *options = step_options(config);
 	return options != NULL ? ls_string(options, "theme") : NULL;
+}
+
+static const gchar *
+plan_sector(JsonObject *config){
+	JsonObject *options = step_options(config);
+	return options != NULL ? ls_string(options, "sector") : NULL;
+}
+
+/* The identity dealt to this site: stable for its recipe name and brief. */
+static JsonObject *
+plan_identity(LsComponents *components, LsRecipe *recipe, JsonObject *config){
+	JsonObject *root = ls_recipe_get_root(recipe);
+	const gchar *name = ls_string(root, "name");
+	const gchar *brief = ls_string(member_object_of(root, "site"), "brief");
+	g_autofree gchar *seed = g_strconcat(name != NULL ? name : "", "\n", brief != NULL ? brief : "", NULL);
+	return ls_components_suggest_identity(components, seed, plan_sector(config));
 }
 
 static gboolean
@@ -47,14 +63,27 @@ check_plan_options(JsonObject *config, GError **error){
 	g_autoptr(LsComponents) components = NULL;
 	if (options == NULL)
 		return TRUE;
-	if (!ls_object_keys(options, "|theme|", NULL) || ls_string(options, "theme") == NULL) {
-		g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID, "plan options allow only theme (a theme name)");
+	if (!ls_object_keys(options, "|theme|sector|", NULL) ||
+		(json_object_has_member(options, "theme") && ls_string(options, "theme") == NULL) ||
+		(json_object_has_member(options, "sector") && ls_string(options, "sector") == NULL)) {
+		g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID,
+			"plan options allow only theme (a theme name) and sector (a sector name)");
 		return FALSE;
 	}
 	components = ls_components_new(error);
 	if (components == NULL)
 		return FALSE;
-	if (ls_components_get_theme_summary(components, ls_string(options, "theme")) == NULL) {
+	if (ls_string(options, "sector") != NULL) {
+		g_auto(GStrv) sectors = ls_components_list_sectors(components);
+		if (!g_strv_contains((const gchar *const *)sectors, ls_string(options, "sector"))) {
+			g_autofree gchar *list = g_strjoinv(", ", sectors);
+			g_set_error(error, LS_ERROR, LS_ERROR_INVALID, "Unknown sector '%s'; available: %s",
+				ls_string(options, "sector"), list);
+			return FALSE;
+		}
+	}
+	if (ls_string(options, "theme") != NULL &&
+		ls_components_get_theme_summary(components, ls_string(options, "theme")) == NULL) {
 		g_auto(GStrv) names = ls_components_list_themes(components);
 		g_autofree gchar *list = g_strjoinv(", ", names);
 		g_set_error(error, LS_ERROR, LS_ERROR_INVALID, "Unknown theme '%s'; available: %s",
@@ -224,7 +253,8 @@ spec_settings(LsRecipe *recipe, JsonObject *config, const gchar *schema){
 /* ---- Plan -------------------------------------------------------------- */
 
 static gchar *
-plan_prompt(LsPrompts *prompts, LsRecipe *recipe, JsonObject *config, LsComponents *components, GError **error){
+plan_prompt(LsPrompts *prompts, LsRecipe *recipe, JsonObject *config, LsComponents *components,
+	JsonObject *identity, GError **error){
 	g_autoptr(JsonObject) literals = acceptance_literals(recipe);
 	g_autoptr(JsonObject) task = json_object_new();
 	g_autoptr(JsonNode) node = json_node_new(JSON_NODE_OBJECT);
@@ -257,7 +287,14 @@ plan_prompt(LsPrompts *prompts, LsRecipe *recipe, JsonObject *config, LsComponen
 		const gchar *brief = ls_string(member_object_of(root, "site"), "brief");
 		g_autofree gchar *seed = g_strconcat(name != NULL ? name : "", "\n", brief != NULL ? brief : "", NULL);
 		json_object_set_object_member(task, "suggested_look", ls_components_suggest_look(components, seed));
+		if (json_object_has_member(identity, "palette"))
+			json_object_set_member(task, "suggested_palette",
+				json_node_copy(json_object_get_member(identity, "palette")));
+		if (json_object_has_member(identity, "type"))
+			json_object_set_member(task, "suggested_type", json_node_copy(json_object_get_member(identity, "type")));
 	}
+	if (json_object_has_member(identity, "home"))
+		json_object_set_member(task, "suggested_home", json_node_copy(json_object_get_member(identity, "home")));
 	json_object_set_object_member(task, "required_text", json_object_ref(literals));
 	json_node_set_object(node, task);
 	task_json = ls_json_encode(node);
@@ -296,6 +333,7 @@ plan_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *prom
 	LsContext *context, LsProvider *provider, GCancellable *cancellable, GError **error){
 	g_autoptr(LsComponents) components = NULL;
 	g_autoptr(JsonObject) settings = NULL;
+	g_autoptr(JsonObject) identity = NULL;
 	g_autofree gchar *prompt = NULL, *retry = NULL;
 	const gchar *system = ls_prompts_get_spec_system(prompts);
 	const gchar *theme;
@@ -312,7 +350,8 @@ plan_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *prom
 	settings = spec_settings(recipe, config, theme != NULL ? ls_components_get_themed_plan_schema(components)
 		: ls_components_get_plan_schema(components));
 	retries = json_object_get_int_member(settings, "retries");
-	prompt = plan_prompt(prompts, recipe, config, components, error);
+	identity = plan_identity(components, recipe, config);
+	prompt = plan_prompt(prompts, recipe, config, components, identity, error);
 	if (prompt == NULL)
 		return FALSE;
 	for (attempt = 0; attempt <= retries; attempt++) {
@@ -337,7 +376,8 @@ plan_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *prom
 			}
 		}
 		if (plan != NULL && ls_components_check_plan(components, plan, &local_error) &&
-			check_routes(recipe, plan, &local_error)) {
+			check_routes(recipe, plan, &local_error) &&
+			(theme != NULL || ls_components_check_identity(components, plan, identity, &local_error))) {
 			g_autofree gchar *text = ls_json_encode(plan);
 			if (g_cancellable_set_error_if_cancelled(cancellable, error))
 				return FALSE;
@@ -865,9 +905,10 @@ ls_spec_step_preview(LsPrompts *prompts, LsRecipe *recipe, JsonObject *config, G
 	JsonObject *options = step_options(config);
 	if (components == NULL || !ls_spec_step_check(prompts, recipe, config, error))
 		return NULL;
-	if (g_strcmp0(ls_string(config, "type"), "plan") == 0)
-		body = plan_prompt(prompts, recipe, config, components, error);
-	else {
+	if (g_strcmp0(ls_string(config, "type"), "plan") == 0) {
+		g_autoptr(JsonObject) identity = plan_identity(components, recipe, config);
+		body = plan_prompt(prompts, recipe, config, components, identity, error);
+	} else {
 		g_autofree gchar *reference = ls_components_describe(components);
 		body = ls_prompts_render_spec(prompts, recipe, config,
 			options != NULL && g_strcmp0(ls_string(options, "mode"), "review") == 0 ? "page-review" : "page",

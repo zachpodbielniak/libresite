@@ -1,0 +1,705 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Site identities. The builder deals each site a palette, a type pairing and a
+# home-page sequence that suit its sector, varied by the site's name and brief,
+# so sites start from designs that fit the business instead of one house
+# default. The plan adapts them. Palettes are contrast-checked and typefaces
+# checked like plans at load; see docs/components.org.
+version: 1
+sectors:
+  trades: Plumbing, building, repair and other hands-on services.
+  food: Restaurants, cafes, bakeries, bars and food makers.
+  community: Nonprofits, clubs, schools and civic groups.
+  advisory: Consultants, lawyers, accountants and other advisers.
+  software: Software products, developer tools and apps.
+  creative: Studios, designers, artists and makers.
+  retail: Shops, stalls and product brands.
+  wellness: Health, fitness, therapy and care.
+palettes:
+  workwear:
+    summary: Cool work-shirt grey with navy ink and a safety-orange accent.
+    fits:
+    - trades
+    - retail
+    tokens:
+      paper: '#eef1f3'
+      ink: '#14202b'
+      muted: '#4a5866'
+      surface: '#dde3e8'
+      line: '#b9c3cc'
+      accent: '#c2410c'
+      accent_ink: '#ffffff'
+  copper-night:
+    summary: Dark soot with warm copper, like a lit workshop after hours.
+    fits:
+    - trades
+    - food
+    - creative
+    tokens:
+      paper: '#15191c'
+      ink: '#f1ece4'
+      muted: '#a9b0b5'
+      surface: '#20262a'
+      line: '#394248'
+      accent: '#d4834a'
+      accent_ink: '#15191c'
+  blueprint:
+    summary: Deep drafting blue with white linework and a highlighter yellow.
+    fits:
+    - trades
+    - advisory
+    - software
+    tokens:
+      paper: '#0f2f4f'
+      ink: '#eaf2fa'
+      muted: '#a8c1d9'
+      surface: '#173d62'
+      line: '#2f5a82'
+      accent: '#ffd24a'
+      accent_ink: '#0f2f4f'
+  chalk-signal:
+    summary: Flat chalk white, hard black and a single signal red.
+    fits:
+    - trades
+    - retail
+    - creative
+    tokens:
+      paper: '#f4f4f0'
+      ink: '#111111'
+      muted: '#555555'
+      surface: '#e6e6e0'
+      line: '#c8c8c0'
+      accent: '#c41e17'
+      accent_ink: '#ffffff'
+  olive-market:
+    summary: Market-stall olive and oat with a dark herb ink.
+    fits:
+    - food
+    - community
+    - wellness
+    tokens:
+      paper: '#f3f1e6'
+      ink: '#2a2d1c'
+      muted: '#5b5f45'
+      surface: '#e6e3cf'
+      line: '#cdc9ad'
+      accent: '#5f6d18'
+      accent_ink: '#ffffff'
+  tile-blue:
+    summary: Bright white with glazed-tile blue, crisp and clean.
+    fits:
+    - food
+    - retail
+    - wellness
+    tokens:
+      paper: '#fbfcfd'
+      ink: '#102338'
+      muted: '#4b5d70'
+      surface: '#e6eef6'
+      line: '#c3d3e3'
+      accent: '#1d5fa8'
+      accent_ink: '#ffffff'
+  wine-cellar:
+    summary: Deep wine-dark rooms with candle amber.
+    fits:
+    - food
+    - creative
+    tokens:
+      paper: '#1e1216'
+      ink: '#f5e9e4'
+      muted: '#c6aeb0'
+      surface: '#2b1a20'
+      line: '#4a2f37'
+      accent: '#e0a458'
+      accent_ink: '#1e1216'
+  herb-garden:
+    summary: Pale leaf green with forest ink and a garden green accent.
+    fits:
+    - community
+    - wellness
+    - food
+    tokens:
+      paper: '#eef4ec'
+      ink: '#16301f'
+      muted: '#466152'
+      surface: '#dde9da'
+      line: '#b7cdb4'
+      accent: '#2f7d4a'
+      accent_ink: '#ffffff'
+  community-sun:
+    summary: Sunlit butter yellow with indigo ink, open and friendly.
+    fits:
+    - community
+    - retail
+    tokens:
+      paper: '#fffdf5'
+      ink: '#1c1d3a'
+      muted: '#50526e'
+      surface: '#fff1c7'
+      line: '#f0dc9a'
+      accent: '#3a3fa8'
+      accent_ink: '#ffffff'
+  harbor:
+    summary: Sea-glass teal on a cool white, calm and dependable.
+    fits:
+    - advisory
+    - wellness
+    - community
+    tokens:
+      paper: '#f5f8f8'
+      ink: '#0f2e33'
+      muted: '#43636a'
+      surface: '#e1ecec'
+      line: '#bdd4d5'
+      accent: '#0d7478'
+      accent_ink: '#ffffff'
+  ink-paper:
+    summary: Pure white and near-black with one cobalt accent, like a printed report.
+    fits:
+    - advisory
+    - creative
+    - software
+    tokens:
+      paper: '#ffffff'
+      ink: '#0a0a0a'
+      muted: '#555555'
+      surface: '#f2f2f2'
+      line: '#d4d4d4'
+      accent: '#2b50aa'
+      accent_ink: '#ffffff'
+  graphite-lime:
+    summary: Graphite dark with an acid-lime accent.
+    fits:
+    - software
+    - creative
+    tokens:
+      paper: '#111315'
+      ink: '#eef0ea'
+      muted: '#a3a89e'
+      surface: '#1b1e21'
+      line: '#34393d'
+      accent: '#c6f432'
+      accent_ink: '#111315'
+  violet-dusk:
+    summary: Lavender white with deep violet, soft but assured.
+    fits:
+    - software
+    - creative
+    - wellness
+    tokens:
+      paper: '#f6f4fb'
+      ink: '#1f1535'
+      muted: '#574b72'
+      surface: '#ebe6f6'
+      line: '#cfc6e6'
+      accent: '#5b3cc4'
+      accent_ink: '#ffffff'
+  terminal-mint:
+    summary: Near-black green with a phosphor mint accent.
+    fits:
+    - software
+    tokens:
+      paper: '#0b1a17'
+      ink: '#e3f5ee'
+      muted: '#93b3a8'
+      surface: '#12261f'
+      line: '#24433a'
+      accent: '#4fe0a8'
+      accent_ink: '#0b1a17'
+  clay-sky:
+    summary: Cool sky grey with a fired-clay accent.
+    fits:
+    - trades
+    - community
+    - advisory
+    tokens:
+      paper: '#f2f6fa'
+      ink: '#1d2733'
+      muted: '#4f5d6b'
+      surface: '#e2eaf2'
+      line: '#c2d0dd'
+      accent: '#a44b24'
+      accent_ink: '#ffffff'
+  noir-gold:
+    summary: Black-tie dark with brushed gold.
+    fits:
+    - advisory
+    - food
+    - creative
+    - retail
+    tokens:
+      paper: '#0e0e0e'
+      ink: '#f3efe6'
+      muted: '#a8a296'
+      surface: '#1a1a1a'
+      line: '#333333'
+      accent: '#d8b25a'
+      accent_ink: '#0e0e0e'
+  pastel-pop:
+    summary: Blush pink with plum ink and a hot magenta accent.
+    fits:
+    - retail
+    - food
+    - creative
+    - wellness
+    tokens:
+      paper: '#fff7fb'
+      ink: '#2a1030'
+      muted: '#6a4a6f'
+      surface: '#ffe6f2'
+      line: '#f3c4dc'
+      accent: '#c21f64'
+      accent_ink: '#ffffff'
+  forest-dark:
+    summary: Dark pine with warm lamp-yellow, grounded and outdoorsy.
+    fits:
+    - community
+    - trades
+    - wellness
+    tokens:
+      paper: '#102019'
+      ink: '#eef3e8'
+      muted: '#a7b9a8'
+      surface: '#172b22'
+      line: '#2c4638'
+      accent: '#f0b429'
+      accent_ink: '#102019'
+typefaces:
+  slab-grotesk:
+    summary: A sturdy slab serif over a plain working grotesk.
+    fits:
+    - trades
+    - retail
+    tokens:
+      font_display: '''Zilla Slab'', Rockwell, Georgia, serif'
+      font_body: '''Work Sans'', system-ui, sans-serif'
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 700
+      heading_tracking: -0.01
+      heading_leading: 1.05
+      heading_case: none
+    fonts:
+    - family: Zilla Slab
+      weights:
+      - 500
+      - 700
+      italic: false
+    - family: Work Sans
+      weights:
+      - 400
+      - 600
+      italic: false
+  condensed-industrial:
+    summary: Tall condensed capitals over a technical sans, with a mono for specs.
+    fits:
+    - trades
+    - software
+    - retail
+    tokens:
+      font_display: '''Barlow Condensed'', ''Arial Narrow'', sans-serif'
+      font_body: Barlow, system-ui, sans-serif
+      font_mono: '''JetBrains Mono'', ui-monospace, monospace'
+      heading_weight: 800
+      heading_tracking: 0.01
+      heading_leading: 0.95
+      heading_case: uppercase
+    fonts:
+    - family: Barlow Condensed
+      weights:
+      - 600
+      - 800
+      italic: false
+    - family: Barlow
+      weights:
+      - 400
+      - 600
+      italic: false
+    - family: JetBrains Mono
+      weights:
+      - 400
+      italic: false
+  didone-humanist:
+    summary: High-contrast Didone headlines over a friendly humanist sans.
+    fits:
+    - food
+    - advisory
+    - retail
+    tokens:
+      font_display: '''Playfair Display'', Didot, Georgia, serif'
+      font_body: '''Source Sans 3'', system-ui, sans-serif'
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 700
+      heading_tracking: -0.02
+      heading_leading: 1.05
+      heading_case: none
+    fonts:
+    - family: Playfair Display
+      weights:
+      - 600
+      - 800
+      italic: true
+    - family: Source Sans 3
+      weights:
+      - 400
+      - 600
+      italic: false
+  geometric:
+    summary: Round geometric headlines over a neutral interface sans.
+    fits:
+    - software
+    - community
+    - wellness
+    tokens:
+      font_display: Outfit, 'Avenir Next', system-ui, sans-serif
+      font_body: Inter, system-ui, sans-serif
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 700
+      heading_tracking: -0.02
+      heading_leading: 1.05
+      heading_case: none
+    fonts:
+    - family: Outfit
+      weights:
+      - 500
+      - 700
+      italic: false
+    - family: Inter
+      weights:
+      - 400
+      - 600
+      italic: false
+  grotesk-mono:
+    summary: A quirky grotesk with a mono sidekick, for technical brands.
+    fits:
+    - software
+    - creative
+    tokens:
+      font_display: '''Space Grotesk'', system-ui, sans-serif'
+      font_body: '''IBM Plex Sans'', system-ui, sans-serif'
+      font_mono: '''IBM Plex Mono'', ui-monospace, monospace'
+      heading_weight: 700
+      heading_tracking: -0.03
+      heading_leading: 1.0
+      heading_case: none
+    fonts:
+    - family: Space Grotesk
+      weights:
+      - 500
+      - 700
+      italic: false
+    - family: IBM Plex Sans
+      weights:
+      - 400
+      - 600
+      italic: false
+    - family: IBM Plex Mono
+      weights:
+      - 400
+      - 500
+      italic: false
+  warm-rounded:
+    summary: Soft rounded headlines over an easy reading sans.
+    fits:
+    - community
+    - wellness
+    tokens:
+      font_display: Nunito, 'Avenir Next', system-ui, sans-serif
+      font_body: '''Nunito Sans'', system-ui, sans-serif'
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 800
+      heading_tracking: -0.01
+      heading_leading: 1.1
+      heading_case: none
+    fonts:
+    - family: Nunito
+      weights:
+      - 700
+      - 900
+      italic: false
+    - family: Nunito Sans
+      weights:
+      - 400
+      - 700
+      italic: false
+  caslon-franklin:
+    summary: Classic book serif headlines with a newsroom sans.
+    fits:
+    - advisory
+    - creative
+    - community
+    tokens:
+      font_display: '''Libre Caslon Text'', Georgia, serif'
+      font_body: '''Libre Franklin'', system-ui, sans-serif'
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 700
+      heading_tracking: -0.01
+      heading_leading: 1.1
+      heading_case: none
+    fonts:
+    - family: Libre Caslon Text
+      weights:
+      - 400
+      - 700
+      italic: true
+    - family: Libre Franklin
+      weights:
+      - 400
+      - 600
+      italic: false
+  newsreader-public:
+    summary: A calm reading serif over a civic sans.
+    fits:
+    - advisory
+    - community
+    tokens:
+      font_display: Newsreader, Charter, Georgia, serif
+      font_body: '''Public Sans'', system-ui, sans-serif'
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 600
+      heading_tracking: -0.015
+      heading_leading: 1.08
+      heading_case: none
+    fonts:
+    - family: Newsreader
+      weights:
+      - 500
+      - 700
+      italic: true
+    - family: Public Sans
+      weights:
+      - 400
+      - 600
+      italic: false
+  poster-sans:
+    summary: Loud poster capitals over a relaxed sans.
+    fits:
+    - food
+    - retail
+    - creative
+    tokens:
+      font_display: Anton, Impact, 'Arial Narrow', sans-serif
+      font_body: Karla, system-ui, sans-serif
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 400
+      heading_tracking: 0.01
+      heading_leading: 0.95
+      heading_case: uppercase
+    fonts:
+    - family: Anton
+      weights:
+      - 400
+      italic: false
+    - family: Karla
+      weights:
+      - 400
+      - 700
+      italic: false
+  cormorant-lato:
+    summary: Refined display serif over a light, open sans.
+    fits:
+    - food
+    - wellness
+    - creative
+    tokens:
+      font_display: '''Cormorant Garamond'', Garamond, Georgia, serif'
+      font_body: Lato, system-ui, sans-serif
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 600
+      heading_tracking: -0.01
+      heading_leading: 1.0
+      heading_case: none
+    fonts:
+    - family: Cormorant Garamond
+      weights:
+      - 500
+      - 700
+      italic: true
+    - family: Lato
+      weights:
+      - 400
+      - 700
+      italic: false
+  dm-pair:
+    summary: A bold display serif paired with its geometric sans sibling.
+    fits:
+    - food
+    - creative
+    - retail
+    tokens:
+      font_display: '''DM Serif Display'', Georgia, serif'
+      font_body: '''DM Sans'', system-ui, sans-serif'
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 400
+      heading_tracking: -0.02
+      heading_leading: 1.02
+      heading_case: none
+    fonts:
+    - family: DM Serif Display
+      weights:
+      - 400
+      italic: true
+    - family: DM Sans
+      weights:
+      - 400
+      - 700
+      italic: false
+  manrope:
+    summary: One modern sans at two weights, precise and quiet.
+    fits:
+    - software
+    - advisory
+    tokens:
+      font_display: Manrope, system-ui, sans-serif
+      font_body: Manrope, system-ui, sans-serif
+      font_mono: '''JetBrains Mono'', ui-monospace, monospace'
+      heading_weight: 800
+      heading_tracking: -0.035
+      heading_leading: 1.0
+      heading_case: none
+    fonts:
+    - family: Manrope
+      weights:
+      - 400
+      - 800
+      italic: false
+    - family: JetBrains Mono
+      weights:
+      - 400
+      italic: false
+  archivo:
+    summary: Heavy grotesk headlines over the same family for text.
+    fits:
+    - trades
+    - community
+    - retail
+    tokens:
+      font_display: '''Archivo Black'', ''Arial Black'', sans-serif'
+      font_body: Archivo, system-ui, sans-serif
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 400
+      heading_tracking: -0.02
+      heading_leading: 1.0
+      heading_case: none
+    fonts:
+    - family: Archivo Black
+      weights:
+      - 400
+      italic: false
+    - family: Archivo
+      weights:
+      - 400
+      - 600
+      italic: false
+homes:
+  services-first:
+    sections:
+    - services
+    - steps
+    - faq
+    - contact-card
+    fits:
+    - trades
+    - advisory
+    - wellness
+  story-led:
+    sections:
+    - story
+    - strip
+    - statement
+    - links
+    fits:
+    - creative
+    - food
+    - community
+  proof-and-process:
+    sections:
+    - steps
+    - compare
+    - checklist
+    - offer
+    fits:
+    - trades
+    - software
+  taste-first:
+    sections:
+    - statement
+    - bento
+    - details
+    - contact-card
+    fits:
+    - food
+    - retail
+  showcase-led:
+    sections:
+    - showcase
+    - marquee
+    - cards
+    - faq
+    fits:
+    - creative
+    - software
+    - retail
+  mission:
+    sections:
+    - statement
+    - columns
+    - steps
+    - cta
+    fits:
+    - community
+  reading:
+    sections:
+    - lead
+    - tabs
+    - callout
+    - links
+    fits:
+    - advisory
+    - software
+  gallery-led:
+    sections:
+    - gallery
+    - story
+    - faq
+    - cta
+    fits:
+    - creative
+    - food
+    - retail
+    - wellness
+  features-tabs:
+    sections:
+    - features
+    - tabs
+    - strip
+    - offer
+    fits:
+    - software
+  dense-useful:
+    sections:
+    - marquee
+    - services
+    - checklist
+    - contact-card
+    fits:
+    - trades
+    - retail
+  quiet:
+    sections:
+    - text
+    - figure
+    - statement
+    - links
+    fits:
+    - advisory
+    - community
+    - wellness
+  split-rhythm:
+    sections:
+    - split
+    - features
+    - details
+    - cta
+    fits:
+    - advisory
+    - software
+    - community

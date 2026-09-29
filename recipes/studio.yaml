@@ -25,6 +25,7 @@ pipeline:
   steps:
     - id: plan
       type: plan
+      options: {sector: creative}
       instructions: >-
         Home introduces the thesis "Make the complex feel clear", shows both projects as asymmetric rows, a short approach passage, a journal excerpt linking to journal.html and a clear next action; its opening is a confident typographic statement with the actions "Explore the work" (work.html) and "Prepare a brief" (start.html). Work indexes both projects with a filter: All, Tools and Culture; Atlas is Tools, Common is Culture. Atlas is a concept offline field-notes tool (information hierarchy, disconnected use, legible field conditions; never claimed as shipped). Common is a concept community archive (discovery, metadata, contributor clarity; no real dataset or service). Each case study needs roughly 300 words covering problem, constraints, decisions, tradeoff and proposed next validation, an explicit concept-project label, related-work links and a link to start.html. Approach explains discover, map, build and maintain through concrete deliverables, collaboration boundaries and maintenance handoff. Journal is a complete essay of roughly 500 words, "Clarity is a systems property", with three practical examples and in-page contents. Start is a local worksheet that sends nothing. Plan art: a cartographic Atlas piece, a modular Common piece and a mark.
     - id: design-gate

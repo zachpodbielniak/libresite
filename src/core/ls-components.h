@@ -73,6 +73,42 @@ JsonObject *ls_components_suggest_look(LsComponents *self, const gchar *seed);
  */
 gchar *ls_components_suggest_opening(LsComponents *self, const gchar *seed);
 /**
+ * ls_components_list_sectors:
+ * @self: a component library
+ *
+ * Returns: (transfer full) (array zero-terminated=1): the business sectors
+ *   that identities are dealt by, in catalog order
+ */
+gchar **ls_components_list_sectors(LsComponents *self);
+/**
+ * ls_components_suggest_identity:
+ * @self: a component library
+ * @seed: stable text identifying the site
+ * @sector: (nullable): a sector from ls_components_list_sectors(), or %NULL
+ *   (or an unknown name) to deal from every entry
+ *
+ * Deals a palette, a type pairing and a home-page section sequence that fit
+ * @sector, picked from a hash of @seed, so sites start from designs suited to
+ * their business instead of one default. The plan adapts them.
+ * Returns: (transfer full): {palette: {name, summary, tokens},
+ *   type: {name, summary, tokens, fonts}, home: {name, sections}}
+ */
+JsonObject *ls_components_suggest_identity(LsComponents *self, const gchar *seed, const gchar *sector);
+/**
+ * ls_components_check_identity:
+ * @self: a component library
+ * @plan: a site plan
+ * @identity: (nullable): the identity dealt to this site
+ * @error: return location for an error
+ *
+ * Rejects a plan whose tokens fall back on the house default (warm cream
+ * paper with a rust accent, or Fraunces over Source Sans) unless @identity
+ * itself dealt it. The error, %LS_ERROR_VALIDATION, is written to be sent
+ * back to the model.
+ * Returns: whether the plan's identity is its own
+ */
+gboolean ls_components_check_identity(LsComponents *self, JsonNode *plan, JsonObject *identity, GError **error);
+/**
  * ls_components_list_themes:
  * @self: a component library
  *

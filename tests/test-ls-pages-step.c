@@ -17,6 +17,7 @@ typedef struct {
 	GHashTable *threads;		/* GThread* seen */
 	gboolean bad_plan;		/* first plan answer fails contrast */
 	gboolean drop_note;		/* first start.html answer lacks its literal */
+	gboolean default_plan;	/* first plan answer uses the house default colors */
 	gboolean block;			/* wait for cancellation */
 	GCancellable *started;		/* cancelled when a call begins */
 	gchar *last_schema;
@@ -83,6 +84,11 @@ fake_generate(LsProvider *provider, JsonObject *settings, const gchar *system,
 			memcpy(swap, "#c8c0b0", 7);
 			memcpy(home, "\"path\": \"indey.html\"", 21);
 			self->bad_plan = FALSE;
+		}
+		if (self->default_plan) {
+			/* Warm cream paper with a rust accent, still at AA contrast. */
+			memcpy(strstr(answer, "#1f5c4a"), "#a8431c", 7);
+			self->default_plan = FALSE;
 		}
 		g_mutex_unlock(&self->lock);
 	} else if (schema != NULL && strstr(schema, "\"svg\"") != NULL) {
@@ -287,6 +293,9 @@ test_plan(void){
 	g_assert_nonnull(strstr(g_ptr_array_index(prompts, 0), "Plan three pages."));
 	g_assert_nonnull(strstr(g_ptr_array_index(prompts, 0), "\"suggested_opening\":\""));
 	g_assert_nonnull(strstr(g_ptr_array_index(prompts, 0), "\"suggested_look\":{"));
+	g_assert_nonnull(strstr(g_ptr_array_index(prompts, 0), "\"suggested_palette\":{"));
+	g_assert_nonnull(strstr(g_ptr_array_index(prompts, 0), "\"suggested_type\":{"));
+	g_assert_nonnull(strstr(g_ptr_array_index(prompts, 0), "\"suggested_home\":{"));
 	g_assert_nonnull(strstr(g_ptr_array_index(prompts, 0), "Nothing is sent."));
 	g_assert_nonnull(strstr(g_ptr_array_index(prompts, 1), "PREVIOUS ATTEMPT REJECTED"));
 	g_assert_nonnull(strstr(g_ptr_array_index(prompts, 1), "index.html"));
@@ -508,6 +517,8 @@ test_plan_theme(void){
 	g_assert_cmpuint(prompts->len, ==, 1);
 	g_assert_nonnull(strstr(g_ptr_array_index(prompts, 0), "\"theme\":{\"name\":\"midnight\""));
 	g_assert_null(strstr(g_ptr_array_index(prompts, 0), "\"suggested_look\":{"));
+	g_assert_null(strstr(g_ptr_array_index(prompts, 0), "\"suggested_palette\":{"));
+	g_assert_nonnull(strstr(g_ptr_array_index(prompts, 0), "\"suggested_home\":{"));
 	plan = ls_json_parse(artifact_text(fixture.context, "site/plan.json"), NULL);
 	root = json_node_get_object(plan);
 	g_assert_cmpstr(ls_string(json_object_get_object_member(root, "tokens"), "paper"), ==, "#0e1422");
@@ -521,7 +532,8 @@ test_plan_theme(void){
 static void
 test_plan_options(void){
 	const gchar *cases[][2] = {{"{theme: nope}", "Unknown theme 'nope'; available: editorial"},
-		{"{theme: midnight, extra: 1}", "plan options allow only theme"}, {"{theme: 3}", "plan options allow only theme"}};
+		{"{theme: midnight, extra: 1}", "plan options allow only theme"}, {"{theme: 3}", "plan options allow only theme"},
+		{"{sector: nope}", "Unknown sector 'nope'; available: trades"}, {"{sector: 3}", "and sector"}};
 	guint i;
 	for (i = 0; i < G_N_ELEMENTS(cases); i++) {
 		Fixture fixture;
@@ -538,12 +550,49 @@ test_plan_options(void){
 	}
 }
 
+/* A plan that falls back on the house default is sent back with the reason,
+ * and the sector option deals an identity that fits it. */
+static void
+test_plan_identity(void){
+	Fixture fixture;
+	GPtrArray *prompts;
+	g_autoptr(GError) error = NULL;
+	g_autoptr(LsComponents) components = ls_components_new(&error);
+	JsonObject *options = json_object_new();
+	const gchar *task;
+	g_autofree gchar *wanted = NULL;
+	g_assert_no_error(error);
+	fixture_setup(&fixture, 4, 1);
+	json_object_set_string_member(options, "sector", "food");
+	json_object_set_object_member(step_config(&fixture, 0), "options", options);
+	g_assert_true(ls_spec_step_check(fixture.prompts, fixture.recipe, step_config(&fixture, 0), &error));
+	fixture.provider->default_plan = TRUE;
+	run_plan(&fixture);
+	prompts = prompts_for(fixture.provider, "plan");
+	g_assert_cmpuint(prompts->len, ==, 2);
+	g_assert_nonnull(strstr(g_ptr_array_index(prompts, 1), "house default"));
+	/* The prompt carries exactly the identity the library deals for this site. */
+	{
+		JsonObject *root = ls_recipe_get_root(fixture.recipe);
+		g_autofree gchar *seed = g_strconcat(ls_string(root, "name"), "\n",
+			ls_string(json_object_get_object_member(root, "site"), "brief"), NULL);
+		g_autoptr(JsonObject) identity = ls_components_suggest_identity(components, seed, "food");
+		wanted = g_strdup_printf("\"suggested_palette\":{\"summary\":\"%s\"",
+			ls_string(json_object_get_object_member(identity, "palette"), "summary"));
+	}
+	task = strstr(g_ptr_array_index(prompts, 0), "TASK (JSON)");
+	g_assert_nonnull(task);
+	g_assert_nonnull(strstr(task, wanted));
+	fixture_teardown(&fixture);
+}
+
 int
 main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
 	g_test_add_func("/pages/plan", test_plan);
 	g_test_add_func("/pages/plan-theme", test_plan_theme);
 	g_test_add_func("/pages/plan-options", test_plan_options);
+	g_test_add_func("/pages/plan-identity", test_plan_identity);
 	g_test_add_func("/pages/parallel", test_parallel);
 	g_test_add_func("/pages/sequential", test_sequential);
 	g_test_add_func("/pages/retry-one", test_retry_one);

@@ -11,6 +11,7 @@
     <file>components/base.css</file>
     <file>components/look.css</file>
     <file>components/themes.yaml</file>
+    <file>components/identities.yaml</file>
     <file>components/cards.css</file>
     <file>components/cards.html</file>
     <file>components/catalog.yaml</file>

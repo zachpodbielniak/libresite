@@ -23,6 +23,11 @@ struct _LsComponents {
 	JsonObject *looks;
 	JsonNode *theme_catalog;
 	JsonObject *themes;
+	JsonNode *identity_catalog;
+	JsonObject *sectors;	/* sector name -> description */
+	JsonObject *palettes;
+	JsonObject *typefaces;
+	JsonObject *homes;
 	GPtrArray *order;
 	GHashTable *files;	/* resource-relative name -> contents */
 	JsonNode *utility[G_N_ELEMENTS(utility_routes)];
@@ -44,6 +49,7 @@ ls_components_finalize(GObject *object){
 	g_free(self->plan_schema);
 	g_free(self->themed_plan_schema);
 	g_clear_pointer(&self->theme_catalog, json_node_unref);
+	g_clear_pointer(&self->identity_catalog, json_node_unref);
 	g_free(self->digest);
 	G_OBJECT_CLASS(ls_components_parent_class)->finalize(object);
 }
@@ -709,6 +715,7 @@ copy_theme(JsonObject *theme, JsonObject *plan){
 
 static void check_plan_into(Problems *problems, LsComponents *self, JsonNode *node);
 static gboolean load_themes(LsComponents *self, GChecksum *digest, GError **error);
+static gboolean load_identities(LsComponents *self, GChecksum *digest, GError **error);
 
 /* Every look axis lists named values with a description; the first is the default. */
 static gboolean
@@ -906,7 +913,8 @@ ls_components_new(GError **error){
 			return NULL;
 	}
 	self->plan_schema = build_plan_schema(self, error);
-	if (self->plan_schema == NULL || !load_themes(self, digest, error))
+	if (self->plan_schema == NULL || !load_themes(self, digest, error) ||
+		!load_identities(self, digest, error))
 		return NULL;
 	self->digest = g_strdup(g_checksum_get_string(digest));
 	return (LsComponents *)g_steal_pointer(&self);
@@ -1450,9 +1458,9 @@ check_plan_into(Problems *problems, LsComponents *self, JsonNode *node){
 		problem(problems, "the plan must be a JSON object");
 		return;
 	}
-	if (!ls_object_keys(plan, "|name|tagline|lang|tokens|fonts|brand|nav|action|footer|voice|look|art|pages|"
-		"css|restyle|ui|", NULL))
-		problem(problems, "unknown top-level key; allowed: name, tagline, lang, tokens, fonts, brand, "
+	if (!ls_object_keys(plan, "|name|tagline|lang|character|tokens|fonts|brand|nav|action|footer|voice|look|art|"
+		"pages|css|restyle|ui|", NULL))
+		problem(problems, "unknown top-level key; allowed: name, tagline, lang, character, tokens, fonts, brand, "
 			"nav, action, footer, voice, look, art, pages, css, restyle, ui");
 	check_look(problems, self, plan);
 	check_restyle(problems, self, plan);
@@ -1461,6 +1469,7 @@ check_plan_into(Problems *problems, LsComponents *self, JsonNode *node){
 	check_text(problems, "name", json_object_get_member(plan, "name"), TRUE, 80);
 	check_text(problems, "tagline", json_object_get_member(plan, "tagline"), FALSE, 160);
 	check_text(problems, "voice", json_object_get_member(plan, "voice"), FALSE, 1500);
+	check_text(problems, "character", json_object_get_member(plan, "character"), FALSE, 600);
 	lang = ls_string(plan, "lang");
 	if (json_object_has_member(plan, "lang") && (lang == NULL || strlen(lang) < 2 || strlen(lang) > 35 ||
 		!g_ascii_isalpha(lang[0]) || strspn(lang, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-") != strlen(lang)))
@@ -1732,6 +1741,282 @@ ls_components_apply_theme(LsComponents *self, JsonNode *plan, const gchar *name,
 		return FALSE;
 	}
 	copy_theme(theme, json_node_get_object(plan));
+	return TRUE;
+}
+
+/* ---- Identities ---------------------------------------------------------- */
+
+/* Hue in degrees, saturation and lightness in 0..1 (HSL). */
+static gboolean
+color_hsl(const gchar *text, gdouble *hue, gdouble *saturation, gdouble *lightness){
+	gdouble rgb[3], high, low, delta;
+	if (!parse_color(text, rgb))
+		return FALSE;
+	high = MAX(rgb[0], MAX(rgb[1], rgb[2]));
+	low = MIN(rgb[0], MIN(rgb[1], rgb[2]));
+	delta = high - low;
+	*lightness = (high + low) / 2;
+	*saturation = delta == 0 ? 0 : delta / (1 - fabs(2 * *lightness - 1));
+	if (delta == 0)
+		*hue = 0;
+	else if (high == rgb[0])
+		*hue = 60 * fmod((rgb[1] - rgb[2]) / delta + 6, 6);
+	else if (high == rgb[1])
+		*hue = 60 * ((rgb[2] - rgb[0]) / delta + 2);
+	else
+		*hue = 60 * ((rgb[0] - rgb[1]) / delta + 4);
+	return TRUE;
+}
+
+/* The design a model reaches for when nothing ties it to the business: warm
+ * cream paper with a rust or orange accent. */
+static gboolean
+house_default_colors(JsonObject *tokens){
+	gdouble ph, ps, pl, ah, as, al;
+	if (tokens == NULL || !color_hsl(ls_string(tokens, "paper"), &ph, &ps, &pl) ||
+		!color_hsl(ls_string(tokens, "accent"), &ah, &as, &al))
+		return FALSE;
+	return pl >= 0.88 && ps >= 0.2 && ph >= 20 && ph <= 60 && as >= 0.4 && (ah <= 35 || ah >= 350);
+}
+
+/* The default pairing: Fraunces headlines over Source Sans 3. */
+static gboolean
+house_default_fonts(JsonObject *tokens){
+	const gchar *display = tokens != NULL ? ls_string(tokens, "font_display") : NULL;
+	const gchar *body = tokens != NULL ? ls_string(tokens, "font_body") : NULL;
+	return display != NULL && body != NULL && strstr(display, "Fraunces") != NULL &&
+		strstr(body, "Source Sans") != NULL && strstr(display, "Fraunces") - display < 3;
+}
+
+/* Every fits list names known sectors, at least one. */
+static gboolean
+check_fits(LsComponents *self, JsonObject *entry, const gchar *name, GError **error){
+	JsonArray *fits = member_array(entry, "fits");
+	guint i;
+	if (fits == NULL || json_array_get_length(fits) == 0)
+		return catalog_invalid(error, name, "needs fits: one or more sectors");
+	for (i = 0; i < json_array_get_length(fits); i++) {
+		JsonNode *node = json_array_get_element(fits, i);
+		if (!JSON_NODE_HOLDS_VALUE(node) || json_node_get_value_type(node) != G_TYPE_STRING ||
+			!json_object_has_member(self->sectors, json_node_get_string(node)))
+			return catalog_invalid(error, name, "fits may only name sectors");
+	}
+	return TRUE;
+}
+
+/* A palette or typeface is checked as the design half of a plan: first theme
+ * as the base, then the palette colors and the typeface over it. */
+static gboolean
+check_identity_pair(LsComponents *self, JsonObject *palette, JsonObject *typeface, const gchar *name,
+	GError **error){
+	g_autoptr(GList) themes = json_object_get_members(self->themes);
+	g_autoptr(JsonNode) plan = ls_json_parse("{\"name\": \"Identity\", \"nav\": [{\"href\": \"index.html\", "
+		"\"label\": \"Home\"}], \"art\": [], \"pages\": [{\"path\": \"index.html\", \"kind\": \"home\", "
+		"\"title\": \"Home\", \"description\": \"An identity check page of about sixty characters long.\", "
+		"\"brief\": \"b\"}]}", NULL);
+	JsonObject *tokens;
+	g_autoptr(GList) keys = NULL;
+	GList *key;
+	Problems problems = {g_ptr_array_new_with_free_func(g_free)};
+	gboolean okay;
+	copy_theme(member_object(self->themes, themes->data), json_node_get_object(plan));
+	tokens = member_object(json_node_get_object(plan), "tokens");
+	keys = json_object_get_members(member_object(palette, "tokens"));
+	for (key = keys; key != NULL; key = key->next)
+		json_object_set_member(tokens, key->data,
+			json_node_copy(json_object_get_member(member_object(palette, "tokens"), key->data)));
+	g_list_free(keys);
+	keys = json_object_get_members(member_object(typeface, "tokens"));
+	for (key = keys; key != NULL; key = key->next)
+		json_object_set_member(tokens, key->data,
+			json_node_copy(json_object_get_member(member_object(typeface, "tokens"), key->data)));
+	if (json_object_has_member(json_node_get_object(plan), "fonts"))
+		json_object_remove_member(json_node_get_object(plan), "fonts");
+	if (member_array(typeface, "fonts") != NULL) {
+		g_autofree gchar *fonts = ls_json_encode(json_object_get_member(typeface, "fonts"));
+		json_object_set_member(json_node_get_object(plan), "fonts", ls_json_parse(fonts, NULL));
+	}
+	check_plan_into(&problems, self, plan);
+	okay = problems.messages->len == 0;
+	if (!okay) {
+		g_autofree gchar *why = NULL;
+		g_ptr_array_add(problems.messages, NULL);
+		why = g_strjoinv("; ", (gchar **)problems.messages->pdata);
+		catalog_invalid(error, name, why);
+	}
+	g_ptr_array_unref(problems.messages);
+	return okay;
+}
+
+static gboolean
+load_identities(LsComponents *self, GChecksum *digest, GError **error){
+	const gchar *colors = "|paper|ink|muted|surface|line|accent|accent_ink|";
+	const gchar *type = "|font_display|font_body|font_mono|heading_weight|heading_tracking|heading_leading|heading_case|";
+	g_autofree gchar *text = load_resource(self, digest, "identities.yaml", TRUE, error);
+	JsonObject *root, *first_palette = NULL, *first_typeface = NULL;
+	g_autoptr(GList) names = NULL;
+	GList *name;
+	if (text == NULL || (self->identity_catalog = ls_yaml_parse(text, error)) == NULL)
+		return FALSE;
+	root = JSON_NODE_HOLDS_OBJECT(self->identity_catalog) ? json_node_get_object(self->identity_catalog) : NULL;
+	if (root == NULL || !ls_object_keys(root, "|version|sectors|palettes|typefaces|homes|", NULL) ||
+		(self->sectors = member_object(root, "sectors")) == NULL || json_object_get_size(self->sectors) == 0 ||
+		(self->palettes = member_object(root, "palettes")) == NULL || json_object_get_size(self->palettes) == 0 ||
+		(self->typefaces = member_object(root, "typefaces")) == NULL || json_object_get_size(self->typefaces) == 0 ||
+		(self->homes = member_object(root, "homes")) == NULL || json_object_get_size(self->homes) == 0)
+		return catalog_invalid(error, "identities.yaml", "needs version, sectors, palettes, typefaces and homes");
+	names = json_object_get_members(self->palettes);
+	for (name = names; name != NULL; name = name->next) {
+		JsonObject *palette = member_object(self->palettes, name->data);
+		JsonObject *tokens = member_object(palette, "tokens");
+		if (palette == NULL || !ls_object_keys(palette, "|summary|fits|tokens|", NULL) ||
+			ls_string(palette, "summary") == NULL || tokens == NULL || !ls_object_keys(tokens, colors, NULL) ||
+			json_object_get_size(tokens) != 7)
+			return catalog_invalid(error, name->data, "palettes need a summary, fits and the seven color tokens");
+		if (!check_fits(self, palette, name->data, error))
+			return FALSE;
+		if (house_default_colors(tokens))
+			return catalog_invalid(error, name->data, "a palette may not be the house default it replaces");
+		if (first_palette == NULL)
+			first_palette = palette;
+	}
+	g_list_free(names);
+	names = json_object_get_members(self->typefaces);
+	for (name = names; name != NULL; name = name->next) {
+		JsonObject *typeface = member_object(self->typefaces, name->data);
+		JsonObject *tokens = member_object(typeface, "tokens");
+		if (typeface == NULL || !ls_object_keys(typeface, "|summary|fits|tokens|fonts|", NULL) ||
+			ls_string(typeface, "summary") == NULL || tokens == NULL || !ls_object_keys(tokens, type, NULL) ||
+			json_object_get_size(tokens) != 7)
+			return catalog_invalid(error, name->data, "typefaces need a summary, fits, fonts and the seven type tokens");
+		if (!check_fits(self, typeface, name->data, error))
+			return FALSE;
+		if (house_default_fonts(tokens))
+			return catalog_invalid(error, name->data, "a typeface may not be the house default it replaces");
+		if (first_typeface == NULL)
+			first_typeface = typeface;
+		if (!check_identity_pair(self, first_palette, typeface, name->data, error))
+			return FALSE;
+	}
+	g_list_free(names);
+	names = json_object_get_members(self->palettes);
+	for (name = names; name != NULL; name = name->next)
+		if (!check_identity_pair(self, member_object(self->palettes, name->data), first_typeface, name->data, error))
+			return FALSE;
+	g_list_free(names);
+	names = json_object_get_members(self->homes);
+	for (name = names; name != NULL; name = name->next) {
+		JsonObject *home = member_object(self->homes, name->data);
+		JsonArray *sections = member_array(home, "sections");
+		guint i;
+		if (home == NULL || !ls_object_keys(home, "|sections|fits|", NULL) || sections == NULL ||
+			json_array_get_length(sections) < 2 || json_array_get_length(sections) > 8)
+			return catalog_invalid(error, name->data, "homes need fits and 2 to 8 sections");
+		if (!check_fits(self, home, name->data, error))
+			return FALSE;
+		for (i = 0; i < json_array_get_length(sections); i++) {
+			const gchar *component = json_array_get_string_element(sections, i);
+			if (component == NULL || member_object(self->components, component) == NULL)
+				return catalog_invalid(error, name->data, "home sections may only name catalog components");
+		}
+	}
+	return TRUE;
+}
+
+gchar **
+ls_components_list_sectors(LsComponents *self){
+	g_autoptr(GList) names = NULL;
+	GPtrArray *out = g_ptr_array_new();
+	GList *name;
+	g_return_val_if_fail(LS_IS_COMPONENTS(self), NULL);
+	names = json_object_get_members(self->sectors);
+	for (name = names; name != NULL; name = name->next)
+		g_ptr_array_add(out, g_strdup(name->data));
+	g_ptr_array_add(out, NULL);
+	return (gchar **)g_ptr_array_free(out, FALSE);
+}
+
+/* Pick one entry of @group that fits @sector (any entry without a sector). */
+static const gchar *
+deal(JsonObject *group, const gchar *seed, const gchar *salt, const gchar *sector){
+	g_autoptr(GList) names = json_object_get_members(group);
+	g_autoptr(GPtrArray) fitting = g_ptr_array_new();
+	GList *name;
+	for (name = names; name != NULL; name = name->next) {
+		JsonArray *fits = member_array(member_object(group, name->data), "fits");
+		guint i;
+		gboolean fit = sector == NULL;
+		for (i = 0; !fit && fits != NULL && i < json_array_get_length(fits); i++)
+			fit = g_strcmp0(json_array_get_string_element(fits, i), sector) == 0;
+		if (fit)
+			g_ptr_array_add(fitting, name->data);
+	}
+	if (fitting->len == 0)
+		return NULL;
+	return g_ptr_array_index(fitting, seed_pick(seed, salt, fitting->len));
+}
+
+/* {name, summary, ...members} as a fresh object: a deep copy of the entry. */
+static JsonObject *
+named_copy(JsonObject *group, const gchar *name){
+	g_autoptr(JsonNode) source = json_node_new(JSON_NODE_OBJECT);
+	g_autofree gchar *text = NULL;
+	JsonNode *copy;
+	JsonObject *out;
+	json_node_set_object(source, member_object(group, name));
+	text = ls_json_encode(source);
+	copy = ls_json_parse(text, NULL);
+	out = json_object_ref(json_node_get_object(copy));
+	json_node_unref(copy);
+	json_object_remove_member(out, "fits");
+	json_object_set_string_member(out, "name", name);
+	return out;
+}
+
+JsonObject *
+ls_components_suggest_identity(LsComponents *self, const gchar *seed, const gchar *sector){
+	JsonObject *identity;
+	const gchar *palette, *typeface, *home;
+	g_return_val_if_fail(LS_IS_COMPONENTS(self), NULL);
+	g_return_val_if_fail(seed != NULL, NULL);
+	if (sector != NULL && !json_object_has_member(self->sectors, sector))
+		sector = NULL;
+	palette = deal(self->palettes, seed, "palette", sector);
+	typeface = deal(self->typefaces, seed, "typeface", sector);
+	home = deal(self->homes, seed, "home", sector);
+	identity = json_object_new();
+	if (palette != NULL)
+		json_object_set_object_member(identity, "palette", named_copy(self->palettes, palette));
+	if (typeface != NULL)
+		json_object_set_object_member(identity, "type", named_copy(self->typefaces, typeface));
+	if (home != NULL)
+		json_object_set_object_member(identity, "home", named_copy(self->homes, home));
+	return identity;
+}
+
+gboolean
+ls_components_check_identity(LsComponents *self, JsonNode *plan, JsonObject *identity, GError **error){
+	JsonObject *tokens;
+	JsonObject *palette, *typeface;
+	g_return_val_if_fail(LS_IS_COMPONENTS(self), FALSE);
+	g_return_val_if_fail(plan != NULL, FALSE);
+	g_return_val_if_fail(error == NULL || *error == NULL, FALSE);
+	tokens = JSON_NODE_HOLDS_OBJECT(plan) ? member_object(json_node_get_object(plan), "tokens") : NULL;
+	palette = identity != NULL ? member_object(member_object(identity, "palette"), "tokens") : NULL;
+	typeface = identity != NULL ? member_object(member_object(identity, "type"), "tokens") : NULL;
+	if (house_default_colors(tokens) && (palette == NULL || !house_default_colors(palette))) {
+		g_set_error_literal(error, LS_ERROR, LS_ERROR_VALIDATION,
+			"tokens fall back on the house default (warm cream paper with a rust or orange accent), which "
+			"makes every site look alike; derive the colors from the business's character, starting from "
+			"TASK suggested_palette");
+		return FALSE;
+	}
+	if (house_default_fonts(tokens) && (typeface == NULL || !house_default_fonts(typeface))) {
+		g_set_error_literal(error, LS_ERROR, LS_ERROR_VALIDATION,
+			"fonts fall back on the house default (Fraunces over Source Sans), which makes every site look "
+			"alike; choose type that fits the business, starting from TASK suggested_type");
+		return FALSE;
+	}
 	return TRUE;
 }
 
