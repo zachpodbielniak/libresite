@@ -9,6 +9,7 @@
 struct _LsContext {
 	GObject parent_instance;
 	GHashTable *files;
+	GHashTable *archive;	/* path -> LsArtifact kept by native steps, never exported */
 	gboolean revision;
 };
 G_DEFINE_TYPE(LsContext, ls_context, G_TYPE_OBJECT)
@@ -16,6 +17,7 @@ G_DEFINE_TYPE(LsContext, ls_context, G_TYPE_OBJECT)
 static void
 ls_context_finalize(GObject *object){
 	g_hash_table_unref(LS_CONTEXT(object)->files);
+	g_hash_table_unref(LS_CONTEXT(object)->archive);
 	G_OBJECT_CLASS(ls_context_parent_class)->finalize(object);
 }
 static void
@@ -25,6 +27,8 @@ ls_context_class_init(LsContextClass *klass){
 static void
 ls_context_init(LsContext *self){
 	self->files =
+		g_hash_table_new_full(g_str_hash, g_str_equal, g_free, (GDestroyNotify)ls_artifact_free);
+	self->archive =
 		g_hash_table_new_full(g_str_hash, g_str_equal, g_free, (GDestroyNotify)ls_artifact_free);
 }
 LsContext *
@@ -348,6 +352,16 @@ ls_context_snapshot(LsContext *self){
 		artifact_to_builder(builder, artifact);
 	}
 	json_builder_end_array(builder);
+	/* The archive member appears only when used, so older snapshots stay byte-identical. */
+	if (g_hash_table_size(self->archive) > 0) {
+		g_autoptr(GList) archived =
+			g_list_sort(g_hash_table_get_keys(self->archive), (GCompareFunc)g_strcmp0);
+		json_builder_set_member_name(builder, "archive");
+		json_builder_begin_array(builder);
+		for (item = archived; item != NULL; item = item->next)
+			artifact_to_builder(builder, g_hash_table_lookup(self->archive, item->data));
+		json_builder_end_array(builder);
+	}
 	json_builder_end_object(builder);
 	root = json_builder_get_root(builder);
 	return ls_json_encode(root);
@@ -527,17 +541,99 @@ ls_context_lookup(LsContext *self, const gchar *path){
 	return (const LsArtifact *)g_hash_table_lookup(self->files, path);
 }
 
-/* Replace a complete snapshot atomically, retaining the context's run mode. */
+/* Decode a snapshot archive into @archive with the same path, uniqueness and
+ * size rules as published files. */
+static gboolean
+load_archive(JsonNode *node, GHashTable *archive, GError **error){
+	JsonArray *entries;
+	gsize total = 0;
+	guint i;
+	if (!JSON_NODE_HOLDS_ARRAY(node) || json_array_get_length(json_node_get_array(node)) > 4096)
+		goto invalid;
+	entries = json_node_get_array(node);
+	for (i = 0; i < json_array_get_length(entries); i++) {
+		JsonNode *element = json_array_get_element(entries, i);
+		LsArtifact *artifact;
+		gsize size = 0;
+		const gchar *path;
+		if (!JSON_NODE_HOLDS_OBJECT(element))
+			goto invalid;
+		path = ls_string(json_node_get_object(element), "path");
+		if (path == NULL || !ls_path_valid(path) || ls_string(json_node_get_object(element), "content") == NULL ||
+			g_hash_table_contains(archive, path))
+			goto invalid;
+		artifact = artifact_from_object(json_node_get_object(element), NULL, error);
+		if (artifact == NULL)
+			return FALSE;
+		(void)ls_artifact_get_data(artifact, &size);
+		total += size;
+		g_hash_table_insert(archive, g_strdup(path), artifact);
+		if (total > LS_MAX_PROJECT) {
+			g_set_error_literal(error, LS_ERROR, LS_ERROR_LIMIT, "Archive exceeds project size limit");
+			return FALSE;
+		}
+	}
+	return TRUE;
+invalid:
+	g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID,
+		"Snapshot archive must be a list of unique {path, content} files with safe paths");
+	return FALSE;
+}
+
+/* Replace a complete snapshot atomically, retaining the context's run mode.
+ * The archive travels in snapshots only; generated responses cannot set it. */
 gboolean
 ls_context_restore(LsContext *self, const gchar *snapshot, GError **error){
 	g_autoptr(LsContext) candidate = ls_context_new();
+	g_autoptr(JsonNode) parsed = NULL;
+	g_autofree gchar *files_only = NULL;
 	GHashTable *previous;
-	if (!ls_context_apply(candidate, snapshot, error))
+	JsonNode *archive;
+	parsed = snapshot != NULL ? ls_json_parse(snapshot, error) : NULL;
+	if (parsed == NULL) {
+		if (error != NULL && *error == NULL)
+			g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID, "Snapshot is not JSON");
+		return FALSE;
+	}
+	if (!JSON_NODE_HOLDS_OBJECT(parsed))
+		return ls_context_apply(candidate, snapshot, error);
+	archive = json_object_get_member(json_node_get_object(parsed), "archive");
+	if (archive != NULL) {
+		if (!load_archive(archive, candidate->archive, error))
+			return FALSE;
+		json_object_remove_member(json_node_get_object(parsed), "archive");
+	}
+	files_only = ls_json_encode(parsed);
+	if (!ls_context_apply(candidate, files_only, error))
 		return FALSE;
 	previous = self->files;
 	self->files = candidate->files;
 	candidate->files = previous;
+	previous = self->archive;
+	self->archive = candidate->archive;
+	candidate->archive = previous;
 	return TRUE;
+}
+
+gboolean
+ls_context_archive(LsContext *self, const gchar *path, GError **error){
+	gpointer key = NULL, value = NULL;
+	g_return_val_if_fail(LS_IS_CONTEXT(self), FALSE);
+	g_return_val_if_fail(path != NULL, FALSE);
+	g_return_val_if_fail(error == NULL || *error == NULL, FALSE);
+	if (!g_hash_table_steal_extended(self->files, path, &key, &value)) {
+		g_set_error(error, LS_ERROR, LS_ERROR_INVALID, "Cannot archive %s: no such file", path);
+		return FALSE;
+	}
+	g_hash_table_replace(self->archive, key, value);
+	return TRUE;
+}
+
+const LsArtifact *
+ls_context_lookup_archived(LsContext *self, const gchar *path){
+	g_return_val_if_fail(LS_IS_CONTEXT(self), NULL);
+	g_return_val_if_fail(path != NULL, NULL);
+	return g_hash_table_lookup(self->archive, path);
 }
 
 /* Open children relative to pinned directory descriptors. Never follow symlinks,

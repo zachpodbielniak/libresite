@@ -82,12 +82,14 @@ A replacement catalog is complete: there is no merge with embedded styles, stage
 | =ls_context_new()= | full | Empty store |
 | =ls_context_import(directory, cancellable, error)= | full, nullable | Revision snapshot; rejects symlinks and special files |
 | =ls_context_is_revision(self)= | — | Whether the store was imported |
-| =ls_context_restore(self, snapshot, error)= | — | Replace every file from a JSON snapshot |
+| =ls_context_restore(self, snapshot, error)= | — | Replace every file and the archive from a JSON snapshot |
 | =ls_context_apply(self, response, error)= | — | Transactional files/delete/rename bundle |
 | =ls_context_snapshot(self)= | full | Canonical JSON bundle, sorted by path |
 | =ls_context_prompt_bundle(self, step, error)= | full, nullable | Manifest plus focused UTF-8 contents |
 | =ls_context_export(self, directory, cancellable, error)= | — | Write a new directory |
 | =ls_context_lookup(self, path)= | none, nullable | Borrowed immutable artifact |
+| =ls_context_archive(self, path, error)= | — | Move a file out of the published tree into the archive kept in snapshots and the run record |
+| =ls_context_lookup_archived(self, path)= | none, nullable | Borrowed archived artifact |
 
 | Function | Transfer | Role |
 |----------+----------+------|

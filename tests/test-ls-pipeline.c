@@ -86,7 +86,7 @@ static const gchar *composed_recipe =
 	"        required: [index.html, work.html, start.html, styles.css, site.js, robots.txt, sitemap.xml]\n"
 	"        checks:\n"
 	"          - {path: start.html, contains: ['Nothing is sent.']}\n"
-	"    - {id: specs, type: prune, options: {prefixes: [site/]}}\n";
+	"    - {id: specs, type: prune, options: {prefixes: [site/], archive: true}}\n";
 
 static gchar *
 publish_path(const gchar *output, const gchar *path){

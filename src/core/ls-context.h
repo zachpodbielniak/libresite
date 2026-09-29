@@ -81,6 +81,28 @@ gboolean ls_context_export(
 	LsContext *self, const gchar *directory, GCancellable *cancellable, GError **error
 );
 /**
+ * ls_context_archive:
+ * @self: a context
+ * @path: a stored file path
+ * @error: return location for an error
+ *
+ * Moves a file out of the published tree into the context archive. Archived
+ * files are never exported, but they travel in snapshots, checkpoints and the
+ * published run record, so build sources such as page outlines survive a
+ * build without being served. Archiving a path again replaces its content.
+ * Only native steps archive; generated responses cannot write the archive.
+ * Returns: whether the file was archived; %FALSE when @path is not stored
+ */
+gboolean ls_context_archive(LsContext *self, const gchar *path, GError **error);
+/**
+ * ls_context_lookup_archived:
+ * @self: a context
+ * @path: an archived file path
+ *
+ * Returns: (transfer none) (nullable): the archived file, or %NULL
+ */
+const LsArtifact *ls_context_lookup_archived(LsContext *self, const gchar *path);
+/**
  * ls_context_lookup:
  * @self: an artifact store
  * @path: relative file path

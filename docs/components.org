@@ -22,13 +22,13 @@ pipeline:
     - id: acceptance
       type: validate
       options: {required: [...], checks: [...]}
-    - {id: build-notes, type: prune, options: {prefixes: [site/]}}
+    - {id: build-notes, type: prune, options: {prefixes: [site/], archive: true}}
 #+end_src
 
 1. =plan= makes one model call and stores =site/plan.json=: design tokens, optional web fonts, brand, navigation, footer, voice, the artwork list and every route with a title, meta description and a short brief. Mechanical token misses are repaired natively (see [[*Plan repair][plan repair]]); anything else is rejected with every problem listed, and retried.
 2. =pages= reads the plan and writes one page specification per route and one SVG per planned artwork, all at once on worker threads, up to =options.parallel= (1 to 16, default 6) in flight. Each answer is checked on the step thread; a rejected answer is retried alone with its exact rejection. When every job is accepted the builder composes the whole site, runs the immediately following =validate= steps on the candidate, and sends a failure back to the one page that caused it. Nothing reaches the project until the composed site passes.
 3. =validate= checks the composed files as with any recipe.
-4. =prune= with =prefixes: [site/]= removes the plan and specifications before publication.
+4. =prune= with =prefixes: [site/]= and =archive: true= takes the plan and page specifications out of the published site and keeps them in the run record (=.libresite/run.json=, member =archive=). They are the site's source: editing and theme switching work on them, and the pages are drawn from them.
 
 =pages= with =options.mode: review= is an optional second pass: each writer receives its current specification and returns an improved one. Artwork is kept.
 
@@ -108,7 +108,7 @@ The plan call then uses a schema without tokens, fonts, look, css and restyle, a
 
 =ls_components_apply_theme()= does the same to any plan: it replaces the design half and leaves the rest. Themes are checked like plans when the library loads (contrast, token ranges, fonts, CSS), so applying one can never produce a plan that fails its own checks, and the library's copy is never edited. To add a theme, add an entry with a summary, all tokens, fonts, every look axis and optional css or restyle; =/components/themes= composes the fixture site under every theme.
 
-Recomposing an already delivered site under a new theme needs its plan and page specifications, which the prune step removes before publication. Keeping them for later retheming is not built yet.
+Recomposing an already delivered site needs its plan and page specifications. Composed recipes archive them in the run record (see [[*The pipeline][the pipeline]]); a command that recomposes a delivered site from them is not built yet.
 
 * What the builder produces
 

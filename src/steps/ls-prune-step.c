@@ -42,12 +42,15 @@ gboolean
 ls_prune_step_check_options(JsonObject *options, GError **error){
 	gboolean has_paths = options != NULL && json_object_has_member(options, "paths");
 	gboolean has_prefixes = options != NULL && json_object_has_member(options, "prefixes");
-	if (options == NULL || !ls_object_keys(options, "|paths|prefixes|", NULL) || (!has_paths && !has_prefixes) ||
+	JsonNode *archive = options != NULL ? json_object_get_member(options, "archive") : NULL;
+	if (options == NULL || !ls_object_keys(options, "|paths|prefixes|archive|", NULL) || (!has_paths && !has_prefixes) ||
+		(archive != NULL && json_node_get_value_type(archive) != G_TYPE_BOOLEAN) ||
 		(has_paths && !path_list(options, "paths", FALSE)) ||
 		(has_prefixes && !path_list(options, "prefixes", TRUE))) {
 		g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID,
 			"prune requires options.paths (1..4096 unique safe relative file paths) and/or "
-			"options.prefixes (unique safe directories ending in /), and no other keys");
+			"options.prefixes (unique safe directories ending in /), optionally archive (true or false), "
+			"and no other keys");
 		return FALSE;
 	}
 	return TRUE;
@@ -63,7 +66,9 @@ matches_prefix(JsonArray *prefixes, const gchar *path){
 }
 
 /* Remove listed files through the ordinary transactional delete path. Absent
- * files are skipped, so the step is repeatable on resume and with seeds. */
+ * files are skipped, so the step is repeatable on resume and with seeds. With
+ * archive, the files move to the context archive instead: they leave the
+ * published tree but stay in the run record for later editing. */
 static gboolean
 execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *prompts,
 	LsContext *context, LsProvider *provider, GCancellable *cancellable, GError **error){
@@ -111,10 +116,19 @@ execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *prompts,
 	}
 	json_builder_end_array(builder);
 	json_builder_end_object(builder);
-	root = json_builder_get_root(builder);
-	bundle = ls_json_encode(root);
 	if (g_cancellable_set_error_if_cancelled(cancellable, error))
 		return FALSE;
+	if (json_object_has_member(options, "archive") && json_object_get_boolean_member(options, "archive")) {
+		GHashTableIter iter;
+		gpointer path;
+		g_hash_table_iter_init(&iter, removed);
+		while (g_hash_table_iter_next(&iter, &path, NULL))
+			if (!ls_context_archive(context, path, error))
+				return FALSE;
+		return TRUE;
+	}
+	root = json_builder_get_root(builder);
+	bundle = ls_json_encode(root);
 	return ls_context_apply(context, bundle, error);
 }
 static void

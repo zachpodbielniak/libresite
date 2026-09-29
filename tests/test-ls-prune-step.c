@@ -134,11 +134,65 @@ prune_prefixes(void){
 	g_assert_nonnull(ls_context_lookup(context, "index.html"));
 }
 
+
+/* With archive, pruned files leave the published site but are kept in the
+ * run record, where later editing can find them. */
+static void
+prune_archive(void){
+	g_autoptr(GError) error = NULL;
+	g_autoptr(JsonNode) bad = ls_json_parse("{\"prefixes\":[\"site/\"],\"archive\":\"yes\"}", NULL);
+	g_autoptr(LsRecipe) recipe = ls_recipe_new(
+		"version: 1\nname: prune\nsite: {brief: contract}\n"
+		"seed_artifacts:\n"
+		"  - {path: index.html, content: '<main>Home</main>'}\n"
+		"  - {path: site/plan.json, content: '{\"name\": \"x\"}'}\n"
+		"  - {path: site/pages/index.json, content: '{}'}\n"
+		"pipeline:\n  steps:\n"
+		"    - {id: specs, type: prune, options: {prefixes: [site/], archive: true}}\n", NULL);
+	g_autoptr(LsPrompts) prompts = ls_prompts_new(NULL, NULL);
+	g_autoptr(GObject) provider = g_object_new(unused_provider_get_type(), NULL);
+	g_autoptr(LsPipeline) pipeline = ls_pipeline_new(LS_PROVIDER(provider), prompts);
+	g_autofree gchar *temp = g_dir_make_tmp("libresite-prune-XXXXXX", NULL);
+	g_autofree gchar *output = g_build_filename(temp, "site", NULL);
+	g_autofree gchar *specs = g_build_filename(output, "site", NULL);
+	g_autofree gchar *run = g_build_filename(output, ".libresite", "run.json", NULL);
+	g_autofree gchar *record = NULL;
+	g_autoptr(LsContext) restored = ls_context_new();
+	g_autoptr(JsonNode) parsed = NULL;
+	JsonObject *object;
+	g_assert_false(ls_prune_step_check_options(json_node_get_object(bad), &error));
+	g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+	g_clear_error(&error);
+	g_assert_nonnull(recipe);
+	g_assert_true(ls_pipeline_run(pipeline, recipe, output, FALSE, NULL, &error));
+	g_assert_no_error(error);
+	g_assert_false(g_file_test(specs, G_FILE_TEST_EXISTS));
+	g_assert_true(g_file_get_contents(run, &record, NULL, NULL));
+	parsed = ls_json_parse(record, NULL);
+	object = json_node_get_object(parsed);
+	json_object_remove_member(object, "usage");
+	json_object_remove_member(object, "usage_complete");
+	json_object_remove_member(object, "fingerprint");
+	json_object_remove_member(object, "next");
+	json_object_remove_member(object, "version");
+	{
+		g_autofree gchar *bundle = ls_json_encode(parsed);
+		g_assert_true(ls_context_restore(restored, bundle, &error));
+		g_assert_no_error(error);
+	}
+	g_assert_cmpstr(ls_artifact_get_content(ls_context_lookup_archived(restored, "site/plan.json")), ==,
+		"{\"name\": \"x\"}");
+	g_assert_nonnull(ls_context_lookup_archived(restored, "site/pages/index.json"));
+	g_assert_null(ls_context_lookup(restored, "site/plan.json"));
+	g_assert_nonnull(ls_context_lookup(restored, "index.html"));
+}
+
 int
 main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
 	g_test_add_func("/prune/contract", prune_contract);
 	g_test_add_func("/prune/publish", prune_publish);
 	g_test_add_func("/prune/prefixes", prune_prefixes);
+	g_test_add_func("/prune/archive", prune_archive);
 	return g_test_run();
 }

@@ -68,4 +68,4 @@ pipeline:
             contains: ['<main', 'noindex']
     - id: build-notes
       type: prune
-      options: {prefixes: [site/]}
+      options: {prefixes: [site/], archive: true}

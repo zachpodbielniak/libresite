@@ -274,7 +274,7 @@ load_checkpoint(
 	if (!JSON_NODE_HOLDS_OBJECT(node))
 		goto invalid;
 	object = json_node_get_object(node);
-	if (!ls_object_keys(object, "|version|fingerprint|next|files|usage|usage_complete|", error))
+	if (!ls_object_keys(object, "|version|fingerprint|next|files|archive|usage|usage_complete|", error))
 		return FALSE;
 	if (g_strcmp0(ls_string(object, "fingerprint"), fingerprint) != 0)
 		goto invalid;

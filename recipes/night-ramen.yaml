@@ -41,4 +41,4 @@ pipeline:
             contains: ['mailto:arch7@moth-moon.example']
     - id: build-notes
       type: prune
-      options: {prefixes: [site/]}
+      options: {prefixes: [site/], archive: true}
