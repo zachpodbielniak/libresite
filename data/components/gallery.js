@@ -13,6 +13,8 @@ document.querySelectorAll("[data-lightbox]").forEach(function (list) {
 			big.src = link.getAttribute("href");
 			big.alt = image ? image.alt : "";
 			caption.textContent = text ? text.textContent : "";
+			/* Name the dialog after its picture, never after its close button. */
+			dialog.setAttribute("aria-label", big.alt || caption.textContent);
 			dialog.showModal();
 		});
 	});

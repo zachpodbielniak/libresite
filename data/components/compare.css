@@ -8,8 +8,15 @@
 /* Slider: side by side until the script lays the second picture over the
  * first; the range input wipes between them. */
 @media (min-width: 48rem) { .compare--slider .compare__pair { grid-template-columns: 1fr 1fr; } }
-.compare--slider .compare__pair.is-ready { position: relative; display: block; }
-.compare--slider .is-ready .compare__side:last-of-type { position: absolute; inset: 0; clip-path: inset(0 0 0 var(--split, 50%)); }
+.compare--slider .compare__pair.is-ready { display: grid; grid-template-columns: 1fr; gap: 0; }
+/* Both pictures share one cell and the range gets its own row, so the
+ * overlaid picture can never cover the slider. */
+.compare--slider .is-ready .compare__side { grid-area: 1 / 1; position: relative; }
+.compare--slider .is-ready .compare__side img { height: 100%; object-fit: cover; }
+.compare--slider .is-ready .compare__side:last-of-type { clip-path: inset(0 0 0 var(--split, 50%)); }
+.compare--slider .is-ready .compare__range { grid-area: 2 / 1; }
 .compare--slider .is-ready .compare__side:last-of-type figcaption { position: absolute; right: var(--space-3); bottom: var(--space-3); margin: 0; padding: 0.2em 0.6em; background: var(--paper); }
 .compare--slider .is-ready .compare__side:first-of-type figcaption { position: absolute; left: var(--space-3); bottom: var(--space-3); margin: 0; padding: 0.2em 0.6em; background: var(--paper); }
 .compare--slider .compare__range { display: block; width: 100%; margin-top: var(--space-3); accent-color: var(--accent); }
+/* A thin line marks the split so the edge between pictures is visible. */
+.compare--slider .compare__pair.is-ready::after { content: ""; grid-area: 1 / 1; justify-self: start; width: 2px; margin-left: calc(var(--split, 50%) - 1px); background: var(--paper); box-shadow: 0 0 0 1px color-mix(in srgb, var(--ink) 35%, transparent); pointer-events: none; }

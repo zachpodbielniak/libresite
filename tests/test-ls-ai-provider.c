@@ -36,7 +36,7 @@ argv_index(GStrv argv, const gchar *word){
 /* Run one generation through @adapter; returns the recorded argv and stores
  * the child's CLAUDE_CODE_MAX_OUTPUT_TOKENS ("unset" if absent) in @output_cap. */
 static GStrv
-generate_argv(const AdapterCase *adapter, const gchar *schema, gchar **output_cap){
+generate_argv(const AdapterCase *adapter, const gchar *schema, gchar **output_cap, gchar **input){
 	g_autoptr(GError) error = NULL;
 	g_autoptr(LsAiProvider) transport = NULL;
 	g_autoptr(JsonObject) settings = json_object_new();
@@ -44,12 +44,14 @@ generate_argv(const AdapterCase *adapter, const gchar *schema, gchar **output_ca
 	g_autofree gchar *directory = g_dir_make_tmp("libresite-provider-test-XXXXXX", &error);
 	g_autofree gchar *args_path = NULL;
 	g_autofree gchar *env_path = NULL;
+	g_autofree gchar *input_path = NULL;
 	g_autofree gchar *response = NULL;
 	g_autofree gchar *contents = NULL;
 	g_assert_no_error(error);
 	g_assert_true(g_file_test(script, G_FILE_TEST_IS_EXECUTABLE));
 	args_path = g_build_filename(directory, "args", NULL);
 	env_path = g_build_filename(directory, "env", NULL);
+	input_path = g_build_filename(directory, "input", NULL);
 	/* The operator's own value must not leak into the assertion. */
 	g_unsetenv("CLAUDE_CODE_MAX_OUTPUT_TOKENS");
 	g_assert_true(g_setenv("LS_TEST_ENV", env_path, TRUE));
@@ -59,7 +61,7 @@ generate_argv(const AdapterCase *adapter, const gchar *schema, gchar **output_ca
 	g_assert_true(g_setenv("GROK_PATH", script, TRUE));
 	g_assert_true(g_setenv("AGY_PATH", script, TRUE));
 	g_assert_true(g_setenv("LS_TEST_ARGS", args_path, TRUE));
-	g_assert_true(g_setenv("LS_TEST_INPUT", "/dev/null", TRUE));
+	g_assert_true(g_setenv("LS_TEST_INPUT", input_path, TRUE));
 	g_assert_true(g_setenv("LS_TEST_PROVIDER", adapter->provider, TRUE));
 	transport = ls_ai_provider_new();
 	json_object_set_string_member(settings, "provider", adapter->provider);
@@ -74,6 +76,9 @@ generate_argv(const AdapterCase *adapter, const gchar *schema, gchar **output_ca
 	g_assert_no_error(error);
 	g_assert_true(g_file_get_contents(env_path, output_cap, NULL, &error));
 	g_assert_no_error(error);
+	g_assert_true(g_file_get_contents(input_path, input, NULL, &error));
+	g_assert_no_error(error);
+	(void)g_unlink(input_path);
 	(void)g_unlink(env_path);
 	(void)g_unlink(args_path);
 	(void)g_rmdir(directory);
@@ -105,18 +110,27 @@ static void
 adapter_argv(gconstpointer data){
 	const AdapterCase *adapter = data;
 	g_auto(GStrv) argv = NULL;
-	g_autofree gchar *output_cap = NULL;
+	g_autofree gchar *output_cap = NULL, *input = NULL, *joined = NULL;
 	if (!g_test_subprocess()) {
 		g_test_trap_subprocess(NULL, 0, G_TEST_SUBPROCESS_INHERIT_STDERR);
 		g_test_trap_assert_passed();
 		return;
 	}
-	argv = generate_argv(adapter, NULL, &output_cap);
+	argv = generate_argv(adapter, NULL, &output_cap, &input);
 	g_assert_cmpstr(output_cap, ==, adapter->output_cap);
+	joined = g_strjoinv("\n", argv);
 	if (adapter->bypass == NULL) {
 		assert_answer_only(argv);
+		/* The schema travels as an option; the prompt stays as written. */
+		g_assert_null(strstr(joined, "RESPONSE SCHEMA"));
+		g_assert_null(strstr(input, "RESPONSE SCHEMA"));
 		return;
 	}
+	/* Agents that cannot take --json-schema must still see the schema the
+	 * response protocol promises, in the prompt (argv or stdin). */
+	if (argv_index(argv, "--json-schema") < 0)
+		g_assert_true((strstr(joined, "RESPONSE SCHEMA") != NULL && strstr(joined, "\"files\"") != NULL) ||
+			(strstr(input, "RESPONSE SCHEMA") != NULL && strstr(input, "\"files\"") != NULL));
 	g_assert_cmpint(argv_index(argv, adapter->bypass), >=, 0);
 	g_assert_cmpint(argv_index(argv, "--safe-mode"), ==, -1);
 	g_assert_cmpint(argv_index(argv, "--tools"), ==, -1);
@@ -127,7 +141,8 @@ static void
 schema_override(void){
 	g_auto(GStrv) argv = NULL;
 	g_auto(GStrv) plain = NULL;
-	g_autofree gchar *cap = NULL, *cap_plain = NULL;
+	g_autofree gchar *cap = NULL, *cap_plain = NULL, *input = NULL, *input_plain = NULL;
+	g_autofree gchar *joined = NULL;
 	const gchar *schema = "{\"type\":\"object\",\"required\":[\"sections\"]}";
 	gint index;
 	if (!g_test_subprocess()) {
@@ -135,14 +150,22 @@ schema_override(void){
 		g_test_trap_assert_passed();
 		return;
 	}
-	argv = generate_argv(&adapter_cases[0], schema, &cap);
+	argv = generate_argv(&adapter_cases[0], schema, &cap, &input);
 	index = argv_index(argv, "--json-schema");
 	g_assert_cmpint(index, >=, 0);
 	g_assert_cmpstr(argv[index + 1], ==, schema);
-	plain = generate_argv(&adapter_cases[0], NULL, &cap_plain);
+	plain = generate_argv(&adapter_cases[0], NULL, &cap_plain, &input_plain);
 	index = argv_index(plain, "--json-schema");
 	g_assert_cmpint(index, >=, 0);
 	g_assert_cmpstr(plain[index + 1], !=, schema);
+	g_clear_pointer(&input, g_free);
+	g_clear_pointer(&cap, g_free);
+	g_clear_pointer(&argv, g_strfreev);
+	/* Codex has no schema option: the step's own schema goes in its prompt. */
+	argv = generate_argv(&adapter_cases[3], schema, &cap, &input);
+	g_assert_cmpstr(adapter_cases[3].provider, ==, "codex");
+	joined = g_strjoinv("\n", argv);
+	g_assert_true(strstr(joined, schema) != NULL || strstr(input, schema) != NULL);
 }
 
 int

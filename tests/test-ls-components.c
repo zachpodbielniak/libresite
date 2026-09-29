@@ -280,6 +280,10 @@ test_art(void){
 		"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 1 1\"><rect style=\"fill:url(https://x)\"/></svg>",
 		"<html xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 1 1\"></html>",
 		"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 1 1\"><rect></svg>",
+		/* Lettering renders in fallback fonts inside <img>: none at all. */
+		"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 9 9\"><text x=\"1\" y=\"8\">VN</text></svg>",
+		"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 9 9\"><g><TEXT><tspan>A</tspan></TEXT></g></svg>",
+		"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 9 9\"><svg:textPath href=\"#p\">B</svg:textPath></svg>",
 	};
 	g_autofree gchar *good = NULL;
 	g_autoptr(GError) error = NULL;
@@ -1148,7 +1152,24 @@ test_new_components(void){
 	contains(html, "data-day=\"mon\" data-opens=\"09:00\" data-closes=\"17:00\"");
 	contains(html, "data-compare");
 	contains(html, "<a class=\"gallery__open\" href=\"assets/bench.svg\">");
-	contains(html, "<dialog class=\"gallery__dialog\"");
+	/* The dialog is named after its picture at open time, not "Close". */
+	contains(html, "<dialog class=\"gallery__dialog\"><form method=\"dialog\">");
+	lacks(html, "gallery__dialog\" aria-label");
+	contains(file_content(bundle, "site.js"), "dialog.setAttribute(\"aria-label\", big.alt");
+	/* The slider's range keeps its own grid row, below both stacked pictures. */
+	contains(file_content(bundle, "styles.css"), ".compare--slider .is-ready .compare__range { grid-area: 2 / 1; }");
+	/* Products without pictures keep the grid even beside ones with them. */
+	contains(file_content(bundle, "styles.css"), ".products__list:has(.product-card__art) .product-card:not(:has(.product-card__art))::before");
+	/* Every edge look reserves room below content for the cut it makes. */
+	{
+		const gchar *edges[] = {"wave", "torn", "slant", "steps"};
+		guint e;
+		for (e = 0; e < G_N_ELEMENTS(edges); e++) {
+			g_autofree gchar *rule = g_strdup_printf(".look-edges-%s main > .block:not(:last-child) { padding-bottom: calc(var(--section-space) + ", edges[e]);
+			contains(file_content(bundle, "styles.css"), rule);
+		}
+	}
+	lacks(file_content(bundle, "styles.css"), "compare__side:last-of-type { position: absolute; inset: 0;");
 	/* The drop-down: children under Work, and Work marked when a child is open. */
 	home = file_content(bundle, "journal.html");
 	contains(home, "<li class=\"site-nav__group is-section\"><a href=\"work.html\">Work</a>");

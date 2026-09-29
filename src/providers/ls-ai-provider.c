@@ -51,6 +51,9 @@ configure_answer_only(AiCliClient *client){
  * which the CLI limits to the selected model's own maximum. */
 #define LS_CLAUDE_DEFAULT_OUTPUT 32000
 #define LS_CLAUDE_UNLIMITED_OUTPUT 128000
+/* Protocol glue, not design guidance: labels the schema appended for agents
+ * without a schema option. The RESPONSE PROTOCOL in prompts.yaml refers to it. */
+#define LS_SCHEMA_HEADING "RESPONSE SCHEMA (the reply is one JSON value valid against this JSON Schema):"
 static void
 configure_output_cap(AiCliClient *client, gint64 max_tokens){
 	g_autoptr(GHashTable) environment = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
@@ -94,6 +97,7 @@ generate(
 	const gchar *effort = ls_string(settings, "effort");
 	GList messages = {NULL, NULL, NULL};
 	GParamSpec *schema_property;
+	g_autofree gchar *schema = NULL, *with_schema = NULL;
 	gboolean debug = LS_AI_PROVIDER(self)->debug;
 	gint64 started;
 	if (g_strcmp0(provider, "codex") == 0)
@@ -116,26 +120,27 @@ generate(
 		);
 		return NULL;
 	}
+	/* Component steps answer with a plan, page or artwork object; every
+	 * other step answers with the file-bundle schema. */
+	if (ls_string(settings, "json_schema") != NULL)
+		schema = g_strdup(ls_string(settings, "json_schema"));
+	else {
+		g_autoptr(GBytes) bytes = g_resource_lookup_data(ls_resources_get_resource(),
+			"/org/libresite/file-bundle.schema.json", 0, error);
+		if (bytes == NULL)
+			return NULL;
+		schema = g_strndup(g_bytes_get_data(bytes, NULL), g_bytes_get_size(bytes));
+	}
 	/* Claude Code and Antigravity expose this capability in pinned ai-glib.
-	 * Constrain the invocation; never strip narration from provider output. */
+	 * Constrain the invocation; never strip narration from provider output.
+	 * The others cannot take a schema, so the prompt carries it: the
+	 * response protocol promises the model a schema either way. */
 	schema_property = g_object_class_find_property(G_OBJECT_GET_CLASS(client), "json-schema");
 	if (schema_property != NULL && G_PARAM_SPEC_VALUE_TYPE(schema_property) == G_TYPE_STRING &&
-		(schema_property->flags & G_PARAM_WRITABLE) != 0) {
-		g_autoptr(GBytes) bytes = NULL;
-		g_autofree gchar *schema = NULL;
-		/* Component steps answer with a plan, page or artwork object; every
-		 * other step answers with the file-bundle schema. */
-		if (ls_string(settings, "json_schema") != NULL)
-			schema = g_strdup(ls_string(settings, "json_schema"));
-		else {
-			bytes = g_resource_lookup_data(ls_resources_get_resource(),
-				"/org/libresite/file-bundle.schema.json", 0, error);
-			if (bytes == NULL)
-				return NULL;
-			schema = g_strndup(g_bytes_get_data(bytes, NULL), g_bytes_get_size(bytes));
-		}
+		(schema_property->flags & G_PARAM_WRITABLE) != 0)
 		g_object_set(client, "json-schema", schema, NULL);
-	}
+	else
+		prompt = with_schema = g_strconcat(prompt, "\n\n" LS_SCHEMA_HEADING "\n", schema, "\n", NULL);
 	/* Unattended generation cannot answer TTY or stdin approval prompts.
 	 * Codex exec rejects --ask-for-approval; read-only plus never-ask still
 	 * waits for sandbox-escalation approval and never returns. The other

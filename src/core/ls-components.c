@@ -509,6 +509,14 @@ markup_start(GMarkupParseContext *context, const gchar *element, const gchar **n
 		check->root_ok = check->why->len == 0;
 	}
 	check->depth++;
+	/* Standalone art is shown through <img>, where the site's fonts never
+	 * load: lettering falls back to stray system glyphs. Words belong in the
+	 * page, where they are also readable and translatable. */
+	if (check->svg && (g_str_equal(local, "text") || g_str_equal(local, "tspan") ||
+		g_str_equal(local, "textpath"))) {
+		g_string_printf(check->why, "<%s> is not allowed: artwork has no lettering; put words in the page", element);
+		return;
+	}
 	for (i = 0; forbidden_elements[i] != NULL; i++) {
 		/* Page fragments may link with <a>; standalone art may not link out. */
 		if (g_str_equal(forbidden_elements[i], "a") && !check->svg)

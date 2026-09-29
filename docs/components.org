@@ -189,7 +189,9 @@ Components (60, with 177 variants):
 - =hours= may carry a =schedule= of days with 24-hour opening and closing times, an IANA =timezone= and =open_label= and =closed_label=; =site.js= then shows a live open-now badge computed in the business's zone. A closing time earlier than the opening time runs past midnight. Without the script, or with an unknown zone, the badge stays hidden and the table still shows the hours. =areas= gains a =map= variant: the business at the center with the places in rings.
 - Media and actions: =media=, =gallery= (every picture links to its file; =site.js= opens it in a dialog instead), =carousel= (a swipeable row with previous and next buttons), =compare= (two artworks side by side; the =slider= variant lays one over the other with a range control to wipe between them), =marquee= (a scrolling band that stops for reduced motion and wraps instead), =cta=, =faq=, =form= and the =custom= escape hatch. =libresite --preview pages -r RECIPE= prints the full reference each writer receives.
 
-Scripted components work without JavaScript: =tabs= shows every panel under its own heading until =site.js= turns them into an arrow-key tab list, and =filter=, =form=, =carousel=, =gallery=, the =compare= slider and the open-now badge keep their fallbacks.
+Scripted components work without JavaScript: =tabs= shows every panel under its own heading until =site.js= turns them into an arrow-key tab list, and =filter=, =form=, =carousel=, =gallery=, the =compare= slider and the open-now badge keep their fallbacks. With scripts, the enlarged-picture dialog is named after its picture, and the =compare= slider keeps its range control in its own row below both stacked pictures, with a thin line at the split. When only some =products= have pictures, the others get a quiet frame of the same shape so the grid stays even.
+
+Artwork has no lettering: no words, initials, labels, codes or numbers. It is shown through =<img>=, where the site's web fonts never load, so SVG text renders in fallback glyphs. The artwork check rejects =<text>=, =<tspan>= and =<textPath>=, and that artwork is retried; words belong in the page. Edge looks (wave, torn, slant, steps) cut into the bottom of each section, so those sections get extra bottom padding equal to the cut and their content is never clipped.
 
 The plan's =nav= links may carry =children= (up to 8 planned pages each). On wide screens they open as a drop-down on hover or keyboard focus; in the phone menu they sit indented under their parent, and the parent is marked while one of its pages is open. =/components/every-variant= renders every component in every variant and requires styles for each non-default variant.
 
@@ -280,4 +282,7 @@ A composed recipe's checkpoint fingerprint includes the component library digest
 | 2026-09-28 | trial bicycle workshop, looks and restyles | 61 s | offset buttons, print images, grid texture; no retries |
 | 2026-09-28 | trial bicycle workshop (not bundled), 53-component library | 66 s, then 53 s | services, pricing, contact and detail kinds; services, checklist, specs, compare, areas, contact-card; no retries |
 
-These are single live runs on Claude Code with the default model. They establish timing, not design quality; a person must still look at every delivered site.
+| 2026-09-29 | trades, sealed, on Codex (default model) | 258 s | plan rejected once: Codex never saw the answer schema; pages 75 s |
+| 2026-09-29 | trades, sealed, on Codex, schema in the prompt | 143 s | plan 91 s first try, pages 51 s; no retries |
+
+These are single live runs, on Claude Code with the default model unless noted. They establish timing, not design quality; a person must still look at every delivered site.
