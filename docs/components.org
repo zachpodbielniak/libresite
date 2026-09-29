@@ -65,18 +65,24 @@ Colors and fonts alone do not make two sites different: the skeleton does. The p
 - header: bar, centered, stacked, inverted, floating, glass (sticky frosted bar)
 - nav: underline, pill, caps, slashes
 - heads: plain, rule, numbered, bar, split, giant
-- buttons: square, pill, underline, offset, glass, hud (cut-corner monospace)
-- panels (cards, tiles, boxed items across components): flat, outlined, raised, rules, inverted, glass (frosted translucent, solid without backdrop-filter or with reduced transparency), hud (cut corners, accent brackets, inner glow)
+- buttons: square, pill, underline, offset, glass, hud (cut-corner monospace), chrome (Y2K metallic)
+- panels (cards, tiles, boxed items across components): flat, outlined, raised, rules, inverted, glass (frosted translucent, solid without backdrop-filter or with reduced transparency), hud (cut corners, accent brackets, inner glow), deco (double-rule frames with stepped corners)
 - rhythm: even, bands, divided, tight
 - align: left, center
-- images: plain, rounded, framed, print, shadow
-- footer: simple, big, inverted
+- images: plain, rounded, framed, print, shadow, taped (collage)
+- footer: simple, big, inverted, sitemap (every planned page in columns)
 - texture: none, grain, grid, dots, lines, aurora (fixed color fields for glass), scanlines, stars
-- motion: none, rise (scroll-linked, off for reduced motion)
+- motion: none, rise (scroll-linked), reveal (the opening fades up on load), lift (cards and images lift under the pointer); all off for reduced motion. Pages also cross-fade between each other where browsers support view transitions, except for reduced motion.
 - emphasis (words marked =*like this*= in section headings): accent, italic, highlight, underline, outline, block
 - ornament between sections: none, wave, zigzag, dots, star, rule
 - kicker labels: mono, pill, line, accent, number
 - backdrop behind the opening section: none, glow, mesh, stripes, halftone, block, aurora, horizon (glowing perspective grid)
+- art: open, line, flat, cutpaper, woodcut, blueprint, neon. The artist receives the value's description as TASK style, so every artwork on a site shares one drawing style.
+- photos (supplied photographs): natural, duotone (ink and accent), mono, grain, print (a turned, white-bordered print), soft (an organic rounded mask)
+- edges between sections with their own background: straight, wave, slant, torn, steps
+- lettering: plain, dropcap, smallcaps, gradient (headline fades into the accent), outline
+- links in running text: underline, thick, highlight, wavy, dotted
+- scheme: fixed, auto. Auto writes a second set of working colors for the visitor's other device scheme: a light site gains a dark version and a dark site a light one, derived from the tokens and repaired to the same AA pairs.
 
 Section headings may mark one or two words as =*emphasis*=. The builder renders them as =<em class="em">= inside the heading only; contents entries, breadcrumbs, labels and anchors get the plain text, and unpaired or empty markers stay literal.
 
@@ -96,7 +102,7 @@ The model-facing reference lists the axes and the override rules (LOOK and OVERR
 
 * Themes
 
-A theme is a complete design applied to the whole site: every token, the web fonts, one value for every look axis and signature CSS. =data/components/themes.yaml= bundles eighteen: editorial, brutalist, midnight, soft, civic, atelier, workshop, neon, terracotta, nordic, retro, zine, botanical, noir, sunrise, liquid-glass (frosted glass over dawn color fields), orbital (sci-fi mission control: HUD panels, scanlines, a horizon grid) and hologram (glass panels glowing over a violet starfield). Every component draws only on tokens and look classes, so applying a theme changes every component on every page together, while content, routes, navigation, art and component choices stay as they are.
+A theme is a complete design applied to the whole site: every token, the web fonts, one value for every look axis and signature CSS. =data/components/themes.yaml= bundles twenty-four: swiss (white, black and red, numbered sections, a sitemap footer), magazine (Didone headlines, drop caps, split headings), terminal (phosphor monospace, scanlines), collage (taped images, turned prints, torn edges), deco (green and gold, stepped double frames), chrome (Y2K chrome buttons over a color mesh), editorial, brutalist, midnight, soft, civic, atelier, workshop, neon, terracotta, nordic, retro, zine, botanical, noir, sunrise, liquid-glass (frosted glass over dawn color fields), orbital (sci-fi mission control: HUD panels, scanlines, a horizon grid) and hologram (glass panels glowing over a violet starfield). Every component draws only on tokens and look classes, so applying a theme changes every component on every page together, while content, routes, navigation, art and component choices stay as they are.
 
 Name one on the plan step:
 
@@ -114,7 +120,7 @@ Recomposing an already delivered site needs its plan and page specifications. Co
 
 Without a theme the model designs each site itself, and left alone it converges: five live packages on 2026-09-28 all came back with warm cream paper, a rust accent and Fraunces headlines, and nearly the same home page order. Nothing tied the design to the business. Identities fix that without extra calls.
 
-=data/components/identities.yaml= defines business sectors (trades, food, community, advisory, software, creative, retail and wellness), twenty-one palettes, fifteen type pairings and twelve home-page section sequences, each listing the sectors it fits. Name the sector on the plan step:
+=data/components/identities.yaml= defines business sectors (trades, food, community, advisory, software, creative, retail and wellness), twenty-one palettes, fifteen type pairings and sixteen home-page section sequences, each listing the sectors it fits. Name the sector on the plan step:
 
 #+begin_src yaml
 - {id: plan, type: plan, options: {sector: trades}}
@@ -138,7 +144,7 @@ seed_artifacts:
   - {path: assets/photos/dining-room.jpg, encoding: base64, content: ...}
 #+end_src
 
-The plan step reads each photo's pixel size from its PNG, JPEG or WebP header and passes the list to the model as =supplied_photos=; a photo whose seed is missing or unreadable stops the step before any call. The builder then writes the list into the plan as =photos= (the model cannot change it), so any image slot may use a photo path as well as a planned art path, and pages render it at its real size. The prompts ask the plan to feature the photos where they fit and to draw art only for marks, motifs and diagrams. Photos never grow taller than the screen: a tall one crops to cover its box. Credits are kept in the plan for the operator; licensed stock such as Unsplash and Pexels needs no on-page credit, and the model may still show one in a caption.
+The plan step reads each photo's pixel size from its PNG, JPEG or WebP header and passes the list to the model as =supplied_photos=; a photo whose seed is missing or unreadable stops the step before any call. The builder then writes the list into the plan as =photos= (the model cannot change it), so any image slot may use a photo path as well as a planned art path, and pages render it at its real size. The prompts ask the plan to feature the photos where they fit and to draw art only for marks, motifs and diagrams. Photos never grow taller than the screen: a tall one crops to cover its box, and a photo in the page's opening stays under 60 percent of the screen height so the headline is on the first screen. A photo may name a =focus=, one or two of =left=, =center=, =right=, =top=, =bottom=, or two percentages such as =70% 30%=; the builder writes it as the image's crop position so the subject stays in frame. Credits are kept in the plan for the operator; licensed stock such as Unsplash and Pexels needs no on-page credit, and the model may still show one in a caption.
 
 * What the builder produces
 
@@ -177,9 +183,15 @@ Components (60, with 177 variants):
 - Lists and navigation: =cards= (now also overlap, polaroid and minimal), =bento= (tiles of four sizes), =strip= (horizontally scrolling cards), =entries=, =filter=, =directory= (entries grouped by initial letter with a jump list), =links=, =pager=.
 - Sequences: =features=, =split= (two panels), =steps=, =timeline=, =schedule=.
 - Business facts: =facts=, =numbers=, =specs= (grouped specification sheets), =hours=, =location= (with a drawn map, never an embedded map service), =locations=, =areas= (places served), =contact-card=, =notice=, =menu= (sections, dotted leaders, supplied prices, tags; =all_label= adds a filter button per section, reusing the =filter= script and styles, and every dish stays visible without JavaScript), =services=, =pricing=, =checklist= (included and not included), =team= (supplied people only), =voices= and =partners= (supplied quotes and names only).
-- Media and actions: =media=, =gallery=, =compare= (two artworks side by side), =marquee= (a scrolling band that stops for reduced motion and wraps instead), =cta=, =faq=, =form= and the =custom= escape hatch. =libresite --preview pages -r RECIPE= prints the full reference each writer receives.
+- Shop: =products= (a grid, list or feature layout; with =all_label=, filter buttons are built from the items' categories), =product= (pictures, supplied price, options, specifications and how to buy). The =shop= page kind uses them.
+- Food and classes: =recipe= (facts, ingredients and numbered method), =specials= (a board or list of supplied dishes and prices), =timetable= (days of sessions).
+- Content: =news= (dated posts; with =all_label=, filter buttons from the tags), =jobs= (supplied roles with how to apply), =press= (supplied quotes word for word with the outlet named), =jumpnav= (a bar of links to the page's own sections, sticky or in place).
+- =hours= may carry a =schedule= of days with 24-hour opening and closing times, an IANA =timezone= and =open_label= and =closed_label=; =site.js= then shows a live open-now badge computed in the business's zone. A closing time earlier than the opening time runs past midnight. Without the script, or with an unknown zone, the badge stays hidden and the table still shows the hours. =areas= gains a =map= variant: the business at the center with the places in rings.
+- Media and actions: =media=, =gallery= (every picture links to its file; =site.js= opens it in a dialog instead), =carousel= (a swipeable row with previous and next buttons), =compare= (two artworks side by side; the =slider= variant lays one over the other with a range control to wipe between them), =marquee= (a scrolling band that stops for reduced motion and wraps instead), =cta=, =faq=, =form= and the =custom= escape hatch. =libresite --preview pages -r RECIPE= prints the full reference each writer receives.
 
-Scripted components work without JavaScript: =tabs= shows every panel under its own heading until =site.js= turns them into an arrow-key tab list, and =filter= and =form= keep their fallbacks. =/components/every-variant= renders every component in every variant and requires styles for each non-default variant.
+Scripted components work without JavaScript: =tabs= shows every panel under its own heading until =site.js= turns them into an arrow-key tab list, and =filter=, =form=, =carousel=, =gallery=, the =compare= slider and the open-now badge keep their fallbacks.
+
+The plan's =nav= links may carry =children= (up to 8 planned pages each). On wide screens they open as a drop-down on hover or keyboard focus; in the phone menu they sit indented under their parent, and the parent is marked while one of its pages is open. =/components/every-variant= renders every component in every variant and requires styles for each non-default variant.
 
 ** Slot types
 
@@ -258,6 +270,10 @@ A composed recipe's checkpoint fingerprint includes the component library digest
 | 2026-09-28 | trades, two photos | 63 s | photos beside drawn gauge diagrams; no retries |
 | 2026-09-28 | farside (test), orbital theme, three photos | 45 s | sci-fi HUD look; rerun 41 s after the tall-photo cap; no retries |
 | 2026-09-28 | stillwater (test), liquid-glass theme, three photos | 46 s | frosted glass over aurora fields; no retries |
+| 2026-09-28 | kiln-and-cord (test), retail sector | 51 s | products with category filters, a product page, news, live open-now hours, a drop-down menu; no retries |
+| 2026-09-28 | gilded-hour (test), deco theme | 49 s | specials board, recipe card, live open-now hours, stepped edges; no retries |
+| 2026-09-28 | pale-signal-records (test), hologram theme | 54 s | press quotes, news, glass over a starfield; no retries |
+| 2026-09-28 | farside (test), orbital theme, photo focus | 37 s | duotone photos cropped to the dish; no retries |
 | 2026-09-28 | studio, 53-component library | 60 s | no retries |
 | 2026-09-28 | night-ramen, 53-component library | 51 s | events kind; marquee, statement, notice, big facts; no retries |
 | 2026-09-28 | studio, looks and restyles | 51 s | stacked-free look from its suggestion: caps nav, split heads, outlined panels, framed images, lines texture; showcase used; no retries |

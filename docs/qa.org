@@ -43,3 +43,7 @@ External =http(s)=, =mailto=, =tel=, =data= and fragment-only references are ign
 HTML validity beyond those tokens, WCAG/ARIA conformance, ranking SEO, TypeScript/C compilation, HTTP, or browser rendering. Those belong to the generated project's own tests and a human pass. Native validate remains the recipe-time acceptance gate.
 
 A successful QA report always states that it is not an a11y, SEO, compile or browser audit.
+
+* Screenshots for review
+
+=scripts/screenshots.sh SITE-DIR OUT-DIR [PORT]= serves a published site on 127.0.0.1 and saves phone (390x844) and desktop (1440x1000) screenshots of every top-level page with headless Firefox (=firefox=, =python3=). It is an operator tool for a person's review, like opening the site in a browser; the builder never runs it, and it judges nothing by itself. Lazily loaded images below the first screen may appear blank in a screenshot.
