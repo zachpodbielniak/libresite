@@ -632,10 +632,11 @@ run_pipeline(
 			break;
 		}
 	}
-	/* Composed pages depend on the component library bytes as well. */
+	/* Composed pages depend on the component library bytes as well, the
+	 * archived ones for a sealed order. */
 	for (i = 0; i < json_array_get_length(steps); i++) {
 		if (g_str_equal(ls_string(json_array_get_object_element(steps, i), "type"), "pages")) {
-			g_autoptr(LsComponents) components = ls_components_new(error);
+			g_autoptr(LsComponents) components = ls_recipe_new_components(recipe, error);
 			if (components == NULL)
 				goto out;
 			components_digest = g_strdup(ls_components_get_digest(components));

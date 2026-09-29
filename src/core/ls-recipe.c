@@ -8,6 +8,7 @@ struct _LsRecipe {
 	JsonNode *root;
 	gchar *source;
 	gchar *scaffold_source;
+	gchar *components_source;
 	gint timeout;
 	gboolean unlimited;
 	gchar *provider;
@@ -23,6 +24,7 @@ ls_recipe_finalize(GObject *object){
 	g_clear_pointer(&self->root, json_node_unref);
 	g_free(self->source);
 	g_free(self->scaffold_source);
+	g_free(self->components_source);
 	g_free(self->provider);
 	g_free(self->model);
 	g_clear_pointer(&self->approvals, g_hash_table_unref);
@@ -739,4 +741,30 @@ ls_recipe_set_scaffold_source(LsRecipe *self, const gchar *bundle, GError **erro
 const gchar *
 ls_recipe_get_scaffold_source(LsRecipe *self){
 	return self->scaffold_source;
+}
+
+/* Like the scaffold pin: an input, so it binds checkpoints and never mixes
+ * with newer embedded components. */
+gboolean
+ls_recipe_set_components_source(LsRecipe *self, const gchar *snapshot, GError **error){
+	gchar *copy;
+	if (snapshot != NULL) {
+		g_autoptr(LsComponents) components = ls_components_new_from_snapshot(snapshot, error);
+		if (components == NULL)
+			return FALSE;
+	}
+	copy = g_strdup(snapshot);
+	g_free(self->components_source);
+	self->components_source = copy;
+	return TRUE;
+}
+
+const gchar *
+ls_recipe_get_components_source(LsRecipe *self){
+	return self->components_source;
+}
+
+LsComponents *
+ls_recipe_new_components(LsRecipe *self, GError **error){
+	return ls_components_new_from_snapshot(self->components_source, error);
 }

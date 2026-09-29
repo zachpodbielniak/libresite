@@ -148,7 +148,7 @@ plan_identity(LsComponents *components, LsRecipe *recipe, JsonObject *config){
 }
 
 static gboolean
-check_plan_options(JsonObject *config, GError **error){
+check_plan_options(LsRecipe *recipe, JsonObject *config, GError **error){
 	JsonObject *options = step_options(config);
 	g_autoptr(LsComponents) components = NULL;
 	if (options == NULL)
@@ -160,7 +160,7 @@ check_plan_options(JsonObject *config, GError **error){
 			"plan options allow only theme (a theme name) and sector (a sector name)");
 		return FALSE;
 	}
-	components = ls_components_new(error);
+	components = ls_recipe_new_components(recipe, error);
 	if (components == NULL)
 		return FALSE;
 	if (ls_string(options, "sector") != NULL) {
@@ -436,7 +436,7 @@ plan_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *prom
 			"Component steps generate new sites; revise an existing project with generate steps");
 		return FALSE;
 	}
-	components = ls_components_new(error);
+	components = ls_recipe_new_components(recipe, error);
 	if (components == NULL || !ls_spec_step_check(prompts, recipe, config, error))
 		return FALSE;
 	theme = plan_theme(config);
@@ -864,7 +864,7 @@ pages_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *pro
 			"The pages step needs " PLAN_PATH "; run a plan step first");
 		return FALSE;
 	}
-	components = ls_components_new(error);
+	components = ls_recipe_new_components(recipe, error);
 	if (components == NULL)
 		return FALSE;
 	plan = ls_json_parse(ls_artifact_get_content(artifact), error);
@@ -983,7 +983,7 @@ ls_spec_step_check(LsPrompts *prompts, LsRecipe *recipe, JsonObject *config, GEr
 	guint i, count = 0;
 	if (pages && !ls_pages_step_check_options(options, error))
 		return FALSE;
-	if (!pages && !check_plan_options(config, error))
+	if (!pages && !check_plan_options(recipe, config, error))
 		return FALSE;
 	if (!pages)
 		stages[count++] = ls_string(config, "prompt") != NULL ? ls_string(config, "prompt") : "plan";
@@ -1016,7 +1016,7 @@ ls_spec_step_check(LsPrompts *prompts, LsRecipe *recipe, JsonObject *config, GEr
 
 gchar *
 ls_spec_step_preview(LsPrompts *prompts, LsRecipe *recipe, JsonObject *config, GError **error){
-	g_autoptr(LsComponents) components = ls_components_new(error);
+	g_autoptr(LsComponents) components = ls_recipe_new_components(recipe, error);
 	g_autofree gchar *body = NULL;
 	JsonObject *options = step_options(config);
 	if (components == NULL || !ls_spec_step_check(prompts, recipe, config, error))

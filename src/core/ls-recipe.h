@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
 #pragma once
+#include "core/ls-components.h"
 #include "core/ls-util.h"
 G_BEGIN_DECLS
 typedef struct _LsContext LsContext;
@@ -36,6 +37,34 @@ gboolean ls_recipe_set_scaffold_source(LsRecipe *self, const gchar *bundle, GErr
  * Returns: (transfer none) (nullable): exact archived native bundle, or NULL
  */
 const gchar *ls_recipe_get_scaffold_source(LsRecipe *self);
+/**
+ * ls_recipe_set_components_source:
+ * @self: a recipe
+ * @snapshot: (nullable): archived component library, or NULL for the embedded one
+ * @error: return location for an error
+ *
+ * Configure before preview or execution. Validates and copies the snapshot.
+ * Its digest binds checkpoint identity. Package loading does this for sealed
+ * composed recipes.
+ * Returns: whether the pin was set; failed validation preserves the old pin
+ */
+gboolean ls_recipe_set_components_source(LsRecipe *self, const gchar *snapshot, GError **error);
+/**
+ * ls_recipe_get_components_source:
+ * @self: a recipe
+ * Returns: (transfer none) (nullable): exact archived library, or NULL
+ */
+const gchar *ls_recipe_get_components_source(LsRecipe *self);
+/**
+ * ls_recipe_new_components:
+ * @self: a recipe
+ * @error: return location for an error
+ *
+ * Load the component library this recipe renders with: its archived pin when
+ * set, otherwise the embedded library.
+ * Returns: (transfer full) (nullable): the component library
+ */
+LsComponents *ls_recipe_new_components(LsRecipe *self, GError **error);
 /**
  * ls_recipe_from_form:
  * @json: UTF-8 JSON form with name, site and optional ai/pipeline/seed_artifacts

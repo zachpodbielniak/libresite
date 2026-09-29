@@ -42,6 +42,9 @@ Cancellation after a callback is normalized to =G_IO_ERROR_CANCELLED=. CLI exit 
 | =ls_recipe_get_source(self)= | none | Original YAML bytes used for identity |
 | =ls_recipe_set_scaffold_source(self, bundle, error)= | — | Pin archived native JSON; failure keeps the previous pin |
 | =ls_recipe_get_scaffold_source(self)= | none, nullable | Archived native bundle or NULL for embedded defaults |
+| =ls_recipe_set_components_source(self, snapshot, error)= | — | Pin an archived component library; failure keeps the previous pin |
+| =ls_recipe_get_components_source(self)= | none, nullable | Archived component library or NULL for the embedded one |
+| =ls_recipe_new_components(self, error)= | full, nullable | The library this recipe renders with: its pin, else embedded |
 | =ls_recipe_create_context(self, error)= | full, nullable | Fresh seed context for previews and first runs |
 | =ls_recipe_seed_context(self, context, error)= | — | Overlay seeds onto an imported revision context |
 | =ls_recipe_set_timeout(self, seconds)= | — | Execution-only deadline: =-1= recipe, =0= unlimited, =1..86400= |
@@ -165,6 +168,8 @@ Built-in final types and helpers:
 | Function | Transfer | Role |
 |----------+----------+------|
 | =ls_components_new(error)= | full, nullable | Load and validate the embedded catalog |
+| =ls_components_new_from_snapshot(snapshot, error)= | full, nullable | Load an archived library; never mixes in embedded files |
+| =ls_components_get_snapshot(self)= | full | Every loaded library file as sorted JSON, for sealing |
 | =ls_components_get_digest(self)= | none | SHA-256 of every component byte, bound into checkpoints |
 | =ls_components_describe(self)= | full | Model-facing component reference |
 | =ls_components_suggest_look(self, seed)= | full | Stable per-site starting look: axis name to value |
@@ -193,7 +198,7 @@ CLI plugins export =gboolean ls_plugin_register(LsPipeline *pipeline, GError **e
 
 | Function | Role |
 |----------|------|
-| =ls_package_save(directory, recipe, prompts, error)= | New archive: recipe.yaml, prompts.yaml, package.yaml, optional scaffold.json |
+| =ls_package_save(directory, recipe, prompts, error)= | New archive: recipe.yaml, prompts.yaml, package.yaml, optional scaffold.json and components.json |
 | =ls_package_load(directory, recipe, prompts, error)= | Verify SHA-256 pins; both out-params NULL on failure |
 | =ls_usage_validate(records, error)= | Typed usage array |
 | =ls_usage_price(usage_json, rates_yaml, error)= | Owned JSON price report; refuses incomplete history |

@@ -30,6 +30,7 @@ struct _LsComponents {
 	JsonObject *homes;
 	GPtrArray *order;
 	GHashTable *files;	/* resource-relative name -> contents */
+	GHashTable *snapshot;	/* archived name -> contents; NULL reads the GResource */
 	JsonNode *utility[G_N_ELEMENTS(utility_routes)];
 	gchar *plan_schema;	/* plan.schema.json with catalog enums filled in */
 	gchar *themed_plan_schema;	/* the same without the parts a theme supplies */
@@ -44,6 +45,7 @@ ls_components_finalize(GObject *object){
 	g_clear_pointer(&self->catalog, json_node_unref);
 	g_clear_pointer(&self->order, g_ptr_array_unref);
 	g_clear_pointer(&self->files, g_hash_table_unref);
+	g_clear_pointer(&self->snapshot, g_hash_table_unref);
 	for (i = 0; i < G_N_ELEMENTS(self->utility); i++)
 		g_clear_pointer(&self->utility[i], json_node_unref);
 	g_free(self->plan_schema);
@@ -676,8 +678,19 @@ static gchar *
 load_resource(LsComponents *self, GChecksum *digest, const gchar *name, gboolean required, GError **error){
 	g_autofree gchar *path = g_strconcat(RESOURCE, name, NULL);
 	g_autoptr(GError) local_error = NULL;
-	g_autoptr(GBytes) bytes = g_resource_lookup_data(ls_resources_get_resource(), path, 0, &local_error);
+	g_autoptr(GBytes) bytes = NULL;
+	const gchar *archived;
 	gchar *text;
+	/* An archived library never falls back to newer embedded bytes. */
+	if (self->snapshot != NULL) {
+		archived = g_hash_table_lookup(self->snapshot, name);
+		if (archived != NULL)
+			bytes = g_bytes_new(archived, strlen(archived));
+		else
+			g_set_error(&local_error, LS_ERROR, LS_ERROR_INVALID,
+				"Archived component library lacks %s", name);
+	} else
+		bytes = g_resource_lookup_data(ls_resources_get_resource(), path, 0, &local_error);
 	if (bytes == NULL) {
 		if (required)
 			g_propagate_error(error, g_steal_pointer(&local_error));
@@ -830,8 +843,69 @@ build_plan_schema(LsComponents *self, GError **error){
 	return ls_json_encode(schema);
 }
 
+/* Read an archived {version: 1, files: {name: text}} library into @self. */
+static gboolean
+read_snapshot(LsComponents *self, const gchar *snapshot, GError **error){
+	g_autoptr(JsonNode) node = ls_json_parse(snapshot, error);
+	JsonObject *root, *files;
+	g_autoptr(GList) names = NULL;
+	GList *item;
+	JsonNode *version;
+	if (node == NULL)
+		return FALSE;
+	root = JSON_NODE_HOLDS_OBJECT(node) ? json_node_get_object(node) : NULL;
+	version = root != NULL ? json_object_get_member(root, "version") : NULL;
+	files = root != NULL ? member_object(root, "files") : NULL;
+	if (root == NULL || !ls_object_keys(root, "|version|files|", NULL) || files == NULL ||
+		version == NULL || !JSON_NODE_HOLDS_VALUE(version) ||
+		json_node_get_value_type(version) != G_TYPE_INT64 || json_node_get_int(version) != 1)
+		goto invalid;
+	self->snapshot = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
+	names = json_object_get_members(files);
+	for (item = names; item != NULL; item = item->next) {
+		JsonNode *value = json_object_get_member(files, item->data);
+		if (!JSON_NODE_HOLDS_VALUE(value) || json_node_get_value_type(value) != G_TYPE_STRING)
+			goto invalid;
+		g_hash_table_replace(self->snapshot, g_strdup(item->data), g_strdup(json_node_get_string(value)));
+	}
+	return TRUE;
+invalid:
+	g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID,
+		"Archived component library must be {version: 1, files: {name: text}}");
+	return FALSE;
+}
+
 LsComponents *
 ls_components_new(GError **error){
+	return ls_components_new_from_snapshot(NULL, error);
+}
+
+gchar *
+ls_components_get_snapshot(LsComponents *self){
+	g_autoptr(JsonBuilder) builder = json_builder_new();
+	g_autoptr(JsonNode) node = NULL;
+	g_autoptr(GList) names = NULL;
+	GList *item;
+	g_return_val_if_fail(LS_IS_COMPONENTS(self), NULL);
+	/* Sorted names make equal libraries archive to equal bytes. */
+	names = g_list_sort(g_hash_table_get_keys(self->files), (GCompareFunc)strcmp);
+	json_builder_begin_object(builder);
+	json_builder_set_member_name(builder, "version");
+	json_builder_add_int_value(builder, 1);
+	json_builder_set_member_name(builder, "files");
+	json_builder_begin_object(builder);
+	for (item = names; item != NULL; item = item->next) {
+		json_builder_set_member_name(builder, item->data);
+		json_builder_add_string_value(builder, g_hash_table_lookup(self->files, item->data));
+	}
+	json_builder_end_object(builder);
+	json_builder_end_object(builder);
+	node = json_builder_get_root(builder);
+	return ls_json_encode(node);
+}
+
+LsComponents *
+ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 	g_autoptr(LsComponents) self = g_object_new(LS_TYPE_COMPONENTS, NULL);
 	g_autoptr(GChecksum) digest = g_checksum_new(G_CHECKSUM_SHA256);
 	g_autofree gchar *catalog = NULL;
@@ -840,6 +914,8 @@ ls_components_new(GError **error){
 	JsonObject *root;
 	GList *item;
 	guint i;
+	if (snapshot != NULL && !read_snapshot(self, snapshot, error))
+		return NULL;
 	catalog = load_resource(self, digest, "catalog.yaml", TRUE, error);
 	if (catalog == NULL)
 		return NULL;

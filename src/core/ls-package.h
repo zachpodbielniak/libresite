@@ -10,7 +10,9 @@ G_BEGIN_DECLS
  * @error: return location for an error
  *
  * Publish recipe.yaml, prompts.yaml and package.yaml together, plus a pinned
- * scaffold.json when the recipe uses native scaffolding. Never overwrite
+ * scaffold.json when the recipe uses native scaffolding and a pinned
+ * components.json (components, themes and identities) when it has plan or
+ * pages steps. Never overwrite
  * an existing directory. Call ls_pipeline_validate() first to check modules
  * and prompt names against the pipeline that will execute this package.
  * Returns: whether the complete package was published
@@ -26,7 +28,7 @@ gboolean ls_package_save(
  * @error: return location for an error
  *
  * Verify recipe/catalog SHA-256 digests before parsing either input, and verify
- * any required native scaffold snapshot before returning. Never substitute
+ * any required native scaffold or component library snapshot before returning. Never substitute
  * embedded defaults or fetch missing inputs. A digest detects accidental drift,
  * not an attacker who can rewrite the manifest. Pin the compatible generator
  * and any plugin binaries separately for long-term execution compatibility.

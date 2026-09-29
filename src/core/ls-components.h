@@ -25,6 +25,28 @@ G_DECLARE_FINAL_TYPE(LsComponents, ls_components, LS, COMPONENTS, GObject)
  */
 LsComponents *ls_components_new(GError **error);
 /**
+ * ls_components_new_from_snapshot:
+ * @snapshot: (nullable): archived library from ls_components_get_snapshot(),
+ *   or NULL for the embedded library
+ * @error: return location for an error
+ *
+ * Loads and validates an archived library with the same checks as the
+ * embedded one. Missing files are errors; embedded bytes are never mixed in,
+ * so a sealed order keeps the components, themes and identities it was sold
+ * with. Equal bytes produce an equal digest.
+ * Returns: (transfer full) (nullable): the component library
+ */
+LsComponents *ls_components_new_from_snapshot(const gchar *snapshot, GError **error);
+/**
+ * ls_components_get_snapshot:
+ * @self: a component library
+ *
+ * Serializes every library file this instance loaded, with sorted names, for
+ * archiving beside a sealed recipe.
+ * Returns: (transfer full): JSON text accepted by ls_components_new_from_snapshot()
+ */
+gchar *ls_components_get_snapshot(LsComponents *self);
+/**
  * ls_components_get_digest:
  * @self: a component library
  * Returns: (transfer none): SHA-256 over every embedded component byte, used

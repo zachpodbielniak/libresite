@@ -20,6 +20,14 @@ do
 	then
 		composed=true
 	fi
+	# Composed SKUs keep the exact component library they were sold with.
+	if [[ $composed == true ]]
+	then
+		[[ -s "$test_dir/$sku/components.json" ]]
+		rg -q "^components_sha256: '[0-9a-f]{64}'$" "$test_dir/$sku/package.yaml"
+	else
+		[[ ! -e "$test_dir/$sku/components.json" ]]
+	fi
 	# Composed SKUs render utility pages from the component library, not the scaffold.
 	if [[ "$sku" == application || $composed == true ]]
 	then

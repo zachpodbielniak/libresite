@@ -251,6 +251,96 @@ native_snapshot(void){
 	g_assert_no_error(error);
 }
 
+/* Replace @from with @to inside one archived library file, as JSON text. */
+static gchar *
+edit_library(const gchar *library, const gchar *from, const gchar *to){
+	g_autoptr(GString) text = g_string_new(library);
+	g_assert_nonnull(strstr(library, from));
+	g_string_replace(text, from, to, 1);
+	return g_string_free(g_steal_pointer(&text), FALSE);
+}
+
+/* A sealed composed order keeps the component library it was sold with: a
+ * later library change must neither leak in nor pass for the archived bytes. */
+static void
+components_pin(void){
+	const gchar *woodcut = "Bold carved marks, hatching and high contrast, like a woodcut print.";
+	const gchar *invalid[] = {"[]", "{}", "{\"version\":2,\"files\":{}}",
+		"{\"version\":1,\"files\":{\"catalog.yaml\":7}}", "{\"version\":1,\"files\":{}}"};
+	g_autoptr(GError) error = NULL;
+	g_autofree gchar *yaml = ls_read_text("recipes/studio.yaml", &error);
+	g_autoptr(LsRecipe) recipe = ls_recipe_new(yaml, &error), loaded = NULL, again = NULL;
+	g_autoptr(LsPrompts) prompts = ls_prompts_new(NULL, &error), archived = NULL, archived_again = NULL;
+	g_autoptr(LsComponents) embedded = ls_components_new(&error), pinned = NULL;
+	g_autofree gchar *directory = g_dir_make_tmp("libresite-package-XXXXXX", &error);
+	g_autofree gchar *sale = g_build_filename(directory, "sale", NULL);
+	g_autofree gchar *resale = g_build_filename(directory, "resale", NULL);
+	g_autofree gchar *library_path = g_build_filename(sale, "components.json", NULL);
+	g_autofree gchar *manifest_path = g_build_filename(sale, "package.yaml", NULL);
+	g_autofree gchar *resale_library = g_build_filename(resale, "components.json", NULL);
+	g_autofree gchar *library = NULL, *manifest = NULL, *changed = NULL, *copy = NULL;
+	g_autofree gchar *edited = NULL, *unpinned = NULL;
+	guint i;
+	g_assert_no_error(error);
+	/* The unsealed recipe renders with the embedded library. */
+	g_assert_null(ls_recipe_get_components_source(recipe));
+	g_assert_true(ls_package_save(sale, recipe, prompts, &error));
+	g_assert_true(g_file_get_contents(library_path, &library, NULL, &error));
+	g_assert_true(g_file_get_contents(manifest_path, &manifest, NULL, &error));
+	g_assert_nonnull(strstr(manifest, "components_sha256: '"));
+	g_assert_true(ls_package_load(sale, &loaded, &archived, &error));
+	g_assert_no_error(error);
+	g_assert_cmpstr(ls_recipe_get_components_source(loaded), ==, library);
+	pinned = ls_recipe_new_components(loaded, &error);
+	g_assert_no_error(error);
+	g_assert_cmpstr(ls_components_get_digest(pinned), ==, ls_components_get_digest(embedded));
+	g_clear_object(&pinned);
+	/* Archived bytes win over embedded ones, and re-sealing keeps them. */
+	changed = edit_library(library, woodcut, "Archived woodcut wording.");
+	g_assert_true(ls_recipe_set_components_source(loaded, changed, &error));
+	pinned = ls_recipe_new_components(loaded, &error);
+	g_assert_no_error(error);
+	g_assert_cmpstr(ls_components_get_look_description(pinned, "art", "woodcut"), ==,
+		"Archived woodcut wording.");
+	g_assert_cmpstr(ls_components_get_look_description(embedded, "art", "woodcut"), ==, woodcut);
+	g_assert_cmpstr(ls_components_get_digest(pinned), !=, ls_components_get_digest(embedded));
+	g_assert_true(ls_package_save(resale, loaded, archived, &error));
+	g_assert_true(g_file_get_contents(resale_library, &copy, NULL, &error));
+	g_assert_cmpstr(copy, ==, changed);
+	g_assert_true(ls_package_load(resale, &again, &archived_again, &error));
+	g_assert_cmpstr(ls_recipe_get_components_source(again), ==, changed);
+	/* Bad snapshots fail validation and keep the previous pin. */
+	for (i = 0; i < G_N_ELEMENTS(invalid); i++) {
+		g_assert_false(ls_recipe_set_components_source(loaded, invalid[i], &error));
+		g_assert_nonnull(error);
+		g_clear_error(&error);
+		g_assert_cmpstr(ls_recipe_get_components_source(loaded), ==, changed);
+	}
+	/* A library missing any file never borrows it from the embedded one. */
+	edited = edit_library(library, "\"themes.yaml\"", "\"themes-gone.yaml\"");
+	g_assert_false(ls_recipe_set_components_source(loaded, edited, &error));
+	g_assert_nonnull(error);
+	g_clear_error(&error);
+	/* Tampered, missing or unpinned archives are all rejected. */
+	g_assert_true(g_file_set_contents(library_path, changed, -1, &error));
+	assert_rejected(sale);
+	g_assert_cmpint(g_unlink(library_path), ==, 0);
+	assert_rejected(sale);
+	g_assert_true(g_file_set_contents(library_path, library, -1, &error));
+	{
+		g_autoptr(GRegex) pattern = g_regex_new("components_sha256: '[0-9a-f]+'\\n", 0, 0, &error);
+		unpinned = g_regex_replace_literal(pattern, manifest, -1, 0, "", 0, &error);
+	}
+	g_assert_true(g_file_set_contents(manifest_path, unpinned, -1, &error));
+	assert_rejected(sale);
+	g_assert_true(g_file_set_contents(manifest_path, manifest, -1, &error));
+	g_clear_object(&loaded);
+	g_clear_object(&archived);
+	g_assert_true(ls_package_load(sale, &loaded, &archived, &error));
+	g_assert_no_error(error);
+	remove_tree(directory);
+}
+
 /* Bad metadata fails parsing before any workspace or provider is available. */
 static void
 metadata_invalid(void){
@@ -453,6 +543,7 @@ main(int argc, char **argv){
 	g_test_add_func("/package/tail", package_tail);
 	g_test_add_func("/package/resume", resume_package);
 	g_test_add_func("/package/native-snapshot", native_snapshot);
+	g_test_add_func("/package/components-pin", components_pin);
 	for (i = 0; i < G_N_ELEMENTS(skus); i++) {
 		g_autofree gchar *name = g_strdup_printf("/package/acceptance/%s", skus[i]);
 		g_test_add_data_func(name, skus[i], sku_acceptance);
