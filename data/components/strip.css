@@ -1,10 +1,10 @@
 .strip__row { display: flex; gap: var(--space-4); margin: 0; padding: 0 var(--gutter) var(--space-3); list-style: none; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: var(--gutter); }
-.strip__item { flex: 0 0 min(80vw, 22rem); scroll-snap-align: start; }
+.strip__item { flex: 0 0 min(80cqi, 22rem); scroll-snap-align: start; }
 .strip__item figure { margin: 0; }
 .strip__item img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: var(--radius); background: var(--surface); }
-.strip__item figcaption { display: grid; gap: var(--space-1); margin-top: var(--space-2); }
+.strip__item figcaption { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-1); margin-top: var(--space-2); }
 .strip__title { font-family: var(--font-display); font-weight: 600; }
 .strip__caption { font-size: var(--step--1); }
-.strip--tall .strip__item { flex-basis: min(60vw, 15rem); }
+.strip--tall .strip__item { flex-basis: min(60cqi, 15rem); }
 .strip--tall .strip__item img { aspect-ratio: 3 / 4; }
-@media (min-width: 80rem) { .strip__row { padding-inline: calc((100vw - var(--max-width)) / 2); } }
+@media (min-width: 80rem) { .strip__row { padding-inline: calc((100cqi - var(--max-width)) / 2); } }

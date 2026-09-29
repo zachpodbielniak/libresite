@@ -12,6 +12,7 @@ version: 1
 looks:
   header:
     summary: How the site header is laid out.
+    builder: true
     values:
       bar: Wordmark left, navigation right, a hairline below.
       centered: Wordmark centered above centered navigation.
@@ -58,6 +59,7 @@ looks:
       deco: Double-rule frames with stepped corners, like art deco.
   rhythm:
     summary: How sections follow one another.
+    builder: true
     values:
       even: One continuous page background.
       bands: Alternate sections sit on the surface color, edge to edge.
@@ -65,6 +67,7 @@ looks:
       tight: Sections close up, with less space between them.
   align:
     summary: Alignment of section headings and intros.
+    builder: true
     values:
       left: Left aligned.
       center: Centered headings and intros; content keeps its own alignment.
@@ -79,6 +82,7 @@ looks:
       taped: Slightly turned, held on with strips of tape, like a collage.
   footer:
     summary: Footer layout.
+    builder: true
     values:
       simple: A quiet surface band with links.
       big: An oversized wordmark across the footer.
@@ -98,6 +102,7 @@ looks:
       stars: A faint scatter of tiny stars.
   motion:
     summary: Scroll motion.
+    builder: true
     values:
       none: Static.
       rise: Sections rise gently into view where the browser supports it; never with reduced motion.
@@ -193,6 +198,26 @@ looks:
     values:
       fixed: One scheme, as designed.
       auto: Follows the visitor's device, with a matching dark or light version built from the tokens.
+  frame:
+    summary: The page silhouette, dealt by the builder.
+    builder: true
+    values:
+      top: A header bar across the top and one column below.
+      rail: A fixed navigation rail down the left edge beside the content.
+      split: A sticky left panel with the wordmark, tagline and navigation; content scrolls on the right.
+      center: A narrow centered column under a centered header, like a journal.
+      wide: Edge-to-edge sections with generous margins and no column cap.
+      inset: The whole page sits in a bordered frame on a tinted ground.
+      offset: Content set right of a wide empty margin, with headings hanging into it.
+      masthead: A newspaper masthead with a huge wordmark between rules.
+  headpos:
+    summary: Where section headings sit, dealt by the builder.
+    builder: true
+    values:
+      top: Above the section content.
+      side: In a column beside the section content.
+      center: Centered above the section content.
+      hang: Hanging into the left margin beside the content.
 # Every planned page has a kind. A kind fixes which components may open the
 # page and whether wide screens get an in-page contents sidebar. Only home
 # may open with a hero: interior pages open with a page header.

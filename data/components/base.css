@@ -52,8 +52,14 @@ hr { border: 0; border-top: var(--border) solid var(--line); margin: var(--space
 
 /* Layout primitives. */
 .wrap { width: min(100% - 2 * var(--gutter), var(--max-width)); margin-inline: auto; }
+/* Full-bleed pieces break out to the page column, not the screen: beside a
+ * side menu the column is narrower than the viewport. */
+main, .site-footer { container-type: inline-size; }
 .block { padding-block: var(--section-space); }
 .block + .block { padding-top: 0; }
+/* Sections with no padding of their own (a full cover, a jump bar) still
+ * leave room above the next section's content. */
+.block.cover + .block, .block.jumpnav + .block { padding-top: var(--section-space); }
 .block--bleed + .block, .block + .block--bleed { padding-top: var(--section-space); }
 .prose { max-width: var(--measure); }
 .prose > :last-child { margin-bottom: 0; }
@@ -70,6 +76,11 @@ hr { border: 0; border-top: var(--border) solid var(--line); margin: var(--space
 
 /* Reading pages: an in-page contents column beside the main column. */
 .page-grid { display: grid; gap: var(--space-6); }
+.page-grid > * { min-width: 0; }
+/* Items in component lists and grids may shrink below their longest word;
+ * otherwise one long word widens its grid track and pushes the item over
+ * its neighbours or off the page. */
+main :is(.wrap, [class$="__list"], [class*="__list "], [class$="__grid"], [class*="__inner"], [class$="__box"], [class$="__row"]) > * { min-width: 0; }
 .page-main > .block { padding-block: 0 var(--space-7); }
 .page-main .wrap { width: auto; margin-inline: 0; }
 .page-aside { font-size: var(--step--1); }
@@ -156,7 +167,8 @@ hr { border: 0; border-top: var(--border) solid var(--line); margin: var(--space
 .site-footer ul { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); margin: 0; padding: 0; list-style: none; font-size: var(--step--1); }
 .site-footer a { display: inline-flex; align-items: center; min-height: 44px; }
 @media (min-width: 48rem) {
-	.site-footer__inner { grid-template-columns: 1fr auto; align-items: start; }
+	/* The note keeps a readable width; the links shrink and wrap beside it. */
+	.site-footer__inner { grid-template-columns: minmax(min(100%, 16rem), 1fr) minmax(0, auto); align-items: start; }
 }
 
 /* Forms shared by every form-bearing component. */
@@ -171,7 +183,7 @@ input, select, textarea {
 }
 textarea { min-height: 8em; resize: vertical; }
 input[type="checkbox"] { width: 1.25rem; min-height: 1.25rem; accent-color: var(--accent); }
-.field--check { grid-template-columns: auto 1fr; align-items: center; }
+.field--check { grid-template-columns: auto minmax(0, 1fr); align-items: center; }
 [aria-invalid="true"] { border-color: var(--danger); }
 .field-error { color: var(--danger); font-weight: 600; font-size: var(--step--1); }
 .field-error:empty { display: none; }

@@ -1,9 +1,10 @@
 .block.poster { padding-block: var(--space-7) var(--section-space); overflow: hidden; }
 .poster__frame { position: relative; }
-.poster__title { margin: 0; font-size: clamp(3.5rem, 15vw, 13rem); line-height: 0.86; letter-spacing: calc(var(--heading-tracking) - 0.035em); text-wrap: balance; overflow-wrap: anywhere; }
-.poster__foot { display: grid; gap: var(--space-5); margin-top: var(--space-6); }
+.poster__title { margin: 0; font-size: clamp(3.5rem, 15cqi, 13rem); line-height: 0.86; letter-spacing: calc(var(--heading-tracking) - 0.035em); text-wrap: balance; overflow-wrap: anywhere; }
+.poster__foot { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-5); margin-top: var(--space-6); }
 @media (min-width: 56rem) { .poster__foot { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); align-items: end; } .poster__foot .actions { justify-content: flex-end; margin: 0; } }
 .poster__art { display: none; }
-.poster--stamped .poster__title { display: inline-block; padding: 0.08em 0.18em 0.12em; background: var(--accent); color: var(--accent-ink); transform: rotate(-2.5deg); transform-origin: left bottom; font-size: clamp(3rem, 12vw, 10rem); }
+/* Room below the baseline keeps descenders (p, g, y) inside the stamp. */
+.poster--stamped .poster__title { display: inline-block; margin-top: var(--space-3); padding: 0.06em 0.18em 0.3em; line-height: 1.08; background: var(--accent); color: var(--accent-ink); transform: rotate(-2.5deg); transform-origin: left bottom; font-size: clamp(3rem, 12cqi, 10rem); }
 .poster--backdrop .poster__art { display: block; position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.28; }
 .poster--backdrop .poster__inner { position: relative; padding-block: var(--space-8) var(--space-5); }

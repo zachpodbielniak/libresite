@@ -1,5 +1,5 @@
-.split__panels { display: grid; gap: var(--space-4); }
-@media (min-width: 48rem) { .split__panels { grid-template-columns: 1fr 1fr; } }
+.split__panels { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
+@media (min-width: 48rem) { .split__panels { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
 .split__panel { padding: var(--space-6); background: var(--surface); border-radius: var(--radius); }
 .split__title { font-size: var(--step-3); }
 .split__link { margin: var(--space-4) 0 0; font-weight: 600; }

@@ -7,4 +7,7 @@
 @media (min-width: 56rem) {
 	.figure--aside .figure__item { float: right; width: min(40%, 22rem); margin: 0 0 var(--space-4) var(--space-6); }
 	.figure--aside + .block { clear: none; }
+	/* Only running text wraps beside an aside figure; panels, lists and
+	 * everything else start below it instead of sliding under it. */
+	.figure--aside + .block:not(.block--text, .block--lead) { clear: both; }
 }

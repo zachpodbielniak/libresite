@@ -2,7 +2,7 @@
 .partners--row .partners__list { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-6); }
 .partners--row .partners__name { font-family: var(--font-display); font-weight: 700; font-size: var(--step-2); color: var(--muted); text-transform: var(--heading-case); }
 .partners--row .partners__note { display: none; }
-.partners--columns .partners__list { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); }
-.partners--columns .partners__item { display: grid; gap: var(--space-1); padding-top: var(--space-3); border-top: var(--border) solid var(--line); }
+.partners--columns .partners__list { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(14rem * var(--grid-scale, 1))), 1fr)); }
+.partners--columns .partners__item { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-1); padding-top: var(--space-3); border-top: var(--border) solid var(--line); }
 .partners__name { font-family: var(--font-display); font-weight: 600; }
 .partners__note { font-size: var(--step--1); }

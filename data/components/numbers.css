@@ -1,8 +1,8 @@
-.numbers__list { display: grid; gap: var(--space-6); margin: 0; }
+.numbers__list { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-6); margin: 0; }
 .numbers__item { display: flex; flex-direction: column; }
 .numbers__value { order: -1; margin: 0; font-family: var(--font-display); font-weight: var(--heading-weight); font-size: var(--step-6); line-height: 1; color: var(--accent-text); font-variant-numeric: tabular-nums; }
 .numbers__label { margin-top: var(--space-2); font-family: var(--font-display); font-weight: 600; }
 .numbers__note { margin: var(--space-1) 0 0; font-size: var(--step--1); }
-@media (min-width: 48rem) { .numbers--row .numbers__list { grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); } }
+@media (min-width: 48rem) { .numbers--row .numbers__list { grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(12rem * var(--grid-scale, 1))), 1fr)); } }
 .numbers--big .numbers__item { padding-block: var(--space-5); border-top: var(--border) solid var(--line); }
 .numbers--big .numbers__value { font-size: var(--step-7); }

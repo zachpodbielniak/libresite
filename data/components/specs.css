@@ -1,7 +1,10 @@
-.specs__groups { display: grid; gap: var(--space-6); }
-@media (min-width: 48rem) { .specs--groups .specs__groups { grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); } }
+.specs__groups { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-6); }
+@media (min-width: 48rem) { .specs--groups .specs__groups { grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(16rem * var(--grid-scale, 1))), 1fr)); } }
 .specs__list { margin: 0; }
-.specs__row { display: flex; justify-content: space-between; gap: var(--space-4); padding-block: var(--space-2); border-bottom: var(--border) solid var(--line); }
+.specs__row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-4); padding-block: var(--space-2); border-bottom: var(--border) solid var(--line); }
+/* Label and value share a line while they fit, and wrap rather than
+ * overflow when they do not. */
+.specs__row > * { min-width: 0; overflow-wrap: anywhere; }
 .specs__row dt { color: var(--muted); }
 .specs__row dd { margin: 0; text-align: right; font-weight: 600; }
 .specs--sheet .specs__groups { max-width: calc(var(--measure) * 1.2); }

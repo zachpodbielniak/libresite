@@ -7,7 +7,7 @@
 .filter__status { font-size: var(--step--1); min-height: 1.5em; }
 .filter__empty { padding: var(--space-5); border: var(--border) dashed var(--line-strong); }
 @media (min-width: 48rem) {
-	.filter--grid .filter__list { grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); }
+	.filter--grid .filter__list { grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(17rem * var(--grid-scale, 1))), 1fr)); }
 	.filter--rows .card { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: var(--space-7); align-items: center; padding-block: var(--space-6); border-top: var(--border) solid var(--line); }
-	.filter--rows .card:not(:has(.card__art)) { grid-template-columns: 1fr; }
+	.filter--rows .card:not(:has(.card__art)) { grid-template-columns: minmax(0, 1fr); }
 }

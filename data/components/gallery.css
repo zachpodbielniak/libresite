@@ -1,18 +1,18 @@
-.gallery__list { display: grid; gap: var(--space-4); margin: 0; padding: 0; list-style: none; }
-@media (min-width: 40rem) { .gallery__list { grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); } }
+.gallery__list { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); margin: 0; padding: 0; list-style: none; }
+@media (min-width: 40rem) { .gallery__list { grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(15rem * var(--grid-scale, 1))), 1fr)); } }
 .gallery__item { margin: 0; }
 .gallery__item img { width: 100%; border-radius: var(--radius); background: var(--surface); }
 .gallery__item figcaption { margin-top: var(--space-2); font-size: var(--step--1); }
 @media (min-width: 56rem) { .gallery--mosaic .gallery__list > li:first-child { grid-column: span 2; grid-row: span 2; } }
 .gallery--strip .gallery__list { display: flex; gap: var(--space-4); overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: var(--space-3); }
-.gallery--strip .gallery__list > li { flex: 0 0 min(80vw, 24rem); scroll-snap-align: start; }
+.gallery--strip .gallery__list > li { flex: 0 0 min(80cqi, 24rem); scroll-snap-align: start; }
 .gallery--framed .gallery__item { padding: var(--space-3); background: var(--surface); border: var(--border) solid var(--line-strong); }
 .gallery--framed .gallery__item img { border-radius: 0; }
 @media (min-width: 40rem) { .gallery--masonry .gallery__list { display: block; columns: 3 14rem; column-gap: var(--space-4); } }
 .gallery--masonry .gallery__list > li { break-inside: avoid; margin-bottom: var(--space-4); }
 .gallery__open { display: block; cursor: zoom-in; }
 .gallery__open:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
-.gallery__dialog { max-width: min(92vw, 70rem); padding: var(--space-3); border: 0; border-radius: var(--radius); background: var(--paper); color: var(--ink); }
+.gallery__dialog { max-width: min(92cqi, 70rem); padding: var(--space-3); border: 0; border-radius: var(--radius); background: var(--paper); color: var(--ink); }
 .gallery__dialog::backdrop { background: color-mix(in srgb, #000 78%, transparent); }
 .gallery__dialog img { width: 100%; max-height: 80vh; object-fit: contain; }
 .gallery__caption { margin: var(--space-2) 0 0; font-size: var(--step--1); }

@@ -168,6 +168,8 @@ Built-in final types and helpers:
 | Function | Transfer | Role |
 |----------+----------+------|
 | =ls_components_new(error)= | full, nullable | Load and validate the embedded catalog |
+| =ls_components_deal_structure(self, seed)= | full | Structure genes and dealt variants for a site seed |
+| =ls_components_apply_structure(self, plan, seed, themed)= | — | Replace plan structure and builder-owned look axes with the deal |
 | =ls_components_new_from_snapshot(snapshot, error)= | full, nullable | Load an archived library; never mixes in embedded files |
 | =ls_components_get_snapshot(self)= | full | Every loaded library file as sorted JSON, for sealing |
 | =ls_components_get_digest(self)= | none | SHA-256 of every component byte, bound into checkpoints |

@@ -1,4 +1,4 @@
-.showcase__list { display: grid; gap: var(--space-8); margin: 0; padding: 0; list-style: none; }
+.showcase__list { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-8); margin: 0; padding: 0; list-style: none; }
 .showcase__art { margin: 0; }
 .showcase__art img { width: 100%; background: var(--surface); }
 .showcase__title { font-size: var(--step-4); }
@@ -15,5 +15,7 @@
 	.showcase--overlap .showcase__item:nth-child(even) .showcase__text { grid-column: 1 / 6; }
 	.showcase--overlap .showcase__list { gap: calc(var(--space-8) * 1.6); }
 }
-.showcase--full .showcase__art { margin-inline: calc(50% - 50vw); }
+/* The list spans the column, so each full picture breaks out from it evenly. */
+.showcase--full .showcase__art { margin-inline: calc(50% - 50cqi); }
+.showcase--full .showcase__list, .showcase--full .showcase__item { width: 100%; }
 .showcase--full .showcase__art img { max-height: 80vh; object-fit: cover; }

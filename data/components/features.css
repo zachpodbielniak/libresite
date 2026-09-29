@@ -1,9 +1,9 @@
-.features__list { display: grid; gap: var(--space-6); margin: 0; padding: 0; list-style: none; }
+.features__list { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-6); margin: 0; padding: 0; list-style: none; }
 .features__title { margin-bottom: 0.4em; }
 .features__item > .prose { color: var(--ink); }
 .features__link { margin: var(--space-3) 0 0; font-weight: 600; }
 @media (min-width: 48rem) {
-	.features--columns .features__list { grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); gap: var(--space-7) var(--space-6); }
+	.features--columns .features__list { grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(15rem * var(--grid-scale, 1))), 1fr)); gap: var(--space-7) var(--space-6); }
 }
 .features--columns .features__item { padding-top: var(--space-4); border-top: var(--border-strong) solid var(--ink); }
 .features--numbered .features__list { counter-reset: none; gap: 0; }
@@ -23,5 +23,5 @@
 .features--split .features__item { padding-block: var(--space-4); border-top: var(--border) solid var(--line); }
 .features--split .features__list { gap: 0; }
 .features--boxed .features__list { gap: var(--space-4); }
-@media (min-width: 48rem) { .features--boxed .features__list { grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); } }
+@media (min-width: 48rem) { .features--boxed .features__list { grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(15rem * var(--grid-scale, 1))), 1fr)); } }
 .features--boxed .features__item { padding: var(--space-5); background: var(--surface); border-radius: var(--radius); }

@@ -1,5 +1,5 @@
-.compare__pair { display: grid; gap: var(--space-4); }
-@media (min-width: 48rem) { .compare--side .compare__pair { grid-template-columns: 1fr 1fr; } }
+.compare__pair { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
+@media (min-width: 48rem) { .compare--side .compare__pair { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
 .compare__side { margin: 0; }
 .compare__side img { width: 100%; border-radius: var(--radius); background: var(--surface); }
 .compare__side figcaption { margin-top: var(--space-2); }
@@ -7,8 +7,8 @@
 .compare--stacked .compare__pair { max-width: calc(var(--measure) * 1.3); }
 /* Slider: side by side until the script lays the second picture over the
  * first; the range input wipes between them. */
-@media (min-width: 48rem) { .compare--slider .compare__pair { grid-template-columns: 1fr 1fr; } }
-.compare--slider .compare__pair.is-ready { display: grid; grid-template-columns: 1fr; gap: 0; }
+@media (min-width: 48rem) { .compare--slider .compare__pair { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+.compare--slider .compare__pair.is-ready { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; }
 /* Both pictures share one cell and the range gets its own row, so the
  * overlaid picture can never cover the slider. */
 .compare--slider .is-ready .compare__side { grid-area: 1 / 1; position: relative; }

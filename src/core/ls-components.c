@@ -752,12 +752,15 @@ check_look_definitions(JsonObject *looks, GError **error){
 		g_autoptr(GList) names = NULL;
 		GList *name;
 		JsonNode *plain = definition != NULL ? json_object_get_member(definition, "plain") : NULL;
-		if (definition == NULL || !ls_object_keys(definition, "|summary|values|plain|", NULL) ||
+		JsonNode *builder = definition != NULL ? json_object_get_member(definition, "builder") : NULL;
+		if (definition == NULL || !ls_object_keys(definition, "|summary|values|plain|builder|", NULL) ||
 			ls_string(definition, "summary") == NULL || values == NULL || json_object_get_size(values) < 2)
 			return catalog_invalid(error, axis->data, "look axes need a summary and two or more values");
 		if (plain != NULL && (!JSON_NODE_HOLDS_VALUE(plain) || json_node_get_value_type(plain) != G_TYPE_INT64 ||
 			json_node_get_int(plain) < 0 || json_node_get_int(plain) > 100))
 			return catalog_invalid(error, axis->data, "plain is a percentage from 0 to 100");
+		if (builder != NULL && (!JSON_NODE_HOLDS_VALUE(builder) || json_node_get_value_type(builder) != G_TYPE_BOOLEAN))
+			return catalog_invalid(error, axis->data, "builder is true or false");
 		names = json_object_get_members(values);
 		for (name = names; name != NULL; name = name->next) {
 			const gchar *p;
@@ -1078,6 +1081,182 @@ ls_components_suggest_look(LsComponents *self, const gchar *seed){
 		json_object_set_string_member(look, axis->data, g_list_nth_data(names, pick));
 	}
 	return look;
+}
+
+/* ---- Structure ------------------------------------------------------------ */
+
+/* Continuous structure genes: widths, spacing, scale and how often sections
+ * break the column. Each is dealt from the site seed anywhere in its range,
+ * so no two sites share one page rhythm. */
+typedef struct {
+	const gchar *name;
+	gdouble min, max;
+} Gene;
+
+static const Gene structure_genes[] = {
+	{"width", 46, 108},	/* column cap, rem */
+	{"gutter", 0.9, 5},	/* page edge margin, rem */
+	{"pace", 0.45, 2.1},	/* space between sections, times the density default */
+	{"pad", 0.7, 1.6},	/* inner spacing, times the space token */
+	{"grid", 0.72, 1.5},	/* minimum card width, times the component default */
+	{"scale", 0.85, 1.3},	/* display heading sizes */
+	{"narrow", 0, 0.55},	/* share of reading sections set in a narrow column */
+	{"bleed", 0, 0.5},	/* share of visual sections that run edge to edge */
+	{"band", 0, 0.6},	/* share of sections painted as a tinted, ink or accent band */
+	{"offset", 0, 0.45},	/* share of reading sections pushed right */
+	{"loose", 0, 0.4},	/* share of sections given extra air */
+	{"tight", 0, 0.4}	/* share of sections pulled tight */
+};
+
+/* Components whose templates ignore the variant, so one variant per site
+ * is safe to deal: hero and the home openings keep the model's choice, and
+ * these others render different markup per variant. */
+static const gchar *const fixed_variant_components[] = {"hero", "cover", "poster", "manifesto", "custom",
+	"article", "compare", "form", "features", "callout", "checklist", "columns", "profile", "areas", NULL};
+/* Variants that say something (an order, hidden artwork) rather than only
+ * restyle: never dealt, though the model may still choose them. */
+static const gchar *const meaningful_variants[] = {"cards/numbered", "cards/minimal", NULL};
+
+static gboolean
+in_list(const gchar *const *list, const gchar *name){
+	guint i;
+	for (i = 0; list[i] != NULL; i++)
+		if (g_strcmp0(list[i], name) == 0)
+			return TRUE;
+	return FALSE;
+}
+
+/* A number in [min, max] from @seed and @salt, rounded to hundredths. */
+static gdouble
+seed_range(const gchar *seed, const gchar *salt, gdouble min, gdouble max){
+	gdouble unit = seed_pick(seed, salt, 10001) / 10000.0;
+	return floor((min + (max - min) * unit) * 100 + 0.5) / 100;
+}
+
+JsonObject *
+ls_components_deal_structure(LsComponents *self, const gchar *seed){
+	JsonObject *structure, *variants;
+	g_autoptr(GList) names = NULL;
+	GList *name;
+	guint i;
+	g_return_val_if_fail(LS_IS_COMPONENTS(self), NULL);
+	g_return_val_if_fail(seed != NULL, NULL);
+	structure = json_object_new();
+	for (i = 0; i < G_N_ELEMENTS(structure_genes); i++) {
+		g_autofree gchar *salt = g_strconcat("gene:", structure_genes[i].name, NULL);
+		json_object_set_double_member(structure, structure_genes[i].name,
+			seed_range(seed, salt, structure_genes[i].min, structure_genes[i].max));
+	}
+	variants = json_object_new();
+	names = json_object_get_members(self->components);
+	for (name = names; name != NULL; name = name->next) {
+		g_autoptr(GList) values = json_object_get_members(member_object(member_object(self->components,
+			name->data), "variants"));
+		g_autoptr(GPtrArray) choices = g_ptr_array_new_with_free_func(g_free);
+		g_autofree gchar *salt = g_strconcat("variant:", (const gchar *)name->data, NULL);
+		GList *value;
+		if (in_list(fixed_variant_components, name->data))
+			continue;
+		for (value = values; value != NULL; value = value->next) {
+			g_autofree gchar *pair = g_strdup_printf("%s/%s", (const gchar *)name->data, (const gchar *)value->data);
+			if (!in_list(meaningful_variants, pair))
+				g_ptr_array_add(choices, g_strdup(value->data));
+		}
+		if (choices->len < 2)
+			continue;
+		json_object_set_string_member(variants, name->data,
+			g_ptr_array_index(choices, seed_pick(seed, salt, choices->len)));
+	}
+	json_object_set_object_member(structure, "variants", variants);
+	return structure;
+}
+
+gboolean
+ls_components_apply_structure(LsComponents *self, JsonNode *plan_node, const gchar *seed, gboolean themed){
+	JsonObject *plan, *look;
+	g_autoptr(JsonObject) dealt = NULL;
+	g_autoptr(GList) axes = NULL;
+	GList *axis;
+	g_return_val_if_fail(LS_IS_COMPONENTS(self), FALSE);
+	g_return_val_if_fail(seed != NULL, FALSE);
+	if (plan_node == NULL || !JSON_NODE_HOLDS_OBJECT(plan_node))
+		return FALSE;
+	plan = json_node_get_object(plan_node);
+	look = member_object(plan, "look");
+	if (look == NULL) {
+		look = json_object_new();
+		json_object_set_object_member(plan, "look", look);
+	}
+	dealt = ls_components_suggest_look(self, seed);
+	axes = json_object_get_members(self->looks);
+	for (axis = axes; axis != NULL; axis = axis->next) {
+		JsonObject *definition = member_object(self->looks, axis->data);
+		if (!json_object_has_member(definition, "builder") ||
+			!json_object_get_boolean_member(definition, "builder"))
+			continue;
+		/* A theme keeps the builder axes it names; a plan never does. */
+		if (themed && ls_string(look, axis->data) != NULL)
+			continue;
+		json_object_set_string_member(look, axis->data, ls_string(dealt, axis->data));
+	}
+	if (json_object_has_member(plan, "structure"))
+		json_object_remove_member(plan, "structure");
+	json_object_set_object_member(plan, "structure", ls_components_deal_structure(self, seed));
+	return TRUE;
+}
+
+static gdouble gene(JsonObject *structure, const gchar *name, gdouble fallback);
+
+/* The builder's structure: known genes in range and dealable variants. */
+static void
+check_structure(Problems *problems, LsComponents *self, JsonObject *plan){
+	JsonObject *structure = member_object(plan, "structure"), *variants;
+	g_autoptr(GList) keys = NULL;
+	GList *key;
+	guint i;
+	if (!json_object_has_member(plan, "structure"))
+		return;
+	if (structure == NULL) {
+		problem(problems, "structure must be an object");
+		return;
+	}
+	keys = json_object_get_members(structure);
+	for (key = keys; key != NULL; key = key->next) {
+		JsonNode *value = json_object_get_member(structure, key->data);
+		gboolean known = FALSE;
+		if (g_str_equal(key->data, "variants"))
+			continue;
+		for (i = 0; i < G_N_ELEMENTS(structure_genes); i++) {
+			if (!g_str_equal(key->data, structure_genes[i].name))
+				continue;
+			known = TRUE;
+			if (!JSON_NODE_HOLDS_VALUE(value) || (json_node_get_value_type(value) != G_TYPE_DOUBLE &&
+				json_node_get_value_type(value) != G_TYPE_INT64) ||
+				gene(structure, key->data, structure_genes[i].min - 1) < structure_genes[i].min ||
+				gene(structure, key->data, structure_genes[i].min - 1) > structure_genes[i].max)
+				problem(problems, "structure.%s must be a number from %g to %g", (const gchar *)key->data,
+					structure_genes[i].min, structure_genes[i].max);
+		}
+		if (!known)
+			problem(problems, "structure.%s is not a structure gene", (const gchar *)key->data);
+	}
+	variants = member_object(structure, "variants");
+	if (json_object_has_member(structure, "variants") && variants == NULL)
+		problem(problems, "structure.variants must be an object");
+	if (variants != NULL) {
+		g_autoptr(GList) names = json_object_get_members(variants);
+		GList *name;
+		for (name = names; name != NULL; name = name->next) {
+			JsonObject *component = member_object(self->components, name->data);
+			const gchar *variant = ls_string(variants, name->data);
+			g_autofree gchar *pair = g_strdup_printf("%s/%s", (const gchar *)name->data, variant != NULL ? variant : "");
+			if (component == NULL || in_list(fixed_variant_components, name->data) || variant == NULL ||
+				!json_object_has_member(member_object(component, "variants"), variant) ||
+				in_list(meaningful_variants, pair))
+				problem(problems, "structure.variants.%s must be a variant of a dealable component",
+					(const gchar *)name->data);
+		}
+	}
 }
 
 const gchar *
@@ -1635,10 +1814,11 @@ check_plan_into(Problems *problems, LsComponents *self, JsonNode *node){
 		return;
 	}
 	if (!ls_object_keys(plan, "|name|tagline|lang|character|tokens|fonts|brand|nav|action|footer|voice|look|art|"
-		"photos|pages|css|restyle|ui|", NULL))
+		"photos|pages|css|restyle|ui|structure|", NULL))
 		problem(problems, "unknown top-level key; allowed: name, tagline, lang, character, tokens, fonts, brand, "
 			"nav, action, footer, voice, look, art, photos, pages, css, restyle, ui");
 	check_photos(problems, plan);
+	check_structure(problems, self, plan);
 	check_look(problems, self, plan);
 	check_restyle(problems, self, plan);
 	check_fonts(problems, plan);
@@ -1852,8 +2032,10 @@ load_themes(LsComponents *self, GChecksum *digest, GError **error){
 			return catalog_invalid(error, name->data, "themes need a summary, tokens and look");
 		}
 		axes = json_object_get_members(self->looks);
+		/* Structural axes may be left to the builder's deal. */
 		for (axis = axes; axis != NULL; axis = axis->next)
-			if (ls_string(member_object(theme, "look"), axis->data) == NULL)
+			if (ls_string(member_object(theme, "look"), axis->data) == NULL &&
+				!json_object_has_member(member_object(self->looks, axis->data), "builder"))
 				problem(&problems, "look.%s is missing", (const gchar *)axis->data);
 		plan = ls_json_parse("{\"name\": \"Theme\", \"nav\": [{\"href\": \"index.html\", \"label\": \"Home\"}], "
 			"\"art\": [], \"pages\": [{\"path\": \"index.html\", \"kind\": \"home\", \"title\": \"Home\", "
@@ -3050,8 +3232,58 @@ heading_markup(const gchar *text, gboolean html){
 	return g_string_free(out, FALSE);
 }
 
+/* Which sections may take each per-section treatment. Reading sections can
+ * narrow or shift; visual ones can run edge to edge; text-led ones can be
+ * painted as a band. Everything else keeps the site column. */
+static const gchar *const narrow_sections[] = {"text", "statement", "quote", "faq", "callout", "notice", "lead",
+	"checklist", "cta", "steps", "details", "glossary", "timeline", "press", "voices", "links",
+	"contact-card", "specs", NULL};
+static const gchar *const bleed_sections[] = {"media", "gallery", "statement", "quote", "cta", "marquee",
+	"numbers", "showcase", "carousel", "strip", "bento", "story", "partners", "voices", "columns", "cards", NULL};
+static const gchar *const band_sections[] = {"text", "statement", "quote", "faq", "callout", "lead", "steps",
+	"columns", "numbers", "checklist", "links", "services", "voices", "press", "details", "glossary",
+	"timeline", "facts", "partners", "badges", "cards", "entries", "big-list", "strip", NULL};
+static const gchar *const offset_sections[] = {"text", "statement", "quote", "lead", "faq", "details",
+	"checklist", "links", "callout", NULL};
+
+/* Per-section structure classes, stable for the site, page and position.
+ * The page opening keeps the column; bands never touch each other. */
+static gchar *
+section_classes(Render *render, const gchar *name, guint index, gboolean reading, const gchar **last_tone){
+	JsonObject *structure = member_object(render->plan, "structure");
+	g_autofree gchar *seed = NULL;
+	GString *out;
+	const gchar *tones[] = {"tint", "ink", "accent"};
+	if (structure == NULL || index == 0 || reading)
+		return NULL;
+	seed = g_strdup_printf("%s\n%s\n%u", ls_string(render->plan, "name"), render->page_path, index);
+	out = g_string_new(NULL);
+	if (in_list(bleed_sections, name) && seed_range(seed, "bleed", 0, 1) < gene(structure, "bleed", 0))
+		g_string_append(out, " sec-w-bleed");
+	else if (in_list(narrow_sections, name) && seed_range(seed, "narrow", 0, 1) < gene(structure, "narrow", 0))
+		g_string_append(out, " sec-w-narrow");
+	else if (in_list(offset_sections, name) && seed_range(seed, "offset", 0, 1) < gene(structure, "offset", 0))
+		g_string_append(out, " sec-offset");
+	if (in_list(band_sections, name) && *last_tone == NULL &&
+		seed_range(seed, "band", 0, 1) < gene(structure, "band", 0)) {
+		*last_tone = tones[seed_pick(seed, "tone", G_N_ELEMENTS(tones))];
+		g_string_append_printf(out, " sec-tone sec-tone-%s", *last_tone);
+	} else
+		*last_tone = NULL;
+	if (seed_range(seed, "loose", 0, 1) < gene(structure, "loose", 0))
+		g_string_append(out, " sec-pad-loose");
+	else if (seed_range(seed, "tight", 0, 1) < gene(structure, "tight", 0))
+		g_string_append(out, " sec-pad-tight");
+	if (out->len == 0) {
+		g_string_free(out, TRUE);
+		return NULL;
+	}
+	return g_string_free(out, FALSE);
+}
+
 static void
-render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArray *toc){
+render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArray *toc, gboolean reading){
+	const gchar *last_tone = NULL;
 	g_autoptr(GHashTable) anchors = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 	g_autoptr(GPtrArray) ids = section_ids(sections, anchors);
 	guint i;
@@ -3062,9 +3294,13 @@ render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArra
 		JsonObject *slots = member_object(component, "slots");
 		JsonObject *content = member_object(section, "content");
 		g_autoptr(GList) variants = json_object_get_members(member_object(component, "variants"));
-		const gchar *variant = ls_string(section, "variant") != NULL ? ls_string(section, "variant")
-			: (const gchar *)variants->data;
+		JsonObject *dealt_variants = member_object(member_object(render->plan, "structure"), "variants");
+		const gchar *dealt = dealt_variants != NULL ? ls_string(dealt_variants, name) : NULL;
+		/* A dealt variant restyles the component the same way across the site. */
+		const gchar *variant = dealt != NULL ? dealt : ls_string(section, "variant") != NULL
+			? ls_string(section, "variant") : (const gchar *)variants->data;
 		const gchar *id = g_ptr_array_index(ids, i);
+		g_autofree gchar *structure_classes = section_classes(render, name, i, reading, &last_tone);
 		g_autoptr(JsonObject) view = json_object_new();
 		g_autoptr(JsonObject) wrapper = json_object_new();
 		g_autoptr(GList) keys = json_object_get_members(slots);
@@ -3213,6 +3449,8 @@ render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArra
 		json_object_set_string_member(wrapper, "variant", variant);
 		json_object_set_string_member(wrapper, "id", id);
 		json_object_set_string_member(wrapper, "inner", inner);
+		if (structure_classes != NULL)
+			json_object_set_string_member(wrapper, "structure", structure_classes);
 		json_object_set_boolean_member(wrapper, "labelled", !blank(ls_string(content, "heading")) &&
 			!g_str_equal(name, "custom"));
 		if (g_str_equal(name, "custom")) {
@@ -3374,6 +3612,8 @@ render_page(Render *render, const gchar *path, const gchar *title, const gchar *
 		json_object_set_string_member(mark, "src", ls_string(brand, "mark"));
 		json_object_set_object_member(view, "mark", mark);
 	}
+	if (ls_string(plan, "tagline") != NULL)
+		json_object_set_string_member(view, "tagline", ls_string(plan, "tagline"));
 	append_link_views(nav, member_array(plan, "nav"), path, seen);
 	json_object_set_array_member(view, "nav", nav);
 	if (member_object(plan, "action") != NULL) {
@@ -3383,7 +3623,9 @@ render_page(Render *render, const gchar *path, const gchar *title, const gchar *
 	render->page_path = path;
 	render->page_title = title;
 	render->wordmark = ls_string(view, "wordmark");
-	render_sections(render, member_array(page, "sections"), pieces, toc);
+	/* Reading kinds keep their contents column steady: no per-section breaks. */
+	render_sections(render, member_array(page, "sections"), pieces, toc,
+		kind != NULL && json_object_has_member(kind, "sidebar") && json_object_get_boolean_member(kind, "sidebar"));
 	/* Reading kinds get an in-page contents column once there is enough to navigate. */
 	sidebar = kind != NULL && json_object_has_member(kind, "sidebar") &&
 		json_object_get_boolean_member(kind, "sidebar") && json_array_get_length(toc) >= 2 && pieces->len > 1;
@@ -3434,9 +3676,20 @@ append_number(GString *out, const gchar *name, gdouble value, const gchar *unit)
 		g_ascii_formatd(buffer, sizeof buffer, "%.4g", value), unit);
 }
 
+/* A structure gene, or @fallback when the plan predates structure. */
+static gdouble
+gene(JsonObject *structure, const gchar *name, gdouble fallback){
+	JsonNode *value = structure != NULL ? json_object_get_member(structure, name) : NULL;
+	if (value == NULL || !JSON_NODE_HOLDS_VALUE(value) || (json_node_get_value_type(value) != G_TYPE_DOUBLE &&
+		json_node_get_value_type(value) != G_TYPE_INT64))
+		return fallback;
+	return json_node_get_value_type(value) == G_TYPE_INT64 ? (gdouble)json_node_get_int(value)
+		: json_node_get_double(value);
+}
+
 /* Tokens become custom properties; derived colors keep contrast guarantees. */
 static gchar *
-token_css(JsonObject *tokens){
+token_css(JsonObject *tokens, JsonObject *structure){
 	GString *out = g_string_new(":root {\n");
 	const gchar *paper = ls_string(tokens, "paper");
 	const gchar *accent = ls_string(tokens, "accent");
@@ -3467,7 +3720,7 @@ token_css(JsonObject *tokens){
 		g_string_append_printf(out, "\t--%s: %s;\n", name, ls_string(tokens, font_tokens[i]));
 	}
 	for (step = -1; step <= 7; step++) {
-		gdouble size = base * pow(ratio, step);
+		gdouble size = base * pow(ratio, step) * (step >= 4 && structure != NULL ? gene(structure, "scale", 1) : 1);
 		g_autofree gchar *name = step < 0 ? g_strdup("step--1") : g_strdup_printf("step-%d", step);
 		if (step <= 1)
 			append_number(out, name, size, "rem");
@@ -3475,13 +3728,20 @@ token_css(JsonObject *tokens){
 			gdouble low = MAX(base * ratio, base * pow(ratio, step * 0.55));
 			gdouble slope = (size - low) / 57.5;
 			gchar a[G_ASCII_DTOSTR_BUF_SIZE], b[G_ASCII_DTOSTR_BUF_SIZE], c[G_ASCII_DTOSTR_BUF_SIZE], d[G_ASCII_DTOSTR_BUF_SIZE];
-			g_string_append_printf(out, "\t--%s: clamp(%srem, calc(%srem + %svw), %srem);\n", name,
+			/* Container units: type scales with the content column (main is a
+			 * container), so it fits beside a side menu too; outside main they
+			 * fall back to the viewport. */
+			g_string_append_printf(out, "\t--%s: clamp(%srem, calc(%srem + %scqi), %srem);\n", name,
 				g_ascii_formatd(a, sizeof a, "%.4g", low),
 				g_ascii_formatd(b, sizeof b, "%.4g", low - 22.5 * slope),
 				g_ascii_formatd(c, sizeof c, "%.4g", slope * 100),
 				g_ascii_formatd(d, sizeof d, "%.4g", size));
 		}
 	}
+	/* Structure genes scale what the tokens chose; a plan without them keeps
+	 * the tokens exactly. */
+	if (structure != NULL)
+		space *= gene(structure, "pad", 1);
 	for (i = 0; i < G_N_ELEMENTS(multipliers); i++) {
 		g_autofree gchar *name = g_strdup_printf("space-%u", i + 1);
 		append_number(out, name, space * multipliers[i], "rem");
@@ -3490,11 +3750,26 @@ token_css(JsonObject *tokens){
 	append_number(out, "radius", token_number(tokens, &number_tokens[3]), "px");
 	append_number(out, "border", border, "px");
 	append_number(out, "border-strong", MAX(2, border), "px");
-	append_number(out, "max-width", token_number(tokens, &number_tokens[9]), "rem");
-	g_string_append(out, "\t--gutter: clamp(1rem, 4vw, 2.5rem);\n");
-	g_string_append_printf(out, "\t--section-space: %s;\n", g_str_equal(density, "compact")
-		? "clamp(2.5rem, 5vw, 4rem)" : g_str_equal(density, "airy") ? "clamp(4rem, 10vw, 8.5rem)"
-		: "clamp(3rem, 7vw, 6rem)");
+	if (structure == NULL) {
+		append_number(out, "frame-width", token_number(tokens, &number_tokens[9]), "rem");
+		g_string_append(out, "\t--gutter: clamp(1rem, 4vw, 2.5rem);\n");
+		g_string_append_printf(out, "\t--section-space: %s;\n", g_str_equal(density, "compact")
+			? "clamp(2.5rem, 5vw, 4rem)" : g_str_equal(density, "airy") ? "clamp(4rem, 10vw, 8.5rem)"
+			: "clamp(3rem, 7vw, 6rem)");
+	} else {
+		gdouble pace = gene(structure, "pace", 1) * (g_str_equal(density, "compact") ? 0.8
+			: g_str_equal(density, "airy") ? 1.3 : 1);
+		gdouble gutter = gene(structure, "gutter", 2.5);
+		gchar a[G_ASCII_DTOSTR_BUF_SIZE], b[G_ASCII_DTOSTR_BUF_SIZE], c[G_ASCII_DTOSTR_BUF_SIZE];
+		append_number(out, "frame-width", gene(structure, "width", 76), "rem");
+		g_string_append_printf(out, "\t--gutter: clamp(1rem, %svw, %srem);\n",
+			g_ascii_formatd(a, sizeof a, "%.3g", gutter * 1.6), g_ascii_formatd(b, sizeof b, "%.3g", MAX(1, gutter)));
+		g_string_append_printf(out, "\t--section-space: clamp(%srem, %svw, %srem);\n",
+			g_ascii_formatd(a, sizeof a, "%.3g", 1.5 + pace), g_ascii_formatd(b, sizeof b, "%.3g", 6 * pace),
+			g_ascii_formatd(c, sizeof c, "%.3g", 5 * pace + 1));
+		append_number(out, "grid-scale", gene(structure, "grid", 1), "");
+	}
+	g_string_append(out, "\t--max-width: var(--frame-width);\n");
 	append_number(out, "heading-weight", token_number(tokens, &number_tokens[6]), "");
 	append_number(out, "heading-tracking", token_number(tokens, &number_tokens[7]), "em");
 	append_number(out, "heading-leading", token_number(tokens, &number_tokens[8]), "");
@@ -3563,6 +3838,15 @@ scheme_css(JsonObject *tokens){
 	g_string_append_printf(out, "\t--focus: %s;\n", contrast(accent, ls_string(alt, "paper")) >= 3
 		? accent : ls_string(alt, "ink"));
 	g_string_append_printf(out, "\t--line-strong: %s;\n", ls_string(alt, "muted"));
+	/* The warning red follows the alternate paper, as token_css() does. */
+	{
+		const gchar *alt_paper = ls_string(alt, "paper");
+		gdouble alt_rgb[3];
+		parse_color(alt_paper, alt_rgb);
+		g_string_append_printf(out, "\t--danger: %s;\n", luminance(alt_rgb) > 0.4
+			? (contrast("#a4161a", alt_paper) >= 4.5 ? "#a4161a" : ls_string(alt, "ink"))
+			: (contrast("#ff8a80", alt_paper) >= 4.5 ? "#ff8a80" : ls_string(alt, "ink")));
+	}
 	g_string_append(out, "}\n}\n");
 	return g_string_free(out, FALSE);
 }
@@ -3685,7 +3969,7 @@ ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages
 		"@layer ls-base, ls-components, ls-look;\n"
 		"@media (prefers-reduced-motion: no-preference) { @view-transition { navigation: auto; } }\n");
 	{
-		g_autofree gchar *tokens = token_css(member_object(plan, "tokens"));
+		g_autofree gchar *tokens = token_css(member_object(plan, "tokens"), member_object(plan, "structure"));
 		g_autofree gchar *focus = focus_css(plan);
 		g_string_append(css, tokens);
 		if (g_strcmp0(ls_string(member_object(plan, "look"), "scheme"), "auto") == 0) {

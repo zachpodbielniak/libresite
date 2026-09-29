@@ -901,7 +901,7 @@ test_suggest_look(void){
 	g_autoptr(GList) axes = json_object_get_members(first);
 	GList *axis;
 	guint i;
-	g_assert_cmpuint(g_list_length(axes), ==, 21);
+	g_assert_cmpuint(g_list_length(axes), ==, 23);
 	for (axis = axes; axis != NULL; axis = axis->next)
 		g_assert_cmpstr(ls_string(first, axis->data), ==, ls_string(again, axis->data));
 	json_object_set_object_member(json_node_get_object(plan), "look", json_object_ref(first));
@@ -944,6 +944,8 @@ test_themes(void){
 		/* Mutating the applied copy must not reach the next application. */
 		json_object_set_string_member(tokens, "paper", "#123456");
 		g_assert_true(ls_components_apply_theme(components, plan, names[i], NULL));
+		/* As in the plan step: the theme's look, then the builder's structure. */
+		g_assert_true(ls_components_apply_structure(components, plan, names[i], TRUE));
 		g_assert_true(ls_components_check_plan(components, plan, &error));
 		g_assert_no_error(error);
 		g_assert_null(ls_components_repair_plan(components, plan));
@@ -1240,6 +1242,9 @@ test_scheme_sitemap_focus(void){
 	/* The fixture is light, so auto adds a dark version whose pairs pass AA. */
 	dark = strstr(css, "@media (prefers-color-scheme: dark) {");
 	g_assert_nonnull(dark);
+	/* The warning red is re-derived for the dark paper, not kept from the light. */
+	g_assert_nonnull(strstr(dark, "--danger: "));
+	g_assert_null(strstr(dark, "--danger: #a4161a"));
 	contains(html, "<meta name=\"color-scheme\" content=\"light dark\">");
 	{
 		gchar paper[8] = {0}, ink[8] = {0}, muted[8] = {0};
@@ -1362,6 +1367,215 @@ test_identities(void){
 	}
 }
 
+/* Section class lists of @html, in order, from each <section class="...">. */
+static GPtrArray *
+section_class_lists(const gchar *html){
+	GPtrArray *out = g_ptr_array_new_with_free_func(g_free);
+	const gchar *p = html;
+	while ((p = strstr(p, "<section class=\"")) != NULL) {
+		const gchar *start = p + strlen("<section class=\"");
+		const gchar *end = strchr(start, '"');
+		g_ptr_array_add(out, g_strndup(start, end - start));
+		p = end;
+	}
+	return out;
+}
+
+/* The builder deals structure: stable per seed, in range, different between
+ * sites, authoritative over the model and rendered into every page. */
+static void
+test_structure(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(JsonObject) a = ls_components_deal_structure(components, "Kiln & Cord\nPottery");
+	g_autoptr(JsonObject) again = ls_components_deal_structure(components, "Kiln & Cord\nPottery");
+	g_autoptr(GHashTable) frames = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+	g_autoptr(GHashTable) widths = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+	g_autoptr(GError) error = NULL;
+	g_autoptr(JsonNode) a_node = json_node_new(JSON_NODE_OBJECT);
+	g_autoptr(JsonNode) b_node = json_node_new(JSON_NODE_OBJECT);
+	g_autofree gchar *a_text = NULL, *b_text = NULL;
+	JsonObject *variants;
+	g_autoptr(GList) names = NULL;
+	GList *name;
+	guint i, tones = 0, narrow = 0, bleed = 0;
+	json_node_set_object(a_node, a);
+	json_node_set_object(b_node, again);
+	a_text = ls_json_encode(a_node);
+	b_text = ls_json_encode(b_node);
+	g_assert_cmpstr(a_text, ==, b_text);
+	/* Dealt variants never touch components whose markup or meaning depends on it. */
+	variants = json_object_get_object_member(a, "variants");
+	g_assert_false(json_object_has_member(variants, "hero"));
+	g_assert_false(json_object_has_member(variants, "callout"));
+	g_assert_false(json_object_has_member(variants, "compare"));
+	g_assert_true(json_object_has_member(variants, "page-header"));
+	for (i = 0; i < 120; i++) {
+		g_autofree gchar *seed = g_strdup_printf("site %u", i);
+		g_autoptr(JsonObject) dealt = ls_components_deal_structure(components, seed);
+		g_autoptr(JsonNode) plan = load("plan.json");
+		g_autofree gchar *width = g_strdup_printf("%.2f", json_object_get_double_member(dealt, "width"));
+		g_assert_cmpfloat(json_object_get_double_member(dealt, "width"), >=, 46);
+		g_assert_cmpfloat(json_object_get_double_member(dealt, "width"), <=, 108);
+		g_assert_cmpfloat(json_object_get_double_member(dealt, "scale"), <=, 1.3);
+		g_assert_cmpstr(ls_string(json_object_get_object_member(dealt, "variants"), "cards"), !=, "numbered");
+		g_assert_cmpstr(ls_string(json_object_get_object_member(dealt, "variants"), "cards"), !=, "minimal");
+		g_hash_table_add(widths, g_steal_pointer(&width));
+		g_assert_true(ls_components_apply_structure(components, plan, seed, FALSE));
+		g_assert_true(ls_components_check_plan(components, plan, &error));
+		g_assert_no_error(error);
+		g_hash_table_add(frames, g_strdup(ls_string(json_object_get_object_member(
+			json_node_get_object(plan), "look"), "frame")));
+	}
+	/* Every frame gets dealt, and widths are continuous, not a few presets. */
+	g_assert_cmpuint(g_hash_table_size(frames), ==, 8);
+	g_assert_cmpuint(g_hash_table_size(widths), >, 100);
+	names = json_object_get_members(variants);
+	for (name = names; name != NULL; name = name->next)
+		g_assert_nonnull(ls_string(variants, name->data));
+	{
+		/* The model's structural choices are replaced; its style choices stay. */
+		g_autoptr(JsonNode) plan = load("plan.json");
+		JsonObject *root = json_node_get_object(plan);
+		JsonObject *look = json_object_get_object_member(root, "look");
+		g_autoptr(JsonObject) dealt = ls_components_suggest_look(components, "structure seed");
+		json_object_set_string_member(look, "buttons", "pill");
+		json_object_set_member(root, "structure", json("{'width': 999}"));
+		g_assert_true(ls_components_apply_structure(components, plan, "structure seed", FALSE));
+		look = json_object_get_object_member(root, "look");
+		g_assert_cmpstr(ls_string(look, "buttons"), ==, "pill");
+		g_assert_cmpstr(ls_string(look, "frame"), ==, ls_string(dealt, "frame"));
+		g_assert_cmpstr(ls_string(look, "header"), ==, ls_string(dealt, "header"));
+		g_assert_cmpstr(ls_string(look, "motion"), ==, ls_string(dealt, "motion"));
+		g_assert_cmpfloat(json_object_get_double_member(json_object_get_object_member(root, "structure"), "width"), <=, 108);
+		/* A theme keeps the builder axes it names. */
+		json_object_set_string_member(look, "header", "stacked");
+		json_object_remove_member(look, "frame");
+		g_assert_true(ls_components_apply_structure(components, plan, "structure seed", TRUE));
+		g_assert_cmpstr(ls_string(look, "header"), ==, "stacked");
+		g_assert_cmpstr(ls_string(look, "frame"), ==, ls_string(dealt, "frame"));
+	}
+	{
+		/* Out-of-range genes, unknown genes and undealable variants are refused. */
+		const gchar *bad[] = {"{'width': 20}", "{'shape': 1}", "{'pace': 'wide'}", "{'variants': {'callout': 'warning'}}",
+			"{'variants': {'cards': 'numbered'}}", "{'variants': {'cards': 'nope'}}", "{'variants': 3}", "[1]"};
+		for (i = 0; i < G_N_ELEMENTS(bad); i++) {
+			g_autoptr(JsonNode) plan = load("plan.json");
+			g_autoptr(GError) plan_error = NULL;
+			json_object_set_member(json_node_get_object(plan), "structure", json(bad[i]));
+			if (ls_components_check_plan(components, plan, &plan_error))
+				g_error("structure case %u was accepted", i);
+			g_assert_nonnull(strstr(plan_error->message, "structure"));
+		}
+	}
+	/* Rendering: tokens follow the genes; sections break the column, but the
+	 * opening never does and two bands never touch. */
+	for (i = 0; i < 40; i++) {
+		g_autoptr(JsonNode) plan = load("plan.json");
+		g_autoptr(JsonObject) pages = fixture_pages();
+		g_autoptr(JsonNode) bundle = NULL;
+		g_autofree gchar *seed = g_strdup_printf("render %u", i);
+		g_autofree gchar *text = NULL;
+		JsonObject *structure;
+		const gchar *page_names[] = {"index.html", "work.html", "start.html", "visit.html"};
+		guint p;
+		g_assert_true(ls_components_apply_structure(components, plan, seed, FALSE));
+		structure = json_object_get_object_member(json_node_get_object(plan), "structure");
+		/* Push the section genes to their maxima so treatments certainly occur. */
+		json_object_set_double_member(structure, "band", 0.6);
+		json_object_set_double_member(structure, "narrow", 0.55);
+		json_object_set_double_member(structure, "bleed", 0.5);
+		text = ls_components_compose(components, plan, pages, NULL, &error);
+		g_assert_no_error(error);
+		bundle = ls_json_parse(text, NULL);
+		contains(file_content(bundle, "styles.css"), "--grid-scale:");
+		contains(file_content(bundle, "styles.css"), "--max-width: var(--frame-width);");
+		for (p = 0; p < G_N_ELEMENTS(page_names); p++) {
+			const gchar *html = file_content(bundle, page_names[p]);
+			g_autoptr(GPtrArray) lists = section_class_lists(html);
+			g_autofree gchar *frame = g_strdup_printf("look-frame-%s",
+				ls_string(json_object_get_object_member(json_node_get_object(plan), "look"), "frame"));
+			guint k;
+			contains(html, frame);
+			g_assert_cmpuint(lists->len, >, 0);
+			g_assert_null(strstr(g_ptr_array_index(lists, 0), "sec-"));
+			for (k = 0; k < lists->len; k++) {
+				const gchar *classes = g_ptr_array_index(lists, k);
+				tones += strstr(classes, "sec-tone ") != NULL;
+				narrow += strstr(classes, "sec-w-narrow") != NULL;
+				bleed += strstr(classes, "sec-w-bleed") != NULL;
+				if (k > 0 && strstr(classes, "sec-tone ") != NULL)
+					g_assert_null(strstr(g_ptr_array_index(lists, k - 1), "sec-tone "));
+			}
+		}
+		/* The dealt page-header variant restyles every interior opening. */
+		{
+			g_autofree gchar *opener = g_strdup_printf("page-header--%s",
+				ls_string(json_object_get_object_member(structure, "variants"), "page-header"));
+			contains(file_content(bundle, "work.html"), opener);
+		}
+	}
+	g_assert_cmpuint(tones, >, 0);
+	g_assert_cmpuint(narrow, >, 0);
+	g_assert_cmpuint(bleed + narrow + tones, >, 20);
+	{
+		/* A plan without structure renders exactly as before: no section classes. */
+		g_autoptr(JsonNode) plan = load("plan.json");
+		g_autoptr(JsonObject) pages = fixture_pages();
+		g_autoptr(JsonNode) bundle = NULL;
+		g_autofree gchar *text = ls_components_compose(components, plan, pages, NULL, &error);
+		g_assert_no_error(error);
+		bundle = ls_json_parse(text, NULL);
+		lacks(file_content(bundle, "index.html"), " sec-");
+		lacks(file_content(bundle, "styles.css"), "--grid-scale:");
+	}
+}
+
+/* Layout lint over every library stylesheet: rules that caused overflow,
+ * clipping or unscrollable pages in real browsers must not return. */
+static void
+test_layout_lint(void){
+	g_autoptr(GDir) dir = g_dir_open("data/components", 0, NULL);
+	g_autoptr(GRegex) bare_fr = g_regex_new("grid-template-columns:[^;}]*?(?<=[ :])(?<!, )[0-9.]+fr", 0, 0, NULL);
+	g_autoptr(GRegex) viewport = g_regex_new("[0-9.]vw", 0, 0, NULL);
+	g_autoptr(GRegex) auto_track = g_regex_new("grid-template-columns:[^;}]*minmax\\(0, [0-9.]+fr\\) auto", 0, 0, NULL);
+	const gchar *name;
+	g_assert_nonnull(dir);
+	while ((name = g_dir_read_name(dir)) != NULL) {
+		g_autofree gchar *path = NULL, *css = NULL;
+		if (!g_str_has_suffix(name, ".css"))
+			continue;
+		path = g_build_filename("data/components", name, NULL);
+		g_assert_true(g_file_get_contents(path, &css, NULL, NULL));
+		/* A bare fr track grows to its longest word and pushes items apart. */
+		if (g_regex_match(bare_fr, css, 0, NULL))
+			g_error("%s: grid track without a minmax(0, ...) floor", name);
+		/* A bare auto track beside a zero-floor track takes all the room and
+		 * collapses its neighbour to a letter per line. */
+		if (g_regex_match(auto_track, css, 0, NULL))
+			g_error("%s: bare auto track beside a shrinkable one", name);
+		/* Headings never get automatic hyphens. */
+		if (strstr(css, "hyphens: auto") != NULL)
+			g_error("%s: automatic hyphenation", name);
+		/* Component type follows the page column, not the screen. */
+		if (!g_str_equal(name, "base.css") && !g_str_equal(name, "look.css") && g_regex_match(viewport, css, 0, NULL))
+			g_error("%s: viewport width unit in a component", name);
+		if (g_str_equal(name, "base.css") || g_str_equal(name, "look.css"))
+			continue;
+		/* Prices, names and links wrap rather than push the page sideways. */
+		if (strstr(css, "white-space: nowrap") != NULL && !g_str_equal(name, "jumpnav.css") &&
+			!g_str_equal(name, "marquee.css"))
+			g_error("%s: unwrappable text", name);
+	}
+	{
+		g_autofree gchar *look = NULL;
+		g_assert_true(g_file_get_contents("data/components/look.css", &look, NULL, NULL));
+		/* The inset frame must never clip the page: that stops scrolling. */
+		lacks(look, "overflow: clip; box-shadow");
+		/* Side panels never wrap into a second column. */
+		contains(look, ":is(.look-frame-rail, .look-frame-split) .site-header__inner { flex-wrap: nowrap;");
+	}
+}
+
 int
 main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
@@ -1396,5 +1610,7 @@ main(int argc, char **argv){
 	g_test_add_func("/components/plain-share", test_plain_share);
 	g_test_add_func("/components/contrast-panel", test_contrast_panel);
 	g_test_add_func("/components/schema-kinds", test_schema_kinds);
+	g_test_add_func("/components/structure", test_structure);
+	g_test_add_func("/components/layout-lint", test_layout_lint);
 	return g_test_run();
 }

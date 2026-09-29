@@ -28,7 +28,8 @@
 <header class="site-header">
 <div class="wrap site-header__inner">
 <a class="brand" href="index.html"{{#home}} aria-current="page"{{/home}}>{{#mark}}<img src="{{src}}" alt="" width="32" height="32">{{/mark}}<span>{{wordmark}}</span></a>
-<button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" hidden>{{menu_label}}</button>
+{{#tagline}}<p class="site-header__tagline">{{tagline}}</p>
+{{/tagline}}<button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" hidden>{{menu_label}}</button>
 <nav class="site-nav" id="site-nav" aria-label="{{nav_label}}">
 <ul>
 {{#nav}}<li{{#has_children}} class="site-nav__group{{#in_section}} is-section{{/in_section}}"{{/has_children}}><a href="{{href}}"{{#current}} aria-current="page"{{/current}}>{{label}}</a>{{#has_children}}

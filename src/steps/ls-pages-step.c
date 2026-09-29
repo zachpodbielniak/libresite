@@ -137,13 +137,19 @@ plan_photos(LsRecipe *recipe, LsContext *context, GError **error){
 	return g_steal_pointer(&out);
 }
 
-/* The identity dealt to this site: stable for its recipe name and brief. */
-static JsonObject *
-plan_identity(LsComponents *components, LsRecipe *recipe, JsonObject *config){
+/* Everything dealt to a site hangs off its recipe name and brief. */
+static gchar *
+plan_seed(LsRecipe *recipe){
 	JsonObject *root = ls_recipe_get_root(recipe);
 	const gchar *name = ls_string(root, "name");
 	const gchar *brief = ls_string(member_object_of(root, "site"), "brief");
-	g_autofree gchar *seed = g_strconcat(name != NULL ? name : "", "\n", brief != NULL ? brief : "", NULL);
+	return g_strconcat(name != NULL ? name : "", "\n", brief != NULL ? brief : "", NULL);
+}
+
+/* The identity dealt to this site: stable for its recipe name and brief. */
+static JsonObject *
+plan_identity(LsComponents *components, LsRecipe *recipe, JsonObject *config){
+	g_autofree gchar *seed = plan_seed(recipe);
 	return ls_components_suggest_identity(components, seed, plan_sector(config));
 }
 
@@ -464,6 +470,12 @@ plan_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *prom
 		if (response != NULL && (plan = parse_object(response, &local_error)) != NULL &&
 			theme != NULL && !ls_components_apply_theme(components, plan, theme, &local_error))
 			g_clear_pointer(&plan, json_node_unref);
+		/* Structure is the builder's too: the frame, rhythm and genes are
+		 * dealt, so sites cannot converge on the model's favourite layout. */
+		if (plan != NULL && JSON_NODE_HOLDS_OBJECT(plan)) {
+			g_autofree gchar *seed = plan_seed(recipe);
+			ls_components_apply_structure(components, plan, seed, theme != NULL);
+		}
 		/* Supplied photographs are the builder's facts, never the model's. */
 		if (plan != NULL && JSON_NODE_HOLDS_OBJECT(plan)) {
 			JsonObject *root = json_node_get_object(plan);

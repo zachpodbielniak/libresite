@@ -1,5 +1,5 @@
-.contact-card__items { display: grid; gap: var(--space-4); margin: var(--space-5) 0 0; }
-@media (min-width: 40rem) { .contact-card__items { grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); } }
+.contact-card__items { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); margin: var(--space-5) 0 0; }
+@media (min-width: 40rem) { .contact-card__items { grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(12rem * var(--grid-scale, 1))), 1fr)); } }
 .contact-card__items dt { font-family: var(--font-mono); font-size: var(--step--1); text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
 .contact-card__items dd { margin: var(--space-1) 0 0; font-family: var(--font-display); font-weight: 600; font-size: var(--step-1); overflow-wrap: anywhere; }
 .contact-card--card .contact-card__box { max-width: 48rem; padding: var(--space-6); background: var(--surface); border-radius: var(--radius); border: var(--border) solid var(--line); }

@@ -1,5 +1,5 @@
-.cards__list { display: grid; gap: var(--space-6); margin: 0; padding: 0; list-style: none; }
-.card { position: relative; display: grid; gap: var(--space-4); align-content: start; }
+.cards__list { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-6); margin: 0; padding: 0; list-style: none; }
+.card { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); align-content: start; }
 .card__art { margin: 0; background: var(--surface); border-radius: var(--radius); overflow: hidden; }
 .card__art img { width: 100%; }
 .card__title { font-size: var(--step-2); margin-bottom: 0.3em; }
@@ -11,21 +11,21 @@
 .card:focus-within { outline: 3px solid var(--focus); outline-offset: 6px; }
 .card:focus-within a:focus-visible { outline: none; }
 @media (min-width: 48rem) {
-	.cards--grid .cards__list { grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); }
+	.cards--grid .cards__list { grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(17rem * var(--grid-scale, 1))), 1fr)); }
 	.cards--rows .card, .cards--alternating .card { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: var(--space-7); align-items: center; padding-block: var(--space-6); border-top: var(--border) solid var(--line); }
 	.cards--alternating .card:nth-child(even) .card__art { order: 2; }
-	.cards--rows .card:not(:has(.card__art)), .cards--alternating .card:not(:has(.card__art)) { grid-template-columns: 1fr; }
+	.cards--rows .card:not(:has(.card__art)), .cards--alternating .card:not(:has(.card__art)) { grid-template-columns: minmax(0, 1fr); }
 }
 .cards--numbered .cards__list { counter-reset: card; }
 .cards--numbered .card { counter-increment: card; padding-top: var(--space-4); border-top: var(--border-strong) solid var(--ink); }
 .cards--numbered .card::before { content: counter(card, decimal-leading-zero); font-family: var(--font-mono); font-size: var(--step--1); color: var(--accent-text); }
 .cards--bordered .card { padding: var(--space-4); border: var(--border) solid var(--line-strong); border-radius: var(--radius); }
-@media (min-width: 48rem) { .cards--numbered .cards__list, .cards--bordered .cards__list { grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); } }
+@media (min-width: 48rem) { .cards--numbered .cards__list, .cards--bordered .cards__list { grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(17rem * var(--grid-scale, 1))), 1fr)); } }
 .cards--list .cards__list { gap: 0; border-top: var(--border) solid var(--line); }
 .cards--list .card { padding-block: var(--space-4); border-bottom: var(--border) solid var(--line); }
 .cards--list .card__art { display: none; }
 .cards--overlap .cards__list { gap: var(--space-7) var(--space-6); }
-@media (min-width: 48rem) { .cards--overlap .cards__list, .cards--polaroid .cards__list, .cards--minimal .cards__list { grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); } }
+@media (min-width: 48rem) { .cards--overlap .cards__list, .cards--polaroid .cards__list, .cards--minimal .cards__list { grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(17rem * var(--grid-scale, 1))), 1fr)); } }
 .cards--overlap .card { gap: 0; }
 .cards--overlap .card__text { position: relative; margin: calc(var(--space-6) * -1) var(--space-4) 0; padding: var(--space-4) var(--space-5); background: var(--paper); border: var(--border) solid var(--line-strong); }
 .cards--polaroid .card { padding: var(--space-3) var(--space-3) var(--space-5); background: var(--paper); box-shadow: 0 0.5rem 1.5rem color-mix(in srgb, var(--ink) 16%, transparent); transform: rotate(-1.2deg); transition: transform 200ms ease; }

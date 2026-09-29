@@ -94,6 +94,35 @@ JsonObject *ls_components_suggest_look(LsComponents *self, const gchar *seed);
  */
 const gchar *ls_components_get_look_description(LsComponents *self, const gchar *axis, const gchar *value);
 /**
+ * ls_components_deal_structure:
+ * @self: a component library
+ * @seed: stable text identifying the site
+ *
+ * Deals the site's structure genes from a hash of @seed: continuous column
+ * width, edge gutter, section pace, inner padding, card width and display
+ * scale, how often sections narrow, bleed, band, shift, loosen or tighten,
+ * and one variant per dealable component. The same seed always deals the
+ * same structure. See docs/components.org.
+ * Returns: (transfer full): the structure object a plan carries
+ */
+JsonObject *ls_components_deal_structure(LsComponents *self, const gchar *seed);
+/**
+ * ls_components_apply_structure:
+ * @self: a component library
+ * @plan: (transfer none): plan to change in place
+ * @seed: stable text identifying the site
+ * @themed: whether a theme already set the plan's look
+ *
+ * Makes the builder authoritative for page structure: replaces any
+ * structure in @plan with ls_components_deal_structure(), and sets every
+ * look axis the catalog marks builder-owned (the page frame, heading
+ * position, header, rhythm, alignment, footer and motion) to the value
+ * dealt from @seed. With @themed, axes the theme already named keep the
+ * theme's value.
+ * Returns: whether @plan was an object and changed
+ */
+gboolean ls_components_apply_structure(LsComponents *self, JsonNode *plan, const gchar *seed, gboolean themed);
+/**
  * ls_components_suggest_opening:
  * @self: a component library
  * @seed: stable text identifying the site

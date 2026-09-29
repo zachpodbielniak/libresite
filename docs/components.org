@@ -82,6 +82,8 @@ Colors and fonts alone do not make two sites different: the skeleton does. The p
 - edges between sections with their own background: straight, wave, slant, torn, steps
 - lettering: plain, dropcap, smallcaps, gradient (headline fades into the accent), outline
 - links in running text: underline, thick, highlight, wavy, dotted
+- frame (builder-owned): top, rail (a fixed navigation column), split (a sticky panel with the wordmark, tagline and navigation beside the content), center (a narrow journal column), wide (no column cap), inset (the page as a bordered sheet on a tinted ground), offset (content right of an empty margin, headings hanging into it), masthead (a newspaper nameplate between rules). Rail, split and offset take effect from 64rem; below that every frame is a top bar.
+- headpos (builder-owned): top, side (headings in a sticky column beside the content), center, hang (headings in the left margin)
 - scheme: fixed, auto. Auto writes a second set of working colors for the visitor's other device scheme: a light site gains a dark version and a dark site a light one, derived from the tokens and repaired to the same AA pairs.
 
 Section headings may mark one or two words as =*emphasis*=. The builder renders them as =<em class="em">= inside the heading only; contents entries, breadcrumbs, labels and anchors get the plain text, and unpaired or empty markers stay literal.
@@ -99,6 +101,33 @@ Every component can be overridden. =styles.css= declares =@layer ls-base, ls-com
 Unlayered rules beat layered ones regardless of specificity, so an override never needs =!important= or longer selectors. The reduced-motion rules are layered =!important= declarations and still win. Restyle entries are checked like plan CSS (8 KB each, 24 KB in total).
 
 The model-facing reference lists the axes and the override rules (LOOK and OVERRIDES). =/components/every-look= requires styles for each non-default look value, and checks that the plan schema lists exactly the catalog's axes and values; the schema's kind and look enums are generated from the catalog at load.
+
+* Structure
+
+Surface styling alone left every site with one silhouette: a top bar, one column of equal-width sections and a call to action at the end. Structure is therefore dealt by the builder, not chosen by the model, which converges on the same safe skeleton.
+
+- Axes marked =builder: true= in =catalog.yaml= (frame, headpos, header, rhythm, align, footer, motion) are set by =ls_components_apply_structure()= after the plan call, from the same recipe name and brief seed as the identity. The model's values for them are replaced; a theme keeps the builder axes it names, and themes may omit them.
+- The plan gains a builder-owned =structure= object of continuous genes, each dealt anywhere in its range: =width= (column cap, 46 to 108 rem), =gutter=, =pace= (section spacing), =pad= (scales every space token), =grid= (scales every card minimum width), =scale= (display heading sizes, capped at 1.3 so headlines fit), and the section shares =narrow=, =bleed=, =band=, =offset=, =loose= and =tight=. A plan without =structure= renders exactly as before.
+- =structure.variants= deals one variant per component for the whole site, so one site's cards are always polaroids and another's always rows. Components whose markup or meaning depends on the variant are never dealt (hero, cover, poster, manifesto, custom, article, compare, form, features, callout, checklist, columns, profile, areas), nor are variants that say something (numbered or artless cards).
+- Each section after the page opening gets its own treatment from the site, page and position: a narrow reading column, an edge-to-edge run, a shift right, a tinted, ink or accent band, or extra or less air. Only components that suit a treatment receive it, two bands never touch, and reading kinds with a contents column keep a steady column. Bands repaint the working tokens locally, including the danger color, so contrast holds inside them.
+- Full-bleed pieces break out to the page column (=main= is an inline-size container), not the screen, so they stay inside the rail and split frames. Headings hyphenate a word too long for their column instead of splitting it unmarked.
+
+=/components/structure= checks determinism, ranges, that all eight frames are dealt across sites, that model structure is replaced and bad structure refused, and the section rules. On nine recorded sites recomposed with dealt structure, a headless Firefox check found no page wider than the screen, no overflowing heading beyond a 4 px emphasis overhang, no low-contrast text in light or dark, and all 52 interaction checks passing under every frame.
+
+* Layout robustness
+
+Dealt structure multiplies the layouts a component meets: eight frames, four heading positions, narrow, bleed and shifted sections, and continuous widths. The library therefore follows rules that hold in any column:
+
+- Every grid track has a zero floor (=minmax(0, ...)=), and component lists, grids, rows, boxes and anything placed directly in a column may shrink below their longest word. A long word or wide picture can no longer widen a track and push items over their neighbours or off the page.
+- Label-and-value rows (service, special and spec lines, opening hours, menu dishes and prices) wrap instead of forcing one line; nothing in a component forbids wrapping except the jump bar and the scrolling band, which scroll by design.
+- Fluid type uses container units: =main= and the footer are inline-size containers, so display sizes follow the content column beside a side menu instead of the screen. Full-bleed pieces break out to that column and skip the offset margin and hanging-heading indent.
+- Headings never hyphenate automatically. =site.js= shrinks any large text (22 px and up) whose longest word overflows its box, or whose box has been pushed past the right edge of a container, down to 30 percent of its size; without scripts such a word wraps at its last point. Headings hanging into the left margin are not treated as overflow.
+- Side panels (rail and split frames) own their header: header looks built for a top bar are reset inside them, and the panel never wraps into a second column. The inset frame never clips the page, which would stop it scrolling.
+- Sections with no padding of their own (a full cover, the jump bar) leave room above the next section; aside figures float only beside running text; a full cover grows to fit its text rather than letting it rise over the header.
+
+=/components/layout-lint= fails on a grid track without a zero floor, automatic hyphenation, a viewport unit inside a component, unwrappable text outside the two scrolling components, or an inset frame that clips.
+
+A browser audit backs this up outside the test suite. A generated site places all 70 components in every variant (176 sections over 14 pages) with deliberately long words, is composed under each of the eight frames with other looks dealt per seed, and every page is checked at 1440, 1024, 768 and 390 px wide for pages that cannot scroll or scroll sideways, words wider than their box, text at the screen edge or jammed against a painted box, overlapping or clipped text, text shrunk below 11.5 px, and sections with no space between them. Findings fell from about 2,300 to under 90 during this pass; the remainder are sample prices and figures of fifteen-letter words in fixed-width stubs, which real content does not produce.
 
 * Themes
 
@@ -284,5 +313,7 @@ A composed recipe's checkpoint fingerprint includes the component library digest
 
 | 2026-09-29 | trades, sealed, on Codex (default model) | 258 s | plan rejected once: Codex never saw the answer schema; pages 75 s |
 | 2026-09-29 | trades, sealed, on Codex, schema in the prompt | 143 s | plan 91 s first try, pages 51 s; no retries |
+
+| 2026-09-29 | nine sites at once, dealt structure (five packages, four tests) | 44 to 65 s | frames top, rail, masthead, inset and wide; three retries in total (an empty pricing field, twice, and one malformed artwork), each redoing only that page or artwork |
 
 These are single live runs, on Claude Code with the default model unless noted. They establish timing, not design quality; a person must still look at every delivered site.

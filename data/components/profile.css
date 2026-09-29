@@ -1,4 +1,4 @@
-.profile__inner { display: grid; gap: var(--space-6); }
+.profile__inner { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-6); }
 .profile__art { margin: 0; max-width: 28rem; }
 .profile__art img { width: 100%; aspect-ratio: 4 / 5; object-fit: cover; background: var(--surface); }
 .profile__name { margin: 0; font-family: var(--font-display); font-weight: var(--heading-weight); font-size: var(--step-3); line-height: 1.1; }
