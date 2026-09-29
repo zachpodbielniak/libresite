@@ -62,6 +62,45 @@ gchar *ls_components_dup_art_schema(LsComponents *self);
  */
 JsonObject *ls_components_suggest_look(LsComponents *self, const gchar *seed);
 /**
+ * ls_components_list_themes:
+ * @self: a component library
+ *
+ * Returns: (transfer full) (array zero-terminated=1): theme names in catalog order
+ */
+gchar **ls_components_list_themes(LsComponents *self);
+/**
+ * ls_components_get_theme_summary:
+ * @self: a component library
+ * @name: a theme name
+ *
+ * Returns: (transfer none) (nullable): the theme's one-line description, or
+ *   %NULL for an unknown theme
+ */
+const gchar *ls_components_get_theme_summary(LsComponents *self, const gchar *name);
+/**
+ * ls_components_apply_theme:
+ * @self: a component library
+ * @plan: (transfer none): a site plan object, modified in place
+ * @name: a theme name
+ * @error: return location for an error
+ *
+ * Replaces the plan's tokens, fonts, look, css and restyle with the theme's,
+ * so every component on every page takes the theme when the site is
+ * composed. Content, routes, navigation and art are untouched. Every bundled
+ * theme passes the plan checks on its own.
+ * Returns: whether the theme was applied; %FALSE for an unknown theme
+ */
+gboolean ls_components_apply_theme(LsComponents *self, JsonNode *plan, const gchar *name, GError **error);
+/**
+ * ls_components_get_themed_plan_schema:
+ * @self: a component library
+ *
+ * The plan response schema without the parts a theme supplies (tokens,
+ * fonts, look, css and restyle), for plan steps that name a theme.
+ * Returns: (transfer none): JSON schema text
+ */
+const gchar *ls_components_get_themed_plan_schema(LsComponents *self);
+/**
  * ls_components_describe:
  * @self: a component library
  * Returns: (transfer full): model-facing reference for page specifications:

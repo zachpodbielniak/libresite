@@ -861,6 +861,57 @@ test_suggest_look(void){
 	g_assert_cmpuint(g_hash_table_size(seen), >=, 11);
 }
 
+
+/* Every theme applies to a whole site: every page, token, look axis and
+ * component style changes, while content stays the same, and applying a
+ * theme never edits the library's copy of it. */
+static void
+test_themes(void){
+	g_autoptr(LsComponents) components = library();
+	g_auto(GStrv) names = ls_components_list_themes(components);
+	g_autoptr(GHashTable) sheets = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+	g_autoptr(GError) error = NULL;
+	guint i;
+	g_assert_cmpuint(g_strv_length(names), >=, 8);
+	for (i = 0; names[i] != NULL; i++) {
+		g_autoptr(JsonNode) plan = load("plan.json");
+		g_autoptr(JsonObject) pages = fixture_pages();
+		g_autoptr(JsonNode) bundle = NULL;
+		g_autofree gchar *text = NULL;
+		JsonObject *tokens;
+		const gchar *css, *index;
+		g_autofree gchar *paper = NULL;
+		g_assert_nonnull(ls_components_get_theme_summary(components, names[i]));
+		g_assert_true(ls_components_apply_theme(components, plan, names[i], &error));
+		g_assert_no_error(error);
+		tokens = json_object_get_object_member(json_node_get_object(plan), "tokens");
+		paper = g_strdup_printf("--paper: %s;", ls_string(tokens, "paper"));
+		/* Mutating the applied copy must not reach the next application. */
+		json_object_set_string_member(tokens, "paper", "#123456");
+		g_assert_true(ls_components_apply_theme(components, plan, names[i], NULL));
+		g_assert_true(ls_components_check_plan(components, plan, &error));
+		g_assert_no_error(error);
+		g_assert_null(ls_components_repair_plan(components, plan));
+		text = ls_components_compose(components, plan, pages, NULL, &error);
+		g_assert_no_error(error);
+		bundle = ls_json_parse(text, NULL);
+		css = file_content(bundle, "styles.css");
+		index = file_content(bundle, "index.html");
+		contains(css, paper);
+		lacks(css, ".hero__title { font-style: italic; }");
+		contains(index, "Harbor");
+		g_assert_true(g_hash_table_add(sheets, g_strdup(css)));
+	}
+	{
+		g_autoptr(JsonNode) plan = load("plan.json");
+		g_assert_false(ls_components_apply_theme(components, plan, "nope", &error));
+		g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+	}
+	g_assert_null(ls_components_get_theme_summary(components, "nope"));
+	g_assert_null(strstr(ls_components_get_themed_plan_schema(components), "\"tokens\""));
+	g_assert_nonnull(strstr(ls_components_get_plan_schema(components), "\"tokens\""));
+}
+
 int
 main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
@@ -883,6 +934,7 @@ main(int argc, char **argv){
 	g_test_add_func("/components/look-restyle", test_look_and_restyle);
 	g_test_add_func("/components/every-look", test_every_look);
 	g_test_add_func("/components/suggest-look", test_suggest_look);
+	g_test_add_func("/components/themes", test_themes);
 	g_test_add_func("/components/directory-tabs", test_directory_and_tabs);
 	g_test_add_func("/components/schema-kinds", test_schema_kinds);
 	return g_test_run();

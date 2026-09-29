@@ -86,6 +86,22 @@ Unlayered rules beat layered ones regardless of specificity, so an override neve
 
 The model-facing reference lists the axes and the override rules (LOOK and OVERRIDES). =/components/every-look= requires styles for each non-default look value, and checks that the plan schema lists exactly the catalog's axes and values; the schema's kind and look enums are generated from the catalog at load.
 
+* Themes
+
+A theme is a complete design applied to the whole site: every token, the web fonts, one value for every look axis and signature CSS. =data/components/themes.yaml= bundles eight: editorial, brutalist, midnight, soft, civic, atelier, workshop and neon. Every component draws only on tokens and look classes, so applying a theme changes every component on every page together, while content, routes, navigation, art and component choices stay as they are.
+
+Name one on the plan step:
+
+#+begin_src yaml
+- {id: plan, type: plan, options: {theme: midnight}}
+#+end_src
+
+The plan call then uses a schema without tokens, fonts, look, css and restyle, and TASK carries the theme's name and summary, so the model writes only content and structure and returns a shorter plan. The builder applies the theme to the answer before repairing and checking it. =theme= is the only plan option; an unknown name fails preflight with the list of themes.
+
+=ls_components_apply_theme()= does the same to any plan: it replaces the design half and leaves the rest. Themes are checked like plans when the library loads (contrast, token ranges, fonts, CSS), so applying one can never produce a plan that fails its own checks, and the library's copy is never edited. To add a theme, add an entry with a summary, all tokens, fonts, every look axis and optional css or restyle; =/components/themes= composes the fixture site under every theme.
+
+Recomposing an already delivered site under a new theme needs its plan and page specifications, which the prune step removes before publication. Keeping them for later retheming is not built yet.
+
 * What the builder produces
 
 From the plan, one specification per route and the artwork, =ls_components_compose()= renders:

@@ -165,6 +165,10 @@ Built-in final types and helpers:
 | =ls_components_get_digest(self)= | none | SHA-256 of every component byte, bound into checkpoints |
 | =ls_components_describe(self)= | full | Model-facing component reference |
 | =ls_components_suggest_look(self, seed)= | full | Stable per-site starting look: axis name to value |
+| =ls_components_list_themes(self)= | full | Theme names |
+| =ls_components_get_theme_summary(self, name)= | none, nullable | One-line theme description |
+| =ls_components_apply_theme(self, plan, name, error)= | none | Replace a plan's tokens, fonts, look, css and restyle with a theme's |
+| =ls_components_get_themed_plan_schema(self)= | none | Plan schema without the parts a theme supplies |
 | =ls_components_get_plan_schema(self)= | none | Plan response schema |
 | =ls_components_dup_page_schema(self)=, =ls_components_dup_art_schema(self)= | full | Page and artwork response schemas |
 | =ls_components_repair_plan(self, plan)= | full, nullable | Fix contrast and numeric ranges in place; NULL when nothing changed |

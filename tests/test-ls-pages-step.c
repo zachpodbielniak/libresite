@@ -72,7 +72,7 @@ fake_generate(LsProvider *provider, JsonObject *settings, const gchar *system,
 	while (self->block && !g_cancellable_is_cancelled(cancellable))
 		g_usleep(1000);
 	g_usleep(40000);
-	if (schema != NULL && strstr(schema, "\"tokens\"") != NULL) {
+	if (schema != NULL && strstr(schema, "\"nav\"") != NULL) {
 		key = g_strdup("plan");
 		answer = fixture("plan.json");
 		g_mutex_lock(&self->lock);
@@ -485,10 +485,63 @@ test_options(void){
 	g_assert_true(ls_pages_step_check_options(NULL, NULL));
 }
 
+
+/* A plan step that names a theme asks only for content and structure, and
+ * the stored plan carries the theme's whole design. */
+static void
+test_plan_theme(void){
+	Fixture fixture;
+	GPtrArray *prompts;
+	g_autoptr(JsonNode) plan = NULL;
+	JsonObject *options = json_object_new();
+	JsonObject *root;
+	fixture_setup(&fixture, 4, 1);
+	json_object_set_string_member(options, "theme", "midnight");
+	json_object_set_object_member(step_config(&fixture, 0), "options", options);
+	run_plan(&fixture);
+	g_assert_null(strstr(fixture.provider->last_schema, "\"tokens\""));
+	g_assert_null(strstr(fixture.provider->last_schema, "\"restyle\""));
+	g_assert_nonnull(strstr(fixture.provider->last_schema, "\"pages\""));
+	prompts = prompts_for(fixture.provider, "plan");
+	g_assert_cmpuint(prompts->len, ==, 1);
+	g_assert_nonnull(strstr(g_ptr_array_index(prompts, 0), "\"theme\":{\"name\":\"midnight\""));
+	g_assert_null(strstr(g_ptr_array_index(prompts, 0), "\"suggested_look\":{"));
+	plan = ls_json_parse(artifact_text(fixture.context, "site/plan.json"), NULL);
+	root = json_node_get_object(plan);
+	g_assert_cmpstr(ls_string(json_object_get_object_member(root, "tokens"), "paper"), ==, "#0e1422");
+	g_assert_cmpstr(ls_string(json_object_get_object_member(root, "look"), "header"), ==, "floating");
+	g_assert_false(json_object_has_member(root, "restyle"));
+	g_assert_cmpstr(ls_string(root, "name"), ==, "Harbor & Pine");
+	fixture_teardown(&fixture);
+}
+
+/* Plan options allow only a known theme, and preflight names the choices. */
+static void
+test_plan_options(void){
+	const gchar *cases[][2] = {{"{theme: nope}", "Unknown theme 'nope'; available: editorial"},
+		{"{theme: midnight, extra: 1}", "plan options allow only theme"}, {"{theme: 3}", "plan options allow only theme"}};
+	guint i;
+	for (i = 0; i < G_N_ELEMENTS(cases); i++) {
+		Fixture fixture;
+		g_autoptr(GError) error = NULL;
+		g_autoptr(JsonNode) node = ls_yaml_parse(cases[i][0], NULL);
+		fixture_setup(&fixture, 4, 1);
+		json_object_set_object_member(step_config(&fixture, 0), "options", json_object_ref(json_node_get_object(node)));
+		g_assert_false(ls_spec_step_check(fixture.prompts, fixture.recipe, step_config(&fixture, 0), &error));
+		g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+		if (strstr(error->message, cases[i][1]) == NULL)
+			g_error("case %u lacks '%s': %s", i, cases[i][1], error->message);
+		g_assert_cmpint(fixture.provider->calls, ==, 0);
+		fixture_teardown(&fixture);
+	}
+}
+
 int
 main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
 	g_test_add_func("/pages/plan", test_plan);
+	g_test_add_func("/pages/plan-theme", test_plan_theme);
+	g_test_add_func("/pages/plan-options", test_plan_options);
 	g_test_add_func("/pages/parallel", test_parallel);
 	g_test_add_func("/pages/sequential", test_sequential);
 	g_test_add_func("/pages/retry-one", test_retry_one);

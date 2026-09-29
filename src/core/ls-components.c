@@ -21,10 +21,13 @@ struct _LsComponents {
 	JsonObject *components;
 	JsonObject *kinds;
 	JsonObject *looks;
+	JsonNode *theme_catalog;
+	JsonObject *themes;
 	GPtrArray *order;
 	GHashTable *files;	/* resource-relative name -> contents */
 	JsonNode *utility[G_N_ELEMENTS(utility_routes)];
 	gchar *plan_schema;	/* plan.schema.json with catalog enums filled in */
+	gchar *themed_plan_schema;	/* the same without the parts a theme supplies */
 	gchar *digest;
 };
 G_DEFINE_TYPE(LsComponents, ls_components, G_TYPE_OBJECT)
@@ -39,6 +42,8 @@ ls_components_finalize(GObject *object){
 	for (i = 0; i < G_N_ELEMENTS(self->utility); i++)
 		g_clear_pointer(&self->utility[i], json_node_unref);
 	g_free(self->plan_schema);
+	g_free(self->themed_plan_schema);
+	g_clear_pointer(&self->theme_catalog, json_node_unref);
 	g_free(self->digest);
 	G_OBJECT_CLASS(ls_components_parent_class)->finalize(object);
 }
@@ -685,6 +690,26 @@ file_text(LsComponents *self, const gchar *name){
 	return g_hash_table_lookup(self->files, name);
 }
 
+/* Replace the design half of @plan (tokens, fonts, look, css, restyle) with @theme's. */
+static void
+copy_theme(JsonObject *theme, JsonObject *plan){
+	const gchar *parts[] = {"tokens", "fonts", "look", "css", "restyle"};
+	guint i;
+	for (i = 0; i < G_N_ELEMENTS(parts); i++) {
+		JsonNode *value = json_object_get_member(theme, parts[i]);
+		if (json_object_has_member(plan, parts[i]))
+			json_object_remove_member(plan, parts[i]);
+		if (value != NULL && !JSON_NODE_HOLDS_NULL(value)) {
+			/* Deep copy: repair edits plan tokens and must never edit the theme. */
+			g_autofree gchar *encoded = ls_json_encode(value);
+			json_object_set_member(plan, parts[i], ls_json_parse(encoded, NULL));
+		}
+	}
+}
+
+static void check_plan_into(Problems *problems, LsComponents *self, JsonNode *node);
+static gboolean load_themes(LsComponents *self, GChecksum *digest, GError **error);
+
 /* Every look axis lists named values with a description; the first is the default. */
 static gboolean
 check_look_definitions(JsonObject *looks, GError **error){
@@ -767,6 +792,29 @@ build_plan_schema(LsComponents *self, GError **error){
 	}
 	json_object_set_object_member(look, "properties", look_properties);
 	json_object_set_array_member(look, "required", required);
+	{
+		/* A themed plan leaves the design system to the theme. */
+		g_autofree gchar *encoded = ls_json_encode(schema);
+		g_autoptr(JsonNode) themed = ls_json_parse(encoded, NULL);	/* deep: json_node_copy shares objects */
+		JsonObject *root = json_node_get_object(themed);
+		JsonObject *themed_properties = member_object(root, "properties");
+		JsonArray *old_required = member_array(root, "required");
+		JsonArray *new_required = json_array_new();
+		const gchar *supplied[] = {"tokens", "fonts", "look", "css", "restyle"};
+		guint i, j;
+		for (i = 0; i < G_N_ELEMENTS(supplied); i++)
+			json_object_remove_member(themed_properties, supplied[i]);
+		for (i = 0; old_required != NULL && i < json_array_get_length(old_required); i++) {
+			const gchar *key = json_array_get_string_element(old_required, i);
+			gboolean keep = TRUE;
+			for (j = 0; j < G_N_ELEMENTS(supplied); j++)
+				keep &= g_strcmp0(key, supplied[j]) != 0;
+			if (keep)
+				json_array_add_string_element(new_required, key);
+		}
+		json_object_set_array_member(root, "required", new_required);
+		self->themed_plan_schema = ls_json_encode(themed);
+	}
 	return ls_json_encode(schema);
 }
 
@@ -858,7 +906,7 @@ ls_components_new(GError **error){
 			return NULL;
 	}
 	self->plan_schema = build_plan_schema(self, error);
-	if (self->plan_schema == NULL)
+	if (self->plan_schema == NULL || !load_themes(self, digest, error))
 		return NULL;
 	self->digest = g_strdup(g_checksum_get_string(digest));
 	return (LsComponents *)g_steal_pointer(&self);
@@ -1544,6 +1592,110 @@ nudge(JsonObject *tokens, const gchar *key, const gchar *background, gdouble min
 		}
 	}
 	return FALSE;
+}
+
+
+/* Themes are whole designs. Each is checked as the design half of a plan,
+ * so applying one can never produce a plan that fails its own checks. */
+static gboolean
+load_themes(LsComponents *self, GChecksum *digest, GError **error){
+	g_autofree gchar *text = load_resource(self, digest, "themes.yaml", TRUE, error);
+	JsonObject *root;
+	g_autoptr(GList) names = NULL;
+	GList *name;
+	if (text == NULL || (self->theme_catalog = ls_yaml_parse(text, error)) == NULL)
+		return FALSE;
+	root = JSON_NODE_HOLDS_OBJECT(self->theme_catalog) ? json_node_get_object(self->theme_catalog) : NULL;
+	if (root == NULL || !ls_object_keys(root, "|version|themes|", NULL) ||
+		(self->themes = member_object(root, "themes")) == NULL || json_object_get_size(self->themes) == 0)
+		return catalog_invalid(error, "themes.yaml", "needs version and at least one theme");
+	names = json_object_get_members(self->themes);
+	for (name = names; name != NULL; name = name->next) {
+		JsonObject *theme = member_object(self->themes, name->data);
+		g_autoptr(JsonNode) plan = NULL;
+		g_autoptr(GList) axes = NULL;
+		Problems problems = {g_ptr_array_new_with_free_func(g_free)};
+		GList *axis;
+		const gchar *p;
+		for (p = name->data; *p != '\0'; p++)
+			if (!g_ascii_islower(*p) && !g_ascii_isdigit(*p) && *p != '-') {
+				g_ptr_array_unref(problems.messages);
+				return catalog_invalid(error, name->data, "theme names are lowercase words");
+			}
+		if (theme == NULL || !ls_object_keys(theme, "|summary|tokens|fonts|look|css|restyle|", NULL) ||
+			ls_string(theme, "summary") == NULL || member_object(theme, "tokens") == NULL ||
+			member_object(theme, "look") == NULL) {
+			g_ptr_array_unref(problems.messages);
+			return catalog_invalid(error, name->data, "themes need a summary, tokens and look");
+		}
+		axes = json_object_get_members(self->looks);
+		for (axis = axes; axis != NULL; axis = axis->next)
+			if (ls_string(member_object(theme, "look"), axis->data) == NULL)
+				problem(&problems, "look.%s is missing", (const gchar *)axis->data);
+		plan = ls_json_parse("{\"name\": \"Theme\", \"nav\": [{\"href\": \"index.html\", \"label\": \"Home\"}], "
+			"\"art\": [], \"pages\": [{\"path\": \"index.html\", \"kind\": \"home\", \"title\": \"Home\", "
+			"\"description\": \"A theme check page of about sixty characters in length.\", \"brief\": \"b\"}]}", NULL);
+		copy_theme(theme, json_node_get_object(plan));
+		check_plan_into(&problems, self, plan);
+		if (problems.messages->len > 0) {
+			g_autofree gchar *why = NULL;
+			g_ptr_array_add(problems.messages, NULL);
+			why = g_strjoinv("; ", (gchar **)problems.messages->pdata);
+			g_ptr_array_unref(problems.messages);
+			catalog_invalid(error, name->data, why);
+			return FALSE;
+		}
+		g_ptr_array_unref(problems.messages);
+	}
+	return TRUE;
+}
+
+gchar **
+ls_components_list_themes(LsComponents *self){
+	g_autoptr(GList) names = NULL;
+	GPtrArray *out = g_ptr_array_new();
+	GList *name;
+	g_return_val_if_fail(LS_IS_COMPONENTS(self), NULL);
+	names = json_object_get_members(self->themes);
+	for (name = names; name != NULL; name = name->next)
+		g_ptr_array_add(out, g_strdup(name->data));
+	g_ptr_array_add(out, NULL);
+	return (gchar **)g_ptr_array_free(out, FALSE);
+}
+
+const gchar *
+ls_components_get_theme_summary(LsComponents *self, const gchar *name){
+	JsonObject *theme;
+	g_return_val_if_fail(LS_IS_COMPONENTS(self), NULL);
+	g_return_val_if_fail(name != NULL, NULL);
+	theme = member_object(self->themes, name);
+	return theme != NULL ? ls_string(theme, "summary") : NULL;
+}
+
+const gchar *
+ls_components_get_themed_plan_schema(LsComponents *self){
+	g_return_val_if_fail(LS_IS_COMPONENTS(self), NULL);
+	return self->themed_plan_schema;
+}
+
+gboolean
+ls_components_apply_theme(LsComponents *self, JsonNode *plan, const gchar *name, GError **error){
+	JsonObject *theme;
+	g_return_val_if_fail(LS_IS_COMPONENTS(self), FALSE);
+	g_return_val_if_fail(plan != NULL, FALSE);
+	g_return_val_if_fail(name != NULL, FALSE);
+	g_return_val_if_fail(error == NULL || *error == NULL, FALSE);
+	theme = member_object(self->themes, name);
+	if (theme == NULL) {
+		g_set_error(error, LS_ERROR, LS_ERROR_INVALID, "Unknown theme '%s'", name);
+		return FALSE;
+	}
+	if (!JSON_NODE_HOLDS_OBJECT(plan)) {
+		g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID, "The plan must be a JSON object");
+		return FALSE;
+	}
+	copy_theme(theme, json_node_get_object(plan));
+	return TRUE;
 }
 
 gchar *

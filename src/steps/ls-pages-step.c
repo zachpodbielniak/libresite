@@ -20,6 +20,8 @@ struct _LsPagesStep {
 };
 G_DEFINE_TYPE(LsPagesStep, ls_pages_step, LS_TYPE_STEP)
 
+static const gchar *plan_theme(JsonObject *config);
+
 static JsonObject *
 member_object_of(JsonObject *object, const gchar *name){
 	JsonNode *node = object != NULL ? json_object_get_member(object, name) : NULL;
@@ -30,6 +32,36 @@ static JsonObject *
 step_options(JsonObject *config){
 	JsonNode *node = config != NULL ? json_object_get_member(config, "options") : NULL;
 	return node != NULL && JSON_NODE_HOLDS_OBJECT(node) ? json_node_get_object(node) : NULL;
+}
+
+/* The plan step's one option names a library theme. */
+static const gchar *
+plan_theme(JsonObject *config){
+	JsonObject *options = step_options(config);
+	return options != NULL ? ls_string(options, "theme") : NULL;
+}
+
+static gboolean
+check_plan_options(JsonObject *config, GError **error){
+	JsonObject *options = step_options(config);
+	g_autoptr(LsComponents) components = NULL;
+	if (options == NULL)
+		return TRUE;
+	if (!ls_object_keys(options, "|theme|", NULL) || ls_string(options, "theme") == NULL) {
+		g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID, "plan options allow only theme (a theme name)");
+		return FALSE;
+	}
+	components = ls_components_new(error);
+	if (components == NULL)
+		return FALSE;
+	if (ls_components_get_theme_summary(components, ls_string(options, "theme")) == NULL) {
+		g_auto(GStrv) names = ls_components_list_themes(components);
+		g_autofree gchar *list = g_strjoinv(", ", names);
+		g_set_error(error, LS_ERROR, LS_ERROR_INVALID, "Unknown theme '%s'; available: %s",
+			ls_string(options, "theme"), list);
+		return FALSE;
+	}
+	return TRUE;
 }
 
 gboolean
@@ -205,7 +237,12 @@ plan_prompt(LsPrompts *prompts, LsRecipe *recipe, JsonObject *config, LsComponen
 		if (!is_utility_route(item->data))
 			json_array_add_string_element(routes, item->data);
 	json_object_set_array_member(task, "required_routes", routes);
-	{
+	if (plan_theme(config) != NULL) {
+		JsonObject *theme = json_object_new();
+		json_object_set_string_member(theme, "name", plan_theme(config));
+		json_object_set_string_member(theme, "summary", ls_components_get_theme_summary(components, plan_theme(config)));
+		json_object_set_object_member(task, "theme", theme);
+	} else {
 		JsonObject *root = ls_recipe_get_root(recipe);
 		const gchar *name = ls_string(root, "name");
 		const gchar *brief = ls_string(member_object_of(root, "site"), "brief");
@@ -252,6 +289,7 @@ plan_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *prom
 	g_autoptr(JsonObject) settings = NULL;
 	g_autofree gchar *prompt = NULL, *retry = NULL;
 	const gchar *system = ls_prompts_get_spec_system(prompts);
+	const gchar *theme;
 	gint64 retries, attempt;
 	if (ls_context_is_revision(context)) {
 		g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID,
@@ -261,7 +299,9 @@ plan_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *prom
 	components = ls_components_new(error);
 	if (components == NULL || !ls_spec_step_check(prompts, recipe, config, error))
 		return FALSE;
-	settings = spec_settings(recipe, config, ls_components_get_plan_schema(components));
+	theme = plan_theme(config);
+	settings = spec_settings(recipe, config, theme != NULL ? ls_components_get_themed_plan_schema(components)
+		: ls_components_get_plan_schema(components));
 	retries = json_object_get_int_member(settings, "retries");
 	prompt = plan_prompt(prompts, recipe, config, components, error);
 	if (prompt == NULL)
@@ -277,7 +317,10 @@ plan_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *prom
 		g_signal_emit_by_name(self, "progress", status);
 		response = ls_provider_generate(provider, settings, system, retry != NULL ? retry : prompt,
 			cancellable, &local_error);
-		if (response != NULL && (plan = parse_object(response, &local_error)) != NULL) {
+		if (response != NULL && (plan = parse_object(response, &local_error)) != NULL &&
+			theme != NULL && !ls_components_apply_theme(components, plan, theme, &local_error))
+			g_clear_pointer(&plan, json_node_unref);
+		if (plan != NULL) {
 			g_autofree gchar *repairs = ls_components_repair_plan(components, plan);
 			if (repairs != NULL) {
 				g_autofree gchar *note = g_strdup_printf("repaired plan tokens: %.400s", repairs);
@@ -774,6 +817,8 @@ ls_spec_step_check(LsPrompts *prompts, LsRecipe *recipe, JsonObject *config, GEr
 	gboolean planned = FALSE;
 	guint i, count = 0;
 	if (pages && !ls_pages_step_check_options(options, error))
+		return FALSE;
+	if (!pages && !check_plan_options(config, error))
 		return FALSE;
 	if (!pages)
 		stages[count++] = ls_string(config, "prompt") != NULL ? ls_string(config, "prompt") : "plan";
