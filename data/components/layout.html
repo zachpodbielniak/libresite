@@ -31,7 +31,11 @@
 <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" hidden>{{menu_label}}</button>
 <nav class="site-nav" id="site-nav" aria-label="{{nav_label}}">
 <ul>
-{{#nav}}<li><a href="{{href}}"{{#current}} aria-current="page"{{/current}}>{{label}}</a></li>
+{{#nav}}<li{{#has_children}} class="site-nav__group{{#in_section}} is-section{{/in_section}}"{{/has_children}}><a href="{{href}}"{{#current}} aria-current="page"{{/current}}>{{label}}</a>{{#has_children}}
+<ul class="site-nav__menu">
+{{#children}}<li><a href="{{href}}"{{#current}} aria-current="page"{{/current}}>{{label}}</a></li>
+{{/children}}</ul>
+{{/has_children}}</li>
 {{/nav}}</ul>
 {{#action}}<a class="button button--small" href="{{href}}">{{label}}</a>
 {{/action}}</nav>

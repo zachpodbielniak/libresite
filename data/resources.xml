@@ -12,6 +12,30 @@
     <file>components/look.css</file>
     <file>components/themes.yaml</file>
     <file>components/identities.yaml</file>
+    <file>components/carousel.css</file>
+    <file>components/carousel.html</file>
+    <file>components/carousel.js</file>
+    <file>components/compare.js</file>
+    <file>components/gallery.js</file>
+    <file>components/hours.js</file>
+    <file>components/jobs.css</file>
+    <file>components/jobs.html</file>
+    <file>components/jumpnav.css</file>
+    <file>components/jumpnav.html</file>
+    <file>components/news.css</file>
+    <file>components/news.html</file>
+    <file>components/press.css</file>
+    <file>components/press.html</file>
+    <file>components/product.css</file>
+    <file>components/product.html</file>
+    <file>components/products.css</file>
+    <file>components/products.html</file>
+    <file>components/recipe.css</file>
+    <file>components/recipe.html</file>
+    <file>components/specials.css</file>
+    <file>components/specials.html</file>
+    <file>components/timetable.css</file>
+    <file>components/timetable.html</file>
     <file>components/cards.css</file>
     <file>components/cards.html</file>
     <file>components/catalog.yaml</file>

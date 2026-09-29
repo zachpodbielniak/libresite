@@ -1179,12 +1179,12 @@ static const gchar *const font_tokens[] = {"font_display", "font_body", "font_mo
 static const gchar *const ui_keys[] = {"skip", "menu", "nav", "footer_nav", "contents", "filter",
 	"count_one", "count_many", "required", "reset", "preview", "download", "error_required",
 	"error_invalid", "error_summary", "breadcrumb", "pager", "previous", "next", "letters", "scroll",
-	"checklist_yes", "checklist_no"};
+	"checklist_yes", "checklist_no", "close", "ingredients", "method"};
 static const gchar *const ui_defaults[] = {"Skip to content", "Menu", "Primary", "Footer", "Contents",
 	"Filter entries", "{n} entry shown", "{n} entries shown", "required", "Clear", "Preview",
 	"Download text file", "Fill in this field.", "Check this entry.", "{n} fields need attention.",
 	"Breadcrumb", "More pages", "Previous", "Next", "Jump to letter", "Scrollable list", "Included",
-	"Not included"};
+	"Not included", "Close", "Ingredients", "Method"};
 static const gchar *const art_ratios[] = {"16:9", "4:3", "3:2", "1:1", "3:4", "2:1", "3:1", "21:9", NULL};
 
 static gdouble
@@ -1439,6 +1439,48 @@ check_plan_links(Problems *problems, LinkScope *scope, const gchar *where, JsonA
 	}
 }
 
+/* nav: up to 8 links, each optionally with up to 8 children for a drop-down
+ * menu. Every href, child or not, is a planned route. */
+static void
+check_nav(Problems *problems, LinkScope *scope, JsonArray *nav){
+	guint i, j;
+	if (json_array_get_length(nav) > 8)
+		problem(problems, "nav allows at most 8 links");
+	for (i = 0; i < json_array_get_length(nav); i++) {
+		JsonNode *entry = json_array_get_element(nav, i);
+		JsonObject *link = JSON_NODE_HOLDS_OBJECT(entry) ? json_node_get_object(entry) : NULL;
+		g_autofree gchar *where = g_strdup_printf("nav[%u]", i);
+		JsonArray *children = link != NULL ? member_array(link, "children") : NULL;
+		if (link != NULL && json_object_has_member(link, "children")) {
+			g_autoptr(JsonNode) bare = json_node_new(JSON_NODE_OBJECT);
+			JsonObject *copy = json_object_new();
+			if (json_object_has_member(link, "href"))
+				json_object_set_member(copy, "href", json_node_copy(json_object_get_member(link, "href")));
+			if (json_object_has_member(link, "label"))
+				json_object_set_member(copy, "label", json_node_copy(json_object_get_member(link, "label")));
+			json_node_take_object(bare, copy);
+			check_link_object(problems, scope, where, bare);
+			if (!ls_object_keys(link, "|href|label|children|", NULL))
+				problem(problems, "%s may only have href, label and children", where);
+			if (children == NULL || json_array_get_length(children) == 0) {
+				problem(problems, "%s.children must list 1 to 8 links", where);
+				continue;
+			}
+			{
+				g_autofree gchar *under = g_strconcat(where, ".children", NULL);
+				check_plan_links(problems, scope, under, children, 8);
+			}
+			for (j = 0; j < json_array_get_length(children); j++) {
+				JsonNode *child = json_array_get_element(children, j);
+				const gchar *href = JSON_NODE_HOLDS_OBJECT(child) ? ls_string(json_node_get_object(child), "href") : NULL;
+				if (href != NULL && !g_hash_table_contains(scope->routes, href))
+					problem(problems, "%s.children[%u] must link to a planned page", where, j);
+			}
+		} else
+			check_link_object(problems, scope, where, entry);
+	}
+}
+
 /* One listed value per look axis; the builder repairs missing axes to defaults. */
 static void
 check_look(Problems *problems, LsComponents *self, JsonObject *plan){
@@ -1599,7 +1641,7 @@ check_plan_into(Problems *problems, LsComponents *self, JsonNode *node){
 	if (nav == NULL || json_array_get_length(nav) == 0)
 		problem(problems, "nav must list 1 to 8 links to planned pages");
 	else {
-		check_plan_links(problems, &scope, "nav", nav, 8);
+		check_nav(problems, &scope, nav);
 		for (i = 0; i < json_array_get_length(nav); i++) {
 			JsonNode *entry = json_array_get_element(nav, i);
 			const gchar *href = JSON_NODE_HOLDS_OBJECT(entry) ? ls_string(json_node_get_object(entry), "href") : NULL;
@@ -2428,6 +2470,30 @@ check_component_rules(PageCheck *check, const gchar *where, const gchar *compone
 				problem(check->problems, "%s.items[%u]: category '%s' is not one of the categories", where, i, category);
 		}
 	}
+	if (g_str_equal(component, "hours") && member_array(content, "schedule") != NULL &&
+		json_array_get_length(member_array(content, "schedule")) > 0) {
+		JsonArray *schedule = member_array(content, "schedule");
+		const gchar *zone = ls_string(content, "timezone");
+		guint i;
+		if (zone == NULL || strchr(zone, '/') == NULL ||
+			strspn(zone, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/_+-") != strlen(zone))
+			problem(check->problems, "%s.timezone must be an IANA zone such as America/New_York when schedule is set", where);
+		if (blank(ls_string(content, "open_label")) || blank(ls_string(content, "closed_label")))
+			problem(check->problems, "%s: schedule needs open_label and closed_label", where);
+		for (i = 0; i < json_array_get_length(schedule); i++) {
+			JsonNode *node = json_array_get_element(schedule, i);
+			JsonObject *row = JSON_NODE_HOLDS_OBJECT(node) ? json_node_get_object(node) : NULL;
+			const gchar *keys[] = {"opens", "closes"};
+			guint k;
+			for (k = 0; row != NULL && k < G_N_ELEMENTS(keys); k++) {
+				const gchar *t = ls_string(row, keys[k]);
+				if (t == NULL || strlen(t) != 5 || !g_ascii_isdigit(t[0]) || !g_ascii_isdigit(t[1]) || t[2] != ':' ||
+					!g_ascii_isdigit(t[3]) || !g_ascii_isdigit(t[4]) || (t[0] - '0') * 10 + (t[1] - '0') > 23 ||
+					(t[3] - '0') * 10 + (t[4] - '0') > 59)
+					problem(check->problems, "%s.schedule[%u].%s must be 24-hour HH:MM", where, i, keys[k]);
+			}
+		}
+	}
 	if (g_str_equal(component, "form")) {
 		const gchar *mode = ls_string(content, "mode");
 		const gchar *target = ls_string(content, "target");
@@ -2610,6 +2676,8 @@ typedef struct {
 	const gchar *page_title;
 	const gchar *wordmark;
 } Render;
+
+static void derived_filter(Render *render, JsonObject *view, const gchar *field);
 
 static const gchar *
 ui_text(Render *render, const gchar *key){
@@ -3044,6 +3112,14 @@ render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArra
 				json_object_set_string_member(item, "category_key", key_text);
 			}
 		}
+		/* Products and news build their filter buttons from the items' own
+		 * categories or tags, reusing the filter script and styles. */
+		if ((g_str_equal(name, "products") || g_str_equal(name, "news")) &&
+			!blank(ls_string(content, "all_label")))
+			derived_filter(render, view, g_str_equal(name, "products") ? "category" : "tag");
+		if (g_str_equal(name, "hours"))
+			json_object_set_boolean_member(view, "live", member_array(content, "schedule") != NULL &&
+				json_array_get_length(member_array(content, "schedule")) > 0);
 		if (g_str_equal(name, "form"))
 			form_view(render, view, content, id);
 		if (g_str_equal(name, "directory"))
@@ -3064,6 +3140,37 @@ render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArra
 	}
 }
 
+/* Filter buttons from the distinct values of @field across the view's items,
+ * in first-seen order; items without one only show under the all button. */
+static void
+derived_filter(Render *render, JsonObject *view, const gchar *field){
+	JsonArray *items = json_object_get_array_member(view, "items");
+	JsonArray *categories = json_array_new();
+	g_autoptr(GHashTable) seen = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+	guint j;
+	for (j = 0; items != NULL && j < json_array_get_length(items); j++) {
+		JsonObject *item = json_array_get_object_element(items, j);
+		const gchar *value = ls_string(item, field);
+		g_autofree gchar *key = NULL;
+		if (blank(value)) {
+			json_object_set_string_member(item, "category_key", "");
+			continue;
+		}
+		key = slugify(value, 40);
+		json_object_set_string_member(item, "category_key", key);
+		if (g_hash_table_add(seen, g_strdup(key))) {
+			JsonObject *category = json_object_new();
+			json_object_set_string_member(category, "label", value);
+			json_object_set_string_member(category, "key", key);
+			json_array_add_object_element(categories, category);
+		}
+	}
+	json_object_set_array_member(view, "categories", categories);
+	json_object_set_boolean_member(view, "filtered", json_array_get_length(categories) > 1);
+	if (json_array_get_length(categories) > 1)
+		g_hash_table_add(render->used, g_strdup("filter"));
+}
+
 static void
 append_link_views(JsonArray *out, JsonArray *links, const gchar *path, GHashTable *seen){
 	guint i;
@@ -3074,6 +3181,24 @@ append_link_views(JsonArray *out, JsonArray *links, const gchar *path, GHashTabl
 			continue;
 		view = link_view(link, FALSE);
 		json_object_set_boolean_member(view, "current", g_strcmp0(ls_string(link, "href"), path) == 0);
+		/* A drop-down menu: its children, and whether this page is one of them. */
+		if (member_array(link, "children") != NULL) {
+			JsonArray *children = member_array(link, "children");
+			JsonArray *views = json_array_new();
+			gboolean inside = FALSE;
+			guint j;
+			for (j = 0; j < json_array_get_length(children); j++) {
+				JsonObject *child = json_array_get_object_element(children, j);
+				JsonObject *child_view = link_view(child, FALSE);
+				gboolean here = g_strcmp0(ls_string(child, "href"), path) == 0;
+				json_object_set_boolean_member(child_view, "current", here);
+				inside |= here;
+				json_array_add_object_element(views, child_view);
+			}
+			json_object_set_array_member(view, "children", views);
+			json_object_set_boolean_member(view, "has_children", TRUE);
+			json_object_set_boolean_member(view, "in_section", inside);
+		}
 		json_array_add_object_element(out, view);
 	}
 }

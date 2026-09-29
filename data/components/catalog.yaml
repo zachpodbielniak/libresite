@@ -204,21 +204,21 @@ kinds:
   index:
     summary: A list of things to choose from, such as work, articles, services or locations. Opens with a page header; the list is the page.
     openings: [page-header]
-    suggested: [entries, cards, filter, directory, bento, links, pager, big-list, showcase]
+    suggested: [entries, cards, filter, news, products, directory, bento, links, pager, big-list, showcase, jumpnav]
   detail:
     summary: One thing in depth, such as a project, service, dish or product. Key facts up front, then the story, evidence and related items.
     openings: [page-header]
-    suggested: [facts, specs, text, figure, compare, article, callout, table, links, pager, story]
+    suggested: [facts, specs, product, recipe, text, figure, compare, carousel, article, callout, table, links, pager, story]
     sidebar: true
   article:
     summary: Longform reading such as an essay, guide or case study. A reading column with contents, inline figures and notes.
     openings: [page-header]
-    suggested: [lead, article, figure, callout, table, timeline, glossary, pager]
+    suggested: [lead, article, recipe, figure, callout, table, timeline, glossary, pager, jumpnav]
     sidebar: true
   menu:
     summary: A menu or price list. Sections of items with prices and notes, little else.
     openings: [page-header]
-    suggested: [menu, pricing, notice, callout, hours, cta]
+    suggested: [menu, specials, pricing, notice, callout, hours, cta]
   visit:
     summary: How to get there and when. Hours, address, directions, practical questions and one clear action.
     openings: [page-header]
@@ -226,7 +226,7 @@ kinds:
   about:
     summary: The story, people and values. A quiet opening, longer reading, pictures and milestones.
     openings: [page-header]
-    suggested: [lead, text, columns, timeline, team, numbers, voices, partners, figure, quote, statement, profile, story, badges]
+    suggested: [lead, text, columns, timeline, team, numbers, voices, press, partners, figure, carousel, quote, statement, profile, story, badges, jobs]
   form:
     summary: A page built around one task, such as a booking request, a brief or a sign-up. Explain, then the form, then what happens next.
     openings: [page-header]
@@ -234,11 +234,15 @@ kinds:
   services:
     summary: What the business offers. Services with prices where supplied, what is included and how it works.
     openings: [page-header]
-    suggested: [services, checklist, details, tabs, steps, areas, faq, cta, offer, story, badges, showcase]
+    suggested: [services, timetable, checklist, details, tabs, steps, areas, faq, cta, offer, story, badges, showcase]
   pricing:
     summary: Prices and packages. Tiers, what each includes and the questions buyers ask.
     openings: [page-header]
     suggested: [pricing, checklist, table, faq, cta, offer]
+  shop:
+    summary: Products for sale. A product grid with filters, then practical answers about buying.
+    openings: [page-header]
+    suggested: [products, notice, faq, checklist, cta, offer]
   contact:
     summary: How to reach the business. Contact details, a form only with a real endpoint, and where to find it.
     openings: [page-header]
@@ -246,11 +250,11 @@ kinds:
   gallery:
     summary: A portfolio or photo page. Artworks first, words second.
     openings: [page-header]
-    suggested: [gallery, strip, bento, compare, figure, cta, showcase]
+    suggested: [gallery, carousel, strip, bento, compare, figure, cta, showcase]
   events:
     summary: What is on. Dates, places and how to join.
     openings: [page-header]
-    suggested: [schedule, notice, callout, location, faq, offer]
+    suggested: [schedule, timetable, news, notice, callout, location, faq, offer]
   general:
     summary: Any other interior page. Opens with a page header.
     openings: [page-header]
@@ -619,6 +623,150 @@ components:
     slots:
       previous: {type: link}
       next: {type: link}
+  products:
+    summary: Products for sale in a grid or list, with supplied prices only. Set all_label to add category filter buttons built from the items' categories.
+    variants:
+      grid: An even grid of product cards.
+      list: Wide rows with the picture beside the details.
+      feature: The first product large, the rest in a grid.
+    slots:
+      heading: {type: text, max: 140}
+      intro: {type: rich, max: 600}
+      all_label: {type: text, max: 40, note: "Set to add filter buttons, one per category; the label of the button that shows every product."}
+      items:
+        type: items
+        min_items: 1
+        max_items: 48
+        fields:
+          name: {type: text, required: true, max: 100}
+          price: {type: text, max: 40, note: "Only a supplied price, exactly as given."}
+          category: {type: text, max: 40}
+          badge: {type: text, max: 24, note: "A short supplied label such as New or Sold out."}
+          description: {type: text, max: 300}
+          art: {type: image}
+          link: {type: link}
+  product:
+    summary: One product in detail. Pictures, the supplied price, options, specifications and how to buy.
+    variants:
+      split: Pictures beside the details.
+      stacked: Pictures above the details.
+    slots:
+      heading: {type: text, required: true, max: 140}
+      price: {type: text, max: 40, note: "Only a supplied price, exactly as given."}
+      gallery: {type: items, min_items: 1, max_items: 8, fields: {art: {type: image, required: true}}}
+      description: {type: rich, max: 2000}
+      options: {type: items, max_items: 6, fields: {label: {type: text, required: true, max: 40}, values: {type: text, required: true, max: 200, note: "The supplied choices, such as Small, Medium, Large."}}}
+      specs: {type: items, max_items: 16, fields: {label: {type: text, required: true, max: 60}, value: {type: text, required: true, max: 200}}}
+      note: {type: rich, max: 600, note: "How to buy, delivery or collection, from supplied facts."}
+      action: {type: link}
+  recipe:
+    summary: A recipe card with quick facts, ingredients and numbered steps.
+    variants:
+      split: Ingredients beside the method.
+      card: One boxed card.
+    slots:
+      heading: {type: text, required: true, max: 140}
+      intro: {type: rich, max: 600}
+      facts: {type: items, max_items: 4, fields: {label: {type: text, required: true, max: 30}, value: {type: text, required: true, max: 40}}}
+      ingredients: {type: items, min_items: 1, max_items: 30, fields: {text: {type: text, required: true, max: 120}}}
+      steps: {type: items, min_items: 1, max_items: 20, fields: {text: {type: text, required: true, max: 400}}}
+      art: {type: image}
+      note: {type: rich, max: 400}
+  specials:
+    summary: Today's or this week's specials, like a board by the door. Supplied dishes and prices only.
+    variants:
+      board: A dark chalkboard panel.
+      list: A plain list with a date line.
+    slots:
+      heading: {type: text, required: true, max: 140}
+      date: {type: text, max: 60}
+      items: {type: items, min_items: 1, max_items: 12, fields: {name: {type: text, required: true, max: 80}, price: {type: text, max: 20}, description: {type: text, max: 200}}}
+      note: {type: rich, max: 300}
+  timetable:
+    summary: A weekly class or session timetable, day by day.
+    variants:
+      columns: Days as columns on wide screens.
+      list: Days as a list.
+    slots:
+      heading: {type: text, max: 140}
+      intro: {type: rich, max: 600}
+      days:
+        type: items
+        min_items: 1
+        max_items: 7
+        fields:
+          day: {type: text, required: true, max: 20}
+          sessions:
+            type: items
+            min_items: 1
+            max_items: 12
+            fields:
+              time: {type: text, required: true, max: 30}
+              name: {type: text, required: true, max: 80}
+              detail: {type: text, max: 80, note: "Level, room or teacher, from supplied facts."}
+      note: {type: rich, max: 400}
+  carousel:
+    summary: Pictures in a row that swipes sideways, with previous and next buttons.
+    variants:
+      cards: Captioned pictures in a row.
+      full: One wide picture at a time.
+    slots:
+      heading: {type: text, max: 140}
+      items: {type: items, min_items: 2, max_items: 16, fields: {art: {type: image, required: true}, caption: {type: text, max: 200}}}
+  news:
+    summary: News or blog posts with dates and tags. Set all_label to add tag filter buttons built from the items' tags.
+    variants:
+      list: A dated list.
+      cards: Cards in a grid.
+    slots:
+      heading: {type: text, max: 140}
+      all_label: {type: text, max: 40, note: "Set to add filter buttons, one per tag; the label of the button that shows every post."}
+      items:
+        type: items
+        min_items: 1
+        max_items: 40
+        fields:
+          title: {type: text, required: true, max: 140}
+          date: {type: text, max: 40}
+          tag: {type: text, max: 40}
+          excerpt: {type: text, max: 400}
+          link: {type: link}
+          art: {type: image}
+  jobs:
+    summary: Open roles, each with its terms and how to apply. Only supplied roles.
+    variants:
+      list: One role per row.
+      cards: Roles as cards.
+    slots:
+      heading: {type: text, max: 140}
+      intro: {type: rich, max: 600}
+      items:
+        type: items
+        min_items: 1
+        max_items: 20
+        fields:
+          title: {type: text, required: true, max: 100}
+          type: {type: text, max: 40, note: "Such as Full time or Part time."}
+          location: {type: text, max: 80}
+          summary: {type: text, max: 400}
+          apply: {type: text, max: 200, note: "How to apply, from supplied facts."}
+          link: {type: link}
+  press:
+    summary: What the press said. Only supplied quotes, word for word, with the outlet named.
+    variants:
+      wall: A wall of quotes.
+      list: A quiet list.
+    slots:
+      heading: {type: text, max: 140}
+      items: {type: items, min_items: 1, max_items: 12, fields: {quote: {type: text, required: true, max: 300}, outlet: {type: text, required: true, max: 80}, date: {type: text, max: 40}, link: {type: link}}}
+  jumpnav:
+    summary: A bar of links to this page's own sections that stays in view while reading.
+    variants:
+      sticky: Sticks under the header while the page scrolls.
+      bar: Sits in place.
+    slots:
+      label: {type: text, required: true, max: 60, note: "What the bar is, such as On this page."}
+      items: {type: items, min_items: 2, max_items: 10, fields: {link: {type: link, required: true}}}
   hours:
     summary: Opening hours by day. Only supplied hours.
     variants:
@@ -635,6 +783,17 @@ components:
           days: {type: text, required: true, max: 60}
           times: {type: text, required: true, max: 80}
       note: {type: rich, max: 400}
+      timezone: {type: text, max: 60, note: "The business's IANA time zone, such as America/New_York. Needed for a live open-now badge."}
+      schedule:
+        type: items
+        max_items: 21
+        note: "Optional machine-readable hours, exactly as supplied, for a live open-now badge; needs timezone, open_label and closed_label."
+        fields:
+          day: {type: choice, required: true, values: [mon, tue, wed, thu, fri, sat, sun]}
+          opens: {type: text, required: true, max: 5, note: "24-hour HH:MM."}
+          closes: {type: text, required: true, max: 5, note: "24-hour HH:MM; earlier than opens means past midnight."}
+      open_label: {type: text, max: 40, note: "Badge text while open, such as Open now."}
+      closed_label: {type: text, max: 40, note: "Badge text while closed, such as Closed now."}
   location:
     summary: An address with directions and an optional drawn map. Never embed a map service.
     variants:
@@ -820,6 +979,7 @@ components:
     variants:
       side: Side by side.
       stacked: One above the other.
+      slider: One over the other, with a handle to wipe between them; side by side without scripts.
     slots:
       heading: {type: text, max: 140}
       first: {type: items, min_items: 1, max_items: 1, fields: {art: {type: image, required: true}, label: {type: text, required: true, max: 60}}}
@@ -932,6 +1092,7 @@ components:
     variants:
       chips: Place names as tags.
       columns: Place names in columns.
+      map: A drawn map with the business at the center and the places in rings around it.
     slots:
       heading: {type: text, max: 140}
       intro: {type: rich, max: 600}

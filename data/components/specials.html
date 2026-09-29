@@ -1,0 +1,13 @@
+<div class="wrap">
+<div class="specials__board">
+<{{htag}} id="{{id}}-h" class="specials__title">{{{heading_html}}}</{{htag}}>
+{{#date}}<p class="specials__date kicker">{{date}}</p>
+{{/date}}<ul class="specials__items" role="list">
+{{#items}}<li class="specials__item">
+<p class="specials__line"><span class="specials__name">{{name}}</span>{{#price}}<span class="specials__price">{{price}}</span>{{/price}}</p>
+{{#description}}<p class="specials__desc">{{description}}</p>
+{{/description}}</li>
+{{/items}}</ul>
+{{#note}}<div class="specials__note prose">{{{note}}}</div>
+{{/note}}</div>
+</div>

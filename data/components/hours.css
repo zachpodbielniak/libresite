@@ -9,3 +9,6 @@
 @media (min-width: 40rem) { .hours--grid .hours__list { grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr)); } }
 .hours--grid .hours__row { display: grid; gap: var(--space-1); padding: var(--space-4); background: var(--surface); border: 0; border-radius: var(--radius); }
 .hours--grid .hours__row dd { text-align: left; }
+.hours__status { display: inline-flex; align-items: center; gap: 0.5em; margin: 0 0 var(--space-4); padding: 0.25em 0.9em; border: var(--border) solid var(--line-strong); border-radius: 999px; font-weight: 600; }
+.hours__status::before { content: ""; width: 0.6em; height: 0.6em; border-radius: 50%; background: var(--muted); }
+.hours__status.is-open::before { background: var(--accent); }

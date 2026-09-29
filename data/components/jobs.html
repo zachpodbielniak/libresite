@@ -1,0 +1,15 @@
+<div class="wrap">
+{{#heading}}<div class="section-head">
+<{{htag}} id="{{id}}-h">{{{heading_html}}}</{{htag}}>
+{{#intro}}<div class="prose">{{{intro}}}</div>
+{{/intro}}</div>
+{{/heading}}<ul class="jobs__list" role="list">
+{{#items}}<li class="jobs__item">
+<{{subtag}} class="jobs__title">{{title}}</{{subtag}}>
+<p class="jobs__meta">{{#type}}<span class="jobs__chip">{{type}}</span>{{/type}}{{#location}}<span class="jobs__chip">{{location}}</span>{{/location}}</p>
+{{#summary}}<p class="jobs__summary">{{summary}}</p>
+{{/summary}}{{#apply}}<p class="jobs__apply muted">{{apply}}</p>
+{{/apply}}{{#link}}<p class="jobs__link"><a class="button button--ghost button--small" href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{label}}</a></p>
+{{/link}}</li>
+{{/items}}</ul>
+</div>

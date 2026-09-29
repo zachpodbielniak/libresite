@@ -1,0 +1,12 @@
+.carousel__track { display: grid; grid-auto-flow: column; grid-auto-columns: min(80%, 26rem); gap: var(--space-4); margin: 0; padding: 0 0 var(--space-3); list-style: none; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: 0; overscroll-behavior-x: contain; }
+.carousel__track:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+.carousel__item { scroll-snap-align: start; }
+.carousel__item figure { margin: 0; }
+.carousel__item img { width: 100%; aspect-ratio: 4 / 3; height: auto; max-height: none; object-fit: cover; border-radius: var(--radius); }
+.carousel__item figcaption { margin-top: var(--space-2); font-size: var(--step--1); }
+.carousel--full .carousel__track { grid-auto-columns: 100%; }
+.carousel--full .carousel__item img { aspect-ratio: 16 / 9; }
+.carousel__controls { display: flex; justify-content: flex-end; gap: var(--space-2); margin-bottom: var(--space-3); }
+.carousel__button { min-width: 44px; min-height: 44px; border: var(--border-strong) solid var(--ink); border-radius: 999px; background: transparent; color: var(--ink); font-size: var(--step-1); cursor: pointer; }
+.carousel__button:hover { background: var(--ink); color: var(--paper); }
+@media (prefers-reduced-motion: no-preference) { .carousel__track { scroll-behavior: smooth; } }

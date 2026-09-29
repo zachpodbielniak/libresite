@@ -1,8 +1,9 @@
 <div class="wrap">
 {{#heading}}<div class="section-head"><{{htag}} id="{{id}}-h">{{{heading_html}}}</{{htag}}></div>
-{{/heading}}<div class="compare__pair">
+{{/heading}}<div class="compare__pair"{{#v_slider}} data-compare{{/v_slider}}>
 {{#first}}<figure class="compare__side">{{#art}}<img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}" loading="lazy" decoding="async">{{/art}}<figcaption class="kicker">{{label}}</figcaption></figure>
 {{/first}}{{#second}}<figure class="compare__side">{{#art}}<img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}" loading="lazy" decoding="async">{{/art}}<figcaption class="kicker">{{label}}</figcaption></figure>
-{{/second}}</div>
+{{/second}}{{#v_slider}}<input class="compare__range" type="range" min="0" max="100" value="50" aria-label="{{#first}}{{label}}{{/first}} / {{#second}}{{label}}{{/second}}" hidden>
+{{/v_slider}}</div>
 {{#caption}}<p class="compare__caption muted">{{caption}}</p>
 {{/caption}}</div>

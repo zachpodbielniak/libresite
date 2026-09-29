@@ -1,0 +1,20 @@
+<div class="wrap product__layout">
+<div class="product__gallery">
+{{#gallery}}<figure class="product__shot">{{#art}}<img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}" decoding="async">{{/art}}</figure>
+{{/gallery}}</div>
+<div class="product__details">
+<{{htag}} id="{{id}}-h" class="product__name">{{{heading_html}}}</{{htag}}>
+{{#price}}<p class="product__price">{{price}}</p>
+{{/price}}{{#description}}<div class="prose">{{{description}}}</div>
+{{/description}}{{#has_options}}<dl class="product__options">
+{{#options}}<div><dt>{{label}}</dt><dd>{{values}}</dd></div>
+{{/options}}</dl>
+{{/has_options}}{{#action}}<p class="actions"><a class="button" href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{label}}</a></p>
+{{/action}}{{#note}}<div class="product__note prose muted">{{{note}}}</div>
+{{/note}}{{#has_specs}}<table class="product__specs">
+<tbody>
+{{#specs}}<tr><th scope="row">{{label}}</th><td>{{value}}</td></tr>
+{{/specs}}</tbody>
+</table>
+{{/has_specs}}</div>
+</div>

@@ -1,6 +1,8 @@
 <div class="wrap">
 {{#heading}}<{{htag}} id="{{id}}-h">{{{heading_html}}}</{{htag}}>
-{{/heading}}<dl class="hours__list">
+{{/heading}}{{#live}}<p class="hours__status" data-hours data-tz="{{timezone}}" data-open="{{open_label}}" data-closed="{{closed_label}}" role="status" hidden></p>
+{{#schedule}}<span hidden data-day="{{day}}" data-opens="{{opens}}" data-closes="{{closes}}"></span>
+{{/schedule}}{{/live}}<dl class="hours__list">
 {{#items}}<div class="hours__row"><dt>{{days}}</dt><dd>{{times}}</dd></div>
 {{/items}}</dl>
 {{#note}}<div class="hours__note prose muted">{{{note}}}</div>

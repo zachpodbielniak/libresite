@@ -617,6 +617,10 @@ sample_content(const gchar *name, JsonObject *component){
 			"'empty':'None yet.','items':[{'title':'Ladderback','category':'Chairs'},{'title':'Drop-leaf','category':'Tables'}]}");
 	if (g_str_equal(name, "custom"))
 		return json("{'label':'Custom region','html':'<div><p>Custom sample</p></div>'}");
+	if (g_str_equal(name, "hours"))
+		return json("{'heading':'Hours','items':[{'days':'Mon to Fri','times':'9:00 to 17:00'}],"
+			"'timezone':'Europe/London','open_label':'Open now','closed_label':'Closed now',"
+			"'schedule':[{'day':'mon','opens':'09:00','closes':'17:00'},{'day':'fri','opens':'18:00','closes':'02:00'}]}");
 	content = json_object_new();
 	names = json_object_get_members(slots);
 	for (slot = names; slot != NULL; slot = slot->next)
@@ -1103,6 +1107,73 @@ test_plain_share(void){
 	g_assert_cmpuint(plain_backdrop, <=, 270);
 }
 
+/* Shop and news filters come from the items themselves, the open-now badge
+ * from a checked schedule, and drop-down menus from checked nav children. */
+static void
+test_new_components(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(JsonNode) plan = load("plan.json");
+	g_autoptr(JsonObject) pages = fixture_pages();
+	g_autoptr(GError) error = NULL;
+	g_autofree gchar *text = NULL;
+	g_autoptr(JsonNode) bundle = NULL;
+	JsonObject *root = json_node_get_object(plan);
+	const gchar *html, *home;
+	json_object_set_member(root, "nav", json(
+		"[{'href':'work.html','label':'Work','children':[{'href':'journal.html','label':'Journal'},{'href':'visit.html','label':'Visit'}]},"
+		"{'href':'start.html','label':'Start'}]"));
+	json_object_set_member(pages, "work.html", json(
+		"{'path':'work.html','sections':[{'component':'page-header','content':{'heading':'Shop'}},"
+		"{'component':'products','variant':'grid','content':{'heading':'Chairs and tables','all_label':'Everything','items':["
+		"{'name':'Ladderback','price':'$240','category':'Chairs'},{'name':'Drop-leaf','category':'Tables'},"
+		"{'name':'Stool','category':'Chairs','badge':'New'}]}},"
+		"{'component':'news','content':{'heading':'Notes','all_label':'All','items':[{'title':'Oil','tag':'Care'},{'title':'Wax','tag':'Care'}]}},"
+		"{'component':'hours','content':{'heading':'Hours','items':[{'days':'Mon','times':'9 to 5'}],'timezone':'Europe/London',"
+		"'open_label':'Open now','closed_label':'Closed now','schedule':[{'day':'mon','opens':'09:00','closes':'17:00'}]}},"
+		"{'component':'compare','variant':'slider','content':{'first':[{'art':{'src':'assets/bench.svg','alt':'Before'},'label':'Before'}],"
+		"'second':[{'art':{'src':'assets/bench.svg','alt':'After'},'label':'After'}]}},"
+		"{'component':'gallery','content':{'items':[{'art':{'src':'assets/bench.svg','alt':'A'}},{'art':{'src':'assets/bench.svg','alt':'B'}}]}}]}"));
+	text = ls_components_compose(components, plan, pages, NULL, &error);
+	g_assert_no_error(error);
+	bundle = ls_json_parse(text, NULL);
+	html = file_content(bundle, "work.html");
+	/* Two categories, in first-seen order, and every item keyed. */
+	contains(html, "data-filter-value=\"chairs\" aria-pressed=\"false\">Chairs</button>");
+	contains(html, "data-filter-value=\"tables\" aria-pressed=\"false\">Tables</button>");
+	g_assert_cmpuint(count(html, "data-filter-item=\"chairs\""), ==, 2);
+	contains(html, "<p class=\"product-card__badge\">New</p>");
+	/* One tag only: no buttons for news. */
+	g_assert_cmpuint(count(html, "data-filter-item=\"care\""), ==, 0);
+	contains(html, "data-hours data-tz=\"Europe/London\" data-open=\"Open now\" data-closed=\"Closed now\"");
+	contains(html, "data-day=\"mon\" data-opens=\"09:00\" data-closes=\"17:00\"");
+	contains(html, "data-compare");
+	contains(html, "<a class=\"gallery__open\" href=\"assets/bench.svg\">");
+	contains(html, "<dialog class=\"gallery__dialog\"");
+	/* The drop-down: children under Work, and Work marked when a child is open. */
+	home = file_content(bundle, "journal.html");
+	contains(home, "<li class=\"site-nav__group is-section\"><a href=\"work.html\">Work</a>");
+	contains(home, "<li><a href=\"journal.html\" aria-current=\"page\">Journal</a></li>");
+	contains(file_content(bundle, "site.js"), "[data-hours]");
+	contains(file_content(bundle, "site.js"), "[data-compare]");
+	contains(file_content(bundle, "site.js"), "[data-lightbox]");
+	/* A schedule without a zone, or a bad time, is rejected. */
+	g_clear_pointer(&text, g_free);
+	json_object_set_member(pages, "work.html", json(
+		"{'path':'work.html','sections':[{'component':'page-header','content':{'heading':'Visit'}},"
+		"{'component':'hours','content':{'items':[{'days':'Mon','times':'9 to 5'}],'open_label':'Open','closed_label':'Closed',"
+		"'schedule':[{'day':'mon','opens':'9am','closes':'17:00'}]}}]}"));
+	text = ls_components_compose(components, plan, pages, NULL, &error);
+	g_assert_null(text);
+	g_assert_nonnull(strstr(error->message, "timezone must be an IANA zone"));
+	g_assert_nonnull(strstr(error->message, "schedule[0].opens must be 24-hour HH:MM"));
+	g_clear_error(&error);
+	/* Nav children must be planned pages. */
+	json_object_set_member(root, "nav", json("[{'href':'work.html','label':'Work','children':[{'href':'nowhere.html','label':'X'}]}]"));
+	g_assert_false(ls_components_check_plan(components, plan, &error));
+	g_assert_nonnull(strstr(error->message, "nav[0].children"));
+	g_clear_error(&error);
+}
+
 /* WCAG contrast of two #rrggbb colors, for checking generated tokens. */
 static gdouble
 test_contrast(const gchar *a, const gchar *b){
@@ -1300,6 +1371,7 @@ main(int argc, char **argv){
 	g_test_add_func("/components/identities", test_identities);
 	g_test_add_func("/components/photos", test_photos);
 	g_test_add_func("/components/scheme-sitemap-focus", test_scheme_sitemap_focus);
+	g_test_add_func("/components/new-components", test_new_components);
 	g_test_add_func("/components/plain-share", test_plain_share);
 	g_test_add_func("/components/contrast-panel", test_contrast_panel);
 	g_test_add_func("/components/schema-kinds", test_schema_kinds);

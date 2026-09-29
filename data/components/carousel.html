@@ -1,0 +1,10 @@
+<div class="wrap" data-carousel>
+{{#heading}}<div class="section-head carousel__head"><{{htag}} id="{{id}}-h">{{{heading_html}}}</{{htag}}></div>
+{{/heading}}<div class="carousel__controls" hidden>
+<button class="carousel__button" type="button" data-carousel-prev aria-label="{{previous_label}}">&larr;</button>
+<button class="carousel__button" type="button" data-carousel-next aria-label="{{next_label}}">&rarr;</button>
+</div>
+<ul class="carousel__track" role="list" tabindex="0" aria-label="{{scroll_label}}">
+{{#items}}<li class="carousel__item"><figure>{{#art}}<img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}" loading="lazy" decoding="async">{{/art}}{{#caption}}<figcaption class="muted">{{caption}}</figcaption>{{/caption}}</figure></li>
+{{/items}}</ul>
+</div>

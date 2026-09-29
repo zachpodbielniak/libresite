@@ -1,0 +1,15 @@
+<div class="wrap">
+{{#heading}}<div class="section-head">
+<{{htag}} id="{{id}}-h">{{{heading_html}}}</{{htag}}>
+{{#intro}}<div class="prose">{{{intro}}}</div>
+{{/intro}}</div>
+{{/heading}}<div class="timetable__days">
+{{#days}}<section class="timetable__day" aria-label="{{day}}">
+<{{subtag}} class="timetable__name">{{day}}</{{subtag}}>
+<ul class="timetable__sessions" role="list">
+{{#sessions}}<li class="timetable__session"><span class="timetable__time">{{time}}</span><span class="timetable__class">{{name}}</span>{{#detail}}<span class="timetable__detail muted">{{detail}}</span>{{/detail}}</li>
+{{/sessions}}</ul>
+</section>
+{{/days}}</div>
+{{#note}}<div class="timetable__note prose muted">{{{note}}}</div>
+{{/note}}</div>

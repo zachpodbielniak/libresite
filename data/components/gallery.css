@@ -10,3 +10,10 @@
 .gallery--framed .gallery__item img { border-radius: 0; }
 @media (min-width: 40rem) { .gallery--masonry .gallery__list { display: block; columns: 3 14rem; column-gap: var(--space-4); } }
 .gallery--masonry .gallery__list > li { break-inside: avoid; margin-bottom: var(--space-4); }
+.gallery__open { display: block; cursor: zoom-in; }
+.gallery__open:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
+.gallery__dialog { max-width: min(92vw, 70rem); padding: var(--space-3); border: 0; border-radius: var(--radius); background: var(--paper); color: var(--ink); }
+.gallery__dialog::backdrop { background: color-mix(in srgb, #000 78%, transparent); }
+.gallery__dialog img { width: 100%; max-height: 80vh; object-fit: contain; }
+.gallery__caption { margin: var(--space-2) 0 0; font-size: var(--step--1); }
+.gallery__close { float: right; min-height: 44px; margin-bottom: var(--space-2); padding: 0 1em; border: var(--border-strong) solid var(--ink); border-radius: 999px; background: var(--paper); color: var(--ink); cursor: pointer; }

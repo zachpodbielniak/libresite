@@ -1,0 +1,9 @@
+.jumpnav__bar { background: var(--paper); border-block: var(--border) solid var(--line); }
+.jumpnav__inner { display: flex; align-items: center; gap: var(--space-4); overflow-x: auto; padding-block: var(--space-3); }
+.jumpnav__label { margin: 0; flex: none; }
+.jumpnav__inner ul { display: flex; gap: var(--space-4); margin: 0; padding: 0; list-style: none; white-space: nowrap; }
+.jumpnav__inner a { text-decoration: none; font-weight: 600; }
+.jumpnav__inner a:hover { text-decoration: underline; }
+.jumpnav--sticky { position: sticky; top: 0; z-index: 5; }
+.block.jumpnav { padding-block: 0; }
+.jumpnav--bar .jumpnav__bar { border-top: 0; }

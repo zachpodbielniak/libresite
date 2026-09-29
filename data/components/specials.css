@@ -1,0 +1,11 @@
+.specials__board { max-width: 44rem; margin-inline: auto; }
+.specials__title { margin-bottom: var(--space-1); }
+.specials__items { display: grid; gap: var(--space-4); margin: var(--space-5) 0 0; padding: 0; list-style: none; }
+.specials__line { display: flex; justify-content: space-between; gap: var(--space-4); margin: 0; font: 700 var(--step-1) var(--font-display); }
+.specials__desc { margin: var(--space-1) 0 0; font-size: var(--step--1); opacity: 0.85; }
+.specials__note { margin-top: var(--space-5); font-size: var(--step--1); }
+.specials--board .specials__board { --paper: var(--ls-ink); --ink: var(--ls-paper); --surface: var(--ls-ink); --muted: var(--ls-paper); --accent-text: var(--ls-paper); --line: color-mix(in srgb, var(--ls-paper) 35%, var(--ls-ink));
+	padding: clamp(var(--space-5), 5vw, var(--space-8)); background: var(--ls-ink); color: var(--ls-paper); border: 0.6rem solid color-mix(in srgb, var(--ls-ink) 70%, var(--accent)); border-radius: var(--radius); text-align: center; }
+.specials--board .specials__line { justify-content: center; flex-wrap: wrap; }
+.specials--board .specials__price::before { content: "\2014\00a0"; }
+.specials--list .specials__item { padding-bottom: var(--space-3); border-bottom: var(--border) dashed var(--line-strong); }

@@ -125,6 +125,17 @@ hr { border: 0; border-top: var(--border) solid var(--line); margin: var(--space
 }
 .site-nav a:not(.button):hover { border-bottom-color: currentColor; color: var(--ink); }
 .site-nav a[aria-current="page"] { border-bottom-color: var(--accent); }
+/* Drop-down menus open on hover or keyboard focus; in the phone menu they sit
+ * indented under their parent. */
+.site-nav__group { position: relative; }
+.site-nav__group.is-section > a { border-bottom-color: var(--accent); }
+.site-nav .site-nav__menu { display: none; }
+@media (min-width: 48rem) {
+	.site-nav .site-nav__menu { position: absolute; z-index: 20; top: 100%; left: calc(var(--space-3) * -1); flex-direction: column; gap: 0; min-width: 12rem; padding: var(--space-2) var(--space-3); background: var(--paper); border: var(--border) solid var(--line-strong); border-radius: var(--radius); box-shadow: 0 0.75rem 2rem color-mix(in srgb, var(--ink) 12%, transparent); }
+	.site-nav .site-nav__group:hover > .site-nav__menu, .site-nav .site-nav__group:focus-within > .site-nav__menu { display: flex; }
+	.site-nav .site-nav__menu a:not(.button) { display: block; padding-block: var(--space-1); }
+}
+@media (max-width: 47.99rem) { .site-nav .site-nav__menu { display: flex; flex-direction: column; padding-left: var(--space-4); } }
 .nav-toggle {
 	display: none; min-height: 44px; padding: 0.4em 0.9em; border: var(--border) solid var(--ink);
 	border-radius: var(--radius); background: transparent; color: var(--ink);

@@ -1,0 +1,27 @@
+<div class="wrap">
+<div class="recipe__inner">
+<div class="recipe__head">
+<{{htag}} id="{{id}}-h">{{{heading_html}}}</{{htag}}>
+{{#intro}}<div class="prose">{{{intro}}}</div>
+{{/intro}}{{#has_facts}}<dl class="recipe__facts">
+{{#facts}}<div><dt class="kicker">{{label}}</dt><dd>{{value}}</dd></div>
+{{/facts}}</dl>
+{{/has_facts}}</div>
+{{#art}}<figure class="recipe__art"><img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}" loading="lazy" decoding="async"></figure>
+{{/art}}<div class="recipe__body">
+<div class="recipe__ingredients">
+<{{subtag}}>{{ingredients_label}}</{{subtag}}>
+<ul>
+{{#ingredients}}<li>{{text}}</li>
+{{/ingredients}}</ul>
+</div>
+<div class="recipe__method">
+<{{subtag}}>{{method_label}}</{{subtag}}>
+<ol>
+{{#steps}}<li>{{text}}</li>
+{{/steps}}</ol>
+</div>
+</div>
+{{#note}}<div class="recipe__note prose muted">{{{note}}}</div>
+{{/note}}</div>
+</div>

@@ -5,3 +5,11 @@
 .compare__side figcaption { margin-top: var(--space-2); }
 .compare__caption { margin-top: var(--space-3); font-size: var(--step--1); max-width: var(--measure); }
 .compare--stacked .compare__pair { max-width: calc(var(--measure) * 1.3); }
+/* Slider: side by side until the script lays the second picture over the
+ * first; the range input wipes between them. */
+@media (min-width: 48rem) { .compare--slider .compare__pair { grid-template-columns: 1fr 1fr; } }
+.compare--slider .compare__pair.is-ready { position: relative; display: block; }
+.compare--slider .is-ready .compare__side:last-of-type { position: absolute; inset: 0; clip-path: inset(0 0 0 var(--split, 50%)); }
+.compare--slider .is-ready .compare__side:last-of-type figcaption { position: absolute; right: var(--space-3); bottom: var(--space-3); margin: 0; padding: 0.2em 0.6em; background: var(--paper); }
+.compare--slider .is-ready .compare__side:first-of-type figcaption { position: absolute; left: var(--space-3); bottom: var(--space-3); margin: 0; padding: 0.2em 0.6em; background: var(--paper); }
+.compare--slider .compare__range { display: block; width: 100%; margin-top: var(--space-3); accent-color: var(--accent); }

@@ -168,7 +168,27 @@
     "nav": {
       "type": "array",
       "items": {
-        "$ref": "#/$defs/link"
+        "type": "object",
+        "required": [
+          "href",
+          "label"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "href": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "children": {
+            "type": "array",
+            "maxItems": 8,
+            "items": {
+              "$ref": "#/$defs/link"
+            }
+          }
+        }
       }
     },
     "action": {

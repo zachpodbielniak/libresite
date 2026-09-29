@@ -789,6 +789,40 @@ homes:
     - advisory
     - community
     - wellness
+  shop-window:
+    sections:
+    - products
+    - story
+    - press
+    - faq
+    fits:
+    - retail
+  shop-lookbook:
+    sections:
+    - carousel
+    - products
+    - checklist
+    - contact-card
+    fits:
+    - retail
+    - creative
+  kitchen-board:
+    sections:
+    - specials
+    - story
+    - carousel
+    - contact-card
+    fits:
+    - food
+  class-week:
+    sections:
+    - timetable
+    - steps
+    - faq
+    - cta
+    fits:
+    - wellness
+    - community
   split-rhythm:
     sections:
     - split

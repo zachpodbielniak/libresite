@@ -1,0 +1,9 @@
+<div class="wrap">
+{{#heading}}<div class="section-head"><{{htag}} id="{{id}}-h">{{{heading_html}}}</{{htag}}></div>
+{{/heading}}<ul class="press__list" role="list">
+{{#items}}<li class="press__item"><figure>
+<blockquote class="press__quote"><p>{{quote}}</p></blockquote>
+<figcaption class="press__source"><cite>{{#link}}<a href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{outlet}}</a>{{/link}}{{^link}}{{outlet}}{{/link}}</cite>{{#date}} <span class="muted">{{date}}</span>{{/date}}</figcaption>
+</figure></li>
+{{/items}}</ul>
+</div>
