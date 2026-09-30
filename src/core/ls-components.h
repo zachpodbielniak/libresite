@@ -293,6 +293,73 @@ JsonArray *ls_components_social(LsComponents *self, JsonArray *links);
  * Returns: whether the layer may be published
  */
 gboolean ls_components_check_signature(const gchar *css, GError **error);
+
+/**
+ * LS_COMPONENTS_TOO_CLOSE:
+ *
+ * The ls_components_similarity() score at or above which two sites read
+ * as the same design.
+ */
+#define LS_COMPONENTS_TOO_CLOSE 0.6
+/**
+ * LS_COMPONENTS_SIGNATURE_TOO_CLOSE:
+ *
+ * The ls_components_signature_overlap() share at or above which two
+ * signature layers are the same flourish.
+ */
+#define LS_COMPONENTS_SIGNATURE_TOO_CLOSE 0.5
+/**
+ * ls_components_fingerprint:
+ * @self: a component library
+ * @plan: (transfer none): a site plan
+ * @home: (transfer none) (nullable): the home page specification
+ *
+ * Summarises what a visitor notices about a composed site: every look
+ * axis, the column and spacing genes, the paper, ink and accent colours,
+ * the display and body families, the home page's opening and section
+ * sequence, and hashed shape-carrying declarations of its signature layer.
+ * It holds no copy, facts or photographs, so an embedder can keep one per
+ * delivered site and pass earlier ones back as site.avoid.
+ * Returns: (transfer full): a version 1 fingerprint object
+ */
+JsonObject *ls_components_fingerprint(LsComponents *self, JsonNode *plan, JsonNode *home);
+/**
+ * ls_components_similarity:
+ * @a: (transfer none): a fingerprint
+ * @b: (transfer none): another fingerprint
+ *
+ * Scores how alike two sites look from their layout, colours, type and
+ * home page, ignoring the signature layer. Parts missing from either side
+ * are left out of the score; malformed parts count as different.
+ * Returns: 0 (nothing shared) to 1 (the same design)
+ */
+gdouble ls_components_similarity(JsonObject *a, JsonObject *b);
+/**
+ * ls_components_signature_overlap:
+ * @a: (transfer none): a fingerprint
+ * @b: (transfer none): another fingerprint
+ *
+ * Returns: the Jaccard share of the two signature layers' hashed
+ *   declarations, 0 when either has none
+ */
+gdouble ls_components_signature_overlap(JsonObject *a, JsonObject *b);
+/**
+ * ls_components_choose_seed:
+ * @self: a component library
+ * @seed: the site seed (recipe name and brief)
+ * @sector: (nullable): the business sector for identity dealing
+ * @avoid: (transfer none) (nullable): earlier sites' fingerprints
+ * @closest: (out) (optional): the chosen deal's highest similarity to @avoid
+ *
+ * Deals the structure, look and identity from @seed and, when that deal
+ * lands at or above %LS_COMPONENTS_TOO_CLOSE to any fingerprint in @avoid,
+ * re-deals from up to 31 derived seeds, keeping the first clear deal or
+ * else the least similar. Without @avoid the seed is returned unchanged,
+ * so existing sites keep their deal.
+ * Returns: (transfer full): the seed to deal this site from
+ */
+gchar *ls_components_choose_seed(LsComponents *self, const gchar *seed, const gchar *sector, JsonArray *avoid,
+	gdouble *closest);
 /**
  * ls_components_compose:
  * @self: a component library

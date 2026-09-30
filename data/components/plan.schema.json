@@ -23,6 +23,13 @@
     "character": {
       "type": "string"
     },
+    "missing": {
+      "type": "array",
+      "maxItems": 12,
+      "items": {
+        "type": "string"
+      }
+    },
     "tokens": {
       "type": "object",
       "required": [

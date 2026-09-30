@@ -3,7 +3,7 @@
 <{{htag}} class="contact-card__title" id="{{id}}-h">{{{heading_html}}}</{{htag}}>
 {{#body}}<div class="prose">{{{body}}}</div>
 {{/body}}<dl class="contact-card__items">
-{{#items}}<div><dt>{{label}}</dt><dd>{{#link}}<a href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{value}}</a>{{/link}}{{^link}}{{value}}{{/link}}</dd></div>
+{{#items}}<div><dt>{{label}}</dt><dd>{{#link}}<a href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{{value_html}}}</a>{{/link}}{{^link}}{{{value_html}}}{{/link}}</dd></div>
 {{/items}}</dl>
 {{#has_actions}}<p class="actions">{{#actions}}<a class="button{{^primary}} button--ghost{{/primary}}" href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{label}}</a>{{/actions}}</p>
 {{/has_actions}}</div>

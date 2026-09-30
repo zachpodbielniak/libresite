@@ -29,6 +29,12 @@ member_object_of(JsonObject *object, const gchar *name){
 	return node != NULL && JSON_NODE_HOLDS_OBJECT(node) ? json_node_get_object(node) : NULL;
 }
 
+static JsonArray *
+member_array_of(JsonObject *object, const gchar *name){
+	JsonNode *node = object != NULL ? json_object_get_member(object, name) : NULL;
+	return node != NULL && JSON_NODE_HOLDS_ARRAY(node) ? json_node_get_array(node) : NULL;
+}
+
 static JsonObject *
 step_options(JsonObject *config){
 	JsonNode *node = config != NULL ? json_object_get_member(config, "options") : NULL;
@@ -138,19 +144,23 @@ plan_photos(LsRecipe *recipe, LsContext *context, GError **error){
 	return g_steal_pointer(&out);
 }
 
-/* Everything dealt to a site hangs off its recipe name and brief. */
+/* Everything dealt to a site hangs off its recipe name and brief. When the
+ * order lists earlier sites to avoid (site.avoid), a deal too close to one of
+ * them is re-dealt from a derived seed; @closest reports how near it lands. */
 static gchar *
-plan_seed(LsRecipe *recipe){
+plan_seed(LsComponents *components, LsRecipe *recipe, JsonObject *config, gdouble *closest){
 	JsonObject *root = ls_recipe_get_root(recipe);
 	const gchar *name = ls_string(root, "name");
 	const gchar *brief = ls_string(member_object_of(root, "site"), "brief");
-	return g_strconcat(name != NULL ? name : "", "\n", brief != NULL ? brief : "", NULL);
+	g_autofree gchar *seed = g_strconcat(name != NULL ? name : "", "\n", brief != NULL ? brief : "", NULL);
+	return ls_components_choose_seed(components, seed, plan_sector(config),
+		member_array_of(member_object_of(root, "site"), "avoid"), closest);
 }
 
 /* The identity dealt to this site: stable for its recipe name and brief. */
 static JsonObject *
 plan_identity(LsComponents *components, LsRecipe *recipe, JsonObject *config){
-	g_autofree gchar *seed = plan_seed(recipe);
+	g_autofree gchar *seed = plan_seed(components, recipe, config, NULL);
 	return ls_components_suggest_identity(components, seed, plan_sector(config));
 }
 
@@ -367,10 +377,7 @@ plan_prompt(LsPrompts *prompts, LsRecipe *recipe, JsonObject *config, LsComponen
 	if (photos != NULL && json_array_get_length(photos) > 0)
 		json_object_set_array_member(task, "supplied_photos", json_array_ref(photos));
 	{
-		JsonObject *root = ls_recipe_get_root(recipe);
-		const gchar *name = ls_string(root, "name");
-		const gchar *brief = ls_string(member_object_of(root, "site"), "brief");
-		g_autofree gchar *seed = g_strconcat(name != NULL ? name : "", "\n", brief != NULL ? brief : "", NULL);
+		g_autofree gchar *seed = plan_seed(components, recipe, config, NULL);
 		g_autofree gchar *opening = ls_components_suggest_opening(components, seed);
 		if (opening != NULL)
 			json_object_set_string_member(task, "suggested_opening", opening);
@@ -381,10 +388,7 @@ plan_prompt(LsPrompts *prompts, LsRecipe *recipe, JsonObject *config, LsComponen
 		json_object_set_string_member(theme, "summary", ls_components_get_theme_summary(components, plan_theme(config)));
 		json_object_set_object_member(task, "theme", theme);
 	} else {
-		JsonObject *root = ls_recipe_get_root(recipe);
-		const gchar *name = ls_string(root, "name");
-		const gchar *brief = ls_string(member_object_of(root, "site"), "brief");
-		g_autofree gchar *seed = g_strconcat(name != NULL ? name : "", "\n", brief != NULL ? brief : "", NULL);
+		g_autofree gchar *seed = plan_seed(components, recipe, config, NULL);
 		json_object_set_object_member(task, "suggested_look", ls_components_suggest_look(components, seed));
 		if (json_object_has_member(identity, "palette"))
 			json_object_set_member(task, "suggested_palette",
@@ -451,6 +455,13 @@ plan_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *prom
 		: ls_components_get_plan_schema(components));
 	retries = json_object_get_int_member(settings, "retries");
 	identity = plan_identity(components, recipe, config);
+	if (member_array_of(member_object_of(ls_recipe_get_root(recipe), "site"), "avoid") != NULL) {
+		gdouble closest = 0;
+		g_autofree gchar *seed = plan_seed(components, recipe, config, &closest);
+		g_autofree gchar *note = g_strdup_printf("dealt a layout %.0f%% like the closest earlier site%s",
+			closest * 100, closest >= LS_COMPONENTS_TOO_CLOSE ? " (no clearer deal found)" : "");
+		g_signal_emit_by_name(self, "progress", note);
+	}
 	photos = plan_photos(recipe, context, error);
 	if (photos == NULL)
 		return FALSE;
@@ -474,7 +485,7 @@ plan_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *prom
 		/* Structure is the builder's too: the frame, rhythm and genes are
 		 * dealt, so sites cannot converge on the model's favourite layout. */
 		if (plan != NULL && JSON_NODE_HOLDS_OBJECT(plan)) {
-			g_autofree gchar *seed = plan_seed(recipe);
+			g_autofree gchar *seed = plan_seed(components, recipe, config, NULL);
 			ls_components_apply_structure(components, plan, seed, theme != NULL);
 		}
 		/* Supplied photographs are the builder's facts, never the model's. */
@@ -516,8 +527,20 @@ plan_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *prom
 			check_routes(recipe, plan, &local_error) &&
 			(theme != NULL || ls_components_check_identity(components, plan, identity, &local_error))) {
 			g_autofree gchar *text = ls_json_encode(plan);
+			JsonArray *missing = member_array_of(json_node_get_object(plan), "missing");
 			if (g_cancellable_set_error_if_cancelled(cancellable, error))
 				return FALSE;
+			/* Facts the order left out, for whoever asks the owner; the plan
+			 * keeps them in the run record as plan.missing. */
+			if (missing != NULL && json_array_get_length(missing) > 0) {
+				GString *note = g_string_new("facts to ask the owner: ");
+				guint i;
+				for (i = 0; i < json_array_get_length(missing); i++)
+					g_string_append_printf(note, "%s%s", i > 0 ? " | " : "",
+						json_array_get_string_element(missing, i));
+				g_signal_emit_by_name(self, "progress", note->str);
+				g_string_free(note, TRUE);
+			}
 			return store(context, PLAN_PATH, text, error);
 		}
 		if (attempt == retries || g_cancellable_is_cancelled(cancellable) ||
@@ -551,6 +574,7 @@ ls_plan_step_init(LsPlanStep *self){
 typedef enum { JOB_PAGE, JOB_ART, JOB_SIGNATURE } JobKind;
 
 #define SIGNATURE_PATH "site/signature.css"
+#define FINGERPRINT_PATH "site/fingerprint.json"
 
 typedef struct {
 	JobKind kind;
@@ -560,6 +584,7 @@ typedef struct {
 	JsonObject *settings;
 	gint64 attempts;
 	gboolean optional;	/* a permanent failure is dropped, not fatal */
+	JsonArray *avoid;	/* borrowed from the recipe: earlier sites' fingerprints */
 	/* Written by the worker, read by the step thread after the queue pop. */
 	gchar *response;
 	GError *error;
@@ -639,6 +664,27 @@ accept_job(Job *job, LsComponents *components, JsonNode *plan, GError **error){
 		}
 		if (!ls_components_check_signature(css, error))
 			return FALSE;
+		/* A flourish an earlier site already wears is no signature. */
+		if (job->avoid != NULL) {
+			g_autoptr(JsonNode) probe = json_node_new(JSON_NODE_OBJECT);
+			g_autoptr(JsonObject) mine = NULL;
+			JsonObject *holder = json_object_new();
+			guint i;
+			json_object_set_string_member(holder, "signature", css);
+			json_node_take_object(probe, holder);
+			mine = ls_components_fingerprint(components, probe, NULL);
+			for (i = 0; i < json_array_get_length(job->avoid); i++) {
+				JsonNode *entry = json_array_get_element(job->avoid, i);
+				gdouble overlap = JSON_NODE_HOLDS_OBJECT(entry)
+					? ls_components_signature_overlap(mine, json_node_get_object(entry)) : 0;
+				if (overlap >= LS_COMPONENTS_SIGNATURE_TOO_CLOSE) {
+					g_set_error(error, LS_ERROR, LS_ERROR_VALIDATION,
+						"%.0f%% of these declarations repeat an earlier site's signature layer; choose a "
+						"different motif and draw new shapes", overlap * 100);
+					return FALSE;
+				}
+			}
+		}
 		g_free(job->svg);
 		job->svg = g_strdup(css);
 		return TRUE;
@@ -930,6 +976,21 @@ site_bundle(LsComponents *components, JsonNode *plan, GPtrArray *jobs, const gch
 		return NULL;
 	bundle = json_node_get_object(composed);
 	files = json_object_get_array_member(bundle, "files");
+	/* What a visitor would notice, for an embedder to pass back as
+	 * site.avoid on later orders; archived with the plan, never published. */
+	{
+		JsonNode *home = NULL;
+		g_autoptr(JsonNode) node = json_node_new(JSON_NODE_OBJECT);
+		g_autofree gchar *fingerprint = NULL;
+		for (i = 0; i < jobs->len; i++) {
+			Job *job = g_ptr_array_index(jobs, i);
+			if (job->kind == JOB_PAGE && g_str_equal(job->path, "index.html"))
+				home = job->spec;
+		}
+		json_node_take_object(node, ls_components_fingerprint(components, plan, home));
+		fingerprint = ls_json_encode(node);
+		add_file(files, FINGERPRINT_PATH, fingerprint);
+	}
 	for (i = 0; i < jobs->len; i++) {
 		Job *job = g_ptr_array_index(jobs, i);
 		if (job->kind == JOB_PAGE) {
@@ -1049,6 +1110,7 @@ pages_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *pro
 			g_ptr_array_add(jobs, job);
 			job->kind = JOB_SIGNATURE;
 			job->optional = TRUE;
+			job->avoid = member_array_of(member_object_of(ls_recipe_get_root(recipe), "site"), "avoid");
 			job->path = g_strdup(SIGNATURE_PATH);
 			job->settings = spec_settings(recipe, config, "{\"type\": \"object\", \"required\": [\"css\"], "
 				"\"additionalProperties\": false, \"properties\": {\"css\": {\"type\": \"string\"}}}\n");

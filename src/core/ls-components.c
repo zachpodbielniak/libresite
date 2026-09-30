@@ -202,6 +202,8 @@ is_utility(const gchar *path){
 
 /* ---- Colors ------------------------------------------------------------- */
 
+static gchar *accent_text(const gchar *accent, const gchar *paper, const gchar *surface, const gchar *ink);
+
 static gboolean
 parse_color(const gchar *text, gdouble rgb[3]){
 	guint i, len;
@@ -322,6 +324,34 @@ append_escaped(GString *out, const gchar *text, gsize length){
 	}
 }
 
+/* Escape text, adding soft break points inside long email addresses and web
+ * addresses (after @ and /, before dots) so a narrow column breaks them at a
+ * seam instead of mid-word. Other words are left alone. */
+static void
+append_breakable(GString *out, const gchar *text, gsize length){
+	gsize i = 0;
+	while (i < length) {
+		gsize end = i, k;
+		gboolean address = FALSE;
+		while (end < length && !g_ascii_isspace(text[end]))
+			end++;
+		for (k = i; k < end; k++)
+			if (text[k] == '@' || (text[k] == '/' && k + 1 < end && text[k + 1] == '/'))
+				address = TRUE;
+		address = address && end - i >= 16;
+		for (k = i; k < end; k++) {
+			if (address && text[k] == '.' && k > i && k + 1 < end && g_ascii_isalnum(text[k + 1]))
+				g_string_append(out, "<wbr>");
+			append_escaped(out, text + k, 1);
+			if (address && (text[k] == '@' || text[k] == '/') && k + 1 < end && text[k + 1] != '/')
+				g_string_append(out, "<wbr>");
+		}
+		while (end < length && g_ascii_isspace(text[end]))
+			append_escaped(out, text + end++, 1);
+		i = end;
+	}
+}
+
 static const gchar *
 find(const gchar *start, const gchar *end, const gchar *needle){
 	gsize n = strlen(needle);
@@ -372,8 +402,11 @@ rich_inline(RichState *state, const gchar *s, const gchar *end, GString *out){
 				s++;
 			}
 		} else {
-			append_escaped(out, s, 1);
-			s++;
+			const gchar *run = s + 1;
+			while (run < end && *run != '`' && *run != '*' && *run != '[')
+				run++;
+			append_breakable(out, s, (gsize)(run - s));
+			s = run;
 		}
 	}
 }
@@ -1723,6 +1756,24 @@ ls_components_social(LsComponents *self, JsonArray *links){
 
 /* social is written by the builder from the recipe's supplied profiles:
  * [{url, network, label, handle}]. */
+/* plan.missing: the facts a visitor would expect that the order did not
+ * supply, as short questions for whoever gathers them from the owner. */
+static void
+check_missing(Problems *problems, JsonObject *plan){
+	JsonArray *missing = member_array(plan, "missing");
+	guint i;
+	if (!json_object_has_member(plan, "missing"))
+		return;
+	if (missing == NULL || json_array_get_length(missing) > 12) {
+		problem(problems, "missing must be an array of at most 12 short questions");
+		return;
+	}
+	for (i = 0; i < json_array_get_length(missing); i++) {
+		g_autofree gchar *here = g_strdup_printf("missing[%u]", i);
+		check_text(problems, here, json_array_get_element(missing, i), TRUE, 200);
+	}
+}
+
 static void
 check_social(Problems *problems, LsComponents *self, JsonObject *plan){
 	JsonArray *social = member_array(plan, "social");
@@ -2019,10 +2070,11 @@ check_plan_into(Problems *problems, LsComponents *self, JsonNode *node){
 		problem(problems, "the plan must be a JSON object");
 		return;
 	}
-	if (!ls_object_keys(plan, "|name|tagline|lang|character|tokens|fonts|brand|nav|action|footer|voice|look|art|"
-		"photos|social|pages|css|restyle|ui|structure|signature|", NULL))
-		problem(problems, "unknown top-level key; allowed: name, tagline, lang, character, tokens, fonts, brand, "
-			"nav, action, footer, voice, look, art, photos, pages, css, restyle, ui");
+	if (!ls_object_keys(plan, "|name|tagline|lang|character|missing|tokens|fonts|brand|nav|action|footer|voice|look|"
+		"art|photos|social|pages|css|restyle|ui|structure|signature|", NULL))
+		problem(problems, "unknown top-level key; allowed: name, tagline, lang, character, missing, tokens, fonts, "
+			"brand, nav, action, footer, voice, look, art, photos, pages, css, restyle, ui");
+	check_missing(problems, plan);
 	check_photos(problems, plan);
 	check_social(problems, self, plan);
 	check_structure(problems, self, plan);
@@ -2600,6 +2652,300 @@ ls_components_suggest_identity(LsComponents *self, const gchar *seed, const gcha
 	if (home != NULL)
 		json_object_set_object_member(identity, "home", named_copy(self->homes, home));
 	return identity;
+}
+
+/* ---- Sameness -------------------------------------------------------------- */
+
+/* The first family of a CSS font stack, unquoted and lowercased. */
+static gchar *
+first_family(const gchar *stack){
+	const gchar *end;
+	g_autofree gchar *family = NULL;
+	if (stack == NULL)
+		return NULL;
+	end = strchr(stack, ',');
+	family = g_strndup(stack, end != NULL ? (gsize)(end - stack) : strlen(stack));
+	g_strdelimit(family, "'\"", ' ');
+	g_strstrip(family);
+	return *family != '\0' ? g_ascii_strdown(family, -1) : NULL;
+}
+
+/* Hashed declarations of a signature layer that carry its shape: numbers
+ * are flattened so a redrawn size still matches, and short generic values
+ * such as display: block are skipped because every layer has them. */
+static JsonArray *
+signature_shingles(const gchar *css){
+	JsonArray *out = json_array_new();
+	g_autoptr(GHashTable) seen = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+	GString *normal = g_string_new(NULL);
+	g_auto(GStrv) pieces = NULL;
+	const gchar *p;
+	guint i;
+	for (p = css != NULL ? css : ""; *p != '\0'; p++) {
+		if (p[0] == '/' && p[1] == '*') {
+			const gchar *close = strstr(p + 2, "*/");
+			if (close == NULL)
+				break;
+			p = close + 1;
+		} else if (g_ascii_isdigit(*p) || (*p == '.' && g_ascii_isdigit(p[1]))) {
+			while (g_ascii_isdigit(p[1]) || p[1] == '.')
+				p++;
+			g_string_append_c(normal, '0');
+		} else if (g_ascii_isspace(*p)) {
+			if (normal->len > 0 && normal->str[normal->len - 1] != ' ')
+				g_string_append_c(normal, ' ');
+		} else
+			g_string_append_c(normal, g_ascii_tolower(*p));
+	}
+	pieces = g_strsplit_set(normal->str, ";{}", -1);
+	g_string_free(normal, TRUE);
+	for (i = 0; pieces[i] != NULL && json_array_get_length(out) < 300; i++) {
+		gchar *piece = g_strstrip(pieces[i]);
+		const gchar *colon = strchr(piece, ':');
+		gchar *hash;
+		if (colon == NULL || strlen(colon + 1) < 10 || strchr(piece, '&') != NULL)
+			continue;
+		hash = g_compute_checksum_for_string(G_CHECKSUM_SHA256, piece, -1);
+		hash[12] = '\0';
+		if (g_hash_table_add(seen, hash))
+			json_array_add_string_element(out, hash);
+	}
+	return out;
+}
+
+/* The parts of a fingerprint shared by a finished plan and a fresh deal. */
+static JsonObject *
+fingerprint_new(JsonObject *look, JsonObject *structure, JsonObject *colors, JsonObject *type_tokens,
+	const gchar *opening, JsonArray *sections){
+	JsonObject *fp = json_object_new();
+	JsonObject *genes = json_object_new(), *out_colors = json_object_new(), *fonts = json_object_new();
+	JsonArray *home = json_array_new();
+	const gchar *hues[] = {"paper", "ink", "accent"};
+	guint i;
+	json_object_set_int_member(fp, "v", 1);
+	if (look != NULL) {
+		g_autoptr(GList) axes = json_object_get_members(look);
+		GList *axis;
+		JsonObject *copy = json_object_new();
+		/* The retired stock flourishes are plain on every unthemed site; the
+		 * signature layer carries that difference instead. */
+		const gchar *const flourishes[] = {"ornament", "emphasis", "kicker", "backdrop", "edges", "texture",
+			"links", NULL};
+		for (axis = axes; axis != NULL; axis = axis->next)
+			if (ls_string(look, axis->data) != NULL && !in_list(flourishes, axis->data))
+				json_object_set_string_member(copy, axis->data, ls_string(look, axis->data));
+		json_object_set_object_member(fp, "look", copy);
+	}
+	for (i = 0; structure != NULL && i < 6; i++)
+		json_object_set_double_member(genes, structure_genes[i].name, gene(structure, structure_genes[i].name,
+			(structure_genes[i].min + structure_genes[i].max) / 2));
+	json_object_set_object_member(fp, "genes", genes);
+	for (i = 0; colors != NULL && i < G_N_ELEMENTS(hues); i++) {
+		gdouble rgb[3];
+		if (parse_color(ls_string(colors, hues[i]), rgb))
+			json_object_set_string_member(out_colors, hues[i], ls_string(colors, hues[i]));
+	}
+	json_object_set_object_member(fp, "colors", out_colors);
+	if (type_tokens != NULL) {
+		g_autofree gchar *display = first_family(ls_string(type_tokens, "font_display"));
+		g_autofree gchar *body = first_family(ls_string(type_tokens, "font_body"));
+		if (display != NULL)
+			json_object_set_string_member(fonts, "display", display);
+		if (body != NULL)
+			json_object_set_string_member(fonts, "body", body);
+	}
+	json_object_set_object_member(fp, "fonts", fonts);
+	if (opening != NULL)
+		json_array_add_string_element(home, opening);
+	for (i = 0; sections != NULL && i < json_array_get_length(sections); i++)
+		if (JSON_NODE_HOLDS_VALUE(json_array_get_element(sections, i)))
+			json_array_add_string_element(home, json_array_get_string_element(sections, i));
+	json_object_set_array_member(fp, "home", home);
+	return fp;
+}
+
+JsonObject *
+ls_components_fingerprint(LsComponents *self, JsonNode *plan, JsonNode *home){
+	JsonObject *root, *tokens, *fp;
+	JsonArray *specs = NULL;
+	g_autoptr(JsonArray) rest = json_array_new();
+	g_autofree gchar *opening = NULL;
+	guint i;
+	g_return_val_if_fail(LS_IS_COMPONENTS(self), NULL);
+	g_return_val_if_fail(plan != NULL, NULL);
+	root = JSON_NODE_HOLDS_OBJECT(plan) ? json_node_get_object(plan) : NULL;
+	tokens = member_object(root, "tokens");
+	if (home != NULL && JSON_NODE_HOLDS_OBJECT(home))
+		specs = member_array(json_node_get_object(home), "sections");
+	for (i = 0; specs != NULL && i < json_array_get_length(specs); i++) {
+		JsonNode *node = json_array_get_element(specs, i);
+		JsonObject *section = JSON_NODE_HOLDS_OBJECT(node) ? json_node_get_object(node) : NULL;
+		const gchar *component = ls_string(section, "component");
+		if (component == NULL)
+			continue;
+		if (opening == NULL)
+			opening = ls_string(section, "variant") != NULL
+				? g_strdup_printf("%s/%s", component, ls_string(section, "variant")) : g_strdup(component);
+		else
+			json_array_add_string_element(rest, component);
+	}
+	fp = fingerprint_new(member_object(root, "look"), member_object(root, "structure"), tokens, tokens, opening, rest);
+	if (ls_string(root, "signature") != NULL)
+		json_object_set_array_member(fp, "signature", signature_shingles(ls_string(root, "signature")));
+	return fp;
+}
+
+/* 1 for the same colour, falling to 0 at a clearly different one. */
+static gdouble
+color_likeness(const gchar *a, const gchar *b){
+	gdouble x[3], y[3], distance = 0;
+	guint i;
+	if (!parse_color(a, x) || !parse_color(b, y))
+		return 0;
+	for (i = 0; i < 3; i++)
+		distance += (x[i] - y[i]) * (x[i] - y[i]);
+	return MAX(0, 1 - sqrt(distance) / 0.35);
+}
+
+static gdouble
+string_set_overlap(JsonArray *a, JsonArray *b){
+	g_autoptr(GHashTable) left = g_hash_table_new(g_str_hash, g_str_equal);
+	g_autoptr(GHashTable) both = g_hash_table_new(g_str_hash, g_str_equal);
+	guint i, shared = 0, total;
+	for (i = 0; a != NULL && i < json_array_get_length(a); i++)
+		if (JSON_NODE_HOLDS_VALUE(json_array_get_element(a, i)) && json_array_get_string_element(a, i) != NULL)
+			g_hash_table_add(left, (gpointer)json_array_get_string_element(a, i));
+	total = g_hash_table_size(left);
+	for (i = 0; b != NULL && i < json_array_get_length(b); i++) {
+		const gchar *item = JSON_NODE_HOLDS_VALUE(json_array_get_element(b, i))
+			? json_array_get_string_element(b, i) : NULL;
+		if (item == NULL || !g_hash_table_add(both, (gpointer)item))
+			continue;
+		if (g_hash_table_contains(left, item))
+			shared++;
+		else
+			total++;
+	}
+	return total == 0 ? 0 : (gdouble)shared / total;
+}
+
+gdouble
+ls_components_similarity(JsonObject *a, JsonObject *b){
+	gdouble score = 0, weight = 0;
+	JsonObject *la = member_object(a, "look"), *lb = member_object(b, "look");
+	JsonObject *ga = member_object(a, "genes"), *gb = member_object(b, "genes");
+	JsonObject *ca = member_object(a, "colors"), *cb = member_object(b, "colors");
+	JsonObject *fa = member_object(a, "fonts"), *fb = member_object(b, "fonts");
+	JsonArray *ha = member_array(a, "home"), *hb = member_array(b, "home");
+	guint i;
+	g_return_val_if_fail(a != NULL && b != NULL, 0);
+	if (la != NULL && lb != NULL) {
+		g_autoptr(GList) axes = json_object_get_members(la);
+		GList *axis;
+		guint same = 0, shared = 0;
+		for (axis = axes; axis != NULL; axis = axis->next)
+			if (ls_string(lb, axis->data) != NULL) {
+				shared++;
+				same += g_strcmp0(ls_string(la, axis->data), ls_string(lb, axis->data)) == 0;
+			}
+		if (shared > 0) {
+			score += 0.25 * same / shared;
+			weight += 0.25;
+		}
+	}
+	if (ga != NULL && gb != NULL) {
+		gdouble near = 0;
+		guint shared = 0;
+		for (i = 0; i < 6; i++) {
+			JsonNode *x = json_object_get_member(ga, structure_genes[i].name);
+			JsonNode *y = json_object_get_member(gb, structure_genes[i].name);
+			if (x == NULL || y == NULL || !JSON_NODE_HOLDS_VALUE(x) || !JSON_NODE_HOLDS_VALUE(y))
+				continue;
+			near += 1 - MIN(1, fabs(json_node_get_double(x) - json_node_get_double(y)) /
+				(structure_genes[i].max - structure_genes[i].min));
+			shared++;
+		}
+		if (shared > 0) {
+			score += 0.1 * near / shared;
+			weight += 0.1;
+		}
+	}
+	if (ca != NULL && cb != NULL && json_object_get_size(ca) > 0 && json_object_get_size(cb) > 0) {
+		const gchar *hues[] = {"paper", "ink", "accent"};
+		gdouble near = 0;
+		for (i = 0; i < G_N_ELEMENTS(hues); i++)
+			near += color_likeness(ls_string(ca, hues[i]), ls_string(cb, hues[i]));
+		score += 0.25 * near / G_N_ELEMENTS(hues);
+		weight += 0.25;
+	}
+	if (fa != NULL && fb != NULL && json_object_get_size(fa) > 0 && json_object_get_size(fb) > 0) {
+		score += 0.1 * (ls_string(fa, "display") != NULL && g_strcmp0(ls_string(fa, "display"), ls_string(fb, "display")) == 0) +
+			0.05 * (ls_string(fa, "body") != NULL && g_strcmp0(ls_string(fa, "body"), ls_string(fb, "body")) == 0);
+		weight += 0.15;
+	}
+	if (ha != NULL && hb != NULL && json_array_get_length(ha) > 0 && json_array_get_length(hb) > 0) {
+		gboolean opening = JSON_NODE_HOLDS_VALUE(json_array_get_element(ha, 0)) &&
+			JSON_NODE_HOLDS_VALUE(json_array_get_element(hb, 0)) &&
+			g_strcmp0(json_array_get_string_element(ha, 0), json_array_get_string_element(hb, 0)) == 0;
+		score += 0.25 * (0.4 * opening + 0.6 * string_set_overlap(ha, hb));
+		weight += 0.25;
+	}
+	return weight > 0 ? score / weight : 0;
+}
+
+gdouble
+ls_components_signature_overlap(JsonObject *a, JsonObject *b){
+	JsonArray *sa = member_array(a, "signature"), *sb = member_array(b, "signature");
+	g_return_val_if_fail(a != NULL && b != NULL, 0);
+	if (sa == NULL || sb == NULL || json_array_get_length(sa) == 0 || json_array_get_length(sb) == 0)
+		return 0;
+	return string_set_overlap(sa, sb);
+}
+
+/* The fingerprint a seed deals, before any model has chosen anything. */
+static JsonObject *
+dealt_fingerprint(LsComponents *self, const gchar *seed, const gchar *sector){
+	g_autoptr(JsonObject) look = ls_components_suggest_look(self, seed);
+	g_autoptr(JsonObject) structure = ls_components_deal_structure(self, seed);
+	g_autoptr(JsonObject) identity = ls_components_suggest_identity(self, seed, sector);
+	g_autofree gchar *opening = ls_components_suggest_opening(self, seed);
+	return fingerprint_new(look, structure, member_object(member_object(identity, "palette"), "tokens"),
+		member_object(member_object(identity, "type"), "tokens"), opening,
+		member_array(member_object(identity, "home"), "sections"));
+}
+
+gchar *
+ls_components_choose_seed(LsComponents *self, const gchar *seed, const gchar *sector, JsonArray *avoid,
+	gdouble *closest){
+	g_autofree gchar *best = NULL;
+	gdouble best_score = 2;
+	guint attempt, i;
+	g_return_val_if_fail(LS_IS_COMPONENTS(self), NULL);
+	g_return_val_if_fail(seed != NULL, NULL);
+	if (closest != NULL)
+		*closest = 0;
+	if (avoid == NULL || json_array_get_length(avoid) == 0)
+		return g_strdup(seed);
+	for (attempt = 0; attempt < 32; attempt++) {
+		g_autofree gchar *candidate = attempt == 0 ? g_strdup(seed) : g_strdup_printf("%s\n~%u", seed, attempt);
+		g_autoptr(JsonObject) dealt = dealt_fingerprint(self, candidate, sector);
+		gdouble worst = 0;
+		for (i = 0; i < json_array_get_length(avoid); i++) {
+			JsonNode *node = json_array_get_element(avoid, i);
+			if (JSON_NODE_HOLDS_OBJECT(node))
+				worst = MAX(worst, ls_components_similarity(dealt, json_node_get_object(node)));
+		}
+		if (worst < best_score) {
+			best_score = worst;
+			g_free(best);
+			best = g_steal_pointer(&candidate);
+		}
+		if (worst < LS_COMPONENTS_TOO_CLOSE)
+			break;
+	}
+	if (closest != NULL)
+		*closest = best_score;
+	return g_steal_pointer(&best);
 }
 
 gboolean
@@ -3309,6 +3655,17 @@ item_view(Render *render, JsonObject *fields, JsonObject *item, guint index, gbo
 			}
 		} else {
 			json_object_set_member(view, name->data, convert_value(render, slot, value, eager));
+			/* Plain text fields also carry an escaped copy with soft break
+			 * points, for templates that show addresses in narrow boxes. */
+			if (g_strcmp0(ls_string(slot, "type"), "text") == 0 && JSON_NODE_HOLDS_VALUE(value) &&
+				json_node_get_value_type(value) == G_TYPE_STRING) {
+				const gchar *text = json_node_get_string(value);
+				g_autofree gchar *html_name = g_strconcat((const gchar *)name->data, "_html", NULL);
+				GString *html = g_string_new(NULL);
+				append_breakable(html, text, strlen(text));
+				json_object_set_string_member(view, html_name, html->str);
+				g_string_free(html, TRUE);
+			}
 			if (JSON_NODE_HOLDS_ARRAY(value)) {
 				g_autofree gchar *has = g_strconcat("has_", (const gchar *)name->data, NULL);
 				json_object_set_boolean_member(view, has, json_array_get_length(json_node_get_array(value)) > 0);
@@ -4206,7 +4563,10 @@ token_css(JsonObject *tokens, JsonObject *structure){
 		g_autofree gchar *name = g_strdelimit(g_strdup(color_tokens[i]), "_", '-');
 		g_string_append_printf(out, "\t--%s: %s;\n", name, ls_string(tokens, color_tokens[i]));
 	}
-	g_string_append_printf(out, "\t--accent-text: %s;\n", contrast(accent, paper) >= 4.5 ? accent : ls_string(tokens, "ink"));
+	{
+		g_autofree gchar *text = accent_text(accent, paper, ls_string(tokens, "surface"), ls_string(tokens, "ink"));
+		g_string_append_printf(out, "\t--accent-text: %s;\n", text);
+	}
 	g_string_append_printf(out, "\t--focus: %s;\n", contrast(accent, paper) >= 3 ? accent : ls_string(tokens, "ink"));
 	g_string_append_printf(out, "\t--line-strong: %s;\n", contrast(ls_string(tokens, "line"), paper) >= 3
 		? ls_string(tokens, "line") : ls_string(tokens, "muted"));
@@ -4291,6 +4651,23 @@ mix_color(const gchar *a, const gchar *b, gdouble t){
 	return format_color(out);
 }
 
+/* Text in the accent colour must read on the paper and on the surface tint
+ * the bands use: the accent itself when it does, else the accent deepened
+ * toward the ink in the smallest step that does, else the ink. */
+static gchar *
+accent_text(const gchar *accent, const gchar *paper, const gchar *surface, const gchar *ink){
+	gdouble t;
+	if (contrast(accent, paper) >= 4.5 && (surface == NULL || contrast(accent, surface) >= 4.5))
+		return g_strdup(accent);
+	for (t = 0.05; t < 1; t += 0.05) {
+		g_autofree gchar *mixed = mix_color(accent, ink, t);
+		if (contrast(mixed, paper) >= 4.5 && (surface == NULL || contrast(mixed, surface) >= 4.5))
+			return g_steal_pointer(&mixed);
+	}
+	return g_strdup(ink);
+}
+
+
 /* look.scheme auto: the other scheme's working colors, derived from the
  * tokens and repaired to the same AA pairs, for visitors whose device asks
  * for it. A light site gains a dark version and a dark site a light one. */
@@ -4333,8 +4710,10 @@ scheme_css(JsonObject *tokens){
 	g_string_append_printf(out, "\t--paper: %s;\n\t--ink: %s;\n\t--muted: %s;\n\t--surface: %s;\n\t--line: %s;\n",
 		ls_string(alt, "paper"), ls_string(alt, "ink"), ls_string(alt, "muted"), ls_string(alt, "surface"),
 		ls_string(alt, "line"));
-	g_string_append_printf(out, "\t--accent-text: %s;\n", contrast(accent, ls_string(alt, "paper")) >= 4.5
-		? accent : ls_string(alt, "ink"));
+	{
+		g_autofree gchar *text = accent_text(accent, ls_string(alt, "paper"), ls_string(alt, "surface"), ls_string(alt, "ink"));
+		g_string_append_printf(out, "\t--accent-text: %s;\n", text);
+	}
 	g_string_append_printf(out, "\t--focus: %s;\n", contrast(accent, ls_string(alt, "paper")) >= 3
 		? accent : ls_string(alt, "ink"));
 	g_string_append_printf(out, "\t--line-strong: %s;\n", ls_string(alt, "muted"));

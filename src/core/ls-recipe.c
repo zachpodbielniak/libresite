@@ -293,6 +293,32 @@ invalid:
 		"spaces or quotes, up to 300 characters; label optional text up to 60 characters");
 	return FALSE;
 }
+/* site.avoid: fingerprints of earlier sites, as written by the builder, so
+ * this one is dealt a design that is not too close to any of them. */
+static gboolean
+avoid_list(JsonObject *site, GError **error){
+	JsonNode *node = json_object_get_member(site, "avoid");
+	JsonArray *list = node != NULL && JSON_NODE_HOLDS_ARRAY(node) ? json_node_get_array(node) : NULL;
+	guint i;
+	if (list == NULL || json_array_get_length(list) > 500)
+		goto invalid;
+	for (i = 0; i < json_array_get_length(list); i++) {
+		JsonNode *entry = json_array_get_element(list, i);
+		JsonObject *fp = JSON_NODE_HOLDS_OBJECT(entry) ? json_node_get_object(entry) : NULL;
+		JsonNode *version = fp != NULL ? json_object_get_member(fp, "v") : NULL;
+		if (fp == NULL || !ls_object_keys(fp, "|v|look|genes|colors|fonts|home|signature|", NULL) ||
+			version == NULL || !JSON_NODE_HOLDS_VALUE(version) ||
+			json_node_get_value_type(version) != G_TYPE_INT64 || json_node_get_int(version) != 1)
+			goto invalid;
+	}
+	return TRUE;
+invalid:
+	g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID,
+		"site.avoid needs up to 500 site fingerprints as the builder writes them: objects with v: 1 and only "
+		"look, genes, colors, fonts, home and signature");
+	return FALSE;
+}
+
 /* No synthesized prose: structured facts remain in the immutable recipe tree. */
 static gboolean
 validate_site(JsonObject *site, GError **error){
@@ -302,7 +328,7 @@ validate_site(JsonObject *site, GError **error){
 	guint i;
 	if (!ls_object_keys(site,
 		"|brief|audience|style|stack|frontend|backend|database|requirements|pages|offers|contact|brand|copy_lock|languages|"
-		"photos|social|",
+		"photos|social|avoid|",
 		error))
 		return FALSE;
 	if (!json_object_has_member(site, "brief")) {
@@ -320,6 +346,9 @@ validate_site(JsonObject *site, GError **error){
 				return FALSE;
 		} else if (g_str_equal(key, "photos")) {
 			if (!photo_list(site, error))
+				return FALSE;
+		} else if (g_str_equal(key, "avoid")) {
+			if (!avoid_list(site, error))
 				return FALSE;
 		} else if (g_str_equal(key, "social")) {
 			if (!social_list(site, error))

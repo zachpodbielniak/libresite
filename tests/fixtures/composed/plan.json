@@ -1,5 +1,8 @@
 {
   "name": "Harbor & Pine",
+  "missing": [
+    "What are your opening hours?"
+  ],
   "tagline": "Repair, restore, return",
   "lang": "en",
   "tokens": {

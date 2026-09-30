@@ -1561,6 +1561,11 @@ main(int argc, char **argv){
 		"version: 1\nname: test\nsite: {brief: hi, social: [{url: 'https://x.com/a'}, {url: 'https://x.com/a'}]}\npipeline: {steps: [{id: a, type: frontend}]}",
 		"version: 1\nname: test\nsite: {brief: hi, social: [{url: 'https://x.com/a', handle: a}]}\npipeline: {steps: [{id: a, type: frontend}]}",
 		"version: 1\nname: test\nsite: {brief: hi, social: [{url: 'javascript:alert(1)'}]}\npipeline: {steps: [{id: a, type: frontend}]}",
+		"version: 1\nname: test\nsite: {brief: hi, avoid: {v: 1}}\npipeline: {steps: [{id: a, type: frontend}]}",
+		"version: 1\nname: test\nsite: {brief: hi, avoid: [{v: 2}]}\npipeline: {steps: [{id: a, type: frontend}]}",
+		"version: 1\nname: test\nsite: {brief: hi, avoid: [{look: {}}]}\npipeline: {steps: [{id: a, type: frontend}]}",
+		"version: 1\nname: test\nsite: {brief: hi, avoid: [{v: 1, copy: x}]}\npipeline: {steps: [{id: a, type: frontend}]}",
+		"version: 1\nname: test\nsite: {brief: hi, avoid: [v]}\npipeline: {steps: [{id: a, type: frontend}]}",
 		"version: 1\nname: test\nsite: {brief: hi}\npipeline: {steps: [{id: a, type: frontend, "
 		"options: []}]}"
 	};

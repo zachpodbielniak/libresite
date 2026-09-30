@@ -126,13 +126,15 @@ Dealt structure multiplies the layouts a component meets: seven frames, four hea
 - Headings never hyphenate automatically. =site.js= shrinks any large text (22 px and up) whose longest word overflows its box, or whose box has been pushed past the right edge of a container, down to 30 percent of its size; without scripts such a word wraps at its last point. Headings hanging into the left margin are not treated as overflow.
 - Side panels (rail and split frames) own their header: header looks built for a top bar are reset inside them, and the panel never wraps into a second column. No frame borders or insets the whole page: every site fills the screen.
 - Container queries scope CSS counters, so numbered headings do not count with them: the builder writes each labelled section's number (after the opening) into the page as =--ls-n=, and the numbered look prints it.
-- Accent-painted variants (=cta/band=, =statement/band=, =marquee/accent=) take the same token swap as accent section bands, so labels, rules, emphasis and buttons inside them stay visible. In the reading column, which has no page gutter, painted sections carry their own inset and a smaller heading.
+- Accent-painted variants and panels (=cta/band=, =statement/band=, =marquee/accent=, the offer stub, the accent notice box and the contrast split panel) take the same token swap as accent section bands, even against a plan restyle that colours their text with =var(--accent)=; so labels, rules, emphasis and buttons inside them stay visible. In the reading column, which has no page gutter, painted sections carry their own inset and a smaller heading.
+- =--accent-text= is the accent only when it reads at 4.5:1 on both the paper and the surface tint; otherwise the builder deepens it toward the ink in the smallest step that does.
 - The alternating =rhythm/bands= tint skips sections that paint their own colours (tone bands and accent or surface variants), so their text keeps its contrast.
-- A pinned glass header reserves room at the top of the viewport, so jump-link targets and focused controls are not scrolled under it.
+- A glass header pins only as a one-row bar (top, wide, offset frames) and reserves room at the top of the viewport, so jump-link targets and focused controls are not scrolled under it; in the centred and masthead frames, where brand, tagline and menu stack, it stays in place instead of covering a quarter of the screen. Its fill is 80 percent paper, so it reads even where a browser draws little blur.
 - Sections with no padding of their own (a full cover, the jump bar) leave room above the next section; aside figures float only beside running text; a full cover grows to fit its text rather than letting it rise over the header, its picture fills the whole cell, and its text sits on a readable panel in the lower corner instead of a fade that washes out the photograph.
 - Every component's layout breakpoints are container queries on the page column, not the screen. Side-by-side media and split covers follow the page column, so beside a side menu they stack before their text column gets narrow. Giant section headings step down beside a picture or a form.
 - The offset frame adds its empty margin beside the dealt column rather than taking it out, so a narrow dealt column never shrinks to a strip, and its headings hang left even under centred alignment.
 - A picture gets one frame: framed images skip the edge-to-edge cover and the framed media mount. Turned pictures (taped, print) are clipped at the page column so they never widen the page.
+- Long email and web addresses in running text and in label-and-value fields (contact cards, spec sheets) get soft break points after =@= and =/= and before dots, so a narrow box breaks them at a seam rather than mid-word; link targets and short values are untouched.
 - Galleries and photo strips give mixed portrait and landscape photographs one shape so rows stay even (masonry keeps each shape). The pinned story spaces its steps by a few lines, not by screens.
 
 =/components/layout-lint= fails on a grid track without a zero floor, automatic hyphenation, a viewport unit inside a component, unwrappable text outside the two scrolling components, or a frame that borders the whole page.
@@ -150,6 +152,22 @@ Stock flourishes become fingerprints: once a visitor has seen the same double ru
 - Themed sites and page reviews write no new signature; a replacement prompt catalog without the =signature= stage simply goes without one.
 
 Live runs of the bookshop and the dog farm each wrote their layer in about 21 seconds, beside the pages and inside the usual build time, first try: drawer-pull dividers, shelf-bay lines behind the opening and a brass rule for the bookshop; fence-rail dividers with posts, a post line along the header and footer and a lattice edge for the dog farm.
+
+* Sameness
+
+Dealing makes two sites unlikely to share a design; the sameness check makes it a rule. Every composed site gets a fingerprint and an order can name earlier sites to stay clear of.
+
+- The pages step writes =site/fingerprint.json= beside the plan, from =ls_components_fingerprint()=: every look axis except the retired stock flourishes (plain on every unthemed site), the six column and spacing genes, the paper, ink and accent colours, the display and body families, the home page's opening (component and variant) and its section sequence, and up to 300 hashed shape-carrying declarations of the signature layer. It holds no copy, facts or photographs. The prune step archives it with the plan, so it never ships.
+- An embedder keeps the fingerprints of delivered sites and passes the ones that matter (the same trade, the same area) back as =site.avoid= on the next order, up to 500 of them. The builder keeps =site.avoid= out of every prompt.
+- =ls_components_similarity()= scores two fingerprints from 0 to 1: look 25 percent, genes 10, colours 25, type 15 and the home page 25, over the parts both have. At =LS_COMPONENTS_TOO_CLOSE= (0.6) they read as the same design. Across the 13 distinct live sites built so far, different businesses scored 0.03 to 0.56 (median 0.23), while reruns of one order scored 0.83 to 1.
+- The plan step deals from the recipe seed as before. When that deal lands at or above 0.6 to any avoided site, =ls_components_choose_seed()= re-deals from up to 31 derived seeds and keeps the first clear one, or the least similar, and reports how close it landed as progress. Without =site.avoid= the seed is unchanged, so existing orders keep their deal.
+- A signature layer whose hashed declarations overlap an avoided site's by =LS_COMPONENTS_SIGNATURE_TOO_CLOSE= (half) or more is sent back with the reason; like any failing layer, one that never clears is left out.
+
+Two dozen dealt plumbing firms show why it matters and where it stops: without the check about one pair in ten comes out too alike, because a trade has only a few fitting palettes and type pairs; with each earlier site passed as avoid, the first sixteen in one town all come out clear, and after that the builder reports the closest deal it could find rather than pretending.
+
+* Missing facts
+
+A thin order makes a thin site, and a site should not guess an address or an event date. So the plan names what is missing: =plan.missing= holds up to 12 short questions (at most 200 characters each) about facts a visitor to this kind of business would expect that the order did not supply, such as opening hours, prices or a date. The pages write around those gaps rather than filling them. The plan step reports them as one progress line, =facts to ask the owner: ...=, and the plan keeps them in the run record, so whoever gathers the order can ask the owner and build again.
 
 * Themes
 
@@ -300,7 +318,7 @@ Within an item, every declared field the model left out is set explicitly empty,
 
 * Plan contract
 
-Required: =name=, =tokens=, =nav=, =pages=, =art= (may be empty). The schema also requires =character= (see [[*Identities][identities]]). Optional: =tagline=, =lang=, =fonts=, =brand=, =action=, =footer=, =voice=, =css= and =ui= (interface strings for a non-English site).
+Required: =name=, =tokens=, =nav=, =pages=, =art= (may be empty). The schema also requires =character= (see [[*Identities][identities]]). Optional: =tagline=, =lang=, =missing= (see [[*Missing facts][missing facts]]), =fonts=, =brand=, =action=, =footer=, =voice=, =css= and =ui= (interface strings for a non-English site).
 
 - Tokens: seven =#rrggbb= colors with WCAG AA text pairs (ink and muted on paper and surface, accent_ink on accent, all 4.5:1), three font stacks of installed or generic families, and numeric scale, spacing, border, radius and heading settings within documented ranges.
 - Fonts: up to three open-source families served by Bunny Fonts; the builder writes the stylesheet URL. Omit them when a brief forbids remote fonts.
@@ -363,5 +381,6 @@ A composed recipe's checkpoint fingerprint includes the component library digest
 | 2026-09-29 | trades, sealed, on Codex, schema in the prompt | 143 s | plan 91 s first try, pages 51 s; no retries |
 
 | 2026-09-29 | nine sites at once, dealt structure (five packages, four tests) | 44 to 65 s | frames top, rail, masthead, inset and wide; three retries in total (an empty pricing field, twice, and one malformed artwork), each redoing only that page or artwork |
+| 2026-09-30 | eight realistic orders at once (not bundled: garage, restaurant, tattoo studio, dentist, climbing gym, florist, surf school, preschool), each avoiding 13 earlier sites | 62 to 126 s | all first try as sites; five single-page or plan retries; every signature accepted in 12 to 22 s; dealt 29 to 46 percent like the closest earlier site; the eight scored 14 to 46 percent like each other |
 
 These are single live runs, on Claude Code with the default model unless noted. They establish timing, not design quality; a person must still look at every delivered site.

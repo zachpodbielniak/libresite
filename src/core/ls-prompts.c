@@ -126,6 +126,21 @@ ls_prompts_get_spec_system(LsPrompts *self){
 
 /* Component calls get only what they need: no bundle protocol, acceptance
  * dump or project manifest. Untrusted text stays inside JSON data. */
+/* SITE DATA for a prompt: the order's site facts, minus site.avoid, which
+ * is builder input (earlier sites' fingerprints) that no model needs to read. */
+static gchar *
+site_data_json(JsonObject *site){
+	g_autoptr(JsonNode) data = json_node_new(JSON_NODE_OBJECT);
+	JsonObject *copy = json_object_new();
+	g_autoptr(GList) members = site != NULL ? json_object_get_members(site) : NULL;
+	GList *member;
+	for (member = members; member != NULL; member = member->next)
+		if (!g_str_equal(member->data, "avoid"))
+			json_object_set_member(copy, member->data, json_node_copy(json_object_get_member(site, member->data)));
+	json_node_take_object(data, copy);
+	return ls_json_encode(data);
+}
+
 gchar *
 ls_prompts_render_spec(LsPrompts *self, LsRecipe *recipe, JsonObject *step,
 	const gchar *stage, const gchar *reference, const gchar *task, GError **error){
@@ -135,7 +150,6 @@ ls_prompts_render_spec(LsPrompts *self, LsRecipe *recipe, JsonObject *step,
 	const gchar *style_text = ls_string(json_object_get_object_member(root, "styles"), style);
 	const gchar *stage_text = ls_string(json_object_get_object_member(root, "stages"), stage);
 	const gchar *system = ls_prompts_get_spec_system(self);
-	g_autoptr(JsonNode) data = json_node_new(JSON_NODE_OBJECT);
 	g_autofree gchar *site_json = NULL;
 	gchar *result;
 	g_return_val_if_fail(LS_IS_PROMPTS(self) && stage != NULL && task != NULL, NULL);
@@ -148,8 +162,7 @@ ls_prompts_render_spec(LsPrompts *self, LsRecipe *recipe, JsonObject *step,
 		g_set_error(error, LS_ERROR, LS_ERROR_INVALID, "Unknown style '%s' or prompt '%s'", style, stage);
 		return NULL;
 	}
-	json_node_set_object(data, site);
-	site_json = ls_json_encode(data);
+	site_json = site_data_json(site);
 	result = g_strdup_printf(
 		"STAGE CONTRACT\n%s\n\nDESIGN DIRECTION\n%s\n\nSITE DATA (JSON)\n%s\n\n"
 		"STEP INSTRUCTIONS\n%s\n\nREFERENCE\n%s\n\nTASK (JSON)\n%s\n",
@@ -233,8 +246,7 @@ ls_prompts_render(
 			return NULL;
 		}
 	}
-	json_node_set_object(data, site);
-	site_json = ls_json_encode(data);
+	site_json = site_data_json(site);
 	json_node_set_object(data, step);
 	step_json = ls_json_encode(data);
 	/* Every planning and implementation stage needs the recipe's exact output

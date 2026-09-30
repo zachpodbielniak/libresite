@@ -21,7 +21,7 @@
 .steps--timeline .steps__n { position: absolute; left: 0; top: 0; }
 /* numerals: an oversized number above each step. */
 @container (min-width: 44rem) { .steps--numerals .steps__list { grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(13rem * var(--grid-scale, 1))), 1fr)); gap: var(--space-6); } }
-.steps--numerals .steps__n { display: block; width: auto; height: auto; margin-bottom: var(--space-2); background: none; color: var(--accent-text); font-size: clamp(3rem, 8cqi, 5.5rem); line-height: 1; }
+.steps--numerals .steps__n { display: block; width: auto; height: auto; margin-bottom: var(--space-4); background: none; color: var(--accent-text); font-size: clamp(3rem, 8cqi, 5.5rem); line-height: 1; }
 .steps--numerals .steps__item { padding-top: var(--space-4); border-top: var(--border) solid var(--line-strong); }
 /* cards: each step a painted card. */
 @container (min-width: 44rem) { .steps--cards .steps__list { grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(15rem * var(--grid-scale, 1))), 1fr)); } }

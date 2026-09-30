@@ -1901,7 +1901,7 @@ test_layout_lint(void){
 		/* One frame per picture, and turned pictures never widen the page. */
 		contains(look, ".look-images-framed main img:not(.cover img, .media--framed img, .brand img)");
 		contains(look, ":is(.look-images-taped, .look-photos-print) main { overflow-x: clip; }");
-		contains(look, "main > .block:first-child:not(.cover--full) img");
+		contains(look, "main > .block:first-child:not(.cover--full, .cover--split) img");
 	}
 	{
 		g_autofree gchar *cover = NULL;
@@ -1922,6 +1922,207 @@ test_layout_lint(void){
 		lacks(story, "30vh");
 		contains(gallery, ".gallery:not(.gallery--masonry) .gallery__item img { aspect-ratio: 4 / 3;");
 	}
+}
+
+/* Fingerprints: a site is 1 like itself, a re-deal escapes an earlier
+ * site, a copied signature overlaps fully, and plan.missing is checked. */
+static void
+test_sameness(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(JsonNode) plan = load("plan.json");
+	g_autoptr(JsonNode) home = load("index.json");
+	g_autoptr(JsonObject) mine = NULL, other = NULL;
+	g_autoptr(JsonArray) avoid = json_array_new();
+	g_autofree gchar *same = NULL, *moved = NULL;
+	g_autoptr(GError) error = NULL;
+	JsonObject *root = json_node_get_object(plan);
+	gdouble closest = 1;
+	ls_components_apply_structure(components, plan, "harbor\nA repair workshop", FALSE);
+	json_object_set_string_member(root, "signature",
+		"main > .block + .block::before { content: \"\"; background: linear-gradient(90deg, var(--accent) 0 2rem, transparent 2rem 4rem); } "
+		".em { border-bottom: 3px double var(--accent); box-shadow: inset 0 -0.4em 0 var(--surface); }");
+	mine = ls_components_fingerprint(components, plan, home);
+	g_assert_cmpint(json_object_get_int_member(mine, "v"), ==, 1);
+	g_assert_cmpstr(ls_string(json_object_get_object_member(mine, "colors"), "accent"), !=, NULL);
+	g_assert_cmpstr(json_array_get_string_element(json_object_get_array_member(mine, "home"), 0), ==, "hero/split");
+	/* Retired flourishes are the same on every unthemed site, so they are left out. */
+	g_assert_false(json_object_has_member(json_object_get_object_member(mine, "look"), "ornament"));
+	g_assert_cmpfloat_with_epsilon(ls_components_similarity(mine, mine), 1, 0.001);
+	g_assert_cmpfloat_with_epsilon(ls_components_signature_overlap(mine, mine), 1, 0.001);
+	/* Redrawn at other sizes, the same shapes still match. */
+	{
+		g_autoptr(JsonNode) resized = load("plan.json");
+		json_object_set_string_member(json_node_get_object(resized), "signature",
+			"main > .block + .block::before { content: \"\"; background: linear-gradient(90deg, var(--accent) 0 3rem, transparent 3rem 6rem); } "
+			".em { border-bottom: 4px double var(--accent); box-shadow: inset 0 -0.5em 0 var(--surface); }");
+		other = ls_components_fingerprint(components, resized, NULL);
+		g_assert_cmpfloat(ls_components_signature_overlap(mine, other), >=, LS_COMPONENTS_SIGNATURE_TOO_CLOSE);
+		g_clear_pointer(&other, json_object_unref);
+	}
+	/* Unrelated values score low; a missing part is left out, not counted. */
+	other = json_object_new();
+	json_object_set_int_member(other, "v", 1);
+	{
+		g_autoptr(JsonNode) colors = json("{'paper':'#101010','ink':'#fafafa','accent':'#00ff66'}");
+		json_object_set_object_member(other, "colors", json_node_dup_object(colors));
+	}
+	g_assert_cmpfloat(ls_components_similarity(mine, other), <, 0.3);
+	/* No avoid list keeps the seed; an avoid list holding the deal itself moves it. */
+	same = ls_components_choose_seed(components, "harbor\nA repair workshop", NULL, NULL, &closest);
+	g_assert_cmpstr(same, ==, "harbor\nA repair workshop");
+	g_assert_cmpfloat(closest, ==, 0);
+	{
+		g_autoptr(JsonNode) dealt = load("plan.json");
+		g_autoptr(JsonObject) identity = ls_components_suggest_identity(components, "harbor\nA repair workshop", NULL);
+		JsonObject *dealt_root = json_node_get_object(dealt);
+		JsonObject *tokens = json_object_get_object_member(dealt_root, "tokens");
+		JsonObject *palette = json_object_get_object_member(json_object_get_object_member(identity, "palette"), "tokens");
+		JsonObject *type = json_object_get_object_member(json_object_get_object_member(identity, "type"), "tokens");
+		g_autofree gchar *opening = ls_components_suggest_opening(components, "harbor\nA repair workshop");
+		g_auto(GStrv) parts = g_strsplit(opening, "/", 2);
+		JsonArray *sections = json_object_get_array_member(json_object_get_object_member(identity, "home"), "sections");
+		JsonArray *home_sections = json_array_new();
+		g_autoptr(JsonNode) dealt_home = json_node_new(JSON_NODE_OBJECT);
+		JsonObject *home_root = json_object_new();
+		JsonObject *first = json_object_new();
+		guint i;
+		json_object_set_object_member(dealt_root, "look", ls_components_suggest_look(components, "harbor\nA repair workshop"));
+		ls_components_apply_structure(components, dealt, "harbor\nA repair workshop", FALSE);
+		json_object_set_object_member(dealt_root, "look", ls_components_suggest_look(components, "harbor\nA repair workshop"));
+		json_object_set_string_member(tokens, "paper", ls_string(palette, "paper"));
+		json_object_set_string_member(tokens, "ink", ls_string(palette, "ink"));
+		json_object_set_string_member(tokens, "accent", ls_string(palette, "accent"));
+		json_object_set_string_member(tokens, "font_display", ls_string(type, "font_display"));
+		json_object_set_string_member(tokens, "font_body", ls_string(type, "font_body"));
+		json_object_set_string_member(first, "component", parts[0]);
+		json_object_set_string_member(first, "variant", parts[1]);
+		json_array_add_object_element(home_sections, first);
+		for (i = 0; i < json_array_get_length(sections); i++) {
+			JsonObject *section = json_object_new();
+			json_object_set_string_member(section, "component", json_array_get_string_element(sections, i));
+			json_array_add_object_element(home_sections, section);
+		}
+		json_object_set_array_member(home_root, "sections", home_sections);
+		json_node_take_object(dealt_home, home_root);
+		json_array_add_object_element(avoid, ls_components_fingerprint(components, dealt, dealt_home));
+		g_assert_cmpfloat(ls_components_similarity(json_array_get_object_element(avoid, 0),
+			json_array_get_object_element(avoid, 0)), >, 0.99);
+	}
+	moved = ls_components_choose_seed(components, "harbor\nA repair workshop", NULL, avoid, &closest);
+	g_assert_cmpstr(moved, !=, "harbor\nA repair workshop");
+	g_assert_cmpfloat(closest, <, LS_COMPONENTS_TOO_CLOSE);
+	/* Two dozen plumbers: without the check about one pair in ten is dealt
+	 * too alike. With each earlier site passed as avoid, a dozen in one town
+	 * all come out clear, and the reported closeness is the true one. */
+	{
+		guint i, j, close = 0, pairs = 0;
+		g_autoptr(GPtrArray) deals = g_ptr_array_new_with_free_func((GDestroyNotify)json_object_unref);
+		g_autoptr(JsonArray) town = json_array_new();
+		for (i = 0; i < 36; i++) {
+			g_autofree gchar *base = g_strdup_printf("plumber %u\nA local plumbing firm", i % 24);
+			g_autofree gchar *seed = i < 24 ? g_strdup(base)
+				: ls_components_choose_seed(components, base, "trades", town, &closest);
+			g_autoptr(JsonNode) deal = load("plan.json");
+			g_autoptr(JsonObject) identity = ls_components_suggest_identity(components, seed, "trades");
+			JsonObject *tokens = json_object_get_object_member(json_node_get_object(deal), "tokens");
+			JsonObject *palette = json_object_get_object_member(json_object_get_object_member(identity, "palette"), "tokens");
+			JsonObject *type = json_object_get_object_member(json_object_get_object_member(identity, "type"), "tokens");
+			JsonObject *fp;
+			ls_components_apply_structure(components, deal, seed, FALSE);
+			json_object_set_object_member(json_node_get_object(deal), "look", ls_components_suggest_look(components, seed));
+			json_object_set_string_member(tokens, "paper", ls_string(palette, "paper"));
+			json_object_set_string_member(tokens, "ink", ls_string(palette, "ink"));
+			json_object_set_string_member(tokens, "accent", ls_string(palette, "accent"));
+			json_object_set_string_member(tokens, "font_display", ls_string(type, "font_display"));
+			json_object_set_string_member(tokens, "font_body", ls_string(type, "font_body"));
+			fp = ls_components_fingerprint(components, deal, NULL);
+			if (i < 24)
+				g_ptr_array_add(deals, fp);
+			else {
+				gdouble worst = 0;
+				for (j = 0; j < json_array_get_length(town); j++)
+					worst = MAX(worst, ls_components_similarity(fp, json_array_get_object_element(town, j)));
+				g_assert_cmpfloat(worst, <, LS_COMPONENTS_TOO_CLOSE);
+				g_assert_cmpfloat_with_epsilon(worst, closest, 0.001);
+				json_array_add_object_element(town, fp);
+			}
+		}
+		for (i = 0; i < deals->len; i++)
+			for (j = i + 1; j < deals->len; j++, pairs++)
+				close += ls_components_similarity(g_ptr_array_index(deals, i), g_ptr_array_index(deals, j)) >=
+					LS_COMPONENTS_TOO_CLOSE;
+		if (g_getenv("LS_SAMENESS_DEBUG") != NULL)
+			g_printerr("%u of %u dealt pairs too close without avoid\n", close, pairs);
+		g_assert_cmpuint(close, >, 0);
+	}
+	/* plan.missing holds short questions only. */
+	json_object_set_member(root, "missing", json("['What are your opening hours?']"));
+	g_assert_true(ls_components_check_plan(components, plan, &error));
+	g_assert_no_error(error);
+	json_object_set_member(root, "missing", json("[3]"));
+	g_assert_false(ls_components_check_plan(components, plan, &error));
+	g_assert_nonnull(strstr(error->message, "missing[0]"));
+	g_clear_error(&error);
+	json_object_set_member(root, "missing", json("'hours'"));
+	g_assert_false(ls_components_check_plan(components, plan, &error));
+}
+
+/* Long email and web addresses break at a seam in narrow boxes, never mid-word. */
+static void
+test_address_breaks(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(JsonNode) plan = load("plan.json");
+	g_autoptr(JsonObject) pages = fixture_pages();
+	g_autoptr(GError) error = NULL;
+	g_autofree gchar *text = NULL;
+	g_autoptr(JsonNode) bundle = NULL;
+	const gchar *html;
+	json_object_set_member(pages, "visit.html", json(
+		"{'path':'visit.html','sections':[{'component':'page-header','content':{'heading':'Visit'}},"
+		"{'component':'contact-card','content':{'heading':'Write to us','body':'Or mail hello@lanternandleafbooks.com any time.',"
+		"'items':[{'label':'Email','value':'hello@lanternandleafbooks.com','link':{'href':'mailto:hello@lanternandleafbooks.com','label':'Email'}},"
+		"{'label':'Phone','value':'(555) 013-4408'}]}}]}"));
+	text = ls_components_compose(components, plan, pages, NULL, &error);
+	g_assert_no_error(error);
+	bundle = ls_json_parse(text, NULL);
+	html = file_content(bundle, "visit.html");
+	contains(html, ">hello@<wbr>lanternandleafbooks<wbr>.com</a>");
+	contains(html, "mail hello@<wbr>lanternandleafbooks<wbr>.com any time.");
+	/* The link target and short values stay as they are. */
+	contains(html, "href=\"mailto:hello@lanternandleafbooks.com\"");
+	contains(html, "<dd>(555) 013-4408</dd>");
+	lacks(file_content(bundle, "styles.css"), "font-size: var(--step-1); overflow-wrap: anywhere; }");
+}
+
+/* Accent text reads on the surface tint too, and accent-painted panels swap
+ * their tokens so a restyle using var(--accent) cannot vanish into them. */
+static void
+test_accent_text(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(JsonNode) plan = load("plan.json");
+	g_autoptr(JsonObject) pages = fixture_pages();
+	g_autoptr(GError) error = NULL;
+	g_autofree gchar *text = NULL, *repairs = NULL;
+	g_autoptr(JsonNode) bundle = NULL;
+	JsonObject *tokens = json_object_get_object_member(json_node_get_object(plan), "tokens");
+	const gchar *css;
+	json_object_set_string_member(tokens, "paper", "#ffffff");
+	json_object_set_string_member(tokens, "surface", "#dcdcdc");
+	json_object_set_string_member(tokens, "ink", "#111111");
+	json_object_set_string_member(tokens, "muted", "#3a3a3a");
+	json_object_set_string_member(tokens, "accent", "#737373");
+	json_object_set_string_member(tokens, "accent_ink", "#ffffff");
+	repairs = ls_components_repair_plan(components, plan);
+	text = ls_components_compose(components, plan, pages, NULL, &error);
+	g_assert_no_error(error);
+	bundle = ls_json_parse(text, NULL);
+	css = file_content(bundle, "styles.css");
+	/* #737373 passes on white (4.7:1) but not on the #dcdcdc surface. */
+	lacks(css, "--accent-text: #737373;");
+	contains(css, "--accent-text: #");
+	contains(css, "main .offer__stub, main .notice--accent .notice__box, main .split--contrast .split__panel:last-child {");
+	/* A tall stacked header never pins over the page. */
+	contains(css, ".look-header-glass:is(.look-frame-center, .look-frame-masthead) .site-header { position: relative; }");
 }
 
 int
@@ -1966,5 +2167,8 @@ main(int argc, char **argv){
 	g_test_add_func("/components/schema-kinds", test_schema_kinds);
 	g_test_add_func("/components/structure", test_structure);
 	g_test_add_func("/components/layout-lint", test_layout_lint);
+	g_test_add_func("/components/sameness", test_sameness);
+	g_test_add_func("/components/address-breaks", test_address_breaks);
+	g_test_add_func("/components/accent-text", test_accent_text);
 	return g_test_run();
 }

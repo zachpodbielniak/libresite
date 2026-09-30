@@ -188,6 +188,7 @@ typedef struct {
 	GThread *main;
 	gint off_thread;
 	gint progress;
+	GString *messages;	/* every progress message, one per line */
 } Fixture;
 
 static const gchar *recipe_text =
@@ -210,8 +211,8 @@ static void
 on_progress(LsStep *step, const gchar *message, gpointer data){
 	Fixture *fixture = data;
 	(void)step;
-	(void)message;
 	fixture->progress++;
+	g_string_append_printf(fixture->messages, "%s\n", message);
 	if (g_thread_self() != fixture->main)
 		fixture->off_thread++;
 }
@@ -252,6 +253,7 @@ fixture_setup(Fixture *fixture, gint parallel, gint retries){
 	fixture->main = g_thread_self();
 	fixture->off_thread = 0;
 	fixture->progress = 0;
+	fixture->messages = g_string_new(NULL);
 	g_signal_connect(fixture->provider, "usage", G_CALLBACK(on_usage), fixture);
 }
 
@@ -261,6 +263,7 @@ fixture_teardown(Fixture *fixture){
 	g_clear_object(&fixture->prompts);
 	g_clear_object(&fixture->context);
 	g_clear_object(&fixture->provider);
+	g_string_free(fixture->messages, TRUE);
 }
 
 static JsonObject *
@@ -391,6 +394,74 @@ test_signature_fallback(void){
 		}
 		fixture_teardown(&fixture);
 	}
+}
+
+/* The plan reports the facts to ask the owner; the pages step writes the
+ * site's fingerprint; an order that lists it as avoid is dealt another
+ * layout and cannot reuse the same signature layer. */
+static void
+test_sameness_run(void){
+	Fixture first, second;
+	g_autoptr(GError) error = NULL;
+	g_autoptr(JsonNode) fingerprint = NULL, plan_a = NULL, plan_b = NULL;
+	g_autofree gchar *fp_text = NULL, *avoid_recipe = NULL, *text = NULL;
+	JsonObject *fp;
+	gchar **parts;
+	fixture_setup(&first, 8, 1);
+	run_plan(&first);
+	g_assert_nonnull(strstr(first.messages->str, "facts to ask the owner: What are your opening hours?"));
+	g_assert_null(strstr(first.messages->str, "dealt a layout"));
+	g_assert_true(run_step(&first, LS_TYPE_PAGES_STEP, 1, NULL, &error));
+	g_assert_no_error(error);
+	fingerprint = ls_json_parse(artifact_text(first.context, "site/fingerprint.json"), &error);
+	g_assert_no_error(error);
+	fp = json_node_get_object(fingerprint);
+	g_assert_cmpint(json_object_get_int_member(fp, "v"), ==, 1);
+	g_assert_cmpuint(json_array_get_length(json_object_get_array_member(fp, "signature")), >, 0);
+	g_assert_cmpstr(json_array_get_string_element(json_object_get_array_member(fp, "home"), 0), ==, "hero/split");
+	/* The same order, now asked to avoid the first site. The fake answers a
+	 * fixed plan whatever it is dealt, so compare only what the builder dealt:
+	 * the layout and genes, not the fixture's own colours, type and home. */
+	json_object_remove_member(fp, "colors");
+	json_object_remove_member(fp, "fonts");
+	json_object_remove_member(fp, "home");
+	fp_text = ls_json_encode(fingerprint);
+	text = g_strdup(recipe_text);
+	parts = g_strsplit(text, "style: editorial}", 2);
+	avoid_recipe = g_strdup_printf("%sstyle: editorial, avoid: [%s]}%s", parts[0], fp_text, parts[1]);
+	g_strfreev(parts);
+	fixture_setup(&second, 8, 1);
+	g_clear_object(&second.recipe);
+	{
+		g_autofree gchar *filled = NULL;
+		parts = g_strsplit(avoid_recipe, "PARALLEL", -1);
+		filled = g_strjoinv("8", parts);
+		g_strfreev(parts);
+		parts = g_strsplit(filled, "RETRIES", -1);
+		g_free(filled);
+		filled = g_strjoinv("1", parts);
+		g_strfreev(parts);
+		second.recipe = ls_recipe_new(filled, &error);
+		g_assert_no_error(error);
+	}
+	run_plan(&second);
+	g_assert_nonnull(strstr(second.messages->str, "dealt a layout "));
+	plan_a = ls_json_parse(artifact_text(first.context, "site/plan.json"), NULL);
+	plan_b = ls_json_parse(artifact_text(second.context, "site/plan.json"), NULL);
+	g_assert_cmpfloat(json_object_get_double_member(json_object_get_object_member(json_node_get_object(plan_a), "structure"), "width"), !=,
+		json_object_get_double_member(json_object_get_object_member(json_node_get_object(plan_b), "structure"), "width"));
+	g_assert_true(run_step(&second, LS_TYPE_PAGES_STEP, 1, NULL, &error));
+	g_assert_no_error(error);
+	/* The fake writes the same layer every time: sent back once, then left out. */
+	{
+		GPtrArray *prompts = prompts_for(second.provider, "signature");
+		g_assert_cmpuint(prompts->len, ==, 2);
+		g_assert_nonnull(strstr(g_ptr_array_index(prompts, 1), "repeat an earlier site's signature layer"));
+	}
+	g_assert_null(ls_context_lookup(second.context, "site/signature.css"));
+	g_assert_nonnull(ls_context_lookup(second.context, "index.html"));
+	fixture_teardown(&first);
+	fixture_teardown(&second);
 }
 
 static void
@@ -795,6 +866,7 @@ main(int argc, char **argv){
 	g_test_add_func("/pages/plan-photos", test_plan_photos);
 	g_test_add_func("/pages/plan-social", test_plan_social);
 	g_test_add_func("/pages/signature-fallback", test_signature_fallback);
+	g_test_add_func("/pages/sameness-run", test_sameness_run);
 	g_test_add_func("/pages/parallel", test_parallel);
 	g_test_add_func("/pages/sequential", test_sequential);
 	g_test_add_func("/pages/retry-one", test_retry_one);
