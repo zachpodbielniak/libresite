@@ -16,8 +16,8 @@
 .faq--numbered .faq__item summary::after { margin-left: auto; }
 /* split: the heading stays beside the questions. */
 @container (min-width: 64rem) {
-	.faq--split > .wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: var(--space-7); align-items: start; }
-	.faq--split .section-head { position: sticky; top: var(--space-5); }
+	.faq--split:not(.sec-w-narrow) > .wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: var(--space-7); align-items: start; }
+	.faq--split:not(.sec-w-narrow) .section-head { position: sticky; top: var(--space-5); }
 	.faq--split .section-head h2 { font-size: var(--step-3); }
 }
 .faq--split .faq__list { max-width: none; }

@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
 #include "steps/ls-step.h"
+#include "core/ls-template.h"
 #include <string.h>
 /* Bound on ShellCheck output quoted back into an error and retry prompt. */
 #define LS_SHELLCHECK_REPORT 400
@@ -175,6 +176,40 @@ check_shell(const gchar *path, const gchar *content, GCancellable *cancellable, 
 	return FALSE;
 }
 
+/* Whether @content holds @literal. Markup pages hold visible text with &, <,
+ * > and quotes written as entities, so an HTML, SVG or XML artifact also
+ * matches the escaped forms the builder's templates write. */
+static gboolean
+holds_literal(const gchar *path, const gchar *content, const gchar *literal){
+	g_autofree gchar *lower = g_ascii_strdown(path, -1);
+	g_autofree gchar *escaped = NULL;
+	GString *text_only;
+	const gchar *p;
+	gboolean found;
+	if (strstr(content, literal) != NULL)
+		return TRUE;
+	if (!g_str_has_suffix(lower, ".html") && !g_str_has_suffix(lower, ".htm") &&
+		!g_str_has_suffix(lower, ".svg") && !g_str_has_suffix(lower, ".xml"))
+		return FALSE;
+	escaped = ls_template_escape(literal);
+	if (strstr(content, escaped) != NULL)
+		return TRUE;
+	/* Text nodes need only &, < and > escaped. */
+	text_only = g_string_new(NULL);
+	for (p = literal; *p != '\0'; p++)
+		if (*p == '&')
+			g_string_append(text_only, "&amp;");
+		else if (*p == '<')
+			g_string_append(text_only, "&lt;");
+		else if (*p == '>')
+			g_string_append(text_only, "&gt;");
+		else
+			g_string_append_c(text_only, *p);
+	found = strstr(content, text_only->str) != NULL;
+	g_string_free(text_only, TRUE);
+	return found;
+}
+
 /* Literal predicates are deterministic and never execute generated code.
  * Report the predicate index instead of dumping arbitrary project content. */
 static gboolean
@@ -212,7 +247,7 @@ check_content(JsonObject *check, LsContext *context, GCancellable *cancellable, 
 			continue;
 		strings = json_object_get_array_member(check, predicates[i]);
 		for (j = 0; j < json_array_get_length(strings); j++) {
-			gboolean found = strstr(content, json_array_get_string_element(strings, j)) != NULL;
+			gboolean found = holds_literal(path, content, json_array_get_string_element(strings, j));
 			if ((i == 0 && !found) || (i == 1 && found)) {
 				g_set_error(error, LS_ERROR, LS_ERROR_VALIDATION,
 					"Artifact '%s' failed %s predicate %u", path, predicates[i], j + 1);

@@ -1227,6 +1227,30 @@ test_share(void){
 	}
 }
 
+/* Side and hanging headings are never dealt into a narrow column. */
+static void
+test_headpos_fits(void){
+	g_autoptr(LsComponents) components = library();
+	guint i, side = 0;
+	for (i = 0; i < 200; i++) {
+		g_autoptr(JsonNode) plan = load("plan.json");
+		g_autofree gchar *seed = g_strdup_printf("fit-%u", i);
+		JsonObject *root, *look, *structure;
+		const gchar *headpos;
+		g_assert_true(ls_components_apply_structure(components, plan, seed, FALSE));
+		root = json_node_get_object(plan);
+		look = json_object_get_object_member(root, "look");
+		structure = json_object_get_object_member(root, "structure");
+		headpos = json_object_get_string_member(look, "headpos");
+		if (g_str_equal(headpos, "side") || g_str_equal(headpos, "hang")) {
+			side++;
+			g_assert_cmpstr(json_object_get_string_member(look, "frame"), !=, "center");
+			g_assert_cmpfloat(json_object_get_double_member(structure, "width"), >=, 60);
+		}
+	}
+	g_assert_cmpuint(side, >, 0);
+}
+
 /* Home openings rotate between sites, stay stable per site and are real. */
 static void
 test_suggest_opening(void){
@@ -1859,6 +1883,7 @@ main(int argc, char **argv){
 	g_test_add_func("/components/heading-emphasis", test_heading_emphasis);
 	g_test_add_func("/components/section-numbers", test_section_numbers);
 	g_test_add_func("/components/variant-family", test_variant_family);
+	g_test_add_func("/components/headpos-fits", test_headpos_fits);
 	g_test_add_func("/components/social", test_social);
 	g_test_add_func("/components/share", test_share);
 	g_test_add_func("/components/suggest-opening", test_suggest_opening);

@@ -1149,6 +1149,56 @@ acceptance_sentinel(JsonObject *acceptance, const gchar *path){
 	return ls_json_encode(value);
 }
 
+/* Literal checks read markup as visible text: an HTML page that shows
+ * "Rise & Shine" writes it as "Rise &amp; Shine", and both contains and
+ * excludes see it; plain text files stay byte-literal. */
+static void
+validate_escaped_literals(void){
+	const gchar *yaml = "version: 1\nname: t\nsite: {brief: hi}\npipeline: {steps: [{id: a, type: validate, options: "
+		"{required: [p.html, n.txt], checks: [{path: p.html, contains: ['Rise & Shine', \"Maggie's <tea>\"]}]}}]}\n";
+	const gchar *bundles[] = {
+		"{\"files\":[{\"path\":\"p.html\",\"content\":\"<p>Rise &amp; Shine and Maggie&#39;s &lt;tea&gt;</p>\"},"
+		"{\"path\":\"n.txt\",\"content\":\"x\"}]}",
+		"{\"files\":[{\"path\":\"p.html\",\"content\":\"<p>Rise &amp; Shine and Maggie's &lt;tea&gt;</p>\"},"
+		"{\"path\":\"n.txt\",\"content\":\"x\"}]}",
+		"{\"files\":[{\"path\":\"p.html\",\"content\":\"<p>Rise and Shine and Maggie's tea</p>\"},"
+		"{\"path\":\"n.txt\",\"content\":\"x\"}]}"};
+	const gboolean pass[] = {TRUE, TRUE, FALSE};
+	g_autoptr(GError) error = NULL;
+	g_autoptr(LsRecipe) recipe = ls_recipe_new(yaml, &error);
+	g_autoptr(LsPrompts) prompts = ls_prompts_new(NULL, NULL);
+	g_autoptr(LsStep) validator = g_object_new(LS_TYPE_VALIDATE_STEP, NULL);
+	guint i;
+	g_assert_no_error(error);
+	for (i = 0; i < G_N_ELEMENTS(bundles); i++) {
+		g_autoptr(LsContext) context = ls_context_new();
+		g_autoptr(GError) local = NULL;
+		g_assert_true(ls_context_apply(context, bundles[i], NULL));
+		g_assert_cmpint(ls_step_execute(validator, recipe, json_array_get_object_element(ls_recipe_get_steps(recipe), 0),
+			prompts, context, NULL, NULL, &local), ==, pass[i]);
+	}
+	/* excludes sees the escaped form too, and a .txt artifact is compared byte for byte. */
+	{
+		const gchar *strict = "version: 1\nname: t\nsite: {brief: hi}\npipeline: {steps: [{id: a, type: validate, options: "
+			"{required: [p.html, n.txt], checks: [{path: p.html, excludes: ['A & B']}, {path: n.txt, contains: ['A & B']}]}}]}\n";
+		g_autoptr(LsRecipe) other = ls_recipe_new(strict, &error);
+		g_autoptr(LsContext) context = ls_context_new();
+		g_autoptr(GError) local = NULL;
+		g_assert_no_error(error);
+		g_assert_true(ls_context_apply(context, "{\"files\":[{\"path\":\"p.html\",\"content\":\"<p>ok</p>\"},"
+			"{\"path\":\"n.txt\",\"content\":\"A &amp; B\"}]}", NULL));
+		g_assert_false(ls_step_execute(validator, other, json_array_get_object_element(ls_recipe_get_steps(other), 0),
+			prompts, context, NULL, NULL, &local));
+		g_assert_nonnull(strstr(local->message, "n.txt"));
+		g_clear_error(&local);
+		g_assert_true(ls_context_apply(context, "{\"files\":[{\"path\":\"p.html\",\"content\":\"<p>A &amp; B</p>\"},"
+			"{\"path\":\"n.txt\",\"content\":\"A & B\"}]}", NULL));
+		g_assert_false(ls_step_execute(validator, other, json_array_get_object_element(ls_recipe_get_steps(other), 0),
+			prompts, context, NULL, NULL, &local));
+		g_assert_nonnull(strstr(local->message, "excludes"));
+	}
+}
+
 /* The native acceptance step: the last step that is not a trailing prune. */
 static JsonObject *
 acceptance_step(JsonArray *steps){
@@ -1581,6 +1631,7 @@ main(int argc, char **argv){
 		g_autofree gchar *name = g_strdup_printf("/revision/pipeline/%s", revisions[i]);
 		g_test_add_data_func(name, revisions[i], revision_case);
 	}
+	g_test_add_func("/validate/escaped-literals", validate_escaped_literals);
 	g_test_add_func("/artifact/delete", artifact_delete);
 	g_test_add_func("/artifact/binary", artifact_binary);
 	g_test_add_func("/artifact/rename", artifact_rename);

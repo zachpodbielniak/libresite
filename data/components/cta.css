@@ -13,7 +13,7 @@
 .cta--stack .cta__inner { text-align: center; }
 .cta--stack .cta__title, .cta--stack .prose { margin-inline: auto; }
 .cta--stack .actions { justify-content: center; }
-.cta--giant .cta__title { max-width: none; font-size: clamp(3rem, 11cqi, 9.5rem); line-height: 0.9; letter-spacing: calc(var(--heading-tracking) - 0.03em); }
+.cta--giant .cta__title { max-width: none; font-size: clamp(2.5rem, min(11cqi, var(--max-width) * 0.11), 9.5rem); line-height: 0.9; letter-spacing: calc(var(--heading-tracking) - 0.03em); }
 .cta--giant .cta__inner { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-5); }
 /* ticket: a torn-off ticket with notched sides and a dashed tear line. */
 .cta--ticket .cta__inner { position: relative; padding: var(--space-7) clamp(var(--space-5), 5cqi, var(--space-8)); background: var(--surface); border: var(--border-strong) dashed var(--line-strong); border-radius: var(--radius); -webkit-mask: radial-gradient(circle 1.1rem at 0 50%, #0000 98%, #000) left / 51% 100% no-repeat, radial-gradient(circle 1.1rem at 100% 50%, #0000 98%, #000) right / 51% 100% no-repeat; mask: radial-gradient(circle 1.1rem at 0 50%, #0000 98%, #000) left / 51% 100% no-repeat, radial-gradient(circle 1.1rem at 100% 50%, #0000 98%, #000) right / 51% 100% no-repeat; }

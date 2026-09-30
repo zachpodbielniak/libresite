@@ -1175,6 +1175,8 @@ ls_components_deal_structure(LsComponents *self, const gchar *seed){
 	return structure;
 }
 
+static gdouble gene(JsonObject *structure, const gchar *name, gdouble fallback);
+
 gboolean
 ls_components_apply_structure(LsComponents *self, JsonNode *plan_node, const gchar *seed, gboolean themed){
 	JsonObject *plan, *look;
@@ -1206,10 +1208,16 @@ ls_components_apply_structure(LsComponents *self, JsonNode *plan_node, const gch
 	if (json_object_has_member(plan, "structure"))
 		json_object_remove_member(plan, "structure");
 	json_object_set_object_member(plan, "structure", ls_components_deal_structure(self, seed));
+	/* Headings beside or hanging off the content need a wide column: the
+	 * narrow journal frame and narrow dealt columns keep them on top. */
+	if ((g_strcmp0(ls_string(look, "headpos"), "side") == 0 || g_strcmp0(ls_string(look, "headpos"), "hang") == 0) &&
+		json_object_has_member(look, "frame") &&
+		(g_strcmp0(ls_string(look, "frame"), "center") == 0 ||
+		gene(member_object(plan, "structure"), "width", 76) < 60))
+		json_object_set_string_member(look, "headpos", "top");
 	return TRUE;
 }
 
-static gdouble gene(JsonObject *structure, const gchar *name, gdouble fallback);
 
 /* The builder's structure: known genes in range and dealable variants. */
 static void

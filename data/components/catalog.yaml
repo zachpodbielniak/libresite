@@ -562,7 +562,7 @@ components:
       boxed: The whole opening on a card.
       banner: The picture as a wide low strip above the title.
       stripe: A thick accent bar beside the title block.
-      index: An oversized outlined label over a compact title.
+      index: An oversized accent label over a compact title.
     slots:
       kicker: {type: text, max: 80, note: "Short label above the title, such as a category."}
       heading: {type: text, required: true, max: 140}
