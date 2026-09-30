@@ -9,12 +9,28 @@
  * grows with the text, so a long title never rises out over the header. */
 .cover--full .cover__frame { display: grid; grid-template-columns: minmax(0, 1fr); }
 .cover--full .cover__art, .cover--full .cover__text { grid-area: 1 / 1; min-width: 0; }
-.cover--full .cover__art img { height: 100%; min-height: min(70vh, 34rem); max-height: none; }
-.cover--full .cover__text { align-self: end; position: relative; padding-block: var(--space-8) var(--space-6); background: linear-gradient(to top, color-mix(in srgb, var(--paper) 94%, transparent), transparent); }
+/* The picture fills the whole cell however tall the text makes it. */
+.cover--full .cover__art { position: relative; min-height: min(70vh, 34rem); }
+.cover--full .cover__art img { position: absolute; inset: 0; height: 100%; max-height: none; }
+/* The text sits on a readable panel in the lower corner; the rest of the
+ * picture stays clear instead of being washed out behind a full-width fade. */
+.cover--full .cover__text { align-self: end; position: relative; padding-block: var(--space-8) var(--space-6); }
+.cover--full .cover__text > .wrap {
+	width: min(100% - 2 * var(--gutter), 46rem);
+	margin-inline: max(var(--gutter), (100% - var(--max-width)) / 2) auto;
+	padding: clamp(var(--space-4), 3cqi, var(--space-6));
+	background: color-mix(in srgb, var(--paper) 90%, transparent);
+	border-radius: var(--radius);
+	-webkit-backdrop-filter: blur(12px) saturate(1.2); backdrop-filter: blur(12px) saturate(1.2);
+}
+.cover--full .cover__text > .wrap > :last-child { margin-bottom: 0; }
+.look-align-center .cover--full .cover__text > .wrap { margin-inline: auto; }
 .cover--framed .cover__art { width: min(100% - 2 * var(--gutter), var(--max-width)); margin: var(--space-6) auto 0; padding: var(--space-3); border: var(--border-strong) solid var(--ink); }
-@media (min-width: 56rem) {
+/* Split when the page column has room. */
+@container (min-width: 56rem) {
 	.cover--split .cover__frame { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); min-height: 80vh; }
 	.cover--split .cover__art { order: 2; }
 	.cover--split .cover__art img { height: 100%; max-height: none; }
 	.cover--split .cover__text { display: flex; align-items: center; background: var(--surface); }
+	.cover--split .cover__title { font-size: var(--step-5); }
 }

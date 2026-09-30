@@ -44,6 +44,8 @@
 .look-heads-numbered main section[style*="--ls-n"] h2[id$="-h"]::before { content: var(--ls-n); display: block; margin-bottom: var(--space-2); font: 600 var(--step--1) / 1 var(--font-mono); letter-spacing: 0.08em; color: var(--accent-text); }
 .look-heads-bar main h2[id$="-h"] { padding-left: var(--space-4); border-left: 0.3em solid var(--accent); }
 .look-heads-giant main h2[id$="-h"] { font-size: var(--step-5); line-height: 0.98; letter-spacing: calc(var(--heading-tracking) - 0.015em); }
+/* Beside a picture or a form the column is narrow: giant headings step down so they keep whole words per line. */
+.look-heads-giant main :is(.media--offset .media__text, .media--split .media__text, .form--aside .form__head) h2[id$="-h"] { font-size: var(--step-4); }
 @media (min-width: 56rem) {
 	.look-heads-split .section-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-7); max-width: none; align-items: end; }
 	.look-heads-split .section-head > h2 { margin: 0; }
@@ -52,6 +54,8 @@
 /* Alignment. */
 .look-align-center .section-head, .look-align-center main h2[id$="-h"] { margin-inline: auto; text-align: center; }
 .look-align-center .section-head .prose { margin-inline: auto; }
+/* A lone media caption and text sit under the centred heading, not in the left half. */
+.look-align-center .media:not(.media--split, .media--offset) .media__text { margin-inline: auto; }
 .look-align-center.look-heads-rule main h2[id$="-h"]::before { margin-inline: auto; }
 .look-align-center.look-heads-bar main h2[id$="-h"] { padding-left: 0; border-left: 0; }
 
@@ -147,8 +151,9 @@ html:has(> body.look-header-glass:not(.look-frame-rail, .look-frame-split)) { sc
 .look-photos-print main img:is([src$=".jpg"], [src$=".jpeg"], [src$=".png"], [src$=".webp"]) { padding: 0.55rem 0.55rem 1.6rem; background: #fbfaf7; border-radius: 2px; box-shadow: 0 0.5rem 1.4rem color-mix(in srgb, #000 22%, transparent); transform: rotate(-1.2deg); }
 .look-photos-print main :nth-child(even) > img:is([src$=".jpg"], [src$=".jpeg"], [src$=".png"], [src$=".webp"]) { transform: rotate(1deg); }
 .look-photos-soft main img:is([src$=".jpg"], [src$=".jpeg"], [src$=".png"], [src$=".webp"]) { border-radius: 42% 58% 55% 45% / 45% 40% 60% 55%; }
-/* A big photo in the opening never pushes the headline off the first screen. */
-main > .block:first-child img:is([src$=".jpg"], [src$=".jpeg"], [src$=".png"], [src$=".webp"]) { max-height: min(60vh, 36rem); }
+/* A big photo in the opening never pushes the headline off the first screen;
+ * a full cover instead fills a cell sized by its text. */
+main > .block:first-child:not(.cover--full) img:is([src$=".jpg"], [src$=".jpeg"], [src$=".png"], [src$=".webp"]) { max-height: min(60vh, 36rem); }
 
 /* Section edges, visible where a section has its own background. */
 .look-edges-wave main > .block:not(:last-child) { -webkit-mask: linear-gradient(#000, #000) top / 100% calc(100% - 1.4rem) no-repeat, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 24' preserveAspectRatio='none'%3E%3Cpath d='M0 0h120v12c-15 0-15 12-30 12S75 12 60 12 45 24 30 24 15 12 0 12z'/%3E%3C/svg%3E") bottom / 8rem 1.4rem repeat-x; mask: linear-gradient(#000, #000) top / 100% calc(100% - 1.4rem) no-repeat, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 24' preserveAspectRatio='none'%3E%3Cpath d='M0 0h120v12c-15 0-15 12-30 12S75 12 60 12 45 24 30 24 15 12 0 12z'/%3E%3C/svg%3E") bottom / 8rem 1.4rem repeat-x; }
@@ -193,6 +198,8 @@ main > .block:first-child img:is([src$=".jpg"], [src$=".jpeg"], [src$=".png"], [
 .look-buttons-chrome .button:hover { filter: brightness(1.06); }
 .look-images-taped main :is(figure, picture, a, div, li):has(> img) { position: relative; }
 .look-images-taped main :is(figure, picture, a, div, li):has(> img)::before { content: ""; position: absolute; z-index: 1; top: -0.6rem; left: 50%; width: 5rem; height: 1.3rem; transform: translateX(-50%) rotate(-3deg); background: color-mix(in srgb, var(--accent) 30%, #ffffff 45%); opacity: 0.85; pointer-events: none; }
+/* A turned picture at the column edge must not widen the page. */
+:is(.look-images-taped, .look-photos-print) main { overflow-x: clip; }
 .look-images-taped main img { transform: rotate(-0.8deg); box-shadow: 0 0.4rem 1rem color-mix(in srgb, #000 16%, transparent); }
 
 /* A full sitemap in the footer. */
@@ -220,7 +227,8 @@ body .split--contrast .split__panel:last-child { background: var(--accent); colo
 
 /* Artwork. */
 .look-images-rounded main img { border-radius: clamp(0.75rem, 2cqi, 1.5rem); }
-.look-images-framed main img { padding: clamp(0.35rem, 1cqi, 0.75rem); border: var(--border) solid var(--line-strong); border-radius: 0; background: var(--paper); }
+/* A cover is edge to edge and a framed media figure has its own mount: one frame, never two. */
+.look-images-framed main img:not(.cover img, .media--framed img, .brand img) { padding: clamp(0.35rem, 1cqi, 0.75rem); border: var(--border) solid var(--line-strong); border-radius: 0; background: var(--paper); }
 .look-images-print main img { filter: grayscale(1) contrast(1.15); }
 .look-images-shadow main img { border-radius: var(--radius); box-shadow: 0.6rem 0.6rem 0 var(--accent); }
 .look-images-shadow main :is(.bento__art, .strip__item img) { box-shadow: none; }
@@ -254,7 +262,7 @@ body .split--contrast .split__panel:last-child { background: var(--accent); colo
 .look-emphasis-underline .em { text-decoration: underline wavy var(--accent); text-decoration-thickness: 0.05em; text-underline-offset: 0.06em; text-decoration-skip-ink: none; }
 .look-emphasis-outline .em { color: transparent; -webkit-text-stroke: max(1px, 0.03em) currentColor; }
 @supports not (-webkit-text-stroke: 1px black) { .look-emphasis-outline .em { color: var(--accent-text); } }
-.look-emphasis-block .em { display: inline-block; padding: 0 0.12em; background: var(--accent); color: var(--accent-ink); transform: rotate(-1.5deg); }
+.look-emphasis-block .em { display: inline-block; padding: 0 0.12em; background: var(--accent); color: var(--accent-ink); transform: rotate(-1.5deg); line-height: 1.05; margin-block: 0.06em; }
 
 /* Ornament between sections. */
 .look-ornament-wave main > .block + .block::before,
@@ -305,6 +313,8 @@ body .split--contrast .split__panel:last-child { background: var(--accent); colo
 	:is(.look-frame-rail, .look-frame-split) > .site-header { padding: 0; border-top: 0; border-left: 0; border-bottom: 0; backdrop-filter: none; -webkit-backdrop-filter: none; }
 	/* No wrapping: in a column, a wrap would start a second column outside the panel. */
 	:is(.look-frame-rail, .look-frame-split) .site-header__inner { flex-wrap: nowrap; border: 0; box-shadow: none; background: transparent; }
+	/* The panel scrolls when it is too tall; its items never shrink below their text. */
+	:is(.look-frame-rail, .look-frame-split) .site-header__inner > * { flex-shrink: 0; }
 	:is(.look-frame-rail, .look-frame-split) .site-nav { flex-direction: column; align-items: flex-start; border: 0; margin-top: 0; padding: 0; }
 	:is(.look-frame-rail, .look-frame-split) .site-nav ul { flex-direction: column; gap: 0; }
 	:is(.look-frame-rail, .look-frame-split) .site-nav .site-nav__menu { position: static; display: flex; min-width: 0; padding: 0 0 0 var(--space-3); background: none; border: 0; box-shadow: none; }
@@ -319,8 +329,14 @@ body .split--contrast .split__panel:last-child { background: var(--accent); colo
 	.look-frame-split .site-nav { margin-top: auto; }
 
 	/* offset: content pushed right of an empty margin; headings hang into it. */
-	.look-frame-offset main > .block > .wrap, .look-frame-offset .site-footer .wrap { padding-left: clamp(0rem, 14cqi, 16rem); }
-	.look-frame-offset main .section-head, .look-frame-offset main .page-header__text { margin-left: calc(clamp(0rem, 14cqi, 16rem) * -0.6); }
+	/* The margin is added beside the column, never taken out of it: a narrow
+	 * dealt column must not shrink to a strip. */
+	.look-frame-offset { --ls-offset: clamp(0rem, 14cqi, 16rem); }
+	.look-frame-offset main > .block > .wrap, .look-frame-offset .site-footer .wrap { width: min(100% - 2 * var(--gutter), var(--max-width) + var(--ls-offset)); padding-left: var(--ls-offset); }
+	.look-frame-offset main .section-head, .look-frame-offset main .page-header__text { margin-left: calc(var(--ls-offset) * -0.6); }
+	/* Hanging headings are the point of this frame, so centred alignment yields to it. */
+	.look-frame-offset.look-align-center main .section-head { text-align: start; margin-right: 0; }
+	.look-frame-offset.look-align-center main .section-head h2[id$="-h"] { text-align: start; margin-inline: 0; }
 }
 /* center: a narrow journal column under a centered header. */
 .look-frame-center { --max-width: min(var(--frame-width), 46rem); }

@@ -13,7 +13,7 @@
 .product__specs { width: 100%; margin-top: var(--space-5); border-collapse: collapse; font-size: var(--step--1); }
 .product__specs th, .product__specs td { padding: var(--space-2) 0; border-top: var(--border) solid var(--line); text-align: left; vertical-align: top; }
 .product__specs th { width: 40%; padding-right: var(--space-4); font-weight: 600; }
-@media (min-width: 56rem) {
+@container (min-width: 56rem) {
 	.product--split .product__layout { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: var(--space-8); align-items: start; }
 	.product--split .product__details { position: sticky; top: var(--space-5); }
 }

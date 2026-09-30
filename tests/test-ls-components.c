@@ -1605,6 +1605,31 @@ test_layout_lint(void){
 		contains(look, ".look-rhythm-bands main > .block:nth-of-type(even):not(.sec-tone, .cta--band, .statement--band,");
 		/* Side panels never wrap into a second column. */
 		contains(look, ":is(.look-frame-rail, .look-frame-split) .site-header__inner { flex-wrap: nowrap;");
+		/* The offset margin is added beside a dealt column, never taken out of it. */
+		contains(look, "var(--max-width) + var(--ls-offset)");
+		/* One frame per picture, and turned pictures never widen the page. */
+		contains(look, ".look-images-framed main img:not(.cover img, .media--framed img, .brand img)");
+		contains(look, ":is(.look-images-taped, .look-photos-print) main { overflow-x: clip; }");
+		contains(look, "main > .block:first-child:not(.cover--full) img");
+	}
+	{
+		g_autofree gchar *cover = NULL;
+		g_autofree gchar *media = NULL;
+		g_autofree gchar *story = NULL;
+		g_autofree gchar *gallery = NULL;
+		g_assert_true(g_file_get_contents("data/components/cover.css", &cover, NULL, NULL));
+		g_assert_true(g_file_get_contents("data/components/media.css", &media, NULL, NULL));
+		g_assert_true(g_file_get_contents("data/components/story.css", &story, NULL, NULL));
+		g_assert_true(g_file_get_contents("data/components/gallery.css", &gallery, NULL, NULL));
+		/* A full cover's picture fills its cell; the text sits on a panel, not a full-width fade. */
+		contains(cover, ".cover--full .cover__art img { position: absolute; inset: 0;");
+		lacks(cover, "linear-gradient(to top");
+		/* Side-by-side layouts follow the page column, not the screen. */
+		lacks(media, "@media (min-width: 56rem)");
+		lacks(cover, "@media (min-width: 56rem)");
+		/* The pinned story never leaves screens of empty page. */
+		lacks(story, "30vh");
+		contains(gallery, ".gallery:not(.gallery--masonry) .gallery__item img { aspect-ratio: 4 / 3;");
 	}
 }
 

@@ -127,7 +127,11 @@ Dealt structure multiplies the layouts a component meets: seven frames, four hea
 - Accent-painted variants (=cta/band=, =statement/band=, =marquee/accent=) take the same token swap as accent section bands, so labels, rules, emphasis and buttons inside them stay visible. In the reading column, which has no page gutter, painted sections carry their own inset and a smaller heading.
 - The alternating =rhythm/bands= tint skips sections that paint their own colours (tone bands and accent or surface variants), so their text keeps its contrast.
 - A pinned glass header reserves room at the top of the viewport, so jump-link targets and focused controls are not scrolled under it.
-- Sections with no padding of their own (a full cover, the jump bar) leave room above the next section; aside figures float only beside running text; a full cover grows to fit its text rather than letting it rise over the header.
+- Sections with no padding of their own (a full cover, the jump bar) leave room above the next section; aside figures float only beside running text; a full cover grows to fit its text rather than letting it rise over the header, its picture fills the whole cell, and its text sits on a readable panel in the lower corner instead of a fade that washes out the photograph.
+- Side-by-side media and split covers follow the page column (container queries), not the screen, so beside a side menu they stack before their text column gets narrow. Giant section headings step down beside a picture or a form.
+- The offset frame adds its empty margin beside the dealt column rather than taking it out, so a narrow dealt column never shrinks to a strip, and its headings hang left even under centred alignment.
+- A picture gets one frame: framed images skip the edge-to-edge cover and the framed media mount. Turned pictures (taped, print) are clipped at the page column so they never widen the page.
+- Galleries and photo strips give mixed portrait and landscape photographs one shape so rows stay even (masonry keeps each shape). The pinned story spaces its steps by a few lines, not by screens.
 
 =/components/layout-lint= fails on a grid track without a zero floor, automatic hyphenation, a viewport unit inside a component, unwrappable text outside the two scrolling components, or a frame that borders the whole page.
 

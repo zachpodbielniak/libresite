@@ -2,9 +2,11 @@
 @media (min-width: 40rem) { .gallery__list { grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(15rem * var(--grid-scale, 1))), 1fr)); } }
 .gallery__item { margin: 0; }
 .gallery__item img { width: 100%; border-radius: var(--radius); background: var(--surface); }
+/* Mixed portrait and landscape photos share one shape, so rows stay even; masonry keeps each photo's own shape. */
+.gallery:not(.gallery--masonry) .gallery__item img { aspect-ratio: 4 / 3; object-fit: cover; }
 .gallery__item figcaption { margin-top: var(--space-2); font-size: var(--step--1); }
 @media (min-width: 56rem) { .gallery--mosaic .gallery__list > li:first-child { grid-column: span 2; grid-row: span 2; } }
-.gallery--strip .gallery__list { display: flex; gap: var(--space-4); overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: var(--space-3); }
+.gallery--strip .gallery__list { display: flex; align-items: start; scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; gap: var(--space-4); overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: var(--space-3); }
 .gallery--strip .gallery__list > li { flex: 0 0 min(80cqi, 24rem); scroll-snap-align: start; }
 .gallery--framed .gallery__item { padding: var(--space-3); background: var(--surface); border: var(--border) solid var(--line-strong); }
 .gallery--framed .gallery__item img { border-radius: 0; }

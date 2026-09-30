@@ -8,5 +8,6 @@
 	.story__grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-8); align-items: start; }
 	.story__art { position: sticky; top: var(--space-6); }
 	.story--right .story__art { order: 2; }
-	.story__steps { gap: 30vh; padding-block: 10vh 20vh; }
+	/* Enough scroll to let the pinned picture travel, never screens of empty page. */
+	.story__steps { gap: clamp(var(--space-7), 12vh, 7rem); padding-block: var(--space-5); }
 }

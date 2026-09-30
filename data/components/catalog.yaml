@@ -157,7 +157,7 @@ looks:
       blueprint: Technical drawing with thin lines, dimension marks and short labels.
       neon: Glowing strokes in the accent on dark fields, like neon tubes.
   photos:
-    summary: Treatment of supplied photographs.
+    summary: Treatment of supplied photographs. Photos of the customer's own people, animals, food or place stay natural unless the brief asks otherwise.
     plain: 40
     values:
       natural: As shot.

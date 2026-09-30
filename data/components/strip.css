@@ -1,4 +1,4 @@
-.strip__row { display: flex; gap: var(--space-4); margin: 0; padding: 0 var(--gutter) var(--space-3); list-style: none; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: var(--gutter); }
+.strip__row { display: flex; align-items: start; scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; gap: var(--space-4); margin: 0; padding: 0 var(--gutter) var(--space-3); list-style: none; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: var(--gutter); }
 .strip__item { flex: 0 0 min(80cqi, 22rem); scroll-snap-align: start; }
 .strip__item figure { margin: 0; }
 .strip__item img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: var(--radius); background: var(--surface); }

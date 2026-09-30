@@ -89,11 +89,12 @@ main :is(.wrap, [class$="__list"], [class*="__list "], [class$="__grid"], [class
 .page-contents a { text-decoration: none; }
 .page-contents a:hover { text-decoration: underline; }
 .page-aside__note { margin-top: var(--space-5); padding-top: var(--space-4); border-top: var(--border) solid var(--line); color: var(--muted); }
-@media (min-width: 64rem) {
-	.page-grid { grid-template-columns: 14rem minmax(0, 1fr); gap: var(--space-8); align-items: start; }
+/* The contents column appears when the content column, not the screen, has room. */
+@container (min-width: 56rem) {
+	.page-grid { grid-template-columns: 14rem minmax(0, 1fr); gap: min(var(--space-8), 4rem); align-items: start; }
 	.page-aside { position: sticky; top: var(--space-5); }
 }
-@media (max-width: 63.99rem) {
+@container (max-width: 55.99rem) {
 	.page-aside { padding: var(--space-4); background: var(--surface); border-radius: var(--radius); }
 }
 
