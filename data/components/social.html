@@ -1,0 +1,8 @@
+<div class="wrap social__inner">
+{{#heading}}<div class="section-head"><{{htag}} id="{{id}}-h">{{{heading_html}}}</{{htag}}>
+{{#body}}<div class="prose">{{{body}}}</div>
+{{/body}}</div>
+{{/heading}}{{#has_profiles}}<ul class="social__list" role="list">
+{{#profiles}}<li class="social__item social__item--{{network}}"><a class="social__link" href="{{url}}" rel="me noopener">{{#icon}}<svg class="social__icon" viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" focusable="false"><path fill="currentColor" d="{{icon}}"/></svg>{{/icon}}<span class="social__network">{{label}}</span>{{#handle}}<span class="social__handle">{{handle}}</span>{{/handle}}</a></li>
+{{/profiles}}</ul>
+{{/has_profiles}}</div>

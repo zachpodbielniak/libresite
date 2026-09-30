@@ -5,3 +5,11 @@
 .notice--accent .notice__box { background: var(--accent); color: var(--accent-ink); }
 .notice--accent a { color: inherit; }
 .notice--quiet .notice__box { border: var(--border-strong) solid var(--line-strong); }
+/* banner: a solid band in the ink colour. */
+.notice--banner .notice__box { border-radius: 0; padding-block: var(--space-4); }
+/* pill: a centred rounded pill. */
+.notice--pill .notice__box { justify-content: center; width: fit-content; max-width: 100%; margin-inline: auto; padding: var(--space-2) var(--space-5); border: var(--border) solid var(--line-strong); border-radius: 999px; text-align: center; }
+/* side: an accent bar down the left edge. */
+.notice--side .notice__box { padding-left: var(--space-5); border-left: calc(var(--border-strong) * 3) solid var(--accent); border-radius: 0; background: var(--surface); }
+/* ticket: a dashed tear-off edge. */
+.notice--ticket .notice__box { border: var(--border-strong) dashed var(--accent); }

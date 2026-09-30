@@ -1,7 +1,18 @@
 .contact-card__items { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); margin: var(--space-5) 0 0; }
-@media (min-width: 40rem) { .contact-card__items { grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(12rem * var(--grid-scale, 1))), 1fr)); } }
+@container (min-width: 40rem) { .contact-card__items { grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(12rem * var(--grid-scale, 1))), 1fr)); } }
 .contact-card__items dt { font-family: var(--font-mono); font-size: var(--step--1); text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); }
 .contact-card__items dd { margin: var(--space-1) 0 0; font-family: var(--font-display); font-weight: 600; font-size: var(--step-1); overflow-wrap: anywhere; }
 .contact-card--card .contact-card__box { max-width: 48rem; padding: var(--space-6); background: var(--surface); border-radius: var(--radius); border: var(--border) solid var(--line); }
 .contact-card--strip { background: var(--surface); padding-block: var(--space-7); }
 .block.contact-card--strip { padding-top: var(--space-7); }
+/* split: the title beside the details, in sections wide enough for both. */
+@container (min-width: 60rem) {
+	.contact-card--split:not(.sec-w-narrow) .contact-card__box { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 0 var(--space-7); align-items: start; }
+	.contact-card--split:not(.sec-w-narrow) .contact-card__box > :not(.contact-card__title) { grid-column: 2; }
+	.contact-card--split:not(.sec-w-narrow) .contact-card__title { grid-row: 1 / span 3; font-size: var(--step-3); }
+	.contact-card--split:not(.sec-w-narrow) .contact-card__items { margin-top: 0; }
+}
+/* band: an accent band across the page. */
+.block.contact-card--band { padding-block: var(--space-7); }
+/* outline: a thick outlined box. */
+.contact-card--outline .contact-card__box { padding: var(--space-6); border: calc(var(--border-strong) * 2) solid var(--ink); border-radius: var(--radius); }

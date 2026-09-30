@@ -1,5 +1,5 @@
 .checklist__grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-6); }
-@media (min-width: 48rem) { .checklist--columns .checklist__grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+@container (min-width: 48rem) { .checklist--columns .checklist__grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
 .checklist__label { font-family: var(--font-display); font-weight: 700; margin-bottom: var(--space-3); }
 .checklist__items { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-2); }
 .checklist__items li { display: grid; grid-template-columns: 1.5rem minmax(0, 1fr); gap: var(--space-2); }

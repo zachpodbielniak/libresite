@@ -6,7 +6,7 @@
 .areas__note { margin-top: var(--space-4); font-size: var(--step--1); }
 .areas__map { margin: var(--space-5) 0 0; }
 .areas__map img { width: 100%; border-radius: var(--radius); background: var(--surface); }
-@media (min-width: 56rem) { .areas__inner:has(.areas__map) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-7); align-items: start; } .areas__map { margin: 0; } }
+@container (min-width: 56rem) { .areas__inner:has(.areas__map) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-7); align-items: start; } .areas__map { margin: 0; } }
 /* A drawn map: the business at the center, the places in rings around it. */
 .areas--map .areas__list { position: relative; display: flex; flex-wrap: wrap; justify-content: center; align-content: center; gap: var(--space-3) var(--space-4); min-height: 20rem; padding: var(--space-7) var(--space-5);
 	border-radius: 50%; aspect-ratio: 1; max-width: 34rem; margin-inline: auto;

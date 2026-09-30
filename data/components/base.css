@@ -196,3 +196,7 @@ input[type="checkbox"] { width: 1.25rem; min-height: 1.25rem; accent-color: var(
 	.site-header nav, .nav-toggle, .actions, .site-footer ul { display: none !important; }
 	body { background: #fff; color: #000; }
 }
+/* Supplied social profiles in the footer: icons with hidden names. */
+.site-footer__social { display: flex; flex-wrap: wrap; gap: var(--space-1); margin: var(--space-4) 0 0; padding: 0; list-style: none; }
+.site-footer__social a { display: inline-grid; place-items: center; min-width: 44px; min-height: 44px; color: var(--ink); border-radius: 50%; }
+.site-footer__social a:hover { color: var(--accent-text); }

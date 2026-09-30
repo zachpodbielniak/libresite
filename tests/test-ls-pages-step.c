@@ -615,6 +615,63 @@ static const gchar *photo_recipe =
 	"      type: validate\n"
 	"      options: {required: [index.html]}\n";
 
+/* @text with the first @needle replaced by @value. */
+static gchar *
+replace_once(const gchar *text, const gchar *needle, const gchar *value){
+	const gchar *at = strstr(text, needle);
+	g_assert_nonnull(at);
+	return g_strdup_printf("%.*s%s%s", (gint)(at - text), text, value, at + strlen(needle));
+}
+
+/* Supplied social profiles are the builder's: the stored plan lists the
+ * recipe's profiles with recognised networks, replacing any the model
+ * wrote, and a recipe without profiles leaves the plan without any. */
+static void
+test_plan_social(void){
+	g_autoptr(GError) error = NULL;
+	g_autofree gchar *text = g_strdup(photo_recipe);
+	g_autofree gchar *with_social = NULL;
+	g_autoptr(LsPrompts) prompts = ls_prompts_new(NULL, &error);
+	const gchar *variants[2];
+	guint v;
+	g_assert_no_error(error);
+	with_social = replace_once(text, "  photos:\n", "  social:\n"
+		"    - {url: 'https://twitter.com/harbor_repair'}\n"
+		"    - {url: 'https://fosstodon.org/@harbor', label: Fediverse}\n"
+		"  photos:\n");
+	variants[0] = with_social;
+	variants[1] = text;
+	for (v = 0; v < 2; v++) {
+		g_autoptr(LsRecipe) recipe = ls_recipe_new(variants[v], &error);
+		g_autoptr(LsContext) context = NULL;
+		FakeProvider *provider = g_object_new(fake_provider_get_type(), NULL);
+		g_autoptr(LsStep) step = g_object_new(LS_TYPE_PLAN_STEP, NULL);
+		g_autoptr(JsonNode) plan = NULL;
+		JsonObject *root;
+		g_assert_no_error(error);
+		context = ls_recipe_create_context(recipe, &error);
+		g_assert_no_error(error);
+		g_assert_true(ls_step_execute(step, recipe, json_array_get_object_element(ls_recipe_get_steps(recipe), 0),
+			prompts, context, LS_PROVIDER(provider), NULL, &error));
+		g_assert_no_error(error);
+		plan = ls_json_parse(ls_artifact_get_content(ls_context_lookup(context, "site/plan.json")), NULL);
+		root = json_node_get_object(plan);
+		if (v == 0) {
+			JsonArray *social = json_object_get_array_member(root, "social");
+			JsonObject *first = json_array_get_object_element(social, 0);
+			JsonObject *second = json_array_get_object_element(social, 1);
+			g_assert_cmpuint(json_array_get_length(social), ==, 2);
+			g_assert_cmpstr(json_object_get_string_member(first, "network"), ==, "x");
+			g_assert_cmpstr(json_object_get_string_member(first, "handle"), ==, "@harbor_repair");
+			g_assert_cmpstr(json_object_get_string_member(second, "network"), ==, "mastodon");
+			g_assert_cmpstr(json_object_get_string_member(second, "label"), ==, "Fediverse");
+			g_assert_null(strstr(ls_artifact_get_content(ls_context_lookup(context, "site/plan.json")), "harborbench"));
+		} else
+			g_assert_false(json_object_has_member(root, "social"));
+		g_object_unref(provider);
+	}
+}
+
 static void
 test_plan_photos(void){
 	g_autoptr(GError) error = NULL;
@@ -678,6 +735,7 @@ main(int argc, char **argv){
 	g_test_add_func("/pages/plan-options", test_plan_options);
 	g_test_add_func("/pages/plan-identity", test_plan_identity);
 	g_test_add_func("/pages/plan-photos", test_plan_photos);
+	g_test_add_func("/pages/plan-social", test_plan_social);
 	g_test_add_func("/pages/parallel", test_parallel);
 	g_test_add_func("/pages/sequential", test_sequential);
 	g_test_add_func("/pages/retry-one", test_retry_one);

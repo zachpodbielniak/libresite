@@ -9,7 +9,7 @@
 .recipe__method ol { padding-left: 1.4em; }
 .recipe__method li::marker { font-family: var(--font-display); font-weight: 700; color: var(--accent-text); }
 .recipe__note { font-size: var(--step--1); }
-@media (min-width: 48rem) {
+@container (min-width: 48rem) {
 	.recipe--split .recipe__body { grid-template-columns: minmax(0, 1fr) minmax(0, 1.7fr); gap: var(--space-8); }
 	.recipe--split .recipe__ingredients { position: sticky; top: var(--space-5); align-self: start; }
 }

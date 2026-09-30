@@ -1,2 +1,8 @@
 .lead__body { font-size: var(--step-2); line-height: 1.45; max-width: 34em; }
 .lead--dropcap .lead__body > p:first-child::first-letter { float: left; margin: 0.08em 0.1em 0 0; font-family: var(--font-display); font-weight: var(--heading-weight); font-size: 3.4em; line-height: 0.8; color: var(--accent-text); }
+/* framed: the opening words between two heavy rules. */
+.lead--framed .lead__body { max-width: none; padding-block: var(--space-5); border-block: calc(var(--border-strong) * 2) solid var(--ink); }
+/* pull: indented behind an accent bar, in the display face. */
+.lead--pull .lead__body { padding-left: clamp(var(--space-4), 3cqi, var(--space-6)); border-left: calc(var(--border-strong) * 3) solid var(--accent); font-family: var(--font-display); }
+/* centered: a short centred opening. */
+.lead--centered .lead__body { margin-inline: auto; text-align: center; max-width: 28em; }

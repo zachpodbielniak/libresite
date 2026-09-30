@@ -1,5 +1,5 @@
 .columns__grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-6); }
-@media (min-width: 48rem) {
+@container (min-width: 48rem) {
 	.columns--two .columns__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-7); }
 	.columns--three .columns__grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }

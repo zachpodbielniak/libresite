@@ -12,7 +12,7 @@
 .menu__tags { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: var(--space-2) 0 0; }
 .menu__tag { padding: 0.1em 0.6em; border: var(--border) solid var(--line-strong); border-radius: 999px; font-size: var(--step--1); }
 .menu__footnote { margin-top: var(--space-6); font-size: var(--step--1); }
-@media (min-width: 56rem) {
+@container (min-width: 56rem) {
 	.menu--columns .menu__sections { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-7) var(--space-8); }
 	.menu--board .menu__sections { grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(20rem * var(--grid-scale, 1))), 1fr)); }
 }

@@ -12,7 +12,8 @@
 <meta property="og:title" content="{{title}}">
 <meta property="og:description" content="{{description}}">
 <meta property="og:site_name" content="{{site}}">
-<meta name="twitter:card" content="summary">
+{{#og_image}}<meta property="og:image" content="{{og_image}}">
+{{/og_image}}<meta name="twitter:card" content="{{twitter_card}}">
 <meta name="color-scheme" content="{{color_scheme}}">
 <meta name="theme-color" content="{{theme_color}}">
 {{#font_href}}<link rel="preconnect" href="https://fonts.bunny.net">
@@ -21,7 +22,8 @@
 {{#page_css}}<style>
 {{{page_css}}}
 </style>
-{{/page_css}}<script src="site.js" defer></script>
+{{/page_css}}{{#jsonld}}<script type="application/ld+json">{{{jsonld}}}</script>
+{{/jsonld}}<script src="site.js" defer></script>
 </head>
 <body class="page page--{{slug}} page--kind-{{kind}} {{look_classes}}">
 <a class="skip-link" href="#main">{{skip_label}}</a>
@@ -68,7 +70,10 @@
 <div>
 <p class="brand">{{wordmark}}</p>
 {{#footer_note}}<div class="site-footer__note prose">{{{footer_note}}}</div>
-{{/footer_note}}</div>
+{{/footer_note}}{{#has_social}}<ul class="site-footer__social" role="list" aria-label="{{social_label}}">
+{{#social}}<li><a href="{{url}}" rel="me noopener">{{#icon}}<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path fill="currentColor" d="{{icon}}"/></svg>{{/icon}}<span class="visually-hidden">{{label}}</span></a></li>
+{{/social}}</ul>
+{{/has_social}}</div>
 <nav aria-label="{{footer_label}}">
 <ul>
 {{#footer_links}}<li><a href="{{href}}"{{#current}} aria-current="page"{{/current}}>{{label}}</a></li>

@@ -7,10 +7,10 @@
 .entries--compact .entries__item { padding-block: var(--space-3); }
 .entries--compact .entries__title { font-size: var(--step-1); margin: 0; }
 .entries--compact .entries__summary { display: none; }
-@media (min-width: 48rem) {
+@container (min-width: 48rem) {
 	.entries--dated .entries__item { display: grid; grid-template-columns: 10rem minmax(0, 1fr); gap: var(--space-5); }
 	.entries--dated .entries__meta { margin: 0.35em 0 0; }
 }
 .entries--cards .entries__list { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); max-width: none; border: 0; }
-@media (min-width: 48rem) { .entries--cards .entries__list { grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(18rem * var(--grid-scale, 1))), 1fr)); } }
+@container (min-width: 48rem) { .entries--cards .entries__list { grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(18rem * var(--grid-scale, 1))), 1fr)); } }
 .entries--cards .entries__item { padding: var(--space-5); border: var(--border) solid var(--line-strong); border-radius: var(--radius); }

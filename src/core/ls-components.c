@@ -28,6 +28,8 @@ struct _LsComponents {
 	JsonObject *palettes;
 	JsonObject *typefaces;
 	JsonObject *homes;
+	JsonNode *network_catalog;
+	JsonObject *networks;	/* social network -> {label, hosts, path}; NULL without networks.yaml */
 	GPtrArray *order;
 	GHashTable *files;	/* resource-relative name -> contents */
 	GHashTable *snapshot;	/* archived name -> contents; NULL reads the GResource */
@@ -43,6 +45,7 @@ ls_components_finalize(GObject *object){
 	LsComponents *self = LS_COMPONENTS(object);
 	guint i;
 	g_clear_pointer(&self->catalog, json_node_unref);
+	g_clear_pointer(&self->network_catalog, json_node_unref);
 	g_clear_pointer(&self->order, g_ptr_array_unref);
 	g_clear_pointer(&self->files, g_hash_table_unref);
 	g_clear_pointer(&self->snapshot, g_hash_table_unref);
@@ -738,6 +741,7 @@ static void check_plan_into(Problems *problems, LsComponents *self, JsonNode *no
 static void check_photos(Problems *problems, JsonObject *plan);
 static gboolean load_themes(LsComponents *self, GChecksum *digest, GError **error);
 static gboolean load_identities(LsComponents *self, GChecksum *digest, GError **error);
+static gboolean load_networks(LsComponents *self, GChecksum *digest, GError **error);
 
 /* Every look axis lists named values with a description; the first is the default. */
 static gboolean
@@ -1006,7 +1010,7 @@ ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 	}
 	self->plan_schema = build_plan_schema(self, error);
 	if (self->plan_schema == NULL || !load_themes(self, digest, error) ||
-		!load_identities(self, digest, error))
+		!load_identities(self, digest, error) || !load_networks(self, digest, error))
 		return NULL;
 	self->digest = g_strdup(g_checksum_get_string(digest));
 	return (LsComponents *)g_steal_pointer(&self);
@@ -1442,12 +1446,12 @@ static const gchar *const font_tokens[] = {"font_display", "font_body", "font_mo
 static const gchar *const ui_keys[] = {"skip", "menu", "nav", "footer_nav", "contents", "filter",
 	"count_one", "count_many", "required", "reset", "preview", "download", "error_required",
 	"error_invalid", "error_summary", "breadcrumb", "pager", "previous", "next", "letters", "scroll",
-	"checklist_yes", "checklist_no", "close", "ingredients", "method"};
+	"checklist_yes", "checklist_no", "close", "ingredients", "method", "social", "share", "copy_link", "copied"};
 static const gchar *const ui_defaults[] = {"Skip to content", "Menu", "Primary", "Footer", "Contents",
 	"Filter entries", "{n} entry shown", "{n} entries shown", "required", "Clear", "Preview",
 	"Download text file", "Fill in this field.", "Check this entry.", "{n} fields need attention.",
 	"Breadcrumb", "More pages", "Previous", "Next", "Jump to letter", "Scrollable list", "Included",
-	"Not included", "Close", "Ingredients", "Method"};
+	"Not included", "Close", "Ingredients", "Method", "Follow us", "Share this page", "Copy link", "Link copied"};
 static const gchar *const art_ratios[] = {"16:9", "4:3", "3:2", "1:1", "3:4", "2:1", "3:1", "21:9", NULL};
 
 static gdouble
@@ -1537,6 +1541,112 @@ plan_scope(JsonObject *plan, LinkScope *scope){
 		const gchar *path = JSON_NODE_HOLDS_OBJECT(node) ? ls_string(json_node_get_object(node), "path") : NULL;
 		if (path != NULL)
 			g_hash_table_add(scope->art, g_strdup(path));
+	}
+}
+
+/* A supplied profile address: https, one line, no markup characters. */
+static gboolean
+profile_url_valid(const gchar *url){
+	return url != NULL && g_str_has_prefix(url, "https://") && strlen(url) > 8 && strlen(url) <= 300 &&
+		strpbrk(url, " \t\r\n\"'<>\\`") == NULL && g_uri_is_valid(url, G_URI_FLAGS_NONE, NULL);
+}
+
+/* The network a profile address belongs to: a listed host or one of its
+ * subdomains, a federated @name path, or "web". */
+static const gchar *
+network_of(LsComponents *self, const gchar *url){
+	g_autoptr(GUri) uri = g_uri_parse(url, G_URI_FLAGS_NONE, NULL);
+	g_autofree gchar *host = uri != NULL && g_uri_get_host(uri) != NULL ? g_ascii_strdown(g_uri_get_host(uri), -1) : NULL;
+	g_autoptr(GList) names = NULL;
+	GList *name;
+	const gchar *bare;
+	if (host == NULL || self->networks == NULL)
+		return "web";
+	bare = g_str_has_prefix(host, "www.") ? host + 4 : g_str_has_prefix(host, "m.") ? host + 2 : host;
+	names = json_object_get_members(self->networks);
+	for (name = names; name != NULL; name = name->next) {
+		JsonArray *hosts = member_array(member_object(self->networks, name->data), "hosts");
+		guint i;
+		for (i = 0; hosts != NULL && i < json_array_get_length(hosts); i++) {
+			const gchar *known = json_array_get_string_element(hosts, i);
+			gsize length = strlen(bare), size = strlen(known);
+			if (g_str_equal(bare, known) || (length > size && g_str_has_suffix(bare, known) && bare[length - size - 1] == '.'))
+				return name->data;
+		}
+	}
+	if (g_str_has_prefix(g_uri_get_path(uri), "/@") && member_object(self->networks, "mastodon") != NULL)
+		return "mastodon";
+	return "web";
+}
+
+/* The handle a visitor recognises: the last path segment, or the host. */
+static gchar *
+profile_handle(const gchar *url, const gchar *network){
+	g_autoptr(GUri) uri = g_uri_parse(url, G_URI_FLAGS_NONE, NULL);
+	const gchar *path = uri != NULL ? g_uri_get_path(uri) : NULL;
+	g_auto(GStrv) parts = path != NULL ? g_strsplit(path, "/", -1) : NULL;
+	const gchar *const at[] = {"instagram", "x", "tiktok", "threads", "twitch", "github", "snapchat", "pinterest", NULL};
+	const gchar *last = NULL;
+	guint i;
+	for (i = 0; parts != NULL && parts[i] != NULL; i++)
+		if (parts[i][0] != '\0')
+			last = parts[i];
+	if (last == NULL)
+		return g_strdup(uri != NULL && g_uri_get_host(uri) != NULL ? g_uri_get_host(uri) : url);
+	return g_strv_contains(at, network) && last[0] != '@' ? g_strconcat("@", last, NULL) : g_strdup(last);
+}
+
+JsonArray *
+ls_components_social(LsComponents *self, JsonArray *links){
+	JsonArray *out;
+	guint i;
+	g_return_val_if_fail(LS_IS_COMPONENTS(self), NULL);
+	out = json_array_new();
+	for (i = 0; links != NULL && i < json_array_get_length(links); i++) {
+		JsonNode *node = json_array_get_element(links, i);
+		JsonObject *link = JSON_NODE_HOLDS_OBJECT(node) ? json_node_get_object(node) : NULL;
+		const gchar *url = link != NULL ? ls_string(link, "url") : NULL;
+		const gchar *network;
+		JsonObject *entry;
+		g_autofree gchar *handle = NULL;
+		if (!profile_url_valid(url))
+			continue;
+		network = network_of(self, url);
+		handle = profile_handle(url, network);
+		entry = json_object_new();
+		json_object_set_string_member(entry, "url", url);
+		json_object_set_string_member(entry, "network", network);
+		json_object_set_string_member(entry, "label", ls_string(link, "label") != NULL ? ls_string(link, "label")
+			: self->networks != NULL && ls_string(member_object(self->networks, network), "label") != NULL
+			? ls_string(member_object(self->networks, network), "label") : "Website");
+		json_object_set_string_member(entry, "handle", handle);
+		json_array_add_object_element(out, entry);
+	}
+	return out;
+}
+
+/* social is written by the builder from the recipe's supplied profiles:
+ * [{url, network, label, handle}]. */
+static void
+check_social(Problems *problems, LsComponents *self, JsonObject *plan){
+	JsonArray *social = member_array(plan, "social");
+	guint i;
+	if (!json_object_has_member(plan, "social"))
+		return;
+	if (social == NULL || json_array_get_length(social) > 12) {
+		problem(problems, "social must list at most 12 supplied profiles");
+		return;
+	}
+	for (i = 0; i < json_array_get_length(social); i++) {
+		JsonNode *node = json_array_get_element(social, i);
+		JsonObject *entry = JSON_NODE_HOLDS_OBJECT(node) ? json_node_get_object(node) : NULL;
+		const gchar *network = entry != NULL ? ls_string(entry, "network") : NULL;
+		if (entry == NULL || !ls_object_keys(entry, "|url|network|label|handle|", NULL) ||
+			!profile_url_valid(ls_string(entry, "url")) || network == NULL ||
+			(!g_str_equal(network, "web") && (self->networks == NULL || member_object(self->networks, network) == NULL)) ||
+			ls_string(entry, "label") == NULL || g_utf8_strlen(ls_string(entry, "label"), -1) > 60 ||
+			(ls_string(entry, "handle") != NULL && g_utf8_strlen(ls_string(entry, "handle"), -1) > 120))
+			problem(problems, "social[%u] must be {url: https address, network: a known network or web, label, handle}", i);
 	}
 }
 
@@ -1814,10 +1924,11 @@ check_plan_into(Problems *problems, LsComponents *self, JsonNode *node){
 		return;
 	}
 	if (!ls_object_keys(plan, "|name|tagline|lang|character|tokens|fonts|brand|nav|action|footer|voice|look|art|"
-		"photos|pages|css|restyle|ui|structure|", NULL))
+		"photos|social|pages|css|restyle|ui|structure|", NULL))
 		problem(problems, "unknown top-level key; allowed: name, tagline, lang, character, tokens, fonts, brand, "
 			"nav, action, footer, voice, look, art, photos, pages, css, restyle, ui");
 	check_photos(problems, plan);
+	check_social(problems, self, plan);
 	check_structure(problems, self, plan);
 	check_look(problems, self, plan);
 	check_restyle(problems, self, plan);
@@ -2207,6 +2318,41 @@ check_identity_pair(LsComponents *self, JsonObject *palette, JsonObject *typefac
 	return okay;
 }
 
+/* Recognised social networks for supplied profile links. The file is
+ * optional so libraries archived before it existed still load; without it
+ * every profile uses the generic link glyph. */
+static gboolean
+load_networks(LsComponents *self, GChecksum *digest, GError **error){
+	g_autofree gchar *text = load_resource(self, digest, "networks.yaml", FALSE, NULL);
+	JsonObject *root;
+	g_autoptr(GList) names = NULL;
+	GList *name;
+	if (text == NULL)
+		return TRUE;
+	if ((self->network_catalog = ls_yaml_parse(text, error)) == NULL)
+		return FALSE;
+	root = JSON_NODE_HOLDS_OBJECT(self->network_catalog) ? json_node_get_object(self->network_catalog) : NULL;
+	if (root == NULL || !ls_object_keys(root, "|version|networks|", NULL) ||
+		(self->networks = member_object(root, "networks")) == NULL || member_object(self->networks, "web") == NULL)
+		return catalog_invalid(error, "networks.yaml", "needs version and networks, including web");
+	names = json_object_get_members(self->networks);
+	for (name = names; name != NULL; name = name->next) {
+		JsonObject *network = member_object(self->networks, name->data);
+		JsonArray *hosts = network != NULL ? member_array(network, "hosts") : NULL;
+		const gchar *path = network != NULL ? ls_string(network, "path") : NULL;
+		guint i;
+		if (network == NULL || !ls_object_keys(network, "|label|hosts|path|", NULL) ||
+			ls_string(network, "label") == NULL || hosts == NULL ||
+			(path != NULL && strspn(path, "0123456789.-, MmLlHhVvCcSsQqTtAaZz") != strlen(path)))
+			return catalog_invalid(error, name->data, "networks need a label, hosts and an optional plain SVG path");
+		for (i = 0; i < json_array_get_length(hosts); i++)
+			if (!JSON_NODE_HOLDS_VALUE(json_array_get_element(hosts, i)) ||
+				json_node_get_value_type(json_array_get_element(hosts, i)) != G_TYPE_STRING)
+				return catalog_invalid(error, name->data, "network hosts must be strings");
+	}
+	return TRUE;
+}
+
 static gboolean
 load_identities(LsComponents *self, GChecksum *digest, GError **error){
 	const gchar *colors = "|paper|ink|muted|surface|line|accent|accent_ink|";
@@ -2407,6 +2553,33 @@ ls_components_repair_plan(LsComponents *self, JsonNode *plan){
 				g_string_append_printf(notes, "%slook.%s -> %s", notes->len > 0 ? "; " : "",
 					(const gchar *)axis->data, look_default(self, axis->data));
 			}
+	}
+	/* A telephone link has one mechanical form: tel: with the digits and a leading +. */
+	if (plan != NULL && JSON_NODE_HOLDS_OBJECT(plan)) {
+		JsonObject *root = json_node_get_object(plan);
+		JsonArray *lists[2];
+		guint l;
+		lists[0] = member_array(root, "nav");
+		lists[1] = member_object(root, "footer") != NULL ? member_array(member_object(root, "footer"), "links") : NULL;
+		for (l = 0; l < G_N_ELEMENTS(lists) + 1; l++) {
+			JsonArray *list = l < G_N_ELEMENTS(lists) ? lists[l] : NULL;
+			guint count = l < G_N_ELEMENTS(lists) ? (list != NULL ? json_array_get_length(list) : 0) : 1;
+			for (i = 0; i < count; i++) {
+				JsonNode *entry = l < G_N_ELEMENTS(lists) ? json_array_get_element(list, i) : json_object_get_member(root, "action");
+				JsonObject *link = entry != NULL && JSON_NODE_HOLDS_OBJECT(entry) ? json_node_get_object(entry) : NULL;
+				const gchar *href = link != NULL ? ls_string(link, "href") : NULL;
+				if (href != NULL && g_str_has_prefix(href, "tel:") && strpbrk(href + 4, " ()-.") != NULL) {
+					GString *clean = g_string_new("tel:");
+					const gchar *c;
+					for (c = href + 4; *c != '\0'; c++)
+						if (g_ascii_isdigit(*c) || (*c == '+' && clean->len == 4))
+							g_string_append_c(clean, *c);
+					g_string_append_printf(notes, "%s%s -> %s", notes->len > 0 ? "; " : "", href, clean->str);
+					json_object_set_string_member(link, "href", clean->str);
+					g_string_free(clean, TRUE);
+				}
+			}
+		}
 	}
 	/* A missing or misplaced kind has one mechanical answer. */
 	if (plan != NULL && JSON_NODE_HOLDS_OBJECT(plan)) {
@@ -2891,6 +3064,10 @@ check_page_into(LsComponents *self, Problems *problems, JsonNode *plan_node, con
 				strchr("aeiou", kind_name[0]) != NULL ? "an" : "a", kind_name, openings->str);
 			g_string_free(openings, TRUE);
 		}
+		/* Profiles are supplied facts: no profiles, no social section. */
+		if (g_str_equal(name, "social") && (plan == NULL || member_array(plan, "social") == NULL ||
+			json_array_get_length(member_array(plan, "social")) == 0))
+			problem(problems, "%s: social lists the site's supplied profiles, and this site has none; remove it", where);
 		if ((g_str_equal(name, "hero") || g_str_equal(name, "cover") || g_str_equal(name, "poster")) && g_strcmp0(kind_name, "home") != 0)
 			problem(problems, "%s: %s belongs only on the home page; open this %s page with page-header",
 				where, name, kind_name);
@@ -2941,6 +3118,7 @@ typedef struct {
 	const gchar *page_path;		/* page being rendered */
 	const gchar *page_title;
 	const gchar *wordmark;
+	const gchar *base;		/* normalized https:// site address, or NULL */
 } Render;
 
 static void derived_filter(Render *render, JsonObject *view, const gchar *field);
@@ -3323,6 +3501,96 @@ section_variant(Render *render, JsonObject *component, const gchar *name, const 
 	return family[seed_pick(section_seed, name, count)];
 }
 
+/* A link address reduced for comparison: no scheme, no www., no trailing slash. */
+static gchar *
+link_key(const gchar *href){
+	g_autofree gchar *lower = g_ascii_strdown(href != NULL ? href : "", -1);
+	const gchar *start = lower;
+	gsize length;
+	if (g_str_has_prefix(start, "https://"))
+		start += 8;
+	else if (g_str_has_prefix(start, "http://"))
+		start += 7;
+	if (g_str_has_prefix(start, "www."))
+		start += 4;
+	length = strlen(start);
+	while (length > 0 && start[length - 1] == '/')
+		length--;
+	return g_strndup(start, length);
+}
+
+/* @text with every @needle replaced by @value. */
+static gchar *
+replace_all(const gchar *text, const gchar *needle, const gchar *value){
+	g_auto(GStrv) parts = g_strsplit(text, needle, -1);
+	return g_strjoinv(value, parts);
+}
+
+/* Profile views for templates: the supplied profiles with their icons. */
+static JsonArray *
+profile_views(Render *render){
+	JsonArray *social = member_array(render->plan, "social");
+	JsonArray *out = json_array_new();
+	guint i;
+	for (i = 0; social != NULL && i < json_array_get_length(social); i++) {
+		JsonObject *entry = json_array_get_object_element(social, i);
+		JsonObject *network = render->self->networks != NULL
+			? member_object(render->self->networks, ls_string(entry, "network")) : NULL;
+		JsonObject *web = render->self->networks != NULL ? member_object(render->self->networks, "web") : NULL;
+		const gchar *icon = network != NULL && ls_string(network, "path") != NULL ? ls_string(network, "path")
+			: web != NULL ? ls_string(web, "path") : NULL;
+		JsonObject *view = json_object_new();
+		json_object_set_string_member(view, "url", ls_string(entry, "url"));
+		json_object_set_string_member(view, "label", ls_string(entry, "label"));
+		json_object_set_string_member(view, "network", ls_string(entry, "network"));
+		if (ls_string(entry, "handle") != NULL)
+			json_object_set_string_member(view, "handle", ls_string(entry, "handle"));
+		if (icon != NULL)
+			json_object_set_string_member(view, "icon", icon);
+		json_array_add_object_element(out, view);
+	}
+	return out;
+}
+
+/* Share targets for the page. With a site address the links are complete;
+ * without one site.js fills them from the visitor's address. Nothing loads
+ * from a network until the visitor follows a link. */
+static JsonArray *
+share_views(Render *render){
+	static const gchar *const targets[][3] = {
+		{"email", "Email", "mailto:?subject={title}&body={url}"},
+		{"facebook", "Facebook", "https://www.facebook.com/sharer/sharer.php?u={url}"},
+		{"x", "X", "https://x.com/intent/post?url={url}&text={title}"},
+		{"linkedin", "LinkedIn", "https://www.linkedin.com/sharing/share-offsite/?url={url}"},
+		{"whatsapp", "WhatsApp", "https://wa.me/?text={title}%20{url}"},
+		{"bluesky", "Bluesky", "https://bsky.app/intent/compose?text={title}%20{url}"},
+	};
+	JsonArray *out = json_array_new();
+	g_autofree gchar *url = render->base == NULL ? NULL : g_str_equal(render->page_path, "index.html")
+		? g_strdup(render->base) : g_strconcat(render->base, render->page_path, NULL);
+	g_autofree gchar *title = g_strcmp0(render->page_title, ls_string(render->plan, "name")) == 0
+		? g_strdup(render->page_title) : g_strdup_printf("%s | %s", render->page_title, ls_string(render->plan, "name"));
+	g_autofree gchar *url_q = url != NULL ? g_uri_escape_string(url, NULL, FALSE) : NULL;
+	g_autofree gchar *title_q = g_uri_escape_string(title, NULL, FALSE);
+	guint i;
+	for (i = 0; i < G_N_ELEMENTS(targets); i++) {
+		JsonObject *view = json_object_new();
+		JsonObject *network = render->self->networks != NULL ? member_object(render->self->networks, targets[i][0]) : NULL;
+		json_object_set_string_member(view, "network", targets[i][0]);
+		json_object_set_string_member(view, "label", targets[i][1]);
+		json_object_set_string_member(view, "pattern", targets[i][2]);
+		if (network != NULL && ls_string(network, "path") != NULL)
+			json_object_set_string_member(view, "icon", ls_string(network, "path"));
+		if (url_q != NULL) {
+			g_autofree gchar *with_url = replace_all(targets[i][2], "{url}", url_q);
+			g_autofree gchar *href = replace_all(with_url, "{title}", title_q);
+			json_object_set_string_member(view, "href", href);
+		}
+		json_array_add_object_element(out, view);
+	}
+	return out;
+}
+
 static void
 render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArray *toc, gboolean reading){
 	const gchar *last_tone = NULL;
@@ -3362,6 +3630,15 @@ render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArra
 				g_autofree gchar *has = g_strconcat("has_", (const gchar *)key->data, NULL);
 				json_object_set_boolean_member(view, has, json_array_get_length(json_node_get_array(value)) > 0);
 			}
+		}
+		/* Builder facts the model never writes: supplied profiles and share targets. */
+		if (g_str_equal(name, "social")) {
+			JsonArray *profiles = profile_views(render);
+			json_object_set_boolean_member(view, "has_profiles", json_array_get_length(profiles) > 0);
+			json_object_set_array_member(view, "profiles", profiles);
+		} else if (g_str_equal(name, "share")) {
+			json_object_set_array_member(view, "targets", share_views(render));
+			json_object_set_string_member(view, "share_title", render->page_title);
 		}
 		if (ls_string(content, "heading") != NULL) {
 			g_autofree gchar *plain = heading_markup(ls_string(content, "heading"), FALSE);
@@ -3690,13 +3967,80 @@ render_page(Render *render, const gchar *path, const gchar *title, const gchar *
 			json_object_set_member(view, "aside", rich_node(render, ls_string(page, "aside")));
 	}
 	json_object_set_string_member(view, "main", main->str);
+	/* Link previews use the page's first picture, when the site has an address to make it absolute. */
+	if (render->base != NULL && !noindex) {
+		const gchar *img = strstr(main->str, "<img src=\"");
+		if (img != NULL) {
+			g_autofree gchar *src = g_strndup(img + 10, strcspn(img + 10, "\""));
+			g_autofree gchar *lower = g_ascii_strdown(src, -1);
+			/* Link previews need a raster picture; drawings stay out. */
+			if (strstr(src, "://") == NULL && src[0] != '/' && src[0] != '\0' && (g_str_has_suffix(lower, ".jpg") ||
+				g_str_has_suffix(lower, ".jpeg") || g_str_has_suffix(lower, ".png") || g_str_has_suffix(lower, ".webp"))) {
+				g_autofree gchar *absolute = g_strconcat(render->base, src, NULL);
+				json_object_set_string_member(view, "og_image", absolute);
+			}
+		}
+	}
+	json_object_set_string_member(view, "twitter_card", json_object_has_member(view, "og_image") ? "summary_large_image" : "summary");
 	g_string_free(main, TRUE);
+	/* Supplied profiles: footer links on every page, and the business's
+	 * sameAs links for search engines on the home page. */
+	{
+		JsonArray *profiles = profile_views(render);
+		json_object_set_boolean_member(view, "has_social", json_array_get_length(profiles) > 0);
+		json_object_set_string_member(view, "social_label", ui_text(render, "social"));
+		if (g_str_equal(path, "index.html") && json_array_get_length(profiles) > 0) {
+			g_autoptr(JsonBuilder) builder = json_builder_new();
+			g_autoptr(JsonNode) node = NULL;
+			g_autofree gchar *text = NULL, *safe = NULL;
+			guint k;
+			json_builder_begin_object(builder);
+			json_builder_set_member_name(builder, "@context");
+			json_builder_add_string_value(builder, "https://schema.org");
+			json_builder_set_member_name(builder, "@type");
+			json_builder_add_string_value(builder, "Organization");
+			json_builder_set_member_name(builder, "name");
+			json_builder_add_string_value(builder, name);
+			if (render->base != NULL) {
+				json_builder_set_member_name(builder, "url");
+				json_builder_add_string_value(builder, render->base);
+			}
+			json_builder_set_member_name(builder, "sameAs");
+			json_builder_begin_array(builder);
+			for (k = 0; k < json_array_get_length(profiles); k++)
+				json_builder_add_string_value(builder, ls_string(json_array_get_object_element(profiles, k), "url"));
+			json_builder_end_array(builder);
+			json_builder_end_object(builder);
+			node = json_builder_get_root(builder);
+			text = ls_json_encode(node);
+			/* Inside <script>, "</" could end the element early. */
+			safe = replace_all(text, "</", "<\\/");
+			json_object_set_string_member(view, "jsonld", safe);
+		}
+		json_object_set_array_member(view, "social", profiles);
+	}
 	if (footer != NULL && ls_string(footer, "note") != NULL) {
 		JsonNode *note = rich_node(render, ls_string(footer, "note"));
 		json_object_set_member(view, "footer_note", note);
 	}
 	g_hash_table_remove_all(seen);
-	append_link_views(footer_links, footer != NULL ? member_array(footer, "links") : NULL, path, seen);
+	/* Supplied profiles already have footer icons; a text link to the same
+	 * profile would list it twice. */
+	{
+		g_autoptr(JsonArray) kept = json_array_new();
+		g_autoptr(GHashTable) profiles = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+		JsonArray *social = member_array(plan, "social");
+		JsonArray *links = footer != NULL ? member_array(footer, "links") : NULL;
+		for (i = 0; social != NULL && i < json_array_get_length(social); i++)
+			g_hash_table_add(profiles, link_key(ls_string(json_array_get_object_element(social, i), "url")));
+		for (i = 0; links != NULL && i < json_array_get_length(links); i++) {
+			JsonObject *link = json_array_get_object_element(links, i);
+			g_autofree gchar *key = link_key(ls_string(link, "href"));
+			if (!g_hash_table_contains(profiles, key))
+				json_array_add_element(kept, json_node_copy(json_array_get_element(links, i)));
+		}
+		append_link_views(footer_links, kept, path, seen);
+	}
 	for (i = 1; i < G_N_ELEMENTS(utility_routes); i++) {
 		JsonObject *link = json_object_new();
 		JsonObject *spec = json_node_get_object(render->self->utility[i]);
@@ -3940,7 +4284,7 @@ normalize_base(const gchar *base_url, GError **error){
 gchar *
 ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages, const gchar *base_url, GError **error){
 	Problems problems = {g_ptr_array_new_with_free_func(g_free)};
-	Render render = {self, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+	Render render = {self, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 	g_autoptr(JsonObject) ui = json_object_new();
 	g_autoptr(GHashTable) used = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 	g_autoptr(JsonNode) root = json_node_new(JSON_NODE_OBJECT);
@@ -3983,6 +4327,7 @@ ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages
 	render.plan = plan;
 	render.ui = ui;
 	render.used = used;
+	render.base = base;
 	if (base != NULL) {
 		sitemap = g_string_new("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
 			"<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n");

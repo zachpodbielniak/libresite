@@ -7,8 +7,8 @@
 .offer__stub { display: grid; grid-template-columns: minmax(0, 1fr); align-content: center; gap: var(--space-1); padding: var(--space-6); text-align: center; background: var(--accent); color: var(--accent-ink); }
 .offer__price { margin: 0; font-family: var(--font-display); font-weight: var(--heading-weight); font-size: var(--step-5); line-height: 1; }
 .offer__note { margin: 0; font-size: var(--step--1); }
-@media (min-width: 48rem) { .offer__box:has(.offer__stub) { grid-template-columns: minmax(0, 1fr) 16rem; } }
+@container (min-width: 48rem) { .offer__box:has(.offer__stub) { grid-template-columns: minmax(0, 1fr) 16rem; } }
 .offer--ticket .offer__stub { border-top: 0.2rem dashed var(--accent-ink); }
-@media (min-width: 48rem) { .offer--ticket .offer__stub { border-top: 0; border-left: 0.2rem dashed var(--paper); } }
+@container (min-width: 48rem) { .offer--ticket .offer__stub { border-top: 0; border-left: 0.2rem dashed var(--paper); } }
 .offer--ticket .offer__box { overflow: hidden; -webkit-mask: radial-gradient(circle 0.9rem at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat, radial-gradient(circle 0.9rem at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat; mask: radial-gradient(circle 0.9rem at 0 50%, transparent 98%, #000) left / 51% 100% no-repeat, radial-gradient(circle 0.9rem at 100% 50%, transparent 98%, #000) right / 51% 100% no-repeat; }
 .offer--card .offer__box { border: 0; background: var(--surface); border-radius: max(var(--radius), 0.75rem); overflow: hidden; }

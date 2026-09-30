@@ -1,16 +1,16 @@
 .gallery__list { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); margin: 0; padding: 0; list-style: none; }
-@media (min-width: 40rem) { .gallery__list { grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(15rem * var(--grid-scale, 1))), 1fr)); } }
+@container (min-width: 40rem) { .gallery__list { grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(15rem * var(--grid-scale, 1))), 1fr)); } }
 .gallery__item { margin: 0; }
 .gallery__item img { width: 100%; border-radius: var(--radius); background: var(--surface); }
 /* Mixed portrait and landscape photos share one shape, so rows stay even; masonry keeps each photo's own shape. */
 .gallery:not(.gallery--masonry) .gallery__item img { aspect-ratio: 4 / 3; object-fit: cover; }
 .gallery__item figcaption { margin-top: var(--space-2); font-size: var(--step--1); }
-@media (min-width: 56rem) { .gallery--mosaic .gallery__list > li:first-child { grid-column: span 2; grid-row: span 2; } }
+@container (min-width: 56rem) { .gallery--mosaic .gallery__list > li:first-child { grid-column: span 2; grid-row: span 2; } }
 .gallery--strip .gallery__list { display: flex; align-items: start; scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; gap: var(--space-4); overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: var(--space-3); }
 .gallery--strip .gallery__list > li { flex: 0 0 min(80cqi, 24rem); scroll-snap-align: start; }
 .gallery--framed .gallery__item { padding: var(--space-3); background: var(--surface); border: var(--border) solid var(--line-strong); }
 .gallery--framed .gallery__item img { border-radius: 0; }
-@media (min-width: 40rem) { .gallery--masonry .gallery__list { display: block; columns: 3 14rem; column-gap: var(--space-4); } }
+@container (min-width: 40rem) { .gallery--masonry .gallery__list { display: block; columns: 3 14rem; column-gap: var(--space-4); } }
 .gallery--masonry .gallery__list > li { break-inside: avoid; margin-bottom: var(--space-4); }
 .gallery__open { display: block; cursor: zoom-in; }
 .gallery__open:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
@@ -19,3 +19,17 @@
 .gallery__dialog img { width: 100%; max-height: 80vh; object-fit: contain; }
 .gallery__caption { margin: var(--space-2) 0 0; font-size: var(--step--1); }
 .gallery__close { float: right; min-height: 44px; margin-bottom: var(--space-2); padding: 0 1em; border: var(--border-strong) solid var(--ink); border-radius: 999px; background: var(--paper); color: var(--ink); cursor: pointer; }
+/* wide: the first picture across the column, the rest in a grid below. */
+.gallery--wide .gallery__list > li:first-child { grid-column: 1 / -1; }
+.gallery--wide .gallery__list > li:first-child img { aspect-ratio: 21 / 9; }
+/* duo: two large pictures a row. */
+@container (min-width: 40rem) { .gallery--duo .gallery__list { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-5); } }
+.gallery--duo .gallery__item img { aspect-ratio: 4 / 5; }
+/* stack: one big picture at a time, its caption hanging beside it. */
+.gallery--stack .gallery__list { grid-template-columns: minmax(0, 1fr); gap: var(--space-7); }
+@container (min-width: 52rem) {
+	.gallery--stack .gallery__item { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 4fr); gap: var(--space-5); align-items: end; }
+	.gallery--stack .gallery__item figcaption { grid-column: 1; grid-row: 1; margin: 0; text-align: right; }
+	.gallery--stack .gallery__item > :not(figcaption) { grid-column: 2; grid-row: 1; }
+}
+.gallery--stack .gallery__item img { aspect-ratio: 16 / 9; }

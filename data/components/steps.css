@@ -11,7 +11,7 @@
 .steps--stack .steps__item { display: grid; grid-template-columns: 4rem minmax(0, 1fr); column-gap: var(--space-4); max-width: calc(var(--measure) * 1.2); }
 .steps--stack .steps__n { grid-row: 1 / span 2; width: 3.25rem; height: 3.25rem; font-size: var(--step-2); }
 .steps--stack .steps__item > :not(.steps__n) { grid-column: 2; }
-@media (min-width: 48rem) { .steps--grid .steps__list { grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(14rem * var(--grid-scale, 1))), 1fr)); } }
+@container (min-width: 48rem) { .steps--grid .steps__list { grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(14rem * var(--grid-scale, 1))), 1fr)); } }
 .steps--grid .steps__item { padding: var(--space-5); border: var(--border) solid var(--line-strong); border-radius: var(--radius); }
 /* timeline: numbered stops on a vertical line. */
 .steps--timeline .steps__list { gap: 0; max-width: calc(var(--measure) * 1.2); }

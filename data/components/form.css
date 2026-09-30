@@ -7,7 +7,7 @@
 .form__output { margin-top: var(--space-6); }
 .form__preview { max-height: 24rem; overflow: auto; padding: var(--space-4); border: var(--border) solid var(--line-strong); background: var(--surface); font-family: var(--font-mono); font-size: var(--step--1); white-space: pre-wrap; }
 .form__fallback { margin-top: var(--space-5); padding: var(--space-4); background: var(--surface); }
-@media (min-width: 56rem) {
+@container (min-width: 56rem) {
 	.form--aside .form__inner { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: var(--space-8); align-items: start; }
 	.form--aside .form__head { position: sticky; top: var(--space-5); }
 }

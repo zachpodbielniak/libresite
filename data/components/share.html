@@ -1,0 +1,10 @@
+<div class="wrap share__inner">
+{{#heading}}<{{htag}} class="share__title" id="{{id}}-h">{{{heading_html}}}</{{htag}}>
+{{/heading}}{{#body}}<div class="prose share__body">{{{body}}}</div>
+{{/body}}<ul class="share__list" role="list" aria-label="{{share_label}}">
+<li hidden><button class="share__button share__native" type="button" data-share-native data-share-title="{{share_title}}">{{share_label}}</button></li>
+<li hidden><button class="share__button share__copy" type="button" data-share-copy data-copied="{{copied_label}}">{{copy_link_label}}</button></li>
+{{#targets}}<li{{^href}} hidden{{/href}}><a class="share__button share__link share__link--{{network}}"{{#href}} href="{{href}}"{{/href}} data-share="{{pattern}}" data-share-title="{{share_title}}" rel="noopener" target="_blank">{{#icon}}<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path fill="currentColor" d="{{icon}}"/></svg>{{/icon}}<span>{{label}}</span></a></li>
+{{/targets}}</ul>
+<p class="share__status visually-hidden" role="status" aria-live="polite"></p>
+</div>

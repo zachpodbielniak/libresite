@@ -4,7 +4,7 @@
 .showcase__title { font-size: var(--step-4); }
 .showcase__link { margin: var(--space-4) 0 0; font-family: var(--font-display); font-weight: 700; }
 .showcase__text { margin-top: var(--space-5); max-width: var(--measure); }
-@media (min-width: 56rem) {
+@container (min-width: 56rem) {
 	.showcase--alternating .showcase__item { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: var(--space-7); align-items: center; }
 	.showcase--alternating .showcase__item:nth-child(even) .showcase__art { order: 2; }
 	.showcase--alternating .showcase__text { margin: 0; }

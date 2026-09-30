@@ -5,6 +5,6 @@
 .voices__item figcaption { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.1em; }
 .voices__name { font-family: var(--font-display); font-weight: 700; }
 .voices__role { font-size: var(--step--1); }
-@media (min-width: 48rem) { .voices--wall .voices__list { grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(18rem * var(--grid-scale, 1))), 1fr)); } }
+@container (min-width: 48rem) { .voices--wall .voices__list { grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(18rem * var(--grid-scale, 1))), 1fr)); } }
 .voices--single .voices__item { background: transparent; padding: 0 0 var(--space-5); border-bottom: var(--border) solid var(--line); }
 .voices--single .voices__item blockquote { font-family: var(--font-display); font-size: var(--step-3); line-height: 1.2; }

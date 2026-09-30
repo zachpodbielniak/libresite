@@ -267,6 +267,20 @@ gboolean ls_components_check_page(LsComponents *self, JsonNode *plan,
  */
 gboolean ls_components_check_art(const gchar *svg, GError **error);
 /**
+ * ls_components_social:
+ * @self: a component library
+ * @links: (transfer none) (nullable): supplied profile links, each
+ *   {url, label?} with an https:// url
+ *
+ * Recognises the network of each supplied profile address from the
+ * library's network list (a listed host or its subdomain, a federated
+ * @name path, otherwise "web") and derives the handle visitors see. Entries
+ * without a valid https:// address are skipped. The result is the plan's
+ * builder-owned social member; nothing is looked up online.
+ * Returns: (transfer full): [{url, network, label, handle}]
+ */
+JsonArray *ls_components_social(LsComponents *self, JsonArray *links);
+/**
  * ls_components_compose:
  * @self: a component library
  * @plan: (transfer none): a valid plan

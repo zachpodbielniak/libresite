@@ -7,4 +7,4 @@
 .strip__caption { font-size: var(--step--1); }
 .strip--tall .strip__item { flex-basis: min(60cqi, 15rem); }
 .strip--tall .strip__item img { aspect-ratio: 3 / 4; }
-@media (min-width: 80rem) { .strip__row { padding-inline: calc((100cqi - var(--max-width)) / 2); } }
+@container (min-width: 80rem) { .strip__row { padding-inline: calc((100cqi - var(--max-width)) / 2); } }

@@ -6,7 +6,7 @@
 .profile__quote { margin: 0 0 var(--space-5); }
 .profile__quote p { font-family: var(--font-display); font-size: var(--step-2); line-height: 1.3; }
 .profile__quote p::before { content: "\201C"; } .profile__quote p::after { content: "\201D"; }
-@media (min-width: 48rem) {
+@container (min-width: 48rem) {
 	.profile--side .profile__inner:has(.profile__art) { grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: var(--space-8); align-items: center; }
 	.profile--quote .profile__inner:has(.profile__art) { grid-template-columns: 10rem minmax(0, 1fr); gap: var(--space-6); align-items: start; }
 }

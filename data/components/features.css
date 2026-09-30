@@ -2,7 +2,7 @@
 .features__title { margin-bottom: 0.4em; }
 .features__item > .prose { color: var(--ink); }
 .features__link { margin: var(--space-3) 0 0; font-weight: 600; }
-@media (min-width: 48rem) {
+@container (min-width: 48rem) {
 	.features--columns .features__list { grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(15rem * var(--grid-scale, 1))), 1fr)); gap: var(--space-7) var(--space-6); }
 }
 .features--columns .features__item { padding-top: var(--space-4); border-top: var(--border-strong) solid var(--ink); }
@@ -12,16 +12,16 @@
 .features--numbered .features__n { grid-row: 1 / span 3; font-family: var(--font-display); font-weight: var(--heading-weight); font-size: var(--step-3); line-height: 1; color: var(--accent-text); }
 .features--list .features__list { gap: 0; max-width: calc(var(--measure) * 1.2); }
 .features--list .features__item { padding-block: var(--space-4); border-top: var(--border) solid var(--line); }
-@media (min-width: 48rem) {
+@container (min-width: 48rem) {
 	.features--list .features__item { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: var(--space-5); }
 	.features--list .features__item > :not(.features__title) { grid-column: 2; }
 }
-@media (min-width: 56rem) {
+@container (min-width: 56rem) {
 	.features--split .wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); gap: var(--space-7); align-items: start; }
 	.features--split .section-head { position: sticky; top: var(--space-5); }
 }
 .features--split .features__item { padding-block: var(--space-4); border-top: var(--border) solid var(--line); }
 .features--split .features__list { gap: 0; }
 .features--boxed .features__list { gap: var(--space-4); }
-@media (min-width: 48rem) { .features--boxed .features__list { grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(15rem * var(--grid-scale, 1))), 1fr)); } }
+@container (min-width: 48rem) { .features--boxed .features__list { grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(15rem * var(--grid-scale, 1))), 1fr)); } }
 .features--boxed .features__item { padding: var(--space-5); background: var(--surface); border-radius: var(--radius); }

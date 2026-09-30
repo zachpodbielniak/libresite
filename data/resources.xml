@@ -12,6 +12,12 @@
     <file>components/look.css</file>
     <file>components/themes.yaml</file>
     <file>components/identities.yaml</file>
+    <file>components/networks.yaml</file>
+    <file>components/social.css</file>
+    <file>components/social.html</file>
+    <file>components/share.css</file>
+    <file>components/share.html</file>
+    <file>components/share.js</file>
     <file>components/carousel.css</file>
     <file>components/carousel.html</file>
     <file>components/carousel.js</file>

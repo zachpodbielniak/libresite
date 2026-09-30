@@ -1068,6 +1068,165 @@ test_variant_family(void){
 	g_assert_cmpuint(g_hash_table_size(seen), <=, 3);
 }
 
+/* Supplied profiles: networks are recognised from the address alone, the
+ * footer links them on every page, the home page lists them as sameAs for
+ * search engines, and a social section needs profiles to exist. */
+static void
+test_social(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(JsonNode) links = json("[{'url':'https://www.instagram.com/harbor.bench/'},"
+		"{'url':'https://twitter.com/harbor'},{'url':'https://bsky.app/profile/harbor.bsky.social'},"
+		"{'url':'https://fosstodon.org/@harbor'},{'url':'https://www.linkedin.com/company/harbor'},"
+		"{'url':'https://harbor.example/','label':'Our blog'},{'url':'http://facebook.com/harbor'},"
+		"{'url':'https://notinstagram.com/x'}]");
+	g_autoptr(JsonArray) social = ls_components_social(components, json_node_get_array(links));
+	const gchar *expected[][3] = {
+		{"instagram", "Instagram", "@harbor.bench"}, {"x", "X", "@harbor"},
+		{"bluesky", "Bluesky", "harbor.bsky.social"}, {"mastodon", "Mastodon", "@harbor"},
+		{"linkedin", "LinkedIn", "harbor"}, {"web", "Our blog", "harbor.example"}, {"web", "Website", "x"}};
+	g_autoptr(JsonNode) plan = load("plan.json");
+	g_autoptr(JsonObject) pages = fixture_pages();
+	g_autoptr(GError) error = NULL;
+	g_autofree gchar *text = NULL;
+	g_autoptr(JsonNode) bundle = NULL;
+	const gchar *home, *work;
+	guint i;
+	/* The http address is skipped; a look-alike host is not the network. */
+	g_assert_cmpuint(json_array_get_length(social), ==, G_N_ELEMENTS(expected));
+	for (i = 0; i < G_N_ELEMENTS(expected); i++) {
+		JsonObject *entry = json_array_get_object_element(social, i);
+		g_assert_cmpstr(json_object_get_string_member(entry, "network"), ==, expected[i][0]);
+		g_assert_cmpstr(json_object_get_string_member(entry, "label"), ==, expected[i][1]);
+		g_assert_cmpstr(json_object_get_string_member(entry, "handle"), ==, expected[i][2]);
+	}
+	/* The plan's builder-owned profiles render, with a hostile site name kept inside its script. */
+	json_object_set_string_member(json_node_get_object(plan), "name", "Harbor </script><b>");
+	/* A footer text link to a supplied profile is dropped: the icons already list it. A spaced
+	 * telephone link is repaired to digits. */
+	{
+		JsonObject *footer = json_object_get_object_member(json_node_get_object(plan), "footer");
+		JsonArray *footer_links = json_object_get_array_member(footer, "links");
+		g_autofree gchar *notes = NULL;
+		json_array_add_element(footer_links, json("{'label':'Instagram','href':'https://instagram.com/harborbench/'}"));
+		json_array_add_element(footer_links, json("{'label':'Call','href':'tel:+1 (555) 014-2270'}"));
+		notes = ls_components_repair_plan(components, plan);
+		g_assert_nonnull(notes);
+		g_assert_nonnull(strstr(notes, "-> tel:+15550142270"));
+	}
+	json_object_set_member(pages, "journal.html", json(
+		"{'path':'journal.html','sections':[{'component':'page-header','content':{'heading':'Notes'}},"
+		"{'component':'social','variant':'list','content':{'heading':'Follow the bench'}}]}"));
+	text = ls_components_compose(components, plan, pages, "https://harbor.example/", &error);
+	g_assert_no_error(error);
+	bundle = ls_json_parse(text, NULL);
+	home = file_content(bundle, "index.html");
+	work = file_content(bundle, "journal.html");
+	contains(home, "<ul class=\"site-footer__social\" role=\"list\" aria-label=\"Follow us\">");
+	contains(home, "<a href=\"https://www.instagram.com/harborbench\" rel=\"me noopener\"><svg viewBox=\"0 0 24 24\"");
+	contains(home, "<span class=\"visually-hidden\">Mastodon</span>");
+	lacks(home, ">Instagram</a>");
+	contains(home, "href=\"tel:+15550142270\"");
+	contains(home, "<script type=\"application/ld+json\">");
+	contains(home, "\"sameAs\":[\"https://www.instagram.com/harborbench\",\"https://mastodon.social/@harborbench\"]");
+	contains(home, "Harbor <\\/script><b>");
+	lacks(home, "Harbor </script>");
+	lacks(work, "application/ld+json");
+	contains(work, "social__item social__item--instagram");
+	contains(work, "<span class=\"social__handle\">@harborbench</span>");
+	/* A profile the builder cannot vouch for is refused. */
+	{
+		g_autoptr(JsonNode) bad = load("plan.json");
+		g_autoptr(GError) bad_error = NULL;
+		g_autofree gchar *none = NULL;
+		json_object_set_member(json_node_get_object(bad), "social",
+			json("[{'url':'http://instagram.com/x','network':'instagram','label':'Instagram'}]"));
+		none = ls_components_compose(components, bad, pages, NULL, &bad_error);
+		g_assert_null(none);
+		g_assert_nonnull(strstr(bad_error->message, "social[0]"));
+	}
+	/* A social section without supplied profiles is refused, and no footer links appear. */
+	{
+		g_autoptr(JsonNode) bare = load("plan.json");
+		g_autoptr(GError) bare_error = NULL;
+		g_autofree gchar *none = NULL;
+		json_object_remove_member(json_node_get_object(bare), "social");
+		none = ls_components_compose(components, bare, pages, NULL, &bare_error);
+		g_assert_null(none);
+		g_assert_nonnull(strstr(bare_error->message, "has none"));
+	}
+}
+
+/* Share targets are complete links when the site has an address, filled by
+ * site.js from the visitor's address when it does not, and the preview
+ * image is the page's first picture made absolute. */
+static void
+test_share(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(JsonNode) plan = load("plan.json");
+	g_autoptr(JsonObject) pages = fixture_pages();
+	guint pass;
+	json_object_set_member(pages, "journal.html", json(
+		"{'path':'journal.html','sections':[{'component':'page-header','content':{'heading':'Notes & news'}},"
+		"{'component':'share','content':{'heading':'Pass it on'}}]}"));
+	for (pass = 0; pass < 2; pass++) {
+		g_autoptr(GError) error = NULL;
+		g_autofree gchar *text = ls_components_compose(components, plan, pages,
+			pass == 0 ? "https://harbor.example/" : NULL, &error);
+		g_autoptr(JsonNode) bundle = NULL;
+		const gchar *html, *js;
+		g_assert_no_error(error);
+		bundle = ls_json_parse(text, NULL);
+		html = file_content(bundle, "journal.html");
+		js = file_content(bundle, "site.js");
+		contains(js, "data-share-native");
+		contains(html, "data-share=\"https://www.facebook.com/sharer/sharer.php?u={url}\"");
+		contains(html, "data-share-copy data-copied=\"Link copied\">Copy link</button>");
+		if (pass == 0) {
+			contains(html, "href=\"https://www.facebook.com/sharer/sharer.php?u=https%3A%2F%2Fharbor.example%2Fjournal.html\"");
+			contains(html, "href=\"mailto:?subject=Why%20we%20mend%20instead%20of%20replace%20%7C%20Harbor%20%26%20Pine&amp;body=https%3A%2F%2F");
+			lacks(html, "<li hidden><a");
+		} else {
+			contains(html, "<li hidden><a class=\"share__button share__link share__link--facebook\" data-share=");
+			lacks(html, "og:image");
+			contains(html, "<meta name=\"twitter:card\" content=\"summary\">");
+		}
+	}
+	/* Pages without share load no share script; the home page's first picture previews it. */
+	{
+		g_autoptr(JsonObject) plain = fixture_pages();
+		g_autoptr(GError) error = NULL;
+		g_autofree gchar *text = ls_components_compose(components, plan, plain, "https://harbor.example/", &error);
+		g_autoptr(JsonNode) bundle = NULL;
+		const gchar *home;
+		g_assert_no_error(error);
+		bundle = ls_json_parse(text, NULL);
+		lacks(file_content(bundle, "site.js"), "data-share-native");
+		/* A drawing is no link preview. */
+		home = file_content(bundle, "index.html");
+		contains(home, "<img src=\"assets/");
+		lacks(home, "og:image");
+	}
+	{
+		g_autoptr(JsonNode) photo_plan = load("plan.json");
+		g_autoptr(JsonObject) photo_pages = fixture_pages();
+		g_autoptr(GError) error = NULL;
+		g_autofree gchar *text = NULL;
+		g_autoptr(JsonNode) bundle = NULL;
+		const gchar *html;
+		json_object_set_member(json_node_get_object(photo_plan), "photos",
+			json("[{'path':'assets/yard.jpg','alt':'Dogs in the yard','width':1600,'height':1067}]"));
+		json_object_set_member(photo_pages, "journal.html", json(
+			"{'path':'journal.html','sections':[{'component':'page-header','content':{'heading':'Notes'}},"
+			"{'component':'media','content':{'art':{'src':'assets/yard.jpg','alt':'Dogs in the yard'}}}]}"));
+		text = ls_components_compose(components, photo_plan, photo_pages, "https://harbor.example/", &error);
+		g_assert_no_error(error);
+		bundle = ls_json_parse(text, NULL);
+		html = file_content(bundle, "journal.html");
+		contains(html, "<meta property=\"og:image\" content=\"https://harbor.example/assets/yard.jpg\">");
+		contains(html, "<meta name=\"twitter:card\" content=\"summary_large_image\">");
+	}
+}
+
 /* Home openings rotate between sites, stay stable per site and are real. */
 static void
 test_suggest_opening(void){
@@ -1700,6 +1859,8 @@ main(int argc, char **argv){
 	g_test_add_func("/components/heading-emphasis", test_heading_emphasis);
 	g_test_add_func("/components/section-numbers", test_section_numbers);
 	g_test_add_func("/components/variant-family", test_variant_family);
+	g_test_add_func("/components/social", test_social);
+	g_test_add_func("/components/share", test_share);
 	g_test_add_func("/components/suggest-opening", test_suggest_opening);
 	g_test_add_func("/components/directory-tabs", test_directory_and_tabs);
 	g_test_add_func("/components/menu-filter", test_menu_filter);

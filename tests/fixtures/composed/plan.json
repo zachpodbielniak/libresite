@@ -121,5 +121,19 @@
   "restyle": {
     "hero": ".hero__title { font-style: italic; }",
     "tabs": ".tabs__tab { color: red; }"
-  }
+  },
+  "social": [
+    {
+      "url": "https://www.instagram.com/harborbench",
+      "network": "instagram",
+      "label": "Instagram",
+      "handle": "@harborbench"
+    },
+    {
+      "url": "https://mastodon.social/@harborbench",
+      "network": "mastodon",
+      "label": "Mastodon",
+      "handle": "@harborbench"
+    }
+  ]
 }

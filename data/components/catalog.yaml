@@ -224,20 +224,20 @@ kinds:
   home:
     summary: The front door. A confident opening, a short tour of what matters and a clear next step.
     openings: [hero, cover, manifesto, custom, poster]
-    suggested: [cards, bento, features, media, statement, marquee, numbers, voices, strip, quote, text, cta, showcase, big-list, story, badges, offer]
+    suggested: [cards, bento, features, media, statement, marquee, numbers, voices, strip, quote, text, cta, showcase, big-list, story, badges, offer, social]
   index:
     summary: A list of things to choose from, such as work, articles, services or locations. Opens with a page header; the list is the page.
     openings: [page-header]
-    suggested: [entries, cards, filter, news, products, directory, bento, links, pager, big-list, showcase, jumpnav]
+    suggested: [entries, cards, filter, news, products, directory, bento, links, pager, big-list, showcase, jumpnav, share]
   detail:
     summary: One thing in depth, such as a project, service, dish or product. Key facts up front, then the story, evidence and related items.
     openings: [page-header]
-    suggested: [facts, specs, product, recipe, text, figure, compare, carousel, article, callout, table, links, pager, story]
+    suggested: [facts, specs, product, recipe, text, figure, compare, carousel, article, callout, table, links, pager, story, share]
     sidebar: true
   article:
     summary: Longform reading such as an essay, guide or case study. A reading column with contents, inline figures and notes.
     openings: [page-header]
-    suggested: [lead, article, recipe, figure, callout, table, timeline, glossary, pager, jumpnav]
+    suggested: [lead, article, recipe, figure, callout, table, timeline, glossary, pager, jumpnav, share]
     sidebar: true
   menu:
     summary: A menu or price list. Sections of items with prices and notes, little else.
@@ -246,11 +246,11 @@ kinds:
   visit:
     summary: How to get there and when. Hours, address, directions, practical questions and one clear action.
     openings: [page-header]
-    suggested: [hours, location, locations, areas, contact-card, notice, faq, facts, schedule, cta]
+    suggested: [hours, location, locations, areas, contact-card, notice, faq, facts, schedule, cta, social]
   about:
     summary: The story, people and values. A quiet opening, longer reading, pictures and milestones.
     openings: [page-header]
-    suggested: [lead, text, columns, timeline, team, numbers, voices, press, partners, figure, carousel, quote, statement, profile, story, badges, jobs]
+    suggested: [lead, text, columns, timeline, team, numbers, voices, press, partners, figure, carousel, quote, statement, profile, story, badges, jobs, social]
   form:
     summary: A page built around one task, such as a booking request, a brief or a sign-up. Explain, then the form, then what happens next.
     openings: [page-header]
@@ -270,7 +270,7 @@ kinds:
   contact:
     summary: How to reach the business. Contact details, a form only with a real endpoint, and where to find it.
     openings: [page-header]
-    suggested: [contact-card, form, location, hours, locations, faq]
+    suggested: [contact-card, form, location, hours, locations, faq, social]
   gallery:
     summary: A portfolio or photo page. Artworks first, words second.
     openings: [page-header]
@@ -278,7 +278,7 @@ kinds:
   events:
     summary: What is on. Dates, places and how to join.
     openings: [page-header]
-    suggested: [schedule, timetable, news, notice, callout, location, faq, offer]
+    suggested: [schedule, timetable, news, notice, callout, location, faq, offer, share]
   general:
     summary: Any other interior page. Opens with a page header.
     openings: [page-header]
@@ -477,6 +477,9 @@ components:
       list: A definition list.
       inline: Facts in one flowing line.
       big: Values set large.
+      cards: Outlined cards.
+      ledger: A two-column table of ruled rows.
+      ribbon: The facts in one painted strip.
     slots:
       heading: {type: text, max: 140}
       intro: {type: rich, max: 800}
@@ -492,6 +495,8 @@ components:
     variants:
       columns: Tiers side by side.
       stack: Tiers stacked as wide rows.
+      minimal: No boxes; tiers divided by rules.
+      bold: A painted head strip on each tier.
     slots:
       heading: {type: text, max: 140}
       intro: {type: rich, max: 800}
@@ -515,6 +520,9 @@ components:
       strip: One row that scrolls sideways.
       framed: Artworks in frames with captions below.
       masonry: Artworks of mixed heights packed in columns.
+      wide: The first picture across the column, the rest below.
+      duo: Two large pictures a row.
+      stack: One big picture at a time, its caption beside it.
     slots:
       heading: {type: text, max: 140}
       items:
@@ -567,6 +575,9 @@ components:
     variants:
       plain: Large lead text.
       dropcap: Large lead text with a drop cap.
+      framed: The opening words between two heavy rules.
+      pull: Indented behind an accent bar, in the display face.
+      centered: A short centred opening.
     slots:
       body: {type: rich, required: true, max: 1200}
   figure:
@@ -797,6 +808,26 @@ components:
           summary: {type: text, max: 400}
           apply: {type: text, max: 200, note: "How to apply, from supplied facts."}
           link: {type: link}
+  social:
+    summary: The business's own social profiles, from the builder. Only when the site has supplied profiles; never write profile addresses yourself.
+    variants:
+      cards: A card per profile with the network and handle.
+      row: Round icons in a row.
+      list: A ruled list with large handles.
+      band: Painted tiles, one per network.
+    slots:
+      heading: {type: text, max: 140}
+      body: {type: rich, max: 600}
+  share:
+    summary: Buttons to share this page by email or on social networks, plus copy link and the device share sheet. Nothing loads from a network until a visitor follows a link.
+    variants:
+      row: A row of outlined buttons.
+      stacked: A heading beside a column of buttons.
+      quiet: One small line under a rule.
+      pills: Solid accent pills.
+    slots:
+      heading: {type: text, max: 140}
+      body: {type: rich, max: 400}
   press:
     summary: What the press said. Only supplied quotes, word for word, with the outlet named.
     variants:
@@ -819,6 +850,8 @@ components:
       table: A two-column table.
       inline: A compact block.
       grid: Days as tiles.
+      board: A dark chalkboard panel.
+      compact: Small rows in two columns.
     slots:
       heading: {type: text, max: 140}
       items:
@@ -961,6 +994,9 @@ components:
       centered: Centered with space around it.
       left: Left aligned under a rule.
       band: On an accent band.
+      huge: Set enormous across the column.
+      quote: An oversized quotation mark before it.
+      boxed: On a panel with generous padding.
     slots:
       text: {type: text, required: true, max: 240}
       link: {type: link}
@@ -977,6 +1013,8 @@ components:
     variants:
       even: Two equal panels.
       contrast: The second panel in the accent color.
+      bordered: Outlined panels.
+      divider: Two columns separated by a rule.
     slots:
       heading: {type: text, max: 140}
       panels:
@@ -1084,6 +1122,8 @@ components:
     variants:
       bordered: Panels with borders.
       plain: Panels divided by rules.
+      cards: Each item a painted card.
+      numbered: A running number before each title.
     slots:
       heading: {type: text, max: 140}
       items:
@@ -1123,6 +1163,9 @@ components:
     variants:
       rows: One service per row.
       grid: Services in a grid.
+      cards: Painted cards with the price as a pill.
+      menu: A dotted leader from each name to its price.
+      split: Name and price in a column beside the description.
     slots:
       heading: {type: text, max: 140}
       intro: {type: rich, max: 600}
@@ -1153,6 +1196,9 @@ components:
     variants:
       card: A raised card.
       strip: A full-width strip.
+      split: The title beside the details.
+      band: An accent band across the page.
+      outline: A thick outlined box.
     slots:
       heading: {type: text, required: true, max: 120}
       body: {type: rich, max: 600}
@@ -1163,6 +1209,10 @@ components:
     variants:
       accent: On the accent color.
       quiet: A bordered line.
+      banner: A solid band in the ink colour.
+      pill: A centred rounded pill.
+      side: An accent bar down the left edge.
+      ticket: A dashed tear-off edge.
     slots:
       text: {type: rich, required: true, max: 300}
       link: {type: link}
@@ -1220,6 +1270,9 @@ components:
       tiles: Large linked tiles.
       inline: Links in a sentence-like row.
       cards: Links as bordered cards.
+      numbered: A running number before each link.
+      arrows: Big rows with a large arrow at the right.
+      columns: Two ruled columns of links.
     slots:
       heading: {type: text, max: 140}
       items:

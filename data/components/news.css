@@ -12,7 +12,7 @@
 .news__item:focus-within a:focus-visible { outline: none; }
 .news__excerpt { margin: 0; }
 .news--list .news__item { padding-bottom: var(--space-5); border-bottom: var(--border) solid var(--line); }
-@media (min-width: 48rem) {
+@container (min-width: 48rem) {
 	.news--list .news__item:has(.news__art) { grid-template-columns: 14rem minmax(0, 1fr); gap: var(--space-6); align-items: start; }
 	.news--cards .news__list { grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(17rem * var(--grid-scale, 1))), 1fr)); }
 }

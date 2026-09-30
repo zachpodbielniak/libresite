@@ -10,5 +10,28 @@
 .services--rows .services__list { border-top: var(--border) solid var(--line); max-width: calc(var(--measure) * 1.5); }
 .services--rows .services__item { padding-block: var(--space-5); border-bottom: var(--border) solid var(--line); }
 .services--grid .services__list { gap: var(--space-4); }
-@media (min-width: 48rem) { .services--grid .services__list { grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(17rem * var(--grid-scale, 1))), 1fr)); } }
+@container (min-width: 48rem) { .services--grid .services__list { grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(17rem * var(--grid-scale, 1))), 1fr)); } }
 .services--grid .services__item { padding: var(--space-5); border: var(--border) solid var(--line-strong); border-radius: var(--radius); }
+/* cards: painted cards with the price as a pill. */
+.services--cards .services__list { gap: var(--space-4); }
+@container (min-width: 44rem) { .services--cards .services__list { grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(17rem * var(--grid-scale, 1))), 1fr)); } }
+.services--cards .services__item { padding: var(--space-5); background: var(--surface); border-radius: var(--radius); }
+.services--cards .services__price { padding: 0.2em 0.8em; background: var(--accent); color: var(--accent-ink); border-radius: 999px; font-size: var(--step--1); }
+/* menu: a dotted leader runs from the name to the price. */
+.services--menu .services__list { max-width: calc(var(--measure) * 1.4); }
+.services--menu .services__item { padding-block: var(--space-4); }
+.services--menu .services__name { flex: 0 1 auto; font-size: var(--step-1); }
+/* The leader shows while name and price share a line; a long pair wraps instead. */
+@container (min-width: 36rem) {
+	.services--menu .services__head { flex-wrap: nowrap; }
+	.services--menu .services__head::after { content: ""; flex: 1 1 2rem; order: 1; min-width: 2rem; border-bottom: 2px dotted var(--line-strong); transform: translateY(-0.3em); }
+	.services--menu .services__price { order: 2; flex: 0 1 auto; max-width: 50%; }
+}
+/* split: name and price in a column beside the description. */
+@container (min-width: 48rem) {
+	.services--split .services__item { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); gap: 0 var(--space-6); }
+	.services--split .services__item > :not(.services__head) { grid-column: 2; }
+	.services--split .services__head { grid-row: 1 / span 3; flex-direction: column; align-items: flex-start; gap: var(--space-2); }
+}
+.services--split .services__list { border-top: var(--border-strong) solid var(--ink); }
+.services--split .services__item { padding-block: var(--space-6); border-bottom: var(--border) solid var(--line); }

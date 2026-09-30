@@ -15,7 +15,7 @@
 .product-card:focus-within { outline: 3px solid var(--focus); outline-offset: 6px; }
 .product-card:focus-within a:focus-visible { outline: none; }
 .products--list .products__list { grid-template-columns: minmax(0, 1fr); }
-@media (min-width: 48rem) {
+@container (min-width: 48rem) {
 	.products--list .product-card { grid-template-columns: minmax(0, 14rem) minmax(0, 1fr); gap: var(--space-6); align-items: center; padding-block: var(--space-4); border-top: var(--border) solid var(--line); }
 	.products--list .product-card__art, .products--list .products__list:has(.product-card__art) .product-card:not(:has(.product-card__art))::before { aspect-ratio: 1; }
 	.products--feature .product-card:first-child { grid-column: span 2; grid-row: span 2; }

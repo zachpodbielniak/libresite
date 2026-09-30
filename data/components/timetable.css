@@ -6,6 +6,6 @@
 .timetable__class { font-weight: 600; }
 .timetable__detail { font-size: var(--step--1); }
 .timetable__note { margin-top: var(--space-5); font-size: var(--step--1); }
-@media (min-width: 56rem) { .timetable--columns .timetable__days { grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(9rem * var(--grid-scale, 1))), 1fr)); } }
+@container (min-width: 56rem) { .timetable--columns .timetable__days { grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(9rem * var(--grid-scale, 1))), 1fr)); } }
 .timetable--list .timetable__day { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
-@media (min-width: 48rem) { .timetable--list .timetable__day { grid-template-columns: 10rem minmax(0, 1fr); } .timetable--list .timetable__sessions { grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(14rem * var(--grid-scale, 1))), 1fr)); } }
+@container (min-width: 48rem) { .timetable--list .timetable__day { grid-template-columns: 10rem minmax(0, 1fr); } .timetable--list .timetable__sessions { grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(14rem * var(--grid-scale, 1))), 1fr)); } }

@@ -4,7 +4,7 @@
 .figure__credit { font-family: var(--font-mono); }
 .figure--inline .figure__item { max-width: var(--measure); }
 .figure--wide .figure__item { max-width: calc(var(--measure) * 1.5); }
-@media (min-width: 56rem) {
+@container (min-width: 56rem) {
 	.figure--aside .figure__item { float: right; width: min(40%, 22rem); margin: 0 0 var(--space-4) var(--space-6); }
 	.figure--aside + .block { clear: none; }
 	/* Only running text wraps beside an aside figure; panels, lists and

@@ -6,3 +6,11 @@
 .statement--band { background: var(--accent); color: var(--accent-ink); padding-block: var(--section-space); }
 .block.statement--band { padding-top: var(--section-space); }
 .statement--band a { color: inherit; }
+/* huge: the statement set enormous across the column. */
+.statement--huge .statement__text { max-width: none; font-size: clamp(2.5rem, 8cqi, 7rem); line-height: 1; letter-spacing: calc(var(--heading-tracking) - 0.02em); }
+/* quote: an oversized quotation mark hangs before it. */
+.statement--quote .statement__text { position: relative; padding-top: 0.6em; }
+.statement--quote .statement__text::before { content: "\201C"; position: absolute; top: -0.1em; left: -0.05em; font-size: 2.6em; line-height: 1; color: var(--accent-text); }
+/* boxed: on a panel with generous padding. */
+.statement--boxed .wrap > * { max-width: none; }
+.statement--boxed .wrap { padding: clamp(var(--space-5), 5cqi, var(--space-8)); background: var(--surface); border-radius: var(--radius); }

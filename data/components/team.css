@@ -1,9 +1,9 @@
 .team__list { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-6); margin: 0; padding: 0; list-style: none; }
-@media (min-width: 48rem) { .team--grid .team__list { grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(15rem * var(--grid-scale, 1))), 1fr)); } }
+@container (min-width: 48rem) { .team--grid .team__list { grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(15rem * var(--grid-scale, 1))), 1fr)); } }
 .team__art { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: var(--radius); background: var(--surface); margin-bottom: var(--space-3); }
 .team__name { margin-bottom: 0.2em; }
 .team__role { margin: 0 0 var(--space-2); font-size: var(--step--1); }
 .team--list .team__list { gap: 0; border-top: var(--border) solid var(--line); max-width: calc(var(--measure) * 1.2); }
 .team--list .team__person { padding-block: var(--space-4); border-bottom: var(--border) solid var(--line); }
-@media (min-width: 48rem) { .team--cards .team__list { grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(15rem * var(--grid-scale, 1))), 1fr)); gap: var(--space-4); } }
+@container (min-width: 48rem) { .team--cards .team__list { grid-template-columns: repeat(auto-fill, minmax(min(100%, calc(15rem * var(--grid-scale, 1))), 1fr)); gap: var(--space-4); } }
 .team--cards .team__person { padding: var(--space-4); background: var(--surface); border-radius: var(--radius); }

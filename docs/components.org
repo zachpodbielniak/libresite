@@ -108,7 +108,7 @@ Surface styling alone left every site with one silhouette: a top bar, one column
 
 - Axes marked =builder: true= in =catalog.yaml= (frame, headpos, header, rhythm, align, footer, motion) are set by =ls_components_apply_structure()= after the plan call, from the same recipe name and brief seed as the identity. The model's values for them are replaced; a theme keeps the builder axes it names, and themes may omit them.
 - The plan gains a builder-owned =structure= object of continuous genes, each dealt anywhere in its range: =width= (column cap, 46 to 108 rem), =gutter=, =pace= (section spacing), =pad= (scales every space token), =grid= (scales every card minimum width), =scale= (display heading sizes, capped at 1.3 so headlines fit), and the section shares =narrow=, =bleed=, =band=, =offset=, =loose= and =tight=. A plan without =structure= renders exactly as before.
-- =structure.variants= deals each component's lead variant for the site. At render time that variant heads a small family: two more variants picked from the site name, never meaningful ones. Each section takes one family member from its page and position, so a component repeated across a site varies (a picture beside text, then on a painted column, then an ultrawide crop) while the site keeps a coherent set. The page opening (=page-header=) stays on its lead variant, so interior pages open alike. Rendering stays deterministic for a plan and its pages. Components whose markup or meaning depends on the variant are never dealt (hero, cover, poster, manifesto, custom, article, compare, form, features, callout, checklist, columns, profile, areas), nor are variants that say something (numbered or artless cards).
+- =structure.variants= deals each component's lead variant for the site (266 variants over 72 components). At render time that variant heads a small family: two more variants picked from the site name, never meaningful ones. Each section takes one family member from its page and position, so a component repeated across a site varies (a picture beside text, then on a painted column, then an ultrawide crop) while the site keeps a coherent set. The page opening (=page-header=) stays on its lead variant, so interior pages open alike. Rendering stays deterministic for a plan and its pages. Components whose markup or meaning depends on the variant are never dealt (hero, cover, poster, manifesto, custom, article, compare, form, features, callout, checklist, columns, profile, areas), nor are variants that say something (numbered or artless cards).
 - Each section after the page opening gets its own treatment from the site, page and position: a narrow reading column, an edge-to-edge run, a shift right, a tinted, ink or accent band, or extra or less air. Only components that suit a treatment receive it, two bands never touch, and reading kinds with a contents column keep a steady column. Bands repaint the working tokens locally, including the danger color, so contrast holds inside them.
 - Full-bleed pieces break out to the page column (=main= is an inline-size container), not the screen, so they stay inside the rail and split frames. Headings hyphenate a word too long for their column instead of splitting it unmarked.
 
@@ -128,7 +128,7 @@ Dealt structure multiplies the layouts a component meets: seven frames, four hea
 - The alternating =rhythm/bands= tint skips sections that paint their own colours (tone bands and accent or surface variants), so their text keeps its contrast.
 - A pinned glass header reserves room at the top of the viewport, so jump-link targets and focused controls are not scrolled under it.
 - Sections with no padding of their own (a full cover, the jump bar) leave room above the next section; aside figures float only beside running text; a full cover grows to fit its text rather than letting it rise over the header, its picture fills the whole cell, and its text sits on a readable panel in the lower corner instead of a fade that washes out the photograph.
-- Side-by-side media and split covers follow the page column (container queries), not the screen, so beside a side menu they stack before their text column gets narrow. Giant section headings step down beside a picture or a form.
+- Every component's layout breakpoints are container queries on the page column, not the screen. Side-by-side media and split covers follow the page column, so beside a side menu they stack before their text column gets narrow. Giant section headings step down beside a picture or a form.
 - The offset frame adds its empty margin beside the dealt column rather than taking it out, so a narrow dealt column never shrinks to a strip, and its headings hang left even under centred alignment.
 - A picture gets one frame: framed images skip the edge-to-edge cover and the framed media mount. Turned pictures (taped, print) are clipped at the page column so they never widen the page.
 - Galleries and photo strips give mixed portrait and landscape photographs one shape so rows stay even (masonry keeps each shape). The pinned story spaces its steps by a few lines, not by screens.
@@ -182,6 +182,32 @@ seed_artifacts:
 #+end_src
 
 The plan step reads each photo's pixel size from its PNG, JPEG or WebP header and passes the list to the model as =supplied_photos=; a photo whose seed is missing or unreadable stops the step before any call. The builder then writes the list into the plan as =photos= (the model cannot change it), so any image slot may use a photo path as well as a planned art path, and pages render it at its real size. The prompts ask the plan to feature the photos where they fit and to draw art only for marks, motifs and diagrams. Photos never grow taller than the screen: a tall one crops to cover its box, and a photo in the page's opening stays under 60 percent of the screen height so the headline is on the first screen. A photo may name a =focus=, one or two of =left=, =center=, =right=, =top=, =bottom=, or two percentages such as =70% 30%=; the builder writes it as the image's crop position so the subject stays in frame. Credits are kept in the plan for the operator; licensed stock such as Unsplash and Pexels needs no on-page credit, and the model may still show one in a caption.
+
+* Social profiles and sharing
+
+A recipe can list the business's own social profiles. Nothing is generated: the builder links only the addresses supplied, and a site without them has no social links.
+
+#+begin_src yaml
+site:
+  social:
+    - {url: 'https://www.instagram.com/bandlpawhaven'}
+    - {url: 'https://www.facebook.com/bandlpawhaven'}
+    - {url: 'https://harbor.example/journal', label: Our journal}
+#+end_src
+
+Each entry is an https:// address of up to 300 characters with no spaces or quotes, and an optional label of up to 60 characters; at most 12, each once. The plan step recognises the network of each address from =data/components/networks.yaml= (a listed host or one of its subdomains, or a federated =/@name= path for Mastodon; anything else is =web=), derives the handle visitors see, and writes the list into the plan as =social= after the model answers, replacing anything the model wrote. =ls_components_social()= exposes the same recognition.
+
+With profiles, the builder adds:
+
+- a row of network icons in every page footer, each link named for screen readers and marked =rel="me"=;
+- Organization JSON-LD with =sameAs= links on the home page, with =url= when the site has an address;
+- the =social= component (cards, row, list or band), which pages may use only when the plan lists profiles. Composition refuses a =social= section on a site without them.
+
+The =share= component (row, stacked, quiet or pills) offers email, Facebook, X, LinkedIn, WhatsApp and Bluesky links, a copy-link button and the device share sheet. With a site address (=pages.options.base_url= or the recipe's deployment URL) the links are complete in the HTML; without one they stay hidden until =site.js= fills them from the visitor's own address. Copy and the share sheet appear only where the browser supports them. Nothing loads from any network until a visitor follows a link: there are no embedded widgets, trackers or third-party scripts.
+
+With a site address, a page whose first picture is a supplied photograph (PNG, JPEG or WebP) gets =og:image= and a large preview card; drawings are not used as previews.
+
+Icons come from Simple Icons 16.33.0 (CC0 1.0). Brand marks remain their owners' trademarks and link only to the business's own profiles. LinkedIn has no Simple Icons mark, so it and unrecognised hosts use the builder's own link glyph. A library archived before =networks.yaml= existed still loads, with the link glyph for every profile.
 
 * What the builder produces
 

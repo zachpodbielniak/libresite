@@ -223,7 +223,7 @@ body .split--contrast .split__panel:last-child { background: var(--accent); colo
 
 /* Rhythm. */
 .look-rhythm-bands main > .block { padding-block: calc(var(--section-space) * 0.7); }
-.look-rhythm-bands main > .block:nth-of-type(even):not(.sec-tone, .cta--band, .statement--band, .marquee--accent, .contact-card--strip, .page-header--band) { --surface: var(--ls-paper); background: var(--ls-surface); }
+.look-rhythm-bands main > .block:nth-of-type(even):not(.sec-tone, .cta--band, .statement--band, .marquee--accent, .contact-card--strip, .contact-card--band, .page-header--band) { --surface: var(--ls-paper); background: var(--ls-surface); }
 .look-rhythm-divided main > .block + .block { padding-top: var(--section-space); border-top: var(--border) solid var(--line-strong); }
 .look-rhythm-tight { --section-space: clamp(2.5rem, 6vw, 4.5rem); }
 
@@ -386,7 +386,7 @@ main > .block.sec-pad-tight + .block { padding-top: calc(var(--section-space) * 
 main > .block.sec-tone { padding-block: var(--section-space); }
 main > .block.sec-tone + .block { padding-top: var(--section-space); }
 main > .block.sec-tone.sec-tone-tint { --paper: var(--ls-surface); background: var(--ls-surface); }
-main > .block.sec-tone.sec-tone-ink {
+main > .block.sec-tone.sec-tone-ink, main .notice--banner .notice__box, main .hours--board > .wrap > .hours__list {
 	--paper: var(--ls-ink); --ink: var(--ls-paper); --surface: color-mix(in srgb, var(--ls-paper) 10%, var(--ls-ink));
 	--muted: var(--ls-paper); --accent: var(--ls-paper); --accent-ink: var(--ls-ink); --accent-text: var(--ls-paper);
 	--line: color-mix(in srgb, var(--ls-paper) 30%, var(--ls-ink)); --line-strong: var(--ls-paper); --focus: var(--ls-paper); --field: var(--ls-ink); --danger: var(--ls-paper);
@@ -394,7 +394,7 @@ main > .block.sec-tone.sec-tone-ink {
 }
 /* Accent-painted component variants take the same token swap as accent
  * bands, so labels, rules, emphasis and buttons stay visible on them. */
-main > .block.sec-tone.sec-tone-accent, main .block:is(.cta--band, .statement--band, .marquee--accent), main .media--flush .media__text, main .cta--sidebar .cta__text {
+main > .block.sec-tone.sec-tone-accent, main .block:is(.cta--band, .statement--band, .marquee--accent, .contact-card--band), main .media--flush .media__text, main .cta--sidebar .cta__text, main .facts--ribbon .facts__list {
 	--paper: var(--ls-accent); --ink: var(--ls-accent-ink); --surface: color-mix(in srgb, var(--ls-accent-ink) 12%, var(--ls-accent));
 	--muted: var(--ls-accent-ink); --accent: var(--ls-accent-ink); --accent-ink: var(--ls-accent); --accent-text: var(--ls-accent-ink);
 	--line: color-mix(in srgb, var(--ls-accent-ink) 35%, var(--ls-accent)); --line-strong: var(--ls-accent-ink); --focus: var(--ls-accent-ink); --field: var(--ls-accent); --danger: var(--ls-accent-ink);
@@ -410,7 +410,7 @@ main > .block.sec-tone.sec-tone-accent, main .block:is(.cta--band, .statement--b
 /* Painted sections in the reading column have no page gutter around them,
  * so they carry their own inset and a column-sized heading. Containers
  * would scope the section counters, so no container query here. */
-.page-main > .block:is(.cta--band, .statement--band, .contact-card--strip, .page-header--band, .marquee--accent) {
+.page-main > .block:is(.cta--band, .statement--band, .contact-card--strip, .contact-card--band, .page-header--band, .marquee--accent) {
 	padding: var(--space-7) var(--space-6); margin-bottom: var(--space-7); border-radius: var(--radius);
 }
 .page-main > .block:is(.cta--band, .statement--band) :is(h2, h3, .statement__text) { font-size: var(--step-3); }

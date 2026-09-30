@@ -489,6 +489,21 @@ plan_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *prom
 				json_object_set_member(root, "photos", ls_json_parse(text, NULL));
 			}
 		}
+		/* Supplied social profiles are the builder's facts too. */
+		if (plan != NULL && JSON_NODE_HOLDS_OBJECT(plan)) {
+			JsonObject *root = json_node_get_object(plan);
+			JsonObject *site = member_object_of(ls_recipe_get_root(recipe), "site");
+			JsonNode *links = site != NULL ? json_object_get_member(site, "social") : NULL;
+			if (json_object_has_member(root, "social"))
+				json_object_remove_member(root, "social");
+			if (links != NULL && JSON_NODE_HOLDS_ARRAY(links)) {
+				JsonArray *social = ls_components_social(components, json_node_get_array(links));
+				if (json_array_get_length(social) > 0)
+					json_object_set_array_member(root, "social", social);
+				else
+					json_array_unref(social);
+			}
+		}
 		if (plan != NULL) {
 			g_autofree gchar *repairs = ls_components_repair_plan(components, plan);
 			if (repairs != NULL) {

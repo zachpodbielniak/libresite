@@ -5,7 +5,7 @@
 .hero__art img { width: 100%; }
 .hero--statement .hero__title { font-size: var(--step-7); max-width: 14ch; }
 .hero--statement .hero__lede { font-size: var(--step-2); }
-@media (min-width: 56rem) {
+@container (min-width: 56rem) {
 	.hero--split .hero__inner { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: var(--space-7); align-items: center; }
 	.hero--split .hero__art { margin: 0; }
 	.hero--split .hero__title { font-size: var(--step-6); }
@@ -17,7 +17,7 @@
 .hero--centered .actions { justify-content: center; }
 .hero--overlap .hero__art { position: relative; z-index: 0; margin-top: calc(var(--space-6) * -1); }
 .hero--overlap .hero__text { position: relative; z-index: 1; max-width: 44rem; padding: var(--space-6); background: var(--paper); border: var(--border) solid var(--line); border-radius: var(--radius); }
-@media (min-width: 56rem) { .hero--overlap .hero__inner { display: flex; flex-direction: column-reverse; } .hero--overlap .hero__text { margin: calc(var(--space-8) * -1.5) 0 0 var(--space-6); } }
+@container (min-width: 56rem) { .hero--overlap .hero__inner { display: flex; flex-direction: column-reverse; } .hero--overlap .hero__text { margin: calc(var(--space-8) * -1.5) 0 0 var(--space-6); } }
 .hero--minimal { padding-block: var(--space-7) var(--space-6); }
 .hero--minimal .hero__title { font-size: var(--step-5); max-width: 26ch; }
 .hero--minimal .hero__art { display: none; }

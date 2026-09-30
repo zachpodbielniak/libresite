@@ -264,6 +264,35 @@ invalid:
 		"position such as 'top', 'bottom right' or '70% 40%'");
 	return FALSE;
 }
+/* Supplied social profiles: https addresses the builder links and shows
+ * with the network's icon. Never generated. */
+static gboolean
+social_list(JsonObject *site, GError **error){
+	JsonNode *node = json_object_get_member(site, "social");
+	JsonArray *links = node != NULL && JSON_NODE_HOLDS_ARRAY(node) ? json_node_get_array(node) : NULL;
+	g_autoptr(GHashTable) seen = g_hash_table_new(g_str_hash, g_str_equal);
+	guint i;
+	if (links == NULL || json_array_get_length(links) == 0 || json_array_get_length(links) > 12)
+		goto invalid;
+	for (i = 0; i < json_array_get_length(links); i++) {
+		JsonNode *entry = json_array_get_element(links, i);
+		JsonObject *link = JSON_NODE_HOLDS_OBJECT(entry) ? json_node_get_object(entry) : NULL;
+		const gchar *url = link != NULL ? ls_string(link, "url") : NULL;
+		if (link == NULL || !ls_object_keys(link, "|url|label|", NULL) || url == NULL ||
+			!g_str_has_prefix(url, "https://") || strlen(url) <= 8 || strlen(url) > 300 ||
+			strpbrk(url, " \t\r\n\"'<>\\`") != NULL || !g_uri_is_valid(url, G_URI_FLAGS_NONE, NULL) ||
+			!text_member(link, "label", FALSE, NULL) ||
+			(ls_string(link, "label") != NULL && g_utf8_strlen(ls_string(link, "label"), -1) > 60) ||
+			!g_hash_table_add(seen, (gpointer)url))
+			goto invalid;
+	}
+	return TRUE;
+invalid:
+	g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID,
+		"site.social needs 1 to 12 unique {url, label} entries: url an https:// profile address without "
+		"spaces or quotes, up to 300 characters; label optional text up to 60 characters");
+	return FALSE;
+}
 /* No synthesized prose: structured facts remain in the immutable recipe tree. */
 static gboolean
 validate_site(JsonObject *site, GError **error){
@@ -273,7 +302,7 @@ validate_site(JsonObject *site, GError **error){
 	guint i;
 	if (!ls_object_keys(site,
 		"|brief|audience|style|stack|frontend|backend|database|requirements|pages|offers|contact|brand|copy_lock|languages|"
-		"photos|",
+		"photos|social|",
 		error))
 		return FALSE;
 	if (!json_object_has_member(site, "brief")) {
@@ -291,6 +320,9 @@ validate_site(JsonObject *site, GError **error){
 				return FALSE;
 		} else if (g_str_equal(key, "photos")) {
 			if (!photo_list(site, error))
+				return FALSE;
+		} else if (g_str_equal(key, "social")) {
+			if (!social_list(site, error))
 				return FALSE;
 		} else if (g_str_equal(key, "copy_lock")) {
 			if (!text_list(site, key, 0, error))

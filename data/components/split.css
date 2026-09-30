@@ -1,7 +1,12 @@
 .split__panels { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
-@media (min-width: 48rem) { .split__panels { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+@container (min-width: 48rem) { .split__panels { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
 .split__panel { padding: var(--space-6); background: var(--surface); border-radius: var(--radius); }
 .split__title { font-size: var(--step-3); }
 .split__link { margin: var(--space-4) 0 0; font-weight: 600; }
 .split--contrast .split__panel:last-child { background: var(--accent); color: var(--accent-ink); }
 .split--contrast .split__panel:last-child a, .split--contrast .split__panel:last-child .kicker { color: inherit; }
+/* bordered: outlined panels instead of painted ones. */
+.split--bordered .split__panel { background: none; border: var(--border-strong) solid var(--line-strong); }
+/* divider: two columns on the page separated by a rule. */
+.split--divider .split__panel { padding: var(--space-4) 0; background: none; border-radius: 0; }
+@container (min-width: 48rem) { .split--divider .split__panels { gap: var(--space-8); } .split--divider .split__panel + .split__panel { padding-left: var(--space-8); border-left: var(--border) solid var(--line-strong); margin-left: calc(var(--space-8) * -1); } }

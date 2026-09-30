@@ -4,7 +4,7 @@
 .story__steps { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-7); }
 .story__step { padding-top: var(--space-4); border-top: var(--border) solid var(--line-strong); }
 .story__title { font-size: var(--step-3); }
-@media (min-width: 56rem) {
+@container (min-width: 56rem) {
 	.story__grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-8); align-items: start; }
 	.story__art { position: sticky; top: var(--space-6); }
 	.story--right .story__art { order: 2; }

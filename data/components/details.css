@@ -8,3 +8,12 @@
 .details--bordered .details__item { padding-inline: var(--space-4); border: var(--border) solid var(--line-strong); border-radius: var(--radius); }
 .details--plain .details__list { gap: 0; border-top: var(--border) solid var(--line); }
 .details--plain .details__item { border-bottom: var(--border) solid var(--line); }
+/* cards: each item a painted card. */
+.details--cards .details__list { gap: var(--space-3); }
+.details--cards .details__item { padding-inline: var(--space-5); background: var(--surface); border-radius: var(--radius); }
+/* numbered: a running number before each title. */
+.details--numbered .details__list { counter-reset: ls-details; gap: 0; border-top: var(--border) solid var(--line); }
+.details--numbered .details__item { counter-increment: ls-details; border-bottom: var(--border) solid var(--line); }
+.details--numbered .details__item summary::before { content: counter(ls-details, decimal-leading-zero); flex: none; min-width: 2.5em; font-family: var(--font-mono); font-size: var(--step--1); color: var(--accent-text); padding-top: 0.2em; }
+.details--numbered .details__item summary::after { margin-left: auto; }
+.details--numbered .details__item summary { justify-content: flex-start; }

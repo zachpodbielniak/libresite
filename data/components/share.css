@@ -1,0 +1,17 @@
+.share__title { font-size: var(--step-2); }
+.share__list { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: var(--space-4) 0 0; padding: 0; list-style: none; }
+.share__button { display: inline-flex; align-items: center; gap: 0.5em; min-height: 44px; padding: 0.5em 1em; font: 600 var(--step--1) var(--font-display); color: var(--ink); text-decoration: none; background: transparent; border: var(--border) solid var(--line-strong); border-radius: var(--radius); cursor: pointer; }
+.share__button:hover { border-color: var(--accent); color: var(--ink); }
+.share__copy[data-done] { border-color: var(--accent); }
+/* stacked: a heading beside a column of full-width buttons. */
+@container (min-width: 44rem) { .share--stacked .share__inner { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-6); align-items: start; } }
+.share--stacked .share__list { flex-direction: column; margin: 0; }
+.share--stacked .share__button { width: 100%; }
+/* quiet: a single line of small links under a rule. */
+.share--quiet .share__inner { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-5); padding-top: var(--space-4); border-top: var(--border) solid var(--line); }
+.share--quiet .share__title { margin: 0; font-size: var(--step-0); }
+.share--quiet .share__list { margin: 0; }
+.share--quiet .share__button { min-height: 44px; padding-inline: 0.4em; border: 0; }
+/* pills: solid accent pills. */
+.share--pills .share__button { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); border-radius: 999px; }
+.share--pills .share__button:hover { background: var(--ink); border-color: var(--ink); color: var(--paper); }

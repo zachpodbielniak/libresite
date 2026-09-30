@@ -6,8 +6,8 @@
 .timeline--vertical .timeline__item::before { content: ""; position: absolute; left: calc(-0.5rem - var(--border-strong) / 2); top: 0.35em; width: 1rem; height: 1rem; border-radius: 50%; background: var(--paper); border: var(--border-strong) solid var(--accent); }
 .timeline--horizontal .timeline__list { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-5); }
 .timeline--horizontal .timeline__item { padding-top: var(--space-4); border-top: var(--border-strong) solid var(--accent); }
-@media (min-width: 56rem) { .timeline--horizontal .timeline__list { grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(12rem * var(--grid-scale, 1))), 1fr)); } }
-@media (min-width: 56rem) {
+@container (min-width: 56rem) { .timeline--horizontal .timeline__list { grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(12rem * var(--grid-scale, 1))), 1fr)); } }
+@container (min-width: 56rem) {
 	.timeline--alternating .timeline__list { position: relative; }
 	.timeline--alternating .timeline__list::before { content: ""; position: absolute; top: 0; bottom: 0; left: 50%; width: var(--border-strong); background: var(--line-strong); }
 	.timeline--alternating .timeline__item { width: 50%; padding: 0 var(--space-6) var(--space-6) 0; text-align: right; }
