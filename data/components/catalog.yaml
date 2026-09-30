@@ -312,6 +312,10 @@ components:
       aside: Heading in a side column and prose beside it on wide screens.
       columns: Prose flowing into two columns on wide screens.
       centered: A short centered passage.
+      ruled: A heavy rule over a heading column beside the body.
+      boxed: The passage on a panel.
+      lede: The opening paragraph set large.
+      margin: A small label heading hanging in the left margin.
     slots:
       heading: {type: text, max: 140}
       body: {type: rich, required: true, max: 6000}
@@ -409,6 +413,11 @@ components:
       split: Artwork beside a heading and body.
       offset: Artwork offset against a colored block.
       framed: Artwork in a thick frame.
+      overlay: The caption set on the picture as a corner label.
+      stagger: Text on a panel overlapping the picture's lower edge.
+      flush: Picture and a painted text column edge to edge.
+      cinema: An ultrawide crop with heading and body in two columns below.
+      portrait: A tall crop beside a large heading.
     slots:
       art: {type: image, required: true}
       caption: {type: text, max: 300}
@@ -434,6 +443,10 @@ components:
       card: A raised card inside the content width.
       stack: Centered stack with large type.
       giant: A heading set enormous across the width, actions beneath.
+      ticket: A notched ticket with a dashed edge.
+      outline: A thick accent outline, centred.
+      sidebar: A painted title column beside the actions.
+      underline: The title runs into a long accent rule leading to the actions.
     slots:
       heading: {type: text, required: true, max: 140}
       body: {type: rich, max: 800}
@@ -444,6 +457,10 @@ components:
       list: Stacked questions.
       columns: Questions in two columns.
       boxed: Each question in a panel.
+      numbered: Each question carries a running number.
+      split: The heading stays beside the questions.
+      cards: Each question a card in a grid.
+      ruled: Large questions between heavy rules.
     slots:
       heading: {type: text, max: 140}
       items:
@@ -533,6 +550,11 @@ components:
       centered: Title and lede centered.
       minimal: Title only, small and quiet.
       giant: An enormous title that fills the width.
+      ledger: Title and introduction side by side across a rule, facts in ruled cells.
+      boxed: The whole opening on a card.
+      banner: The picture as a wide low strip above the title.
+      stripe: A thick accent bar beside the title block.
+      index: An oversized outlined label over a compact title.
     slots:
       kicker: {type: text, max: 80, note: "Short label above the title, such as a category."}
       heading: {type: text, required: true, max: 140}
@@ -854,6 +876,9 @@ components:
       row: Connected steps in a row on wide screens.
       stack: Large numbered steps stacked.
       grid: Steps in a grid of panels.
+      timeline: Numbered stops on a vertical line.
+      numerals: An oversized number above each step.
+      cards: Each step a painted card.
     slots:
       heading: {type: text, max: 140}
       intro: {type: rich, max: 600}

@@ -3281,6 +3281,48 @@ section_classes(Render *render, const gchar *name, guint index, gboolean reading
 	return g_string_free(out, FALSE);
 }
 
+/* Components that keep one variant across the whole site: the page opening
+ * is the site's signature, so every interior page opens alike. */
+static const gchar *const steady_components[] = {"page-header", NULL};
+
+/* The variant a section renders with. A dealt component has a small
+ * per-site family: the dealt variant and two others picked from the site
+ * name. Each section takes one member of the family from its page and
+ * position, so a component repeated across pages varies instead of
+ * rendering identically, while the site keeps a coherent set. */
+static const gchar *
+section_variant(Render *render, JsonObject *component, const gchar *name, const gchar *dealt, guint index){
+	g_autoptr(GList) values = NULL;
+	g_autoptr(GPtrArray) choices = NULL;
+	g_autofree gchar *family_seed = NULL, *section_seed = NULL;
+	const gchar *family[3];
+	GList *value;
+	guint count = 1, guard;
+	if (dealt == NULL || in_list(steady_components, name))
+		return dealt;
+	choices = g_ptr_array_new();
+	values = json_object_get_members(member_object(component, "variants"));
+	for (value = values; value != NULL; value = value->next) {
+		g_autofree gchar *pair = g_strdup_printf("%s/%s", name, (const gchar *)value->data);
+		if (!in_list(meaningful_variants, pair) && g_strcmp0(value->data, dealt) != 0)
+			g_ptr_array_add(choices, value->data);
+	}
+	if (choices->len < 2)
+		return dealt;
+	family[0] = dealt;
+	family_seed = g_strdup_printf("%s\n%s", ls_string(render->plan, "name"), name);
+	family[1] = g_ptr_array_index(choices, seed_pick(family_seed, "family:1", choices->len));
+	family[2] = family[1];
+	for (guard = 0; guard < choices->len; guard++) {
+		family[2] = g_ptr_array_index(choices, (seed_pick(family_seed, "family:2", choices->len) + guard) % choices->len);
+		if (family[2] != family[1])
+			break;
+	}
+	count = family[2] != family[1] ? 3 : 2;
+	section_seed = g_strdup_printf("%s\n%s\n%u", ls_string(render->plan, "name"), render->page_path, index);
+	return family[seed_pick(section_seed, name, count)];
+}
+
 static void
 render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArray *toc, gboolean reading){
 	const gchar *last_tone = NULL;
@@ -3297,8 +3339,8 @@ render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArra
 		g_autoptr(GList) variants = json_object_get_members(member_object(component, "variants"));
 		JsonObject *dealt_variants = member_object(member_object(render->plan, "structure"), "variants");
 		const gchar *dealt = dealt_variants != NULL ? ls_string(dealt_variants, name) : NULL;
-		/* A dealt variant restyles the component the same way across the site. */
-		const gchar *variant = dealt != NULL ? dealt : ls_string(section, "variant") != NULL
+		/* A dealt family restyles the component coherently across the site. */
+		const gchar *variant = dealt != NULL ? section_variant(render, component, name, dealt, i) : ls_string(section, "variant") != NULL
 			? ls_string(section, "variant") : (const gchar *)variants->data;
 		const gchar *id = g_ptr_array_index(ids, i);
 		g_autofree gchar *structure_classes = section_classes(render, name, i, reading, &last_tone);

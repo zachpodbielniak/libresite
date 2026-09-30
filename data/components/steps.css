@@ -13,3 +13,17 @@
 .steps--stack .steps__item > :not(.steps__n) { grid-column: 2; }
 @media (min-width: 48rem) { .steps--grid .steps__list { grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(14rem * var(--grid-scale, 1))), 1fr)); } }
 .steps--grid .steps__item { padding: var(--space-5); border: var(--border) solid var(--line-strong); border-radius: var(--radius); }
+/* timeline: numbered stops on a vertical line. */
+.steps--timeline .steps__list { gap: 0; max-width: calc(var(--measure) * 1.2); }
+.steps--timeline .steps__item { position: relative; padding: 0 0 var(--space-6) 4rem; }
+.steps--timeline .steps__item::before { content: ""; position: absolute; left: 1.2rem; top: 0; bottom: 0; width: var(--border-strong); background: var(--line-strong); }
+.steps--timeline .steps__item:last-child::before { bottom: auto; height: 2.5rem; }
+.steps--timeline .steps__n { position: absolute; left: 0; top: 0; }
+/* numerals: an oversized number above each step. */
+@container (min-width: 44rem) { .steps--numerals .steps__list { grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(13rem * var(--grid-scale, 1))), 1fr)); gap: var(--space-6); } }
+.steps--numerals .steps__n { display: block; width: auto; height: auto; margin-bottom: var(--space-2); background: none; color: var(--accent-text); font-size: clamp(3rem, 8cqi, 5.5rem); line-height: 1; }
+.steps--numerals .steps__item { padding-top: var(--space-4); border-top: var(--border) solid var(--line-strong); }
+/* cards: each step a painted card. */
+@container (min-width: 44rem) { .steps--cards .steps__list { grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(15rem * var(--grid-scale, 1))), 1fr)); } }
+.steps--cards .steps__item { padding: var(--space-6) var(--space-5); background: var(--surface); border-radius: var(--radius); }
+.steps--cards .steps__n { border-radius: var(--radius); }

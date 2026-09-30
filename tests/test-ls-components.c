@@ -1027,6 +1027,47 @@ test_section_numbers(void){
 	lacks(css, "counter(ls-section");
 }
 
+/* A dealt component renders from a small per-site family of variants, so
+ * repeats vary across sections; the page opening keeps one variant. */
+static void
+test_variant_family(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(JsonNode) plan = load("plan.json");
+	g_autoptr(JsonObject) pages = fixture_pages();
+	g_autoptr(GError) error = NULL;
+	g_autoptr(GHashTable) seen = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+	g_autofree gchar *text = NULL, *again = NULL;
+	g_autoptr(GString) sections = g_string_new("{'path':'journal.html','sections':[{'component':'page-header','content':{'heading':'Notes'}}");
+	g_autoptr(JsonNode) bundle = NULL;
+	JsonObject *variants;
+	const gchar *html, *cursor;
+	guint i;
+	g_assert_true(ls_components_apply_structure(components, plan, "family-site", FALSE));
+	variants = json_object_get_object_member(json_object_get_object_member(json_node_get_object(plan), "structure"), "variants");
+	json_object_set_string_member(variants, "text", "narrow");
+	json_object_set_string_member(variants, "page-header", "boxed");
+	for (i = 0; i < 15; i++)
+		g_string_append_printf(sections, ",{'component':'text','content':{'heading':'Part %u','body':'Body.'}}", i);
+	g_string_append(sections, "]}");
+	json_object_set_member(pages, "journal.html", json(sections->str));
+	text = ls_components_compose(components, plan, pages, NULL, &error);
+	g_assert_no_error(error);
+	again = ls_components_compose(components, plan, pages, NULL, &error);
+	g_assert_no_error(error);
+	g_assert_cmpstr(text, ==, again);
+	bundle = ls_json_parse(text, NULL);
+	html = file_content(bundle, "journal.html");
+	contains(html, "page-header--boxed");
+	lacks(html, "page-header--plain");
+	for (cursor = strstr(html, "block--text text text--"); cursor != NULL; cursor = strstr(cursor + 1, "block--text text text--")) {
+		const gchar *start = cursor + strlen("block--text text ");
+		g_hash_table_add(seen, g_strndup(start, strcspn(start, " \"")));
+	}
+	g_assert_true(g_hash_table_contains(seen, "text--narrow"));
+	g_assert_cmpuint(g_hash_table_size(seen), >=, 2);
+	g_assert_cmpuint(g_hash_table_size(seen), <=, 3);
+}
+
 /* Home openings rotate between sites, stay stable per site and are real. */
 static void
 test_suggest_opening(void){
@@ -1658,6 +1699,7 @@ main(int argc, char **argv){
 	g_test_add_func("/components/themes", test_themes);
 	g_test_add_func("/components/heading-emphasis", test_heading_emphasis);
 	g_test_add_func("/components/section-numbers", test_section_numbers);
+	g_test_add_func("/components/variant-family", test_variant_family);
 	g_test_add_func("/components/suggest-opening", test_suggest_opening);
 	g_test_add_func("/components/directory-tabs", test_directory_and_tabs);
 	g_test_add_func("/components/menu-filter", test_menu_filter);

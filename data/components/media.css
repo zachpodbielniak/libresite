@@ -14,3 +14,33 @@
 	.media--offset .media__text { grid-column: 1; grid-row: 1; margin: 0; }
 }
 .media--framed .media__figure { padding: var(--space-4); background: var(--surface); border: var(--border) solid var(--line-strong); border-radius: var(--radius); }
+/* overlay: the caption rides on the picture as a label in the lower corner. */
+.media--overlay .media__figure { position: relative; }
+.media--overlay .media__figure figcaption { position: absolute; left: var(--space-4); bottom: var(--space-4); max-width: min(100% - 2 * var(--space-4), 28rem); margin: 0; padding: var(--space-2) var(--space-3); background: var(--paper); color: var(--ink); border-radius: var(--radius); }
+/* stagger: the text sits on a panel that overlaps the picture's lower edge. */
+.media--stagger .media__figure { width: min(100%, 78%); }
+/* The caption rides on the picture's upper corner, clear of the overlapping panel. */
+.media--stagger .media__figure { position: relative; }
+.media--stagger .media__figure figcaption { position: absolute; left: var(--space-3); top: var(--space-3); max-width: min(100% - 2 * var(--space-3), 24rem); margin: 0; padding: var(--space-1) var(--space-3); background: var(--paper); color: var(--ink); border-radius: var(--radius); }
+.media--stagger .media__text { position: relative; width: min(100%, 34rem); margin: calc(var(--space-8) * -1) 0 0 auto; padding: var(--space-6); background: var(--surface); border: var(--border) solid var(--line); border-radius: var(--radius); }
+@container (max-width: 40rem) { .media--stagger .media__figure { width: 100%; } .media--stagger .media__text { margin-top: calc(var(--space-5) * -1); margin-inline: var(--space-3); } }
+/* flush: picture and a painted text column meet edge to edge. */
+@container (min-width: 48rem) {
+	.media--flush .media__inner { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: stretch; }
+	.media--flush .media__figure img { height: 100%; border-radius: 0; }
+	.media--flush .media__text { margin: 0; }
+}
+.media--flush .media__text { display: flex; flex-direction: column; justify-content: center; padding: clamp(var(--space-5), 4cqi, var(--space-8)); }
+.media--flush .media__figure figcaption { display: none; }
+/* cinema: an ultrawide crop, with the heading and body in two columns below it. */
+.media--cinema .media__figure img { aspect-ratio: 21 / 9; object-fit: cover; }
+@container (min-width: 48rem) {
+	.media--cinema .media__text { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: var(--space-7); max-width: none; }
+}
+/* portrait: a tall crop beside a large heading. */
+@container (min-width: 48rem) {
+	.media--portrait .media__inner { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: var(--space-7); align-items: center; }
+	.media--portrait .media__text { margin: 0; }
+}
+.media--portrait .media__figure img { aspect-ratio: 3 / 4; object-fit: cover; }
+.media--portrait .media__text h2 { font-size: var(--step-4); }

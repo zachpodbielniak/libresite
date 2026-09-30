@@ -28,3 +28,27 @@
 .page-header--minimal .page-header__art { display: none; }
 .page-header--giant .page-header__title { max-width: none; font-size: clamp(3rem, 12cqi, 10rem); line-height: 0.95; padding-top: 0.04em; margin-bottom: 0.4em; letter-spacing: calc(var(--heading-tracking) - 0.03em); }
 .page-header--giant .page-header__title--long { font-size: clamp(2.5rem, 8cqi, 6.5rem); }
+/* ledger: title and introduction side by side across a vertical rule; the facts become a row of ruled cells. */
+@container (min-width: 52rem) {
+	.page-header--ledger .page-header__text { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: var(--space-4) var(--space-7); align-items: end; }
+	.page-header--ledger .page-header__text > :not(.page-header__title, .page-header__lede) { grid-column: 1 / -1; }
+	.page-header--ledger .page-header__lede { padding-left: var(--space-6); border-left: var(--border-strong) solid var(--accent); }
+}
+.page-header--ledger .page-header__title { max-width: none; margin-bottom: 0; }
+.page-header--ledger .page-header__meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); gap: 0; padding: 0; border: var(--border) solid var(--line-strong); }
+.page-header--ledger .page-header__meta > div { padding: var(--space-3) var(--space-4); border-right: var(--border) solid var(--line); }
+/* boxed: the whole opening set as a card on the page. */
+.page-header--boxed .page-header__inner { padding: clamp(var(--space-5), 4cqi, var(--space-8)); background: var(--surface); border: var(--border) solid var(--line-strong); border-radius: var(--radius); }
+.page-header--boxed .page-header__art { margin-top: var(--space-5); }
+/* banner: the picture as a wide low strip above the title. */
+.page-header--banner .page-header__inner { display: flex; flex-direction: column; }
+.page-header--banner .page-header__art { order: -1; margin: 0 0 var(--space-6); }
+.page-header--banner .page-header__art img { aspect-ratio: 16 / 5; object-fit: cover; }
+.page-header--banner .crumbs { order: -2; }
+/* stripe: a thick accent bar down the side of the title block. */
+.page-header--stripe .page-header__text { padding-left: clamp(var(--space-4), 3cqi, var(--space-6)); border-left: calc(var(--border-strong) * 4) solid var(--accent); }
+.page-header--stripe .kicker { color: var(--accent-text); }
+/* index: the kicker becomes an oversized outlined label over a compact title. */
+.page-header--index .kicker { margin-bottom: 0; font-family: var(--font-display); font-size: clamp(2.5rem, 9cqi, 7rem); font-weight: 800; line-height: 1; letter-spacing: -0.02em; text-transform: none; color: transparent; -webkit-text-stroke: max(1px, 0.02em) var(--line-strong); }
+.page-header--index .page-header__title { font-size: var(--step-4); }
+.page-header--index .page-header__meta { border-top: 0; padding-top: 0; }

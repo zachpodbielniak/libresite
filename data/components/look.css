@@ -44,8 +44,8 @@
 .look-heads-numbered main section[style*="--ls-n"] h2[id$="-h"]::before { content: var(--ls-n); display: block; margin-bottom: var(--space-2); font: 600 var(--step--1) / 1 var(--font-mono); letter-spacing: 0.08em; color: var(--accent-text); }
 .look-heads-bar main h2[id$="-h"] { padding-left: var(--space-4); border-left: 0.3em solid var(--accent); }
 .look-heads-giant main h2[id$="-h"] { font-size: var(--step-5); line-height: 0.98; letter-spacing: calc(var(--heading-tracking) - 0.015em); }
-/* Beside a picture or a form the column is narrow: giant headings step down so they keep whole words per line. */
-.look-heads-giant main :is(.media--offset .media__text, .media--split .media__text, .form--aside .form__head) h2[id$="-h"] { font-size: var(--step-4); }
+/* Beside a picture, a form or a list the column is narrow: giant headings step down so they keep whole words per line. */
+.look-heads-giant main :is(.media--offset .media__text, .media--split .media__text, .media--portrait .media__text, .form--aside .form__head, .faq--split .section-head, .text--aside .text__inner) h2[id$="-h"] { font-size: var(--step-3); }
 @media (min-width: 56rem) {
 	.look-heads-split .section-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-7); max-width: none; align-items: end; }
 	.look-heads-split .section-head > h2 { margin: 0; }
@@ -145,6 +145,8 @@ html:has(> body.look-header-glass:not(.look-frame-rail, .look-frame-split)) { sc
 /* A caption inside a duotone figure sits on the accent, so it takes the
  * accent's paired text color. */
 .look-photos-duotone main figure:has(> img:is([src$=".jpg"], [src$=".jpeg"], [src$=".png"], [src$=".webp"])) > figcaption { margin: 0; padding: var(--space-2) var(--space-3); color: var(--accent-ink); }
+/* Captions set as labels on the picture keep their own paper and ink. */
+.look-photos-duotone main :is(.media--overlay, .media--stagger) .media__figure > figcaption { color: var(--ink); }
 .look-photos-duotone main img:is([src$=".jpg"], [src$=".jpeg"], [src$=".png"], [src$=".webp"]) { filter: grayscale(1) contrast(1.1); mix-blend-mode: luminosity; }
 .look-photos-mono main img:is([src$=".jpg"], [src$=".jpeg"], [src$=".png"], [src$=".webp"]) { filter: grayscale(1) contrast(1.12); }
 .look-photos-grain main img:is([src$=".jpg"], [src$=".jpeg"], [src$=".png"], [src$=".webp"]) { filter: saturate(0.8) contrast(1.06) sepia(0.14); }
@@ -392,7 +394,7 @@ main > .block.sec-tone.sec-tone-ink {
 }
 /* Accent-painted component variants take the same token swap as accent
  * bands, so labels, rules, emphasis and buttons stay visible on them. */
-main > .block.sec-tone.sec-tone-accent, main .block:is(.cta--band, .statement--band, .marquee--accent) {
+main > .block.sec-tone.sec-tone-accent, main .block:is(.cta--band, .statement--band, .marquee--accent), main .media--flush .media__text, main .cta--sidebar .cta__text {
 	--paper: var(--ls-accent); --ink: var(--ls-accent-ink); --surface: color-mix(in srgb, var(--ls-accent-ink) 12%, var(--ls-accent));
 	--muted: var(--ls-accent-ink); --accent: var(--ls-accent-ink); --accent-ink: var(--ls-accent); --accent-text: var(--ls-accent-ink);
 	--line: color-mix(in srgb, var(--ls-accent-ink) 35%, var(--ls-accent)); --line-strong: var(--ls-accent-ink); --focus: var(--ls-accent-ink); --field: var(--ls-accent); --danger: var(--ls-accent-ink);

@@ -5,6 +5,30 @@
 .faq__item summary::after { content: "+"; font-weight: 400; color: var(--accent-text); }
 .faq__item[open] summary::after { content: "\2212"; }
 .faq__item .prose { padding-bottom: var(--space-5); }
-@media (min-width: 56rem) { .faq--columns .faq__list { max-width: none; columns: 2; column-gap: var(--space-7); border-top: 0; } .faq--columns .faq__item { break-inside: avoid; border-top: var(--border) solid var(--line); border-bottom: 0; } }
+@container (min-width: 56rem) { .faq--columns .faq__list { max-width: none; columns: 2; column-gap: var(--space-7); border-top: 0; } .faq--columns .faq__item { break-inside: avoid; border-top: var(--border) solid var(--line); border-bottom: 0; } }
 .faq--boxed .faq__list { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-3); border: 0; }
 .faq--boxed .faq__item { padding-inline: var(--space-5); background: var(--surface); border: 0; border-radius: var(--radius); }
+/* numbered: each question carries a large running number. */
+.faq--numbered .faq__list { counter-reset: ls-faq; }
+.faq--numbered .faq__item { counter-increment: ls-faq; }
+.faq--numbered .faq__item summary::before { content: counter(ls-faq, decimal-leading-zero); flex: none; min-width: 2.5em; font-family: var(--font-mono); font-size: var(--step--1); color: var(--accent-text); padding-top: 0.35em; }
+.faq--numbered .faq__item summary { justify-content: flex-start; }
+.faq--numbered .faq__item summary::after { margin-left: auto; }
+/* split: the heading stays beside the questions. */
+@container (min-width: 64rem) {
+	.faq--split > .wrap { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: var(--space-7); align-items: start; }
+	.faq--split .section-head { position: sticky; top: var(--space-5); }
+	.faq--split .section-head h2 { font-size: var(--step-3); }
+}
+.faq--split .faq__list { max-width: none; }
+/* cards: each question a card in a grid. */
+.faq--cards .faq__list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(17rem * var(--grid-scale, 1))), 1fr)); gap: var(--space-4); max-width: none; border: 0; }
+.faq--cards .faq__item { padding: var(--space-5); border: var(--border) solid var(--line-strong); border-radius: var(--radius); }
+.faq--cards .faq__item summary { padding-block: 0; font-size: var(--step-0); }
+.faq--cards .faq__item[open] summary { margin-bottom: var(--space-3); }
+.faq--cards .faq__item .prose { padding-bottom: 0; }
+/* ruled: questions in large display type between heavy rules. */
+.faq--ruled .faq__list { max-width: none; border-top: calc(var(--border-strong) * 2) solid var(--ink); }
+.faq--ruled .faq__item { border-bottom: var(--border-strong) solid var(--ink); }
+.faq--ruled .faq__item summary { font-size: var(--step-2); padding-block: var(--space-5); }
+.faq--ruled .faq__item .prose { max-width: var(--measure); }
