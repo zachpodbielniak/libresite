@@ -1892,6 +1892,10 @@ test_layout_lint(void){
 		contains(look, ".look-rhythm-bands main > .block:nth-of-type(even):not(.sec-tone, .cta--band, .statement--band,");
 		/* Side panels never wrap into a second column. */
 		contains(look, ":is(.look-frame-rail, .look-frame-split) .site-header__inner { flex-wrap: nowrap;");
+		/* Pill links keep a gap even where a side panel zeroes the list gap, and a
+		 * centred header centres its links, not only the list box. */
+		contains(look, "body.look-nav-pill .site-nav ul { gap: var(--space-2); }");
+		contains(look, ".look-header-centered .site-nav, .look-header-centered .site-nav ul { justify-content: center; }");
 		/* The offset margin is added beside a dealt column, never taken out of it. */
 		contains(look, "var(--max-width) + var(--ls-offset)");
 		/* One frame per picture, and turned pictures never widen the page. */

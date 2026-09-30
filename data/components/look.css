@@ -10,7 +10,9 @@
 
 /* Header. */
 .look-header-centered .site-header__inner { flex-direction: column; justify-content: center; padding-block: var(--space-4); }
-.look-header-centered .site-nav { justify-content: center; }
+.look-header-centered .site-nav, .look-header-centered .site-nav ul { justify-content: center; }
+/* The open phone menu is a column: centre it under the centred brand. */
+@media (max-width: 47.99rem) { .look-header-centered .site-nav, .look-header-centered .site-nav ul { align-items: center; } }
 .look-header-stacked .site-header { border-bottom: 0; }
 .look-header-stacked .site-header__inner { flex-direction: column; align-items: stretch; gap: 0; padding-block: var(--space-5) 0; }
 .look-header-stacked .brand { font-size: var(--step-4); line-height: 1; }
@@ -35,6 +37,8 @@
 .look-nav-pill .site-nav a:not(.button) { padding-inline: 0.95em; border: var(--border) solid var(--line-strong); border-radius: 999px; }
 .look-nav-pill .site-nav a:not(.button):hover { border-color: var(--ink); }
 .look-nav-pill .site-nav a[aria-current="page"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+/* Bordered pills need air on every side, including between wrapped rows and in a column. */
+body.look-nav-pill .site-nav ul { gap: var(--space-2); }
 .look-nav-caps .site-nav a:not(.button) { font-size: var(--step--1); letter-spacing: 0.14em; text-transform: uppercase; }
 .look-nav-slashes .site-nav ul { gap: var(--space-1) var(--space-3); }
 .look-nav-slashes .site-nav li + li::before { content: "/"; margin-right: var(--space-3); color: var(--muted); }
