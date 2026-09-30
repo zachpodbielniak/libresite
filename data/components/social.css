@@ -17,3 +17,8 @@
 /* band: painted tiles, one per network. */
 .social--band .social__link { padding: var(--space-5); background: var(--surface); border: 0; }
 .social--band .social__icon { width: 2.25rem; height: 2.25rem; }
+/* On a narrow column the handle drops under the network name. */
+@container (max-width: 30rem) {
+	.social--list .social__link { grid-template-columns: auto minmax(0, 1fr); }
+	.social--list .social__handle { grid-column: 2; text-align: left; font-size: var(--step-0); }
+}

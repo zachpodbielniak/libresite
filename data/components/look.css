@@ -292,7 +292,10 @@ body .split--contrast .split__panel:last-child { background: var(--accent); colo
 .look-kicker-number .kicker::before { content: "/ "; color: var(--accent-text); }
 /* The page header's oversized label is its own treatment: the small-label looks do not apply to it. */
 body main .page-header--index .kicker { display: block; padding: 0; border: 0; border-radius: 0; font-family: var(--font-display); font-weight: 800; letter-spacing: -0.02em; text-transform: none; color: var(--accent-text); }
-body main .page-header--index .kicker::before { content: none; }
+/* Guards: important declarations in an earlier layer win over any later
+ * layer, so a site's signature layer can never remove these. */
+body main .page-header--index .kicker::before { content: none !important; }
+:focus-visible { outline: 3px solid var(--focus) !important; outline-offset: 3px !important; }
 
 /* Backdrop behind the opening section. */
 .look-backdrop-glow main > .block:first-child { background: radial-gradient(ellipse 60% 70% at 85% 10%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%), radial-gradient(ellipse 50% 60% at 5% 90%, var(--surface), transparent 70%); }

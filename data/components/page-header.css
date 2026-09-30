@@ -49,7 +49,7 @@
 .page-header--stripe .page-header__text { padding-left: clamp(var(--space-4), 3cqi, var(--space-6)); border-left: calc(var(--border-strong) * 4) solid var(--accent); }
 .page-header--stripe .kicker { color: var(--accent-text); }
 /* index: the kicker becomes an oversized label in the accent over a compact title. */
-.page-header--index .kicker { display: block; max-width: 18ch; margin-bottom: var(--space-4); font-family: var(--font-display); font-size: clamp(2.25rem, 7cqi, 5.5rem); font-weight: 800; line-height: 1.05; letter-spacing: -0.02em; text-transform: none; color: var(--accent-text); }
+.page-header--index .kicker { display: block; max-width: 18ch; margin-bottom: var(--space-5); font-family: var(--font-display); font-size: clamp(2.25rem, 7cqi, 5.5rem); font-weight: 800; line-height: 1.2; letter-spacing: -0.02em; text-transform: none; color: var(--accent-text); }
 .page-header--index .kicker::before { content: none; }
 .page-header--index .page-header__title { font-size: var(--step-4); }
 .page-header--index .page-header__meta { border-top: 0; padding-top: 0; }

@@ -57,9 +57,11 @@ hr { border: 0; border-top: var(--border) solid var(--line); margin: var(--space
 main, .site-footer { container-type: inline-size; }
 .block { padding-block: var(--section-space); }
 .block + .block { padding-top: 0; }
-/* Sections with no padding of their own (a full cover, a jump bar) still
- * leave room above the next section's content. */
-.block.cover + .block, .block.jumpnav + .block { padding-top: var(--section-space); }
+/* Sections with little or no padding of their own (a full cover, a jump bar,
+ * a scrolling band, a notice, a floated figure) still leave room above the
+ * next section's content, with or without a divider between them. */
+.block.cover + .block, .block.jumpnav + .block, .block.marquee + .block, .block.notice + .block,
+.block.figure + .block { padding-top: var(--section-space); }
 .block--bleed + .block, .block + .block--bleed { padding-top: var(--section-space); }
 .prose { max-width: var(--measure); }
 .prose > :last-child { margin-bottom: 0; }

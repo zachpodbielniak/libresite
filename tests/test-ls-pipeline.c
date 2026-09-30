@@ -37,6 +37,8 @@ site_generate(LsProvider *provider, JsonObject *settings, const gchar *system, c
 	g_assert_nonnull(schema);
 	if (strstr(schema, "\"tokens\"") != NULL)
 		return read_fixture("plan.json");
+	if (strstr(schema, "\"required\": [\"css\"]") != NULL)
+		return g_strdup("{\"css\": \".em { color: var(--accent-text); }\"}");
 	if (strstr(schema, "\"svg\"") != NULL) {
 		g_autofree gchar *svg = read_fixture("mark.svg");
 		g_autoptr(JsonNode) node = json_node_new(JSON_NODE_OBJECT);
@@ -121,7 +123,8 @@ test_composed_run(void){
 			g_error("missing %s", present[i]);
 	}
 	g_assert_false(g_file_test(specs, G_FILE_TEST_EXISTS));
-	g_assert_cmpint(((SiteProvider *)provider)->calls, ==, 1 + 5 + 2);
+	/* The plan, five pages, two artworks and the signature layer. */
+	g_assert_cmpint(((SiteProvider *)provider)->calls, ==, 1 + 5 + 2 + 1);
 	g_assert_true(g_file_get_contents(index_path, &index, NULL, NULL));
 	g_assert_nonnull(strstr(index, "<link rel=\"canonical\" href=\"https://harbor.example/\">"));
 }

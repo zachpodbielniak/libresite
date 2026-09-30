@@ -18,6 +18,7 @@ typedef struct {
 	gboolean bad_plan;		/* first plan answer fails contrast */
 	gboolean drop_note;		/* first start.html answer lacks its literal */
 	gboolean default_plan;	/* first plan answer uses the house default colors */
+	gint bad_signature;		/* invalid signature answers to give first */
 	gboolean block;			/* wait for cancellation */
 	GCancellable *started;		/* cancelled when a call begins */
 	gchar *last_schema;
@@ -90,6 +91,19 @@ fake_generate(LsProvider *provider, JsonObject *settings, const gchar *system,
 			memcpy(strstr(answer, "#1f5c4a"), "#a8431c", 7);
 			self->default_plan = FALSE;
 		}
+		g_mutex_unlock(&self->lock);
+	} else if (schema != NULL && strstr(schema, "\"required\": [\"css\"]") != NULL) {
+		/* The signature layer: a small divider drawn from a data image. */
+		key = g_strdup("signature");
+		g_mutex_lock(&self->lock);
+		if (self->bad_signature > 0) {
+			self->bad_signature--;
+			answer = g_strdup("{\"css\":\".em { color: #ff0000; }\"}");
+		} else
+			answer = g_strdup("{\"css\":\"main > .block + .block::before { content: \\\"\\\"; display: block; width: 3rem; "
+				"height: 0.6rem; margin-inline: auto; background-color: var(--accent); -webkit-mask: url(\\\"data:image/svg+xml,"
+				"%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 6'%3E%3Cpath d='M0 3h30'/%3E%3C/svg%3E\\\"); } "
+				".em { color: var(--accent-text); }\"}");
 		g_mutex_unlock(&self->lock);
 	} else if (schema != NULL && strstr(schema, "\"svg\"") != NULL) {
 		g_autofree gchar *svg = fixture("mark.svg");
@@ -311,7 +325,7 @@ test_parallel(void){
 	g_autoptr(GError) error = NULL;
 	const gchar *paths[] = {"index.html", "work.html", "start.html", "404.html", "privacy.html",
 		"terms.html", "styles.css", "site.js", "robots.txt", "assets/mark.svg", "assets/bench.svg",
-		"site/pages/index.json", "site/pages/work.json", "site/pages/start.json"};
+		"site/pages/index.json", "site/pages/work.json", "site/pages/start.json", "site/signature.css"};
 	guint i;
 	fixture_setup(&fixture, 8, 1);
 	run_plan(&fixture);
@@ -323,8 +337,18 @@ test_parallel(void){
 	for (i = 0; i < G_N_ELEMENTS(paths); i++)
 		if (ls_context_lookup(fixture.context, paths[i]) == NULL)
 			g_error("missing %s", paths[i]);
-	g_assert_cmpint(fixture.provider->calls, ==, 8);
+	/* One call more than pages and artwork alone: the signature layer. */
+	g_assert_cmpint(fixture.provider->calls, ==, 9);
 	g_assert_cmpint(fixture.provider->max_in_flight, >=, 3);
+	/* The signature layer comes last in the styles and is kept for rebuilds. */
+	g_assert_nonnull(strstr(artifact_text(fixture.context, "styles.css"), "/* Site signature */\n@layer ls-signature {\nmain > .block + .block::before"));
+	g_assert_nonnull(strstr(artifact_text(fixture.context, "site/signature.css"), "var(--accent)"));
+	{
+		const gchar *prompt = g_ptr_array_index(prompts_for(fixture.provider, "signature"), 0);
+		g_assert_nonnull(strstr(prompt, "\"genes\":{\"curve\":"));
+		g_assert_nonnull(strstr(prompt, "motif"));
+		g_assert_null(strstr(prompt, "\"pages\""));
+	}
 	g_assert_cmpuint(g_hash_table_size(fixture.provider->threads), >=, 3);
 	g_assert_cmpint(fixture.off_thread, ==, 0);
 	g_assert_cmpint(fixture.progress, >=, 5);
@@ -337,6 +361,36 @@ test_parallel(void){
 		"\"style\":\"Bold carved marks"));
 	g_assert_null(strstr(g_ptr_array_index(prompts_for(fixture.provider, "work.html"), 0), "Local form"));
 	fixture_teardown(&fixture);
+}
+
+/* A signature that breaks the rules is sent back once with the reason; one
+ * that never passes is left out and the site still builds, plainly. */
+static void
+test_signature_fallback(void){
+	gint bad[] = {1, 5};
+	guint v;
+	for (v = 0; v < G_N_ELEMENTS(bad); v++) {
+		Fixture fixture;
+		g_autoptr(GError) error = NULL;
+		gboolean okay;
+		fixture_setup(&fixture, 8, 1);
+		run_plan(&fixture);
+		fixture.provider->bad_signature = bad[v];
+		okay = run_step(&fixture, LS_TYPE_PAGES_STEP, 1, NULL, &error);
+		g_assert_no_error(error);
+		g_assert_true(okay);
+		if (v == 0) {
+			GPtrArray *prompts = prompts_for(fixture.provider, "signature");
+			g_assert_cmpuint(prompts->len, ==, 2);
+			g_assert_nonnull(strstr(g_ptr_array_index(prompts, 1), "colours must be var(--paper)"));
+			g_assert_nonnull(ls_context_lookup(fixture.context, "site/signature.css"));
+		} else {
+			g_assert_null(ls_context_lookup(fixture.context, "site/signature.css"));
+			g_assert_null(strstr(artifact_text(fixture.context, "styles.css"), "Site signature"));
+			g_assert_nonnull(ls_context_lookup(fixture.context, "index.html"));
+		}
+		fixture_teardown(&fixture);
+	}
 }
 
 static void
@@ -368,7 +422,7 @@ test_retry_one(void){
 		g_assert_no_error(error);
 		g_assert_true(okay);
 	}
-	g_assert_cmpint(fixture.provider->calls, ==, 9);
+	g_assert_cmpint(fixture.provider->calls, ==, 10);
 	work = prompts_for(fixture.provider, "work.html");
 	g_assert_cmpuint(work->len, ==, 2);
 	g_assert_nonnull(strstr(g_ptr_array_index(work, 1), "unknown component 'banner'"));
@@ -459,7 +513,11 @@ test_review(void){
 		g_assert_no_error(error);
 		g_assert_true(okay);
 	}
-	g_assert_cmpint(fixture.provider->calls, ==, 1 + 7 + 5);
+	/* The plan, seven write calls (with the signature) and five review calls:
+	 * a review keeps the signature it found and writes no new one. */
+	g_assert_cmpint(fixture.provider->calls, ==, 1 + 8 + 5);
+	g_assert_cmpuint(prompts_for(fixture.provider, "signature")->len, ==, 1);
+	g_assert_nonnull(strstr(artifact_text(fixture.context, "styles.css"), "/* Site signature */"));
 	g_assert_cmpuint(prompts_for(fixture.provider, "work.html")->len, ==, 2);
 	g_assert_nonnull(strstr(g_ptr_array_index(prompts_for(fixture.provider, "work.html"), 1), "Ladderback chair"));
 	fixture_teardown(&fixture);
@@ -736,6 +794,7 @@ main(int argc, char **argv){
 	g_test_add_func("/pages/plan-identity", test_plan_identity);
 	g_test_add_func("/pages/plan-photos", test_plan_photos);
 	g_test_add_func("/pages/plan-social", test_plan_social);
+	g_test_add_func("/pages/signature-fallback", test_signature_fallback);
 	g_test_add_func("/pages/parallel", test_parallel);
 	g_test_add_func("/pages/sequential", test_sequential);
 	g_test_add_func("/pages/retry-one", test_retry_one);

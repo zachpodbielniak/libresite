@@ -654,6 +654,83 @@ css_problem(const gchar *css, gsize limit){
 	return NULL;
 }
 
+/* The signature layer: plain CSS in the site's own tokens. Colours come only
+ * from the custom properties, so dark mode and the contrast guarantees hold;
+ * nothing may hide, pin or force content. Shapes are percent-encoded SVG data
+ * images, used as masks or backgrounds. */
+static gchar *
+signature_problem(const gchar *css){
+	const gchar *banned[] = {"!important", "display:none", "display: none", "visibility:hidden",
+		"visibility: hidden", "position:fixed", "position: fixed", "rgb(", "rgba(", "hsl(", "hsla(",
+		"hwb(", "lab(", "lch(", "color-mix(", "font-size:0", "font-size: 0", "content: attr", "content:attr"};
+	g_autofree gchar *lower = NULL;
+	GString *plain;
+	const gchar *p;
+	gchar *why;
+	guint i;
+	if (css == NULL || strlen(css) > 8000)
+		return g_strdup("the signature must be CSS of at most 8000 bytes");
+	lower = g_ascii_strdown(css, -1);
+	for (i = 0; i < G_N_ELEMENTS(banned); i++)
+		if (strstr(lower, banned[i]) != NULL)
+			return g_strdup_printf("the signature must not contain '%s'", banned[i]);
+	/* url() may hold only a percent-encoded SVG data image. */
+	plain = g_string_new(NULL);
+	for (p = lower; *p != '\0'; p++) {
+		if (g_str_has_prefix(p, "url(")) {
+			const gchar *target = p + 4, *end;
+			while (*target == ' ' || *target == '"' || *target == '\'')
+				target++;
+			if (!g_str_has_prefix(target, "data:image/svg+xml,") || strchr(target, '<') != NULL ||
+				(end = strchr(target, ')')) == NULL || memchr(target, '<', (gsize)(end - target)) != NULL) {
+				g_string_free(plain, TRUE);
+				return g_strdup("signature url() may only hold a percent-encoded data:image/svg+xml image");
+			}
+			if (strstr(target, "script") != NULL || strstr(target, "href") != NULL) {
+				g_string_free(plain, TRUE);
+				return g_strdup("signature SVG images may not hold scripts or links");
+			}
+			p = end;
+			continue;
+		}
+		g_string_append_c(plain, *p);
+	}
+	/* Outside images, colours are tokens: no hex literals. */
+	for (p = plain->str; *p != '\0'; p++)
+		if (*p == '#' && g_ascii_isxdigit(p[1]) && g_ascii_isxdigit(p[2]) && g_ascii_isxdigit(p[3]) &&
+			(p == plain->str || strchr(" :,(", p[-1]) != NULL)) {
+			g_string_free(plain, TRUE);
+			return g_strdup("signature colours must be var(--paper), var(--ink), var(--accent) and the other tokens, not literals");
+		}
+	g_string_free(plain, TRUE);
+	why = NULL;
+	{
+		gint depth = 0;
+		for (p = css; *p != '\0'; p++) {
+			if (*p == '{')
+				depth++;
+			else if (*p == '}' && --depth < 0)
+				break;
+		}
+		if (depth != 0)
+			why = g_strdup("the signature has unbalanced braces");
+	}
+	if (why == NULL && (strstr(lower, "</") != NULL || strstr(lower, "@import") != NULL ||
+		strstr(lower, "expression(") != NULL || strstr(lower, "javascript:") != NULL || strstr(lower, "@charset") != NULL))
+		why = g_strdup("the signature must not contain markup, imports, scripts or expressions");
+	return why;
+}
+
+gboolean
+ls_components_check_signature(const gchar *css, GError **error){
+	g_autofree gchar *why = signature_problem(css);
+	if (why != NULL) {
+		g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID, why);
+		return FALSE;
+	}
+	return TRUE;
+}
+
 /* ---- Catalog loading ----------------------------------------------------- */
 
 static const gchar *const slot_types[] = {"text", "rich", "link", "links", "image", "items",
@@ -1208,6 +1285,17 @@ ls_components_apply_structure(LsComponents *self, JsonNode *plan_node, const gch
 	if (json_object_has_member(plan, "structure"))
 		json_object_remove_member(plan, "structure");
 	json_object_set_object_member(plan, "structure", ls_components_deal_structure(self, seed));
+	/* Stock flourishes become fingerprints once a visitor has seen them on
+	 * another site. Without a theme, the signature layer written for this
+	 * site supplies dividers, emphasis, labels and backdrops instead. */
+	if (!themed) {
+		const gchar *plain[][2] = {{"ornament", "none"}, {"emphasis", "accent"}, {"kicker", "mono"},
+			{"backdrop", "none"}, {"edges", "straight"}, {"texture", "none"}, {"links", "underline"}};
+		guint p;
+		for (p = 0; p < G_N_ELEMENTS(plain); p++)
+			if (member_object(self->looks, plain[p][0]) != NULL)
+				json_object_set_string_member(look, plain[p][0], plain[p][1]);
+	}
 	/* Headings beside or hanging off the content need a wide column: the
 	 * narrow journal frame and narrow dealt columns keep them on top. */
 	if ((g_strcmp0(ls_string(look, "headpos"), "side") == 0 || g_strcmp0(ls_string(look, "headpos"), "hang") == 0) &&
@@ -1932,7 +2020,7 @@ check_plan_into(Problems *problems, LsComponents *self, JsonNode *node){
 		return;
 	}
 	if (!ls_object_keys(plan, "|name|tagline|lang|character|tokens|fonts|brand|nav|action|footer|voice|look|art|"
-		"photos|social|pages|css|restyle|ui|structure|", NULL))
+		"photos|social|pages|css|restyle|ui|structure|signature|", NULL))
 		problem(problems, "unknown top-level key; allowed: name, tagline, lang, character, tokens, fonts, brand, "
 			"nav, action, footer, voice, look, art, photos, pages, css, restyle, ui");
 	check_photos(problems, plan);
@@ -2081,6 +2169,13 @@ check_plan_into(Problems *problems, LsComponents *self, JsonNode *node){
 	if (json_object_has_member(plan, "css")) {
 		g_autofree gchar *why = is_string(json_object_get_member(plan, "css"))
 			? css_problem(ls_string(plan, "css"), 24000) : g_strdup("css must be a string");
+		if (why != NULL)
+			problem(problems, "%s", why);
+	}
+	/* signature is the builder's: the checked layer written beside the pages. */
+	if (json_object_has_member(plan, "signature")) {
+		g_autofree gchar *why = is_string(json_object_get_member(plan, "signature"))
+			? signature_problem(ls_string(plan, "signature")) : g_strdup("signature must be a string");
 		if (why != NULL)
 			problem(problems, "%s", why);
 	}
@@ -3446,7 +3541,11 @@ section_classes(Render *render, const gchar *name, guint index, gboolean reading
 	out = g_string_new(NULL);
 	if (in_list(bleed_sections, name) && seed_range(seed, "bleed", 0, 1) < gene(structure, "bleed", 0))
 		g_string_append(out, " sec-w-bleed");
-	else if (in_list(narrow_sections, name) && seed_range(seed, "narrow", 0, 1) < gene(structure, "narrow", 0))
+	/* A narrow section only narrows a wide column; inside the journal
+	 * frame or a narrow dealt column it would squeeze its text. */
+	else if (in_list(narrow_sections, name) && seed_range(seed, "narrow", 0, 1) < gene(structure, "narrow", 0) &&
+		g_strcmp0(ls_string(member_object(render->plan, "look"), "frame"), "center") != 0 &&
+		gene(structure, "width", 76) >= 64)
 		g_string_append(out, " sec-w-narrow");
 	else if (in_list(offset_sections, name) && seed_range(seed, "offset", 0, 1) < gene(structure, "offset", 0))
 		g_string_append(out, " sec-offset");
@@ -4368,7 +4467,7 @@ ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages
 	/* Library styles sit in cascade layers; the plan's restyles and CSS are
 	 * unlayered, so any rule a site writes overrides any library rule. */
 	css = g_string_new("/* Generated by libresite from the site plan and component library. */\n"
-		"@layer ls-base, ls-components, ls-look;\n"
+		"@layer ls-base, ls-components, ls-look, ls-signature;\n"
 		"@media (prefers-reduced-motion: no-preference) { @view-transition { navigation: auto; } }\n");
 	{
 		g_autofree gchar *tokens = token_css(member_object(plan, "tokens"), member_object(plan, "structure"));
@@ -4403,6 +4502,11 @@ ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages
 	}
 	if (ls_string(plan, "css") != NULL)
 		g_string_append_printf(css, "\n/* Site plan */\n%s\n", ls_string(plan, "css"));
+	/* The site's signature sits in the last layer: it leads over the library,
+	 * the site's own CSS still leads over it, and the library's few
+	 * !important guards (focus rings, the index label) hold against it. */
+	if (ls_string(plan, "signature") != NULL)
+		g_string_append_printf(css, "\n/* Site signature */\n@layer ls-signature {\n%s\n}\n", ls_string(plan, "signature"));
 	add_file(files, "styles.css", css->str);
 	add_file(files, "site.js", js->str);
 	add_file(files, "robots.txt", robots->str);

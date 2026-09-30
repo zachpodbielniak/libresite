@@ -281,6 +281,19 @@ gboolean ls_components_check_art(const gchar *svg, GError **error);
  */
 JsonArray *ls_components_social(LsComponents *self, JsonArray *links);
 /**
+ * ls_components_check_signature:
+ * @css: (nullable): a site's signature layer
+ * @error: return location for an error
+ *
+ * Checks the per-site signature layer written beside the pages: CSS of at
+ * most 8000 bytes whose colours are only the site's custom properties, whose
+ * url() values are only percent-encoded SVG data images, and which never
+ * hides, pins or forces content (no display:none, visibility:hidden,
+ * position:fixed or !important) and holds no markup, imports or scripts.
+ * Returns: whether the layer may be published
+ */
+gboolean ls_components_check_signature(const gchar *css, GError **error);
+/**
  * ls_components_compose:
  * @self: a component library
  * @plan: (transfer none): a valid plan

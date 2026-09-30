@@ -831,7 +831,7 @@ test_look_and_restyle(void){
 	contains(file_content(bundle, "work.html"), "look-panels-outlined look-rhythm-bands");
 	contains(file_content(bundle, "404.html"), "look-footer-big");
 	css = file_content(bundle, "styles.css");
-	layers = strstr(css, "@layer ls-base, ls-components, ls-look;");
+	layers = strstr(css, "@layer ls-base, ls-components, ls-look, ls-signature;");
 	hero = strstr(css, "@layer ls-components {\n.hero {");
 	look = strstr(css, "@layer ls-look {");
 	restyle = strstr(css, "/* Site restyle: hero */\n.hero__title { font-style: italic; }");
@@ -1249,6 +1249,69 @@ test_headpos_fits(void){
 		}
 	}
 	g_assert_cmpuint(side, >, 0);
+}
+
+/* The signature layer keeps to the site's tokens and never hides or pins
+ * content; stock flourishes are retired unless a theme names them. */
+static void
+test_signature_rules(void){
+	g_autoptr(LsComponents) components = library();
+	const gchar *good[] = {
+		".em { color: var(--accent-text); border-bottom: 2px dashed currentColor; }",
+		"main > .block + .block::before { content: \"\"; display: block; width: 3rem; height: 1rem; margin-inline: auto; "
+		"background-color: var(--accent); mask: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 10'%3E%3Ccircle cx='5' cy='5' r='4'/%3E%3C/svg%3E\") center / contain no-repeat; }",
+		"@media (prefers-reduced-motion: no-preference) { .kicker { transition: color 0.2s; } }"};
+	const gchar *bad[] = {
+		".em { color: #c0ffee; }", ".em { color: rgb(1, 2, 3); }", ".site-nav { display: none; }",
+		".em { color: var(--ink) !important; }", ".kicker { position: fixed; }",
+		".em { background: url(https://example.com/x.png); }",
+		".em { background: url(\"data:image/svg+xml,<svg></svg>\"); }",
+		".em { background: url(\"data:image/svg+xml,%3Csvg%3E%3Cscript%3E%3C/script%3E%3C/svg%3E\"); }",
+		".em { color: var(--ink);", "@import url(x.css);"};
+	guint i;
+	for (i = 0; i < G_N_ELEMENTS(good); i++) {
+		g_autoptr(GError) error = NULL;
+		g_assert_true(ls_components_check_signature(good[i], &error));
+		g_assert_no_error(error);
+	}
+	for (i = 0; i < G_N_ELEMENTS(bad); i++) {
+		g_autoptr(GError) error = NULL;
+		g_assert_false(ls_components_check_signature(bad[i], &error));
+		g_assert_nonnull(error);
+	}
+	/* Without a theme the stock flourishes are off; with one they stay. */
+	for (i = 0; i < 2; i++) {
+		g_autoptr(JsonNode) plan = load("plan.json");
+		JsonObject *look = json_object_get_object_member(json_node_get_object(plan), "look");
+		json_object_set_string_member(look, "ornament", "rule");
+		json_object_set_string_member(look, "emphasis", "highlight");
+		g_assert_true(ls_components_apply_structure(components, plan, "retire", i == 1));
+		g_assert_cmpstr(json_object_get_string_member(look, "ornament"), ==, i == 0 ? "none" : "rule");
+		g_assert_cmpstr(json_object_get_string_member(look, "emphasis"), ==, i == 0 ? "accent" : "highlight");
+	}
+	/* A plan's signature is checked and composed last. */
+	{
+		g_autoptr(JsonNode) plan = load("plan.json");
+		g_autoptr(JsonObject) pages = fixture_pages();
+		g_autoptr(GError) error = NULL;
+		g_autofree gchar *text = NULL;
+		g_autoptr(JsonNode) bundle = NULL;
+		const gchar *css;
+		json_object_set_string_member(json_node_get_object(plan), "signature", good[0]);
+		text = ls_components_compose(components, plan, pages, NULL, &error);
+		g_assert_no_error(error);
+		bundle = ls_json_parse(text, NULL);
+		css = file_content(bundle, "styles.css");
+		g_assert_nonnull(strstr(css, "/* Site signature */"));
+		g_assert_true(g_str_has_suffix(css, "border-bottom: 2px dashed currentColor; }\n}\n"));
+		g_assert_nonnull(strstr(css, "@layer ls-base, ls-components, ls-look, ls-signature;"));
+		g_assert_nonnull(strstr(css, "/* Site signature */\n@layer ls-signature {\n"));
+		json_object_set_string_member(json_node_get_object(plan), "signature", bad[0]);
+		g_clear_pointer(&text, g_free);
+		text = ls_components_compose(components, plan, pages, NULL, &error);
+		g_assert_null(text);
+		g_assert_nonnull(error);
+	}
 }
 
 /* Home openings rotate between sites, stay stable per site and are real. */
@@ -1884,6 +1947,7 @@ main(int argc, char **argv){
 	g_test_add_func("/components/section-numbers", test_section_numbers);
 	g_test_add_func("/components/variant-family", test_variant_family);
 	g_test_add_func("/components/headpos-fits", test_headpos_fits);
+	g_test_add_func("/components/signature-rules", test_signature_rules);
 	g_test_add_func("/components/social", test_social);
 	g_test_add_func("/components/share", test_share);
 	g_test_add_func("/components/suggest-opening", test_suggest_opening);

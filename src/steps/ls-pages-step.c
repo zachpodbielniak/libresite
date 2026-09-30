@@ -5,6 +5,7 @@
 #include "steps/ls-step.h"
 #include "core/ls-components.h"
 #include <string.h>
+#include <math.h>
 
 #define PLAN_PATH "site/plan.json"
 #define SPEC_DIR "site/pages/"
@@ -547,7 +548,9 @@ ls_plan_step_init(LsPlanStep *self){
 
 /* ---- Pages ------------------------------------------------------------- */
 
-typedef enum { JOB_PAGE, JOB_ART } JobKind;
+typedef enum { JOB_PAGE, JOB_ART, JOB_SIGNATURE } JobKind;
+
+#define SIGNATURE_PATH "site/signature.css"
 
 typedef struct {
 	JobKind kind;
@@ -556,6 +559,7 @@ typedef struct {
 	gchar *feedback;
 	JsonObject *settings;
 	gint64 attempts;
+	gboolean optional;	/* a permanent failure is dropped, not fatal */
 	/* Written by the worker, read by the step thread after the queue pop. */
 	gchar *response;
 	GError *error;
@@ -564,7 +568,7 @@ typedef struct {
 	gint64 elapsed;
 	/* Accepted result. */
 	JsonNode *spec;
-	gchar *svg;
+	gchar *svg;		/* artwork, or the signature CSS */
 } Job;
 
 static void
@@ -606,7 +610,7 @@ worker(gpointer data, gpointer user_data){
 
 static const gchar *
 job_label(Job *job){
-	return job->kind == JOB_PAGE ? "page" : "art";
+	return job->kind == JOB_PAGE ? "page" : job->kind == JOB_ART ? "art" : "signature";
 }
 
 /* Runs on the step thread: parse and check one answer. */
@@ -625,6 +629,18 @@ accept_job(Job *job, LsComponents *components, JsonNode *plan, GError **error){
 			return FALSE;
 		g_clear_pointer(&job->spec, json_node_unref);
 		job->spec = g_steal_pointer(&node);
+		return TRUE;
+	}
+	if (job->kind == JOB_SIGNATURE) {
+		const gchar *css = ls_string(json_node_get_object(node), "css");
+		if (css == NULL) {
+			g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID, "The response needs a css string");
+			return FALSE;
+		}
+		if (!ls_components_check_signature(css, error))
+			return FALSE;
+		g_free(job->svg);
+		job->svg = g_strdup(css);
 		return TRUE;
 	}
 	if (ls_string(json_node_get_object(node), "svg") == NULL) {
@@ -700,6 +716,14 @@ run_jobs(LsStep *self, LsProvider *provider, const gchar *system, GPtrArray *job
 			continue;
 		}
 		pending--;
+		/* An optional job that cannot be made valid is simply left out. */
+		if (job->optional && !g_error_matches(local_error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
+			g_autofree gchar *line = first_line(local_error->message);
+			g_autofree gchar *status = g_strdup_printf("%s left out: %s", job_label(job), line);
+			g_signal_emit_by_name(self, "progress", status);
+			g_clear_pointer(&job->svg, g_free);
+			continue;
+		}
 		/* Keep the first real failure; sibling cancellations follow from it. */
 		if (failure == NULL && !g_error_matches(local_error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
 			failure = g_steal_pointer(&local_error);
@@ -790,6 +814,65 @@ art_prompt(LsPrompts *prompts, LsRecipe *recipe, JsonObject *config, LsComponent
 	return ls_prompts_render_spec(prompts, recipe, config, "art", NULL, task_json, error);
 }
 
+/* Continuous numbers dealt from the site, so the signature's shapes differ
+ * between sites even where their motifs are alike. */
+static JsonObject *
+signature_genes(JsonObject *plan){
+	const gchar *names[][3] = {{"curve", "0", "1"}, {"rhythm", "2", "9"}, {"weight", "1", "4"},
+		{"angle", "-14", "14"}, {"density", "0.2", "1"}, {"scale", "0.6", "1.6"}, {"roundness", "0", "1"}};
+	JsonObject *genes = json_object_new();
+	guint i;
+	for (i = 0; i < G_N_ELEMENTS(names); i++) {
+		g_autofree gchar *salt = g_strdup_printf("%s\n%s\n%s", names[i][0], ls_string(plan, "name"),
+			ls_string(plan, "character") != NULL ? ls_string(plan, "character") : "");
+		g_autoptr(GChecksum) sum = g_checksum_new(G_CHECKSUM_SHA256);
+		guint8 digest[32];
+		gsize length = sizeof digest;
+		gdouble unit, low = g_ascii_strtod(names[i][1], NULL), high = g_ascii_strtod(names[i][2], NULL);
+		g_checksum_update(sum, (const guchar *)salt, -1);
+		g_checksum_get_digest(sum, digest, &length);
+		unit = ((digest[0] << 8) | digest[1]) / 65535.0;
+		json_object_set_double_member(genes, names[i][0], floor((low + (high - low) * unit) * 100 + 0.5) / 100);
+	}
+	return genes;
+}
+
+/* The signature writer sees the design, not the pages: name, character,
+ * voice, tokens, fonts, look and the dealt shape numbers. */
+static gchar *
+signature_prompt(LsPrompts *prompts, LsRecipe *recipe, JsonObject *config, JsonObject *plan, GError **error){
+	g_autoptr(JsonObject) task = json_object_new();
+	g_autoptr(JsonNode) node = json_node_new(JSON_NODE_OBJECT);
+	g_autofree gchar *task_json = NULL;
+	const gchar *keys[] = {"name", "tagline", "character", "voice"};
+	const gchar *members[] = {"tokens", "fonts", "look"};
+	guint i;
+	for (i = 0; i < G_N_ELEMENTS(keys); i++)
+		if (ls_string(plan, keys[i]) != NULL)
+			json_object_set_string_member(task, keys[i], ls_string(plan, keys[i]));
+	for (i = 0; i < G_N_ELEMENTS(members); i++)
+		if (member_object_of(plan, members[i]) != NULL)
+			json_object_set_object_member(task, members[i], json_object_ref(member_object_of(plan, members[i])));
+	json_object_set_object_member(task, "genes", signature_genes(plan));
+	json_node_set_object(node, task);
+	task_json = ls_json_encode(node);
+	return ls_prompts_render_spec(prompts, recipe, config, "signature", NULL, task_json, error);
+}
+
+/* Whether the recipe's plan step applies a whole-site theme, whose own
+ * details stand in for a signature. */
+static gboolean
+recipe_themed(LsRecipe *recipe){
+	JsonArray *steps = ls_recipe_get_steps(recipe);
+	guint i;
+	for (i = 0; i < json_array_get_length(steps); i++) {
+		JsonObject *step = json_array_get_object_element(steps, i);
+		if (g_strcmp0(ls_string(step, "type"), "plan") == 0 && plan_theme(step) != NULL)
+			return TRUE;
+	}
+	return FALSE;
+}
+
 /* Route names appear quoted or delimited in validation errors; require a
  * boundary so atlas.html never matches work-atlas.html. */
 static Job *
@@ -831,6 +914,13 @@ site_bundle(LsComponents *components, JsonNode *plan, GPtrArray *jobs, const gch
 		Job *job = g_ptr_array_index(jobs, i);
 		if (job->kind == JOB_PAGE)
 			json_object_set_member(pages, job->path, json_node_ref(job->spec));
+		/* The accepted signature joins the plan the site is composed from. */
+		else if (job->kind == JOB_SIGNATURE && JSON_NODE_HOLDS_OBJECT(plan)) {
+			if (job->svg != NULL)
+				json_object_set_string_member(json_node_get_object(plan), "signature", job->svg);
+			else if (json_object_has_member(json_node_get_object(plan), "signature"))
+				json_object_remove_member(json_node_get_object(plan), "signature");
+		}
 	}
 	text = ls_components_compose(components, plan, pages, base_url, error);
 	if (text == NULL)
@@ -847,7 +937,7 @@ site_bundle(LsComponents *components, JsonNode *plan, GPtrArray *jobs, const gch
 			g_autofree gchar *path = g_strconcat(SPEC_DIR, slug, ".json", NULL);
 			g_autofree gchar *spec = ls_json_encode(job->spec);
 			add_file(files, path, spec);
-		} else
+		} else if (job->svg != NULL)
 			add_file(files, job->path, job->svg);
 	}
 	json_node_set_object(root, bundle);
@@ -941,6 +1031,29 @@ pages_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *pro
 		art_jobs++;
 		if (job->prompt == NULL)
 			return FALSE;
+	}
+	/* A review keeps the signature the pages step wrote. */
+	if (review) {
+		const LsArtifact *signature = ls_context_lookup(context, SIGNATURE_PATH);
+		if (signature != NULL && !ls_artifact_is_binary(signature) &&
+			ls_components_check_signature(ls_artifact_get_content(signature), NULL))
+			json_object_set_string_member(plan_object, "signature", ls_artifact_get_content(signature));
+	}
+	/* The signature layer is written beside the pages. A catalog without the
+	 * stage, a themed site or a review simply goes without one. */
+	if (!review && !recipe_themed(recipe)) {
+		g_autoptr(GError) local_error = NULL;
+		g_autofree gchar *prompt = signature_prompt(prompts, recipe, config, plan_object, &local_error);
+		if (prompt != NULL) {
+			Job *job = g_new0(Job, 1);
+			g_ptr_array_add(jobs, job);
+			job->kind = JOB_SIGNATURE;
+			job->optional = TRUE;
+			job->path = g_strdup(SIGNATURE_PATH);
+			job->settings = spec_settings(recipe, config, "{\"type\": \"object\", \"required\": [\"css\"], "
+				"\"additionalProperties\": false, \"properties\": {\"css\": {\"type\": \"string\"}}}\n");
+			job->prompt = g_steal_pointer(&prompt);
+		}
 	}
 	retries = json_object_get_int_member(((Job *)g_ptr_array_index(jobs, 0))->settings, "retries");
 	status = g_strdup_printf("%s %u page%s%s with up to %u at once; provider %s",
