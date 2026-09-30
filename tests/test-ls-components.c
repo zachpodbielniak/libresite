@@ -1457,7 +1457,7 @@ test_structure(void){
 			json_node_get_object(plan), "look"), "frame")));
 	}
 	/* Every frame gets dealt, and widths are continuous, not a few presets. */
-	g_assert_cmpuint(g_hash_table_size(frames), ==, 8);
+	g_assert_cmpuint(g_hash_table_size(frames), ==, 7);
 	g_assert_cmpuint(g_hash_table_size(widths), >, 100);
 	names = json_object_get_members(variants);
 	for (name = names; name != NULL; name = name->next)
@@ -1599,8 +1599,10 @@ test_layout_lint(void){
 	{
 		g_autofree gchar *look = NULL;
 		g_assert_true(g_file_get_contents("data/components/look.css", &look, NULL, NULL));
-		/* The inset frame must never clip the page: that stops scrolling. */
-		lacks(look, "overflow: clip; box-shadow");
+		/* Sites fill the screen: no frame draws a border around the page. */
+		lacks(look, "look-frame-inset");
+		/* Alternating bands never repaint a section that has its own colours. */
+		contains(look, ".look-rhythm-bands main > .block:nth-of-type(even):not(.sec-tone, .cta--band, .statement--band,");
 		/* Side panels never wrap into a second column. */
 		contains(look, ":is(.look-frame-rail, .look-frame-split) .site-header__inner { flex-wrap: nowrap;");
 	}

@@ -207,7 +207,6 @@ looks:
       split: A sticky left panel with the wordmark, tagline and navigation; content scrolls on the right.
       center: A narrow centered column under a centered header, like a journal.
       wide: Edge-to-edge sections with generous margins and no column cap.
-      inset: The whole page sits in a bordered frame on a tinted ground.
       offset: Content set right of a wide empty margin, with headings hanging into it.
       masthead: A newspaper masthead with a huge wordmark between rules.
   headpos:
