@@ -4,7 +4,7 @@
 {{#intro}}<div class="prose">{{{intro}}}</div>
 {{/intro}}{{#v_aside}}{{#note}}<div class="form__note prose">{{{note}}}</div>
 {{/note}}{{/v_aside}}</div>
-<form class="form__form" id="{{form_id}}" aria-labelledby="{{id}}-h"{{#local}} method="dialog" novalidate data-local-form data-download-name="{{download_name}}" data-error-required="{{error_required}}" data-error-invalid="{{error_invalid}}" data-error-summary="{{error_summary}}"{{/local}}{{#mailto}} action="{{target}}" method="post" enctype="text/plain"{{/mailto}}{{#endpoint}} action="{{target}}" method="post"{{/endpoint}}>
+<form class="form__form" id="{{form_id}}" aria-labelledby="{{id}}-h"{{#local}} method="dialog" novalidate data-local-form data-download-name="{{download_name}}" data-error-required="{{error_required}}" data-error-invalid="{{error_invalid}}" data-error-summary="{{error_summary}}"{{/local}}{{#mailto}} action="{{target}}" method="post" enctype="text/plain"{{/mailto}}{{#endpoint}} action="{{target}}" method="post" data-endpoint-form data-sending="{{sending}}" data-sent="{{sent}}" data-failed="{{send_failed}}"{{/endpoint}}>
 {{#fields}}{{#is_checkbox}}<div class="field field--check">
 <input type="checkbox" id="{{fid}}" name="{{name}}" value="yes"{{#required}} required{{/required}} aria-describedby="{{describedby}}">
 <label for="{{fid}}">{{label}}{{#required}} <span class="required">({{required_label}})</span>{{/required}}</label>
@@ -21,12 +21,14 @@
 {{/is_select}}{{#is_input}}<input type="{{type}}" id="{{fid}}" name="{{name}}"{{#required}} required{{/required}}{{#maxlength}} maxlength="{{maxlength}}"{{/maxlength}}{{#autocomplete}} autocomplete="{{autocomplete}}"{{/autocomplete}} aria-describedby="{{describedby}}">
 {{/is_input}}<p class="field-error" id="{{fid}}-error" data-field-error></p>
 </div>
-{{/is_checkbox}}{{/fields}}<div class="form__summary" role="alert" data-form-summary hidden></div>
+{{/is_checkbox}}{{/fields}}{{#endpoint}}{{#honeypot}}<div class="form__trap" aria-hidden="true"><label>Leave this field empty <input type="text" name="{{honeypot}}" tabindex="-1" autocomplete="off"></label></div>
+{{/honeypot}}{{/endpoint}}<div class="form__summary" role="alert" data-form-summary hidden></div>
 <div class="form__actions"{{#local}} data-form-actions hidden{{/local}}>
 <button class="button" type="submit">{{submit}}</button>
 {{#local}}<button class="button button--ghost" type="reset">{{reset_label}}</button>
 {{/local}}</div>
-{{^v_aside}}{{#note}}<div class="form__note prose">{{{note}}}</div>
+{{#endpoint}}<p class="form__status" role="status" data-form-status></p>
+{{/endpoint}}{{^v_aside}}{{#note}}<div class="form__note prose">{{{note}}}</div>
 {{/note}}{{/v_aside}}{{#local}}<div class="form__output" data-form-output hidden>
 <p class="kicker" id="{{form_id}}-preview-label">{{preview_label}}</p>
 <pre class="form__preview" data-form-preview tabindex="0" aria-labelledby="{{form_id}}-preview-label"></pre>

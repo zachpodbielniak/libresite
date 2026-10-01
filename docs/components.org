@@ -239,6 +239,28 @@ The =share= component (row, stacked, quiet or pills) offers email, Facebook, X, 
 
 With a site address, a page whose first picture is a supplied photograph (PNG, JPEG or WebP) gets =og:image= and a large preview card; drawings are not used as previews.
 
+* Supplied form
+
+A site has one live form when the recipe names it in =site.form=: where it posts and exactly which fields it sends. The host behind the site, not libresite, receives and handles the submission.
+
+#+begin_src yaml
+site:
+  form:
+    action: /api/forms/contact
+    honeypot: website
+    fields:
+      - {name: first-name, label: First name, required: true, autocomplete: given-name}
+      - {name: last-name, label: Last name, required: true, autocomplete: family-name}
+      - {name: email, label: Email, type: email, required: true, autocomplete: email}
+      - {name: message, label: Message, type: textarea, required: true, maxlength: 4000}
+#+end_src
+
+=action= is a same-site path (one leading =/=, letters, digits, =/=, =_=, =.= and =-=, no =..=) or an https:// address, at most 300 characters, never with =?= or =#=. A same-site path keeps the page free of backend addresses and accounts: the host decides where a submission goes, so a site moves between hosts or backends without a rebuild. There are 1 to 12 fields, each once, named with lowercase letters, digits, =-= or =_=; =type= is =text= (the default), =email=, =tel=, =url=, =number=, =date= or =textarea=; =required= is a boolean; =autocomplete=, =maxlength= (1 to 20000) and =hint= are optional. =honeypot= optionally names a field, not among the others, that the page hides from people; a host can discard any submission that fills it.
+
+The plan step writes the form into the plan as =form= after the model answers, replacing anything the model wrote, and an edit cannot change it. Every =form= section on the site then renders in endpoint mode with that action and those fields, whatever mode, target or fields the model wrote; the model writes only the heading, the words around the form and the button label. Without =site.form=, a form section keeps its own =local=, =mailto= or =endpoint= mode, and an endpoint target may be a supplied https:// address or same-site path.
+
+An endpoint form is an ordinary =POST= of URL-encoded fields, so it works without scripts. With =site.js= it sends the same fields in the background, disables the button while pending, reports the =sending=, =sent= or =send_failed= interface string in a polite status region, clears the form only after a successful response and keeps every entry after a failure. Offline tests check the rendered markup and script; they do not exercise a host or a browser submission.
+
 Icons come from Simple Icons 16.33.0 (CC0 1.0). Brand marks remain their owners' trademarks and link only to the business's own profiles. LinkedIn has no Simple Icons mark, so it and unrecognised hosts use the builder's own link glyph. A library archived before =networks.yaml= existed still loads, with the link glyph for every profile.
 
 * What the builder produces

@@ -522,17 +522,27 @@ ls_context_export(
 			g_propagate_error(error, g_steal_pointer(&local_error));
 			return FALSE;
 		}
-		stream = g_file_create(file, G_FILE_CREATE_PRIVATE, cancellable, error);
+		/* Published files are public web content: the process umask decides who
+		 * may read them, so a web server running as another user can serve them. */
+		stream = g_file_create(file, G_FILE_CREATE_NONE, cancellable, error);
 		if (stream == NULL ||
 			!g_output_stream_write_all(
 				G_OUTPUT_STREAM(stream), data, size, NULL, cancellable, error
 			) ||
 			!g_output_stream_close(G_OUTPUT_STREAM(stream), cancellable, error))
 			return FALSE;
-		if (ls_artifact_get_executable((const LsArtifact *)value) &&
-			!g_file_set_attribute_uint32(file, G_FILE_ATTRIBUTE_UNIX_MODE, 0700,
+		if (ls_artifact_get_executable((const LsArtifact *)value)) {
+			g_autoptr(GFileInfo) info = g_file_query_info(file, G_FILE_ATTRIBUTE_UNIX_MODE,
+				G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS, cancellable, error);
+			guint32 mode;
+			if (info == NULL)
+				return FALSE;
+			mode = g_file_info_get_attribute_uint32(info, G_FILE_ATTRIBUTE_UNIX_MODE) & 0777;
+			/* Execute follows read, so the umask governs both. */
+			if (!g_file_set_attribute_uint32(file, G_FILE_ATTRIBUTE_UNIX_MODE, mode | ((mode & 0444) >> 2),
 				G_FILE_QUERY_INFO_NOFOLLOW_SYMLINKS, cancellable, error))
-			return FALSE;
+				return FALSE;
+		}
 	}
 	return TRUE;
 }

@@ -1575,12 +1575,14 @@ static const gchar *const font_tokens[] = {"font_display", "font_body", "font_mo
 static const gchar *const ui_keys[] = {"skip", "menu", "nav", "footer_nav", "contents", "filter",
 	"count_one", "count_many", "required", "reset", "preview", "download", "error_required",
 	"error_invalid", "error_summary", "breadcrumb", "pager", "previous", "next", "letters", "scroll",
-	"checklist_yes", "checklist_no", "close", "ingredients", "method", "social", "share", "copy_link", "copied"};
+	"checklist_yes", "checklist_no", "close", "ingredients", "method", "social", "share", "copy_link", "copied",
+	"sending", "sent", "send_failed"};
 static const gchar *const ui_defaults[] = {"Skip to content", "Menu", "Primary", "Footer", "Contents",
 	"Filter entries", "{n} entry shown", "{n} entries shown", "required", "Clear", "Preview",
 	"Download text file", "Fill in this field.", "Check this entry.", "{n} fields need attention.",
 	"Breadcrumb", "More pages", "Previous", "Next", "Jump to letter", "Scrollable list", "Included",
-	"Not included", "Close", "Ingredients", "Method", "Follow us", "Share this page", "Copy link", "Link copied"};
+	"Not included", "Close", "Ingredients", "Method", "Follow us", "Share this page", "Copy link", "Link copied",
+	"Sending your message.", "Thank you. Your message was sent.", "Your message was not sent. Please try again."};
 static const gchar *const art_ratios[] = {"16:9", "4:3", "3:2", "1:1", "3:4", "2:1", "3:1", "21:9", NULL};
 
 static gdouble
@@ -1795,6 +1797,56 @@ check_social(Problems *problems, LsComponents *self, JsonObject *plan){
 			(ls_string(entry, "handle") != NULL && g_utf8_strlen(ls_string(entry, "handle"), -1) > 120))
 			problem(problems, "social[%u] must be {url: https address, network: a known network or web, label, handle}", i);
 	}
+}
+
+/* form is written by the builder from site.form, already validated there;
+ * a plan restored from outlines keeps the same shape. */
+static void
+check_supplied_form(Problems *problems, JsonObject *plan){
+	JsonObject *form = member_object(plan, "form");
+	JsonArray *fields = form != NULL ? member_array(form, "fields") : NULL;
+	const gchar *action = form != NULL ? ls_string(form, "action") : NULL;
+	guint i;
+	if (!json_object_has_member(plan, "form"))
+		return;
+	if (form == NULL || !ls_object_keys(form, "|action|fields|honeypot|", NULL) || action == NULL ||
+		!(g_str_has_prefix(action, "https://") || (action[0] == '/' && action[1] != '/')) ||
+		strpbrk(action, " \t\r\n\"'<>\\`") != NULL || fields == NULL ||
+		json_array_get_length(fields) == 0 || json_array_get_length(fields) > 12) {
+		problem(problems, "form must be the supplied {action, fields, honeypot}");
+		return;
+	}
+	for (i = 0; i < json_array_get_length(fields); i++) {
+		JsonNode *node = json_array_get_element(fields, i);
+		JsonObject *field = JSON_NODE_HOLDS_OBJECT(node) ? json_node_get_object(node) : NULL;
+		if (field == NULL || blank(ls_string(field, "name")) || blank(ls_string(field, "label")))
+			problem(problems, "form.fields[%u] must have a name and a label", i);
+	}
+}
+
+/* A form section on a site with a supplied form takes its target and fields
+ * from it; the model writes only the words around them. Returns a new copy of
+ * @content, or NULL when the site has no supplied form. */
+static JsonObject *
+supplied_form_content(JsonObject *plan, JsonObject *content){
+	JsonObject *form = plan != NULL ? member_object(plan, "form") : NULL;
+	g_autoptr(JsonNode) wrapped = NULL;
+	g_autoptr(JsonNode) copy = NULL;
+	g_autofree gchar *text = NULL;
+	JsonObject *out;
+	if (form == NULL || content == NULL || member_array(form, "fields") == NULL)
+		return NULL;
+	wrapped = json_node_new(JSON_NODE_OBJECT);
+	json_node_set_object(wrapped, content);
+	text = ls_json_encode(wrapped);
+	copy = ls_json_parse(text, NULL);
+	if (copy == NULL || !JSON_NODE_HOLDS_OBJECT(copy))
+		return NULL;
+	out = json_object_ref(json_node_get_object(copy));
+	json_object_set_string_member(out, "mode", "endpoint");
+	json_object_set_string_member(out, "target", ls_string(form, "action"));
+	json_object_set_array_member(out, "fields", json_array_ref(member_array(form, "fields")));
+	return out;
 }
 
 /* photos is written by the builder from the recipe and the seeded images:
@@ -2071,12 +2123,13 @@ check_plan_into(Problems *problems, LsComponents *self, JsonNode *node){
 		return;
 	}
 	if (!ls_object_keys(plan, "|name|tagline|lang|character|missing|tokens|fonts|brand|nav|action|footer|voice|look|"
-		"art|photos|social|pages|css|restyle|ui|structure|signature|", NULL))
+		"art|photos|social|form|pages|css|restyle|ui|structure|signature|", NULL))
 		problem(problems, "unknown top-level key; allowed: name, tagline, lang, character, missing, tokens, fonts, "
 			"brand, nav, action, footer, voice, look, art, photos, pages, css, restyle, ui");
 	check_missing(problems, plan);
 	check_photos(problems, plan);
 	check_social(problems, self, plan);
+	check_supplied_form(problems, plan);
 	check_structure(problems, self, plan);
 	check_look(problems, self, plan);
 	check_restyle(problems, self, plan);
@@ -3396,9 +3449,12 @@ check_component_rules(PageCheck *check, const gchar *where, const gchar *compone
 			if (target == NULL || strchr(target, '@') == NULL || strpbrk(target, " <>\"'") != NULL)
 				problem(check->problems, "%s.target must be the supplied email address for mailto mode", where);
 		} else if (g_strcmp0(mode, "endpoint") == 0) {
-			g_autofree gchar *why = target != NULL ? href_problem(NULL, target) : g_strdup("missing");
-			if (target == NULL || !g_str_has_prefix(target, "https://") || why != NULL)
-				problem(check->problems, "%s.target must be the supplied https:// endpoint for endpoint mode", where);
+			g_autofree gchar *why = target != NULL && g_str_has_prefix(target, "https://")
+				? href_problem(NULL, target) : NULL;
+			gboolean same_site = target != NULL && target[0] == '/' && target[1] != '/' &&
+				strstr(target, "..") == NULL && strpbrk(target, " \t\r\n\"'<>\\`#?") == NULL;
+			if (target == NULL || (!same_site && (!g_str_has_prefix(target, "https://") || why != NULL)))
+				problem(check->problems, "%s.target must be the supplied https:// address or same-site path for endpoint mode", where);
 		}
 	}
 }
@@ -3475,9 +3531,12 @@ check_page_into(LsComponents *self, Problems *problems, JsonNode *plan_node, con
 		JsonObject *content = section != NULL ? member_object(section, "content") : NULL;
 		const gchar *variant = section != NULL ? ls_string(section, "variant") : NULL;
 		g_autofree gchar *where = g_strdup_printf("section %u (%s)", i + 1, name != NULL ? name : "?");
+		g_autoptr(JsonObject) supplied = g_strcmp0(name, "form") == 0 ? supplied_form_content(plan, content) : NULL;
 		JsonObject *slots;
 		g_autoptr(GList) keys = NULL;
 		GList *item;
+		if (supplied != NULL)
+			content = supplied;
 		if (section == NULL || !ls_object_keys(section, "|component|variant|id|content|", NULL)) {
 			problem(problems, "%s must be {component, variant, id, content}", where);
 			continue;
@@ -3732,6 +3791,15 @@ form_view(Render *render, JsonObject *view, JsonObject *content, const gchar *id
 	json_object_set_boolean_member(view, "local", g_strcmp0(mode, "local") == 0);
 	json_object_set_boolean_member(view, "mailto", g_strcmp0(mode, "mailto") == 0);
 	json_object_set_boolean_member(view, "endpoint", g_strcmp0(mode, "endpoint") == 0);
+	if (g_strcmp0(mode, "endpoint") == 0) {
+		JsonObject *form = member_object(render->plan, "form");
+		const gchar *trap = form != NULL ? ls_string(form, "honeypot") : NULL;
+		if (trap != NULL)
+			json_object_set_string_member(view, "honeypot", trap);
+		json_object_set_string_member(view, "sending", ui_text(render, "sending"));
+		json_object_set_string_member(view, "sent", ui_text(render, "sent"));
+		json_object_set_string_member(view, "send_failed", ui_text(render, "send_failed"));
+	}
 	if (g_strcmp0(mode, "mailto") == 0 && !g_str_has_prefix(ls_string(content, "target"), "mailto:")) {
 		g_autofree gchar *target = g_strconcat("mailto:", ls_string(content, "target"), NULL);
 		json_object_set_string_member(view, "target", target);
@@ -4067,7 +4135,9 @@ render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArra
 		const gchar *name = ls_string(section, "component");
 		JsonObject *component = member_object(render->self->components, name);
 		JsonObject *slots = member_object(component, "slots");
-		JsonObject *content = member_object(section, "content");
+		g_autoptr(JsonObject) supplied = g_str_equal(name, "form")
+			? supplied_form_content(render->plan, member_object(section, "content")) : NULL;
+		JsonObject *content = supplied != NULL ? supplied : member_object(section, "content");
 		g_autoptr(GList) variants = json_object_get_members(member_object(component, "variants"));
 		JsonObject *dealt_variants = member_object(member_object(render->plan, "structure"), "variants");
 		const gchar *dealt = dealt_variants != NULL ? ls_string(dealt_variants, name) : NULL;

@@ -316,9 +316,9 @@ site_base_url(GHashTable *files){
 	return end != NULL && g_str_has_prefix(start, "https://") ? g_strndup(start, (gsize)(end - start)) : NULL;
 }
 
-/* Plan members the builder owns: dealt layout, supplied photos and profiles,
+/* Plan members the builder owns: dealt layout, supplied photos, profiles and form,
  * the separately written signature layer and the order's missing facts. */
-static const gchar *const builder_members[] = {"structure", "photos", "social", "signature", "missing", NULL};
+static const gchar *const builder_members[] = {"structure", "photos", "social", "form", "signature", "missing", NULL};
 
 typedef struct {
 	gchar *summary;
@@ -480,7 +480,8 @@ merge_answer(LsComponents *components, JsonNode *old_plan, JsonObject *old_pages
 	return TRUE;
 }
 
-/* Write one recorded entry to disk with the export's private modes. */
+/* Write one recorded entry to disk with the export's modes: public site
+ * content whose readers the process umask decides. */
 static gboolean
 write_entry(const gchar *project, JsonObject *entry, GError **error){
 	g_autofree gchar *path = g_build_filename(project, ls_string(entry, "path"), NULL);
@@ -491,7 +492,7 @@ write_entry(const gchar *project, JsonObject *entry, GError **error){
 	gsize length = 0;
 	if (content == NULL)
 		return reject(error, "%s has no content", ls_string(entry, "path"));
-	if (g_mkdir_with_parents(parent, 0700) != 0) {
+	if (g_mkdir_with_parents(parent, 0777) != 0) {
 		g_set_error(error, G_IO_ERROR, g_io_error_from_errno(errno), "Cannot create %s: %s", parent,
 			g_strerror(errno));
 		return FALSE;
@@ -499,7 +500,7 @@ write_entry(const gchar *project, JsonObject *entry, GError **error){
 	if (binary)
 		bytes = g_base64_decode(content, &length);
 	return g_file_set_contents_full(path, binary ? (const gchar *)bytes : content,
-		binary ? (gssize)length : -1, G_FILE_SET_CONTENTS_CONSISTENT, 0600, error);
+		binary ? (gssize)length : -1, G_FILE_SET_CONTENTS_CONSISTENT, 0666, error);
 }
 
 static gboolean

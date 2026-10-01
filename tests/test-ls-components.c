@@ -2125,6 +2125,72 @@ test_accent_text(void){
 	contains(css, ".look-header-glass:is(.look-frame-center, .look-frame-masthead) .site-header { position: relative; }");
 }
 
+/* A supplied form is the builder's: whatever the model wrote, the form posts
+ * the order's fields to the order's same-site path, with its honeypot. */
+static void
+test_supplied_form(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(JsonNode) plan = load("plan.json");
+	g_autoptr(JsonObject) pages = fixture_pages();
+	g_autoptr(JsonNode) page = json(
+		"{'path':'visit.html','sections':[{'component':'page-header','content':{'heading':'Visit'}},"
+		"{'component':'form','content':{'heading':'Write to us','mode':'local','download_name':'note.txt',"
+		"'submit':'Send','fields':[{'name':'invented','label':'Invented field'}]}}]}");
+	g_autoptr(GError) error = NULL;
+	g_autofree gchar *text = NULL;
+	g_autoptr(JsonNode) bundle = NULL;
+	const gchar *html;
+	JsonObject *root = json_node_get_object(plan);
+	json_object_set_member(root, "form", json(
+		"{'action':'/api/v1/sites/harbor/enquiries','honeypot':'website','fields':["
+		"{'name':'first-name','label':'First name','required':true,'autocomplete':'given-name'},"
+		"{'name':'last-name','label':'Last name','required':true,'autocomplete':'family-name'},"
+		"{'name':'email','label':'Email','type':'email','required':true,'autocomplete':'email'},"
+		"{'name':'message','label':'Message','type':'textarea','required':true,'maxlength':4000}]}"));
+	g_assert_true(ls_components_check_plan(components, plan, &error));
+	g_assert_no_error(error);
+	/* The model's local mode, download name and invented field give way. */
+	g_assert_true(ls_components_check_page(components, plan, "visit.html", page, &error));
+	g_assert_no_error(error);
+	json_object_set_member(pages, "visit.html", json_node_copy(page));
+	text = ls_components_compose(components, plan, pages, NULL, &error);
+	g_assert_no_error(error);
+	bundle = ls_json_parse(text, NULL);
+	html = file_content(bundle, "visit.html");
+	contains(html, "action=\"/api/v1/sites/harbor/enquiries\" method=\"post\" data-endpoint-form");
+	contains(html, "data-sent=\"Thank you. Your message was sent.\"");
+	contains(html, "name=\"first-name\" required autocomplete=\"given-name\"");
+	contains(html, "autocomplete=\"given-name\"");
+	contains(html, "<textarea id=");
+	contains(html, "name=\"message\" rows=\"5\" required maxlength=\"4000\"");
+	contains(html, "name=\"website\" tabindex=\"-1\" autocomplete=\"off\"");
+	contains(html, "role=\"status\" data-form-status");
+	lacks(html, "invented");
+	lacks(html, "data-local-form");
+	contains(file_content(bundle, "site.js"), "[data-endpoint-form]");
+	/* A plan whose supplied form lost its shape is refused. */
+	json_object_set_member(root, "form", json("{'action':'//evil.example/x','fields':[]}"));
+	g_assert_false(ls_components_check_plan(components, plan, &error));
+	g_assert_nonnull(strstr(error->message, "form must be the supplied"));
+	g_clear_error(&error);
+	/* Without a supplied form, endpoint mode takes a same-site path, never a
+	 * protocol-relative or http address. */
+	json_object_remove_member(root, "form");
+	{
+		const gchar *targets[] = {"/api/forms/contact", "//evil.example/x", "http://example.com/x", "/a?b=1"};
+		const gboolean ok[] = {TRUE, FALSE, FALSE, FALSE};
+		guint i;
+		for (i = 0; i < G_N_ELEMENTS(targets); i++) {
+			g_autofree gchar *spec = g_strdup_printf(
+				"{'path':'visit.html','sections':[{'component':'page-header','content':{'heading':'Visit'}},"
+				"{'component':'form','content':{'heading':'Write','mode':'endpoint','target':'%s','submit':'Send',"
+				"'fields':[{'name':'email','label':'Email','type':'email'}]}}]}", targets[i]);
+			g_autoptr(JsonNode) candidate = json(spec);
+			g_assert_cmpint(ls_components_check_page(components, plan, "visit.html", candidate, NULL), ==, ok[i]);
+		}
+	}
+}
+
 int
 main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
@@ -2170,5 +2236,6 @@ main(int argc, char **argv){
 	g_test_add_func("/components/sameness", test_sameness);
 	g_test_add_func("/components/address-breaks", test_address_breaks);
 	g_test_add_func("/components/accent-text", test_accent_text);
+	g_test_add_func("/components/supplied-form", test_supplied_form);
 	return g_test_run();
 }

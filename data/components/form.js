@@ -80,3 +80,39 @@ document.querySelectorAll("[data-local-form]").forEach(function (form) {
 	actions.hidden = false;
 	if (fallback) fallback.hidden = true;
 });
+
+/* Endpoint forms still work as an ordinary POST. With scripts they send the
+ * same fields in the background, stay on the page, keep input after a
+ * failure and only report success after a successful response. */
+document.querySelectorAll("[data-endpoint-form]").forEach(function (form) {
+	var status = form.querySelector("[data-form-status]");
+	var button = form.querySelector("button[type=submit]");
+	var pending = false;
+	if (!status || typeof fetch === "undefined" || typeof URLSearchParams === "undefined" ||
+		typeof FormData === "undefined") return;
+	function say(text, state) {
+		status.textContent = text;
+		if (state) status.setAttribute("data-state", state); else status.removeAttribute("data-state");
+	}
+	form.addEventListener("submit", function (event) {
+		event.preventDefault();
+		if (pending || !form.checkValidity()) { if (!pending) form.reportValidity(); return; }
+		pending = true;
+		if (button) button.disabled = true;
+		say(form.getAttribute("data-sending"), null);
+		fetch(form.action, {
+			method: "POST",
+			headers: { "Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json" },
+			body: new URLSearchParams(new FormData(form)).toString()
+		}).then(function (response) {
+			if (!response.ok) throw new Error(String(response.status));
+			form.reset();
+			say(form.getAttribute("data-sent"), "sent");
+		}).catch(function () {
+			say(form.getAttribute("data-failed"), "failed");
+		}).then(function () {
+			pending = false;
+			if (button) button.disabled = false;
+		});
+	});
+});

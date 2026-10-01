@@ -516,6 +516,18 @@ plan_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *prom
 					json_array_unref(social);
 			}
 		}
+		/* So is the order's live form: where it posts and which fields it sends. */
+		if (plan != NULL && JSON_NODE_HOLDS_OBJECT(plan)) {
+			JsonObject *root = json_node_get_object(plan);
+			JsonObject *site = member_object_of(ls_recipe_get_root(recipe), "site");
+			JsonNode *form = site != NULL ? json_object_get_member(site, "form") : NULL;
+			if (json_object_has_member(root, "form"))
+				json_object_remove_member(root, "form");
+			if (form != NULL && JSON_NODE_HOLDS_OBJECT(form)) {
+				g_autofree gchar *text = ls_json_encode(form);
+				json_object_set_member(root, "form", ls_json_parse(text, NULL));
+			}
+		}
 		if (plan != NULL) {
 			g_autofree gchar *repairs = ls_components_repair_plan(components, plan);
 			if (repairs != NULL) {

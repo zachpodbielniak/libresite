@@ -13,3 +13,7 @@
 }
 .form--card .form__inner { max-width: 46rem; padding: var(--space-6); background: var(--surface); border: var(--border) solid var(--line); border-radius: var(--radius); }
 .form--card .form__form { max-width: none; }
+.form__trap { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
+.form__status { margin-top: var(--space-4); font-weight: 600; }
+.form__status:empty { display: none; }
+.form__status[data-state="failed"] { color: var(--danger); }

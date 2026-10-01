@@ -149,6 +149,21 @@ valid_recipe(void){
 	g_assert_cmpstr(ls_string(settings, "model"), ==, "second-model");
 	g_assert_cmpstr(ls_string(settings, "provider"), ==, "claude-code");
 	g_assert_cmpint(json_object_get_int_member(settings, "timeout"), ==, 600);
+	/* A live form: same-site path or https address, named fields, a honeypot. */
+	{
+		const gchar *forms[] = {
+			"version: 1\nname: test\nsite: {brief: hi, form: {action: /api/v1/sites/harbor/enquiries, honeypot: website, "
+			"fields: [{name: first-name, label: First name, required: true, autocomplete: given-name}, "
+			"{name: message, label: Message, type: textarea, maxlength: 4000}]}}\npipeline: {steps: [{id: a, type: frontend}]}",
+			"version: 1\nname: test\nsite: {brief: hi, form: {action: 'https://forms.example.com/f/1', "
+			"fields: [{name: email, label: Email, type: email}]}}\npipeline: {steps: [{id: a, type: frontend}]}"};
+		guint i;
+		for (i = 0; i < G_N_ELEMENTS(forms); i++) {
+			g_autoptr(LsRecipe) with_form = ls_recipe_new(forms[i], &error);
+			g_assert_no_error(error);
+			g_assert_nonnull(with_form);
+		}
+	}
 }
 static void
 provider_defaults(void){
@@ -497,6 +512,14 @@ import_case(gconstpointer data){
 }
 
 /* Check incremental publication and source-bound recovery through real steps. */
+/* The process umask, read without changing it. */
+static mode_t
+process_umask(void){
+	mode_t mask = umask(0);
+	(void)umask(mask);
+	return mask;
+}
+
 static void
 revision_case(gconstpointer data){
 	const gchar *mode = (const gchar *)data;
@@ -558,7 +581,13 @@ revision_case(gconstpointer data){
 			g_assert_true(g_file_test(published, G_FILE_TEST_IS_REGULAR));
 			g_assert_false(g_file_test(deleted, G_FILE_TEST_EXISTS));
 			g_assert_cmpint(g_stat(published, &info), ==, 0);
-			g_assert_cmpuint(info.st_mode & 0777, ==, 0700);
+			/* Published files follow the umask; execute follows read. */
+			g_assert_cmpuint(info.st_mode & 0777, ==, 0777 & ~process_umask());
+			{
+				g_autofree gchar *page = g_build_filename(output, "index.html", NULL);
+				g_assert_cmpint(g_stat(page, &info), ==, 0);
+				g_assert_cmpuint(info.st_mode & 0777, ==, 0666 & ~process_umask());
+			}
 		} else {
 			g_assert_false(ls_pipeline_revise(pipeline, recipe, project, output, TRUE, NULL, &error));
 			g_assert_error(error, LS_ERROR, LS_ERROR_RECOVERY);
@@ -1566,6 +1595,18 @@ main(int argc, char **argv){
 		"version: 1\nname: test\nsite: {brief: hi, avoid: [{look: {}}]}\npipeline: {steps: [{id: a, type: frontend}]}",
 		"version: 1\nname: test\nsite: {brief: hi, avoid: [{v: 1, copy: x}]}\npipeline: {steps: [{id: a, type: frontend}]}",
 		"version: 1\nname: test\nsite: {brief: hi, avoid: [v]}\npipeline: {steps: [{id: a, type: frontend}]}",
+		"version: 1\nname: test\nsite: {brief: hi, form: {action: /x}}\npipeline: {steps: [{id: a, type: frontend}]}",
+		"version: 1\nname: test\nsite: {brief: hi, form: {action: //evil.example/x, fields: [{name: a, label: A}]}}\npipeline: {steps: [{id: a, type: frontend}]}",
+		"version: 1\nname: test\nsite: {brief: hi, form: {action: 'http://example.com/x', fields: [{name: a, label: A}]}}\npipeline: {steps: [{id: a, type: frontend}]}",
+		"version: 1\nname: test\nsite: {brief: hi, form: {action: '/a?b=1', fields: [{name: a, label: A}]}}\npipeline: {steps: [{id: a, type: frontend}]}",
+		"version: 1\nname: test\nsite: {brief: hi, form: {action: /a/../b, fields: [{name: a, label: A}]}}\npipeline: {steps: [{id: a, type: frontend}]}",
+		"version: 1\nname: test\nsite: {brief: hi, form: {action: /x, fields: [{name: A B, label: A}]}}\npipeline: {steps: [{id: a, type: frontend}]}",
+		"version: 1\nname: test\nsite: {brief: hi, form: {action: /x, fields: [{name: a, label: A}, {name: a, label: B}]}}\npipeline: {steps: [{id: a, type: frontend}]}",
+		"version: 1\nname: test\nsite: {brief: hi, form: {action: /x, fields: [{name: a, label: A, type: select}]}}\npipeline: {steps: [{id: a, type: frontend}]}",
+		"version: 1\nname: test\nsite: {brief: hi, form: {action: /x, fields: [{name: a, label: A, required: yes please}]}}\npipeline: {steps: [{id: a, type: frontend}]}",
+		"version: 1\nname: test\nsite: {brief: hi, form: {action: /x, fields: [{name: a}]}}\npipeline: {steps: [{id: a, type: frontend}]}",
+		"version: 1\nname: test\nsite: {brief: hi, form: {action: /x, honeypot: a, fields: [{name: a, label: A}]}}\npipeline: {steps: [{id: a, type: frontend}]}",
+		"version: 1\nname: test\nsite: {brief: hi, form: {action: /x, method: get, fields: [{name: a, label: A}]}}\npipeline: {steps: [{id: a, type: frontend}]}",
 		"version: 1\nname: test\nsite: {brief: hi}\npipeline: {steps: [{id: a, type: frontend, "
 		"options: []}]}"
 	};
