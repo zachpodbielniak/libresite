@@ -11,6 +11,7 @@
 #include <string.h>
 
 #define RECORD ".libresite/run.json"
+#define OUTLINES ".libresite/outlines.json"
 #define PLAN_PATH "site/plan.json"
 #define SPEC_DIR "site/pages/"
 #define SIGNATURE_PATH "site/signature.css"
@@ -118,17 +119,11 @@ same_entry(JsonObject *a, JsonObject *b){
 		g_strcmp0(ls_string(a, "encoding"), ls_string(b, "encoding")) == 0;
 }
 
-/* The working tree must be committed and exactly what the record describes,
- * or the outlines would no longer produce the site the owner has. */
+/* The working tree must be committed: an edit becomes exactly one version. */
 static gboolean
-check_tree(const gchar *project, JsonObject *record, GCancellable *cancellable, GError **error){
+check_clean(const gchar *project, GCancellable *cancellable, GError **error){
 	const gchar *status_args[] = {"status", "--porcelain", "--untracked-files=all", NULL};
-	g_autofree gchar *status = NULL, *snapshot = NULL;
-	g_autoptr(LsContext) disk = NULL;
-	g_autoptr(JsonNode) parsed = NULL;
-	g_autoptr(GHashTable) recorded = NULL, found = NULL;
-	GHashTableIter iter;
-	gpointer key, value;
+	g_autofree gchar *status = NULL;
 	if (!ls_git_run(project, status_args, &status, cancellable, error)) {
 		g_prefix_error(error, "%s is not a Git working tree: ", project);
 		return FALSE;
@@ -138,34 +133,144 @@ check_tree(const gchar *project, JsonObject *record, GCancellable *cancellable, 
 			"%s has uncommitted changes; commit or discard them before editing:\n%.400s", project, status);
 		return FALSE;
 	}
-	disk = ls_context_import(project, cancellable, error);
-	if (disk == NULL)
-		return FALSE;
-	snapshot = ls_context_snapshot(disk);
-	parsed = ls_json_parse(snapshot, error);
-	if (parsed == NULL)
-		return FALSE;
-	recorded = entry_map(member_array(record, "files"));
-	found = entry_map(member_array(json_node_get_object(parsed), "files"));
-	g_hash_table_iter_init(&iter, found);
+	return TRUE;
+}
+
+/* SHA-256 of an entry's decoded bytes. */
+static gchar *
+entry_hash(JsonObject *entry){
+	const gchar *content = ls_string(entry, "content");
+	if (content == NULL)
+		return NULL;
+	if (g_strcmp0(ls_string(entry, "encoding"), "base64") == 0) {
+		gsize length = 0;
+		g_autofree guchar *bytes = g_base64_decode(content, &length);
+		return g_compute_checksum_for_data(G_CHECKSUM_SHA256, bytes, length);
+	}
+	return g_compute_checksum_for_string(G_CHECKSUM_SHA256, content, -1);
+}
+
+static gboolean
+is_outline(const gchar *path){
+	return g_str_equal(path, PLAN_PATH) || g_str_has_prefix(path, SPEC_DIR) || g_str_equal(path, SIGNATURE_PATH) ||
+		g_str_equal(path, FINGERPRINT_PATH);
+}
+
+static gint
+by_text(gconstpointer a, gconstpointer b){
+	return g_strcmp0(*(const gchar *const *)a, *(const gchar *const *)b);
+}
+
+/* The committed outlines: the plan, page specifications, signature and
+ * fingerprint, plus a hash of every published file, so a version restored
+ * from history carries the outlines that produced it. */
+static gchar *
+outlines_from(GHashTable *archive, GHashTable *files){
+	g_autoptr(JsonNode) node = json_node_new(JSON_NODE_OBJECT);
+	g_autoptr(GPtrArray) paths = g_ptr_array_new();
+	JsonObject *root = json_object_new();
+	JsonArray *outlines = json_array_new();
+	JsonObject *hashes = json_object_new();
+	GHashTableIter iter;
+	gpointer key, value;
+	guint i;
+	g_hash_table_iter_init(&iter, archive);
+	while (g_hash_table_iter_next(&iter, &key, &value))
+		if (is_outline(key))
+			g_ptr_array_add(paths, key);
+	g_ptr_array_sort(paths, by_text);
+	for (i = 0; i < paths->len; i++) {
+		JsonObject *entry = g_hash_table_lookup(archive, g_ptr_array_index(paths, i));
+		JsonObject *copy = json_object_new();
+		json_object_set_string_member(copy, "path", ls_string(entry, "path"));
+		json_object_set_string_member(copy, "content", ls_string(entry, "content"));
+		json_array_add_object_element(outlines, copy);
+	}
+	g_ptr_array_set_size(paths, 0);
+	g_hash_table_iter_init(&iter, files);
+	while (g_hash_table_iter_next(&iter, &key, &value))
+		if (!g_str_equal(key, ".gitignore"))
+			g_ptr_array_add(paths, key);
+	g_ptr_array_sort(paths, by_text);
+	for (i = 0; i < paths->len; i++) {
+		g_autofree gchar *hash = entry_hash(g_hash_table_lookup(files, g_ptr_array_index(paths, i)));
+		json_object_set_string_member(hashes, g_ptr_array_index(paths, i), hash != NULL ? hash : "");
+	}
+	json_object_set_int_member(root, "version", 1);
+	json_object_set_array_member(root, "outlines", outlines);
+	json_object_set_object_member(root, "files", hashes);
+	json_node_take_object(node, root);
+	return ls_json_encode(node);
+}
+
+gchar *
+ls_outlines_text(LsContext *context){
+	g_autofree gchar *snapshot = NULL;
+	g_autoptr(JsonNode) parsed = NULL;
+	g_autoptr(GHashTable) files = NULL, archive = NULL;
+	g_return_val_if_fail(LS_IS_CONTEXT(context), NULL);
+	snapshot = ls_context_snapshot(context);
+	parsed = ls_json_parse(snapshot, NULL);
+	if (parsed == NULL || !JSON_NODE_HOLDS_OBJECT(parsed))
+		return NULL;
+	files = entry_map(member_array(json_node_get_object(parsed), "files"));
+	archive = entry_map(member_array(json_node_get_object(parsed), "archive"));
+	if (!g_hash_table_contains(archive, PLAN_PATH))
+		return NULL;
+	return outlines_from(archive, files);
+}
+
+/* Every published file on disk must be what the outlines produced. */
+static gboolean
+check_hashes(GHashTable *files, JsonObject *hashes, GError **error){
+	GHashTableIter iter;
+	gpointer key, value;
+	g_autoptr(GList) names = NULL;
+	GList *name;
+	g_hash_table_iter_init(&iter, files);
 	while (g_hash_table_iter_next(&iter, &key, &value)) {
+		g_autofree gchar *hash = NULL;
 		if (g_str_equal(key, ".gitignore"))
 			continue;
-		if (!same_entry(value, g_hash_table_lookup(recorded, key))) {
+		hash = entry_hash(value);
+		if (hashes == NULL || g_strcmp0(hash, ls_string(hashes, key)) != 0) {
 			g_set_error(error, LS_ERROR, LS_ERROR_CONFLICT,
-				"%s differs from the build record: it was changed outside libresite, so the saved "
-				"outlines no longer describe this site", (const gchar *)key);
+				"%s differs from the saved outlines: it was changed outside libresite, so they no longer "
+				"describe this site", (const gchar *)key);
 			return FALSE;
 		}
 	}
-	g_hash_table_iter_init(&iter, recorded);
-	while (g_hash_table_iter_next(&iter, &key, &value))
-		if (!g_hash_table_contains(found, key)) {
+	names = hashes != NULL ? json_object_get_members(hashes) : NULL;
+	for (name = names; name != NULL; name = name->next)
+		if (!g_hash_table_contains(files, name->data)) {
 			g_set_error(error, LS_ERROR, LS_ERROR_CONFLICT,
-				"%s is in the build record but missing from the site", (const gchar *)key);
+				"%s is in the saved outlines but missing from the site", (const gchar *)name->data);
 			return FALSE;
 		}
 	return TRUE;
+}
+
+/* Older sites kept outlines only in the untracked record: track them from now on. */
+static gchar *
+tracked_gitignore(const gchar *text){
+	g_auto(GStrv) lines = g_strsplit(text != NULL ? text : "", "\n", -1);
+	GString *out = g_string_new(NULL);
+	gboolean changed = FALSE;
+	guint i;
+	for (i = 0; lines[i] != NULL; i++) {
+		if (g_str_equal(lines[i], "/.libresite/")) {
+			g_string_append(out, "/.libresite/*\n!/.libresite/outlines.json");
+			changed = TRUE;
+		} else
+			g_string_append(out, lines[i]);
+		if (lines[i + 1] != NULL)
+			g_string_append_c(out, '\n');
+	}
+	if (!changed) {
+		g_string_free(out, TRUE);
+		return NULL;
+	}
+	return g_string_free(out, FALSE);
 }
 
 static gchar *
@@ -441,6 +546,10 @@ gboolean
 ls_editor_apply(LsEditor *self, const gchar *project, const gchar *request, gchar **summary,
 	gchar **commit, GCancellable *cancellable, GError **error){
 	g_autofree gchar *absolute = NULL, *record_path = NULL, *record_text = NULL, *lock_path = NULL;
+	g_autofree gchar *outlines_path = NULL, *outlines_text = NULL, *new_outlines_text = NULL;
+	g_autofree gchar *ignore_path = NULL, *ignore_text = NULL, *new_ignore_text = NULL;
+	g_autoptr(JsonNode) outlines_node = NULL, disk_node = NULL;
+	gboolean have_record, have_outlines;
 	g_autofree gchar *base_url = NULL, *prompt = NULL, *feedback = NULL, *reference = NULL;
 	g_autofree gchar *composed_text = NULL, *new_record_text = NULL, *message = NULL, *head = NULL;
 	g_autoptr(JsonNode) record_node = NULL, old_plan = NULL, composed = NULL, record_copy = NULL;
@@ -467,9 +576,13 @@ ls_editor_apply(LsEditor *self, const gchar *project, const gchar *request, gcha
 	}
 	absolute = g_canonicalize_filename(project, NULL);
 	record_path = g_build_filename(absolute, RECORD, NULL);
-	if (!g_file_test(record_path, G_FILE_TEST_IS_REGULAR)) {
+	outlines_path = g_build_filename(absolute, OUTLINES, NULL);
+	ignore_path = g_build_filename(absolute, ".gitignore", NULL);
+	have_record = g_file_test(record_path, G_FILE_TEST_IS_REGULAR);
+	have_outlines = g_file_test(outlines_path, G_FILE_TEST_IS_REGULAR);
+	if (!have_record && !have_outlines) {
 		g_set_error(error, LS_ERROR, LS_ERROR_INVALID,
-			"%s is not a built site: it has no %s record", absolute, RECORD);
+			"%s is not a built site: it has no %s or %s", absolute, OUTLINES, RECORD);
 		return FALSE;
 	}
 	/* One edit at a time per site. */
@@ -479,20 +592,65 @@ ls_editor_apply(LsEditor *self, const gchar *project, const gchar *request, gcha
 		g_set_error(error, LS_ERROR, LS_ERROR_RECOVERY, "Another edit of %s is running", absolute);
 		goto out;
 	}
-	record_text = ls_read_text(record_path, error);
-	if (record_text == NULL || (record_node = ls_json_parse(record_text, error)) == NULL)
+	if (!check_clean(absolute, cancellable, error))
 		goto out;
-	record = JSON_NODE_HOLDS_OBJECT(record_node) ? json_node_get_object(record_node) : NULL;
-	files = entry_map(member_array(record, "files"));
-	archive = entry_map(member_array(record, "archive"));
+	/* The published files as they are on disk now. */
+	{
+		g_autoptr(LsContext) disk = ls_context_import(absolute, cancellable, error);
+		g_autofree gchar *snapshot = NULL;
+		if (disk == NULL)
+			goto out;
+		snapshot = ls_context_snapshot(disk);
+		disk_node = ls_json_parse(snapshot, error);
+		if (disk_node == NULL)
+			goto out;
+		files = entry_map(member_array(json_node_get_object(disk_node), "files"));
+	}
+	if (have_record) {
+		record_text = ls_read_text(record_path, error);
+		if (record_text == NULL || (record_node = ls_json_parse(record_text, error)) == NULL ||
+			!JSON_NODE_HOLDS_OBJECT(record_node))
+			goto out;
+	}
+	record = record_node != NULL ? json_node_get_object(record_node) : NULL;
+	/* The committed outlines follow the site through its history; a site
+	 * built before they were committed falls back to the local record. */
+	if (have_outlines) {
+		JsonObject *root;
+		outlines_text = ls_read_text(outlines_path, error);
+		if (outlines_text == NULL || (outlines_node = ls_json_parse(outlines_text, error)) == NULL)
+			goto out;
+		root = JSON_NODE_HOLDS_OBJECT(outlines_node) ? json_node_get_object(outlines_node) : NULL;
+		archive = entry_map(member_array(root, "outlines"));
+		if (!check_hashes(files, member_object(root, "files"), error))
+			goto out;
+	} else {
+		g_autoptr(GHashTable) recorded = entry_map(member_array(record, "files"));
+		GHashTableIter iter;
+		gpointer key, value;
+		archive = entry_map(member_array(record, "archive"));
+		g_hash_table_iter_init(&iter, files);
+		while (g_hash_table_iter_next(&iter, &key, &value))
+			if (!g_str_equal(key, ".gitignore") && !same_entry(value, g_hash_table_lookup(recorded, key))) {
+				g_set_error(error, LS_ERROR, LS_ERROR_CONFLICT,
+					"%s differs from the build record: it was changed outside libresite, so the saved "
+					"outlines no longer describe this site", (const gchar *)key);
+				goto out;
+			}
+		g_hash_table_iter_init(&iter, recorded);
+		while (g_hash_table_iter_next(&iter, &key, &value))
+			if (!g_hash_table_contains(files, key)) {
+				g_set_error(error, LS_ERROR, LS_ERROR_CONFLICT,
+					"%s is in the build record but missing from the site", (const gchar *)key);
+				goto out;
+			}
+	}
 	plan_entry = g_hash_table_lookup(archive, PLAN_PATH);
-	if (record == NULL || plan_entry == NULL || ls_string(plan_entry, "content") == NULL) {
+	if (plan_entry == NULL || ls_string(plan_entry, "content") == NULL) {
 		g_set_error(error, LS_ERROR, LS_ERROR_INVALID,
 			"%s has no saved plan: only sites built from components can be edited this way", absolute);
 		goto out;
 	}
-	if (!check_tree(absolute, record, cancellable, error))
-		goto out;
 	old_plan = ls_json_parse(ls_string(plan_entry, "content"), error);
 	if (old_plan == NULL || !JSON_NODE_HOLDS_OBJECT(old_plan))
 		goto out;
@@ -640,23 +798,28 @@ ls_editor_apply(LsEditor *self, const gchar *project, const gchar *request, gcha
 			g_hash_table_insert(new_archive, (gpointer)FINGERPRINT_PATH, entry);
 		}
 	}
-	/* The new record must load as a context: path, size and conflict checks. */
-	record_copy = deep_copy(record_node);
-	json_object_set_array_member(json_node_get_object(record_copy), "files", sorted_entries(new_files));
-	json_object_set_array_member(json_node_get_object(record_copy), "archive", sorted_entries(new_archive));
+	/* The new version must load as a context: path, size and conflict checks. */
 	{
 		g_autoptr(LsContext) check = ls_context_new();
 		g_autoptr(JsonNode) bundle = json_node_new(JSON_NODE_OBJECT);
 		g_autofree gchar *bundle_text = NULL;
 		JsonObject *object = json_object_new();
-		json_object_set_member(object, "files", json_node_copy(json_object_get_member(json_node_get_object(record_copy), "files")));
-		json_object_set_member(object, "archive", json_node_copy(json_object_get_member(json_node_get_object(record_copy), "archive")));
+		json_object_set_array_member(object, "files", sorted_entries(new_files));
+		json_object_set_array_member(object, "archive", sorted_entries(new_archive));
 		json_node_take_object(bundle, object);
 		bundle_text = ls_json_encode(bundle);
 		if (!ls_context_restore(check, bundle_text, error))
 			goto out;
 	}
-	new_record_text = ls_json_encode(record_copy);
+	if (record_node != NULL) {
+		record_copy = deep_copy(record_node);
+		json_object_set_array_member(json_node_get_object(record_copy), "files", sorted_entries(new_files));
+		json_object_set_array_member(json_node_get_object(record_copy), "archive", sorted_entries(new_archive));
+		new_record_text = ls_json_encode(record_copy);
+	}
+	new_outlines_text = outlines_from(new_archive, new_files);
+	ignore_text = g_file_test(ignore_path, G_FILE_TEST_IS_REGULAR) ? ls_read_text(ignore_path, NULL) : NULL;
+	new_ignore_text = tracked_gitignore(ignore_text);
 	{
 		GHashTableIter iter;
 		gpointer key, value;
@@ -676,6 +839,31 @@ ls_editor_apply(LsEditor *self, const gchar *project, const gchar *request, gcha
 	}
 	if (g_cancellable_set_error_if_cancelled(cancellable, error))
 		goto out;
+	/* An older site first commits the outlines of the version it has, as a
+	 * version of its own, so reverting this edit later restores them. */
+	if (!have_outlines) {
+		const gchar *add_outlines[] = {"add", "--", ".gitignore", OUTLINES, NULL};
+		const gchar *track[] = {"commit", "--no-gpg-sign", "--quiet", "-m", "chore: track site outlines for editing",
+			NULL};
+		g_autofree gchar *current = outlines_from(archive, files);
+		if (!g_file_set_contents_full(outlines_path, current, -1,
+			G_FILE_SET_CONTENTS_CONSISTENT | G_FILE_SET_CONTENTS_DURABLE, 0600, error) ||
+			(new_ignore_text != NULL && !g_file_set_contents_full(ignore_path, new_ignore_text, -1,
+				G_FILE_SET_CONTENTS_CONSISTENT, 0600, error)) ||
+			!ls_git_run(absolute, add_outlines, NULL, NULL, error) || !ls_git_run(absolute, track, NULL, NULL, error)) {
+			const gchar *unstage[] = {"reset", "--quiet", NULL};
+			(void)ls_git_run(absolute, unstage, NULL, NULL, NULL);
+			(void)g_unlink(outlines_path);
+			if (new_ignore_text != NULL && ignore_text != NULL)
+				(void)g_file_set_contents_full(ignore_path, ignore_text, -1, G_FILE_SET_CONTENTS_CONSISTENT, 0600, NULL);
+			goto out;
+		}
+		say(self, "now tracking this site's outlines in its history");
+		outlines_text = g_steal_pointer(&current);
+		have_outlines = TRUE;
+		g_clear_pointer(&ignore_text, g_free);
+		ignore_text = g_steal_pointer(&new_ignore_text);
+	}
 	/* Write, record and commit; undo every step on any failure. */
 	{
 		GHashTableIter iter;
@@ -700,8 +888,14 @@ ls_editor_apply(LsEditor *self, const gchar *project, const gchar *request, gcha
 				goto undo;
 			g_ptr_array_add(deleted, key);
 		}
-		if (!g_file_set_contents_full(record_path, new_record_text, -1,
+		if (new_record_text != NULL && !g_file_set_contents_full(record_path, new_record_text, -1,
 			G_FILE_SET_CONTENTS_CONSISTENT | G_FILE_SET_CONTENTS_DURABLE, 0600, error))
+			goto undo;
+		if (!g_file_set_contents_full(outlines_path, new_outlines_text, -1,
+			G_FILE_SET_CONTENTS_CONSISTENT | G_FILE_SET_CONTENTS_DURABLE, 0600, error))
+			goto undo;
+		if (new_ignore_text != NULL && !g_file_set_contents_full(ignore_path, new_ignore_text, -1,
+			G_FILE_SET_CONTENTS_CONSISTENT, 0600, error))
 			goto undo;
 		message = g_strdup_printf("feat: %s", edit.summary);
 		commit_args[4] = message;
@@ -728,7 +922,14 @@ undo:
 			if (previous != NULL)
 				(void)write_entry(absolute, previous, NULL);
 		}
-		(void)g_file_set_contents_full(record_path, record_text, -1, G_FILE_SET_CONTENTS_CONSISTENT, 0600, NULL);
+		if (record_text != NULL)
+			(void)g_file_set_contents_full(record_path, record_text, -1, G_FILE_SET_CONTENTS_CONSISTENT, 0600, NULL);
+		if (outlines_text != NULL)
+			(void)g_file_set_contents_full(outlines_path, outlines_text, -1, G_FILE_SET_CONTENTS_CONSISTENT, 0600, NULL);
+		else
+			(void)g_unlink(outlines_path);
+		if (new_ignore_text != NULL && ignore_text != NULL)
+			(void)g_file_set_contents_full(ignore_path, ignore_text, -1, G_FILE_SET_CONTENTS_CONSISTENT, 0600, NULL);
 	}
 out:
 	if (okay) {

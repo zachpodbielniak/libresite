@@ -8,7 +8,7 @@
 
 * Read structured records
 
-Every executed pipeline step appends an object to =usage= in =OUTPUT.libresite-work/checkpoint.json=. On publication the same history appears in =OUTPUT/.libresite/run.json=. This metadata is private and ignored by the generated Git repository. No prompts, response bodies or diagnostics are added to usage records. Existing artifact metadata remains in the same document.
+Every executed pipeline step appends an object to =usage= in =OUTPUT.libresite-work/checkpoint.json=. On publication the same history appears in =OUTPUT/.libresite/run.json=. This metadata is private and ignored by the generated Git repository; only a composed site's =.libresite/outlines.json= is committed (see [[file:editing.org][editing]]). No prompts, response bodies or diagnostics are added to usage records. Existing artifact metadata remains in the same document.
 
 | Field | Meaning |
 |-------+---------|

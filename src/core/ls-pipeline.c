@@ -2,6 +2,7 @@
 #include "core/ls-usage.h"
 #include "core/ls-pipeline.h"
 #include "core/ls-components.h"
+#include "core/ls-edit.h"
 #include <glib/gstdio.h>
 #include <sys/file.h>
 #include <sys/stat.h>
@@ -338,8 +339,9 @@ initialize_repository(const gchar *directory, LsContext *context,
 	const LsArtifact *existing = ls_context_lookup(context, ".gitignore");
 	g_autofree gchar *path = g_build_filename(directory, ".gitignore", NULL);
 	const gchar *defaults =
-		"\n# Libresite: local metadata, secrets, build output and caches\n"
-		"/.libresite/\n*.libresite-work/\n"
+		"\n# Libresite: local metadata, secrets, build output and caches; the site's\n"
+		"# outlines are versioned with it so any restored version stays editable\n"
+		"/.libresite/*\n!/.libresite/outlines.json\n*.libresite-work/\n"
 		".env\n.env.*\n!.env.example\n!.env.sample\n!.env.template\n"
 		"/build/\n/dist/\n/coverage/\nnode_modules/\n.venv/\nvenv/\n"
 		"__pycache__/\n*.py[cod]\n.pytest_cache/\n.next/\n.nuxt/\n"
@@ -705,6 +707,14 @@ run_pipeline(
 		if (!save_checkpoint(metadata, context, fingerprint, json_array_get_length(steps),
 			usage, usage_complete, error))
 			goto out;
+		/* A composed site commits its outlines, so every version can be edited. */
+		{
+			g_autofree gchar *outlines = ls_outlines_text(context);
+			g_autofree gchar *outlines_path = g_build_filename(metadata_dir, "outlines.json", NULL);
+			if (outlines != NULL && !g_file_set_contents_full(outlines_path, outlines, -1,
+				G_FILE_SET_CONTENTS_CONSISTENT | G_FILE_SET_CONTENTS_DURABLE, 0600, error))
+				goto out;
+		}
 	}
 	if (!initialize_repository(export_path, context, cancellable, error))
 		goto out;

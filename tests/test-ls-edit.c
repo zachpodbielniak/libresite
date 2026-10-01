@@ -231,6 +231,13 @@ test_edit_page(void){
 	g_assert_cmpstr(status, ==, "");
 	record = read_file(site.site, ".libresite/run.json");
 	g_assert_nonnull(strstr(record, "Recent repairs"));
+	/* The outlines are versioned with the site; the local record is not. */
+	{
+		g_autofree gchar *tracked = git(site.site, "ls-files", ".libresite", NULL);
+		g_autofree gchar *outlines = read_file(site.site, ".libresite/outlines.json");
+		g_assert_cmpstr(tracked, ==, ".libresite/outlines.json");
+		g_assert_nonnull(strstr(outlines, "Recent repairs"));
+	}
 	g_assert_nonnull(strstr(site.progress->str, "committed"));
 	site_teardown(&site);
 }
@@ -362,6 +369,94 @@ test_edit_not_a_site(void){
 	remove_all(temp);
 }
 
+/* git commit as a test user, for history the builder did not write. */
+static void
+git_commit(const gchar *directory, const gchar *a, const gchar *b, const gchar *c){
+	gchar *argv[] = {(gchar *)"git", (gchar *)"-C", (gchar *)directory, (gchar *)"-c", (gchar *)"user.name=T",
+		(gchar *)"-c", (gchar *)"user.email=t@t", (gchar *)a, (gchar *)b, (gchar *)c, NULL};
+	gint status = 0;
+	g_assert_true(g_spawn_sync(NULL, argv, NULL, G_SPAWN_SEARCH_PATH | G_SPAWN_STDOUT_TO_DEV_NULL, NULL, NULL,
+		NULL, NULL, &status, NULL));
+	g_assert_true(g_spawn_check_wait_status(status, NULL));
+}
+
+/* Going back with git restores the outlines too, so the next edit builds
+ * on the restored version instead of refusing. */
+static void
+test_edit_after_revert(void){
+	Site site;
+	g_autoptr(GError) error = NULL;
+	g_autofree gchar *first = NULL, *second = NULL, *page = NULL, *outlines = NULL, *count = NULL;
+	site_setup(&site);
+	first = work_with_heading("Recent repairs");
+	g_ptr_array_add(site.provider->answers, g_strdup_printf("{\"summary\": \"Rename\", \"pages\": [%s]}", first));
+	g_assert_true(apply(&site, "Rename the work page", NULL, NULL, &error));
+	g_assert_no_error(error);
+	git_commit(site.site, "revert", "--no-edit", "HEAD");
+	outlines = read_file(site.site, ".libresite/outlines.json");
+	g_assert_null(strstr(outlines, "Recent repairs"));
+	page = read_file(site.site, "work.html");
+	g_assert_null(strstr(page, "Recent repairs"));
+	second = work_with_heading("Our repairs");
+	g_ptr_array_set_size(site.provider->answers, 0);
+	g_ptr_array_add(site.provider->answers, g_strdup_printf("{\"summary\": \"Rename again\", \"pages\": [%s]}", second));
+	g_assert_true(apply(&site, "Call it Our repairs", NULL, NULL, &error));
+	g_assert_no_error(error);
+	/* The model saw the restored version, not the reverted one. */
+	g_assert_null(strstr(site.provider->last_prompt, "Recent repairs"));
+	g_clear_pointer(&page, g_free);
+	page = read_file(site.site, "work.html");
+	g_assert_nonnull(strstr(page, "Our repairs"));
+	count = git(site.site, "rev-list", "--count", "HEAD");
+	g_assert_cmpstr(count, ==, "4");
+	site_teardown(&site);
+}
+
+/* A site built before outlines were committed is edited from its local
+ * record, and that first edit starts tracking its outlines. */
+static void
+test_edit_older_site(void){
+	Site site;
+	g_autoptr(GError) error = NULL;
+	g_autofree gchar *ignore = NULL, *old_ignore = NULL, *work = NULL, *tracked = NULL, *ignore_path = NULL;
+	g_auto(GStrv) parts = NULL;
+	site_setup(&site);
+	/* Turn it into an older site: no outlines, the whole metadata folder ignored. */
+	git_commit(site.site, "rm", "--quiet", ".libresite/outlines.json");
+	ignore = read_file(site.site, ".gitignore");
+	parts = g_strsplit(ignore, "/.libresite/*\n!/.libresite/outlines.json\n", 2);
+	g_assert_nonnull(parts[1]);
+	old_ignore = g_strconcat(parts[0], "/.libresite/\n", parts[1], NULL);
+	ignore_path = g_build_filename(site.site, ".gitignore", NULL);
+	g_assert_true(g_file_set_contents(ignore_path, old_ignore, -1, NULL));
+	git_commit(site.site, "commit", "-qam", "older layout");
+	work = work_with_heading("Recent repairs");
+	g_ptr_array_add(site.provider->answers, g_strdup_printf("{\"summary\": \"Rename\", \"pages\": [%s]}", work));
+	g_assert_true(apply(&site, "Rename the work page", NULL, NULL, &error));
+	g_assert_no_error(error);
+	tracked = git(site.site, "ls-files", ".libresite", NULL);
+	g_assert_cmpstr(tracked, ==, ".libresite/outlines.json");
+	g_clear_pointer(&ignore, g_free);
+	ignore = read_file(site.site, ".gitignore");
+	g_assert_nonnull(strstr(ignore, "!/.libresite/outlines.json"));
+	g_assert_null(strstr(ignore, "\n/.libresite/\n"));
+	/* Tracking came first, as its own version, so reverting the edit keeps it. */
+	{
+		g_autofree gchar *subjects = git(site.site, "log", "-2", "--format=%s");
+		g_autofree gchar *second = work_with_heading("Our repairs");
+		g_autofree gchar *page = NULL;
+		g_assert_cmpstr(subjects, ==, "feat: Rename\nchore: track site outlines for editing");
+		git_commit(site.site, "revert", "--no-edit", "HEAD");
+		g_ptr_array_set_size(site.provider->answers, 0);
+		g_ptr_array_add(site.provider->answers, g_strdup_printf("{\"summary\": \"Again\", \"pages\": [%s]}", second));
+		g_assert_true(apply(&site, "Call it Our repairs", NULL, NULL, &error));
+		g_assert_no_error(error);
+		page = read_file(site.site, "work.html");
+		g_assert_nonnull(strstr(page, "Our repairs"));
+	}
+	site_teardown(&site);
+}
+
 int
 main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
@@ -370,5 +465,7 @@ main(int argc, char **argv){
 	g_test_add_func("/edit/rejected", test_edit_rejected);
 	g_test_add_func("/edit/refuses-drift", test_edit_refuses_drift);
 	g_test_add_func("/edit/not-a-site", test_edit_not_a_site);
+	g_test_add_func("/edit/after-revert", test_edit_after_revert);
+	g_test_add_func("/edit/older-site", test_edit_older_site);
 	return g_test_run();
 }

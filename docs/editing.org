@@ -3,12 +3,12 @@
 #+authors: Ben Doty
 #+categories: libresite, editing, operations
 #+created: 2026-09-30T21:00:00-04:00
-#+updated: 2026-09-30T21:00:00-04:00
+#+updated: 2026-09-30T22:00:00-04:00
 #+version: 0.1.0
 
 * Change this thing
 
-A site built from components keeps its plan and page specifications in =.libresite/run.json= (see [[file:components.org][composed sites]]). =--edit= changes that site in place from one plain-language request and commits the result as a new version on the site's own Git history:
+A site built from components commits its outlines with every version in =.libresite/outlines.json=: the plan, page specifications, signature layer and fingerprint, with a SHA-256 of every published file (see [[file:components.org][composed sites]]). The rest of =.libresite/=, including the =run.json= record, stays local and ignored. =--edit= changes that site in place from one plain-language request and commits the result as a new version on the site's own Git history:
 
 #+begin_src bash
 libresite --edit ./my-site --change "We're closed Thanksgiving week, November 23 to 27. Add a notice on the home and contact pages."
@@ -25,9 +25,9 @@ Optional flags: =--provider= and =--model= (default =claude-code= with its defau
 
 Before any model call:
 
-- the directory has a run record with a saved plan, so only composed sites can be edited this way;
+- the directory has committed outlines (or, for a site built before outlines were committed, a run record) with a saved plan, so only composed sites can be edited this way;
 - the Git working tree has no uncommitted or untracked changes;
-- every published file still matches the run record, so the saved outlines describe the site the owner has. A file changed or committed outside libresite stops the edit with its name.
+- every published file still matches the hashes in the outlines, so they describe the site the owner has. A file changed or committed outside libresite stops the edit with its name.
 
 Before writing anything:
 
@@ -37,13 +37,15 @@ Before writing anything:
 - the merged plan is repaired and checked, and every page, changed or not, is checked against it, so a removed page cannot leave a dead link;
 - the whole site is recomposed and must load as a valid context (paths, sizes, conflicts), and the edit must change at least one published file.
 
-Then the builder writes the changed files with the export's private modes, removes deleted pages, rewrites the run record with the new plan, specifications, signature and fingerprint, and commits. If writing, recording or committing fails, it restores every file and the record and unstages, so the site and its history are as they were. A lock in =.libresite= keeps two edits of one site from running at once.
+Then the builder writes the changed files with the export's private modes, removes deleted pages, writes the new outlines (and the local run record when there is one), and commits them together. If writing, recording or committing fails, it restores every file, the outlines and the record and unstages, so the site and its history are as they were. A lock in =.libresite= keeps two edits of one site from running at once.
 
 * Behaviour worth knowing
 
 - Edits recompose with the current component library. Library fixes made since the last build reach the edited site too, so a commit can include small style changes the request did not mention. A site built from a sealed package is edited with today's library, not its sealed copy.
 - The recipe's acceptance literals are not part of the run record, so they are not rechecked; the edit stage tells the model to keep everything the request does not mention.
-- The run record is local metadata and stays out of Git. Going back to an earlier version by hand (=git revert=, =git checkout=) makes the files disagree with the record, and the next edit refuses rather than guessing. Versioning the outlines with the site is a planned follow-up.
+- Going back is ordinary Git. =git revert= or checking out an earlier version restores that version's outlines with its files, so the next edit starts from it. Live, reverting a new page and then editing the footer built on the restored site, without the page.
+- A site built before outlines were committed is edited from its local record. Its first edit commits the outlines of the version it has as =chore: track site outlines for editing=, and changes its =.gitignore= to track them, before committing the change itself; reverting that change then keeps the outlines.
+- Hosting must not serve =.libresite/=, the same as =.git/=. A deployment from =git archive= or a plain copy of the repository includes =.libresite/outlines.json= and must exclude it.
 - The edit never runs generated code, hooks or project scripts; Git runs without user hooks, attributes or signing, as for publication.
 
 * Library interface
@@ -52,4 +54,4 @@ Then the builder writes the changed files with the export's private modes, remov
 
 * Verification
 
-=tests/test-ls-edit.c= builds a composed site through the pipeline with a controlled provider, then checks an edited page, a plan change followed by a second edit, rejected answers that leave files, record and history untouched, refusals for uncommitted and out-of-band committed changes, and a directory that is not a built site. =tests/edit.sh= checks the command-line rules and refusals, also from an installed binary. Live runs on a delivered garage site took 29 seconds for a two-page notice, 10 seconds for an accent colour and 27 seconds for a new linked page; these measure orchestration and one model, not edit quality in general.
+=tests/test-ls-edit.c= builds a composed site through the pipeline with a controlled provider, then checks an edited page and its committed outlines, a plan change followed by a second edit, rejected answers that leave files, record and history untouched, refusals for uncommitted and out-of-band committed changes, a directory that is not a built site, an edit after =git revert=, and an older site that starts tracking its outlines and can then be reverted and edited again. =tests/edit.sh= checks the command-line rules and refusals, also from an installed binary. Live runs on a delivered garage site took 29 seconds for a two-page notice, 10 seconds for an accent colour and 27 seconds for a new linked page; these measure orchestration and one model, not edit quality in general.
