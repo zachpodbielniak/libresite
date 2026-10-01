@@ -22,6 +22,7 @@ binary="$test_dir/usr/bin/libresite"
 
 (cd /tmp && bash "$root/tests/usage.sh" "$binary")
 (cd /tmp && bash "$root/tests/revision.sh" "$binary")
+(cd /tmp && bash "$root/tests/edit.sh" "$binary")
 (cd /tmp && bash "$root/tests/qa.sh" "$binary")
 for recipe in "$root"/recipes/*.yaml
 do

@@ -359,3 +359,64 @@ invalid:
 	);
 	return NULL;
 }
+
+/* Run Git without inherited repository pointers, user hooks, filters or signing.
+ * Cancellation must reap the child before the private export is abandoned. */
+gboolean
+ls_git_run(const gchar *directory, const gchar *const *arguments, gchar **output,
+	GCancellable *cancellable, GError **error){
+	g_autoptr(GSubprocessLauncher) launcher = g_subprocess_launcher_new(
+		output != NULL ? G_SUBPROCESS_FLAGS_STDOUT_PIPE | G_SUBPROCESS_FLAGS_STDERR_PIPE
+		: G_SUBPROCESS_FLAGS_STDOUT_SILENCE | G_SUBPROCESS_FLAGS_STDERR_PIPE);
+	g_autoptr(GSubprocess) process = NULL;
+	g_auto(GStrv) environment = g_get_environ();
+	g_autoptr(GPtrArray) argv = g_ptr_array_new();
+	g_autofree gchar *diagnostic = NULL, *captured = NULL;
+	guint i;
+	if (g_cancellable_set_error_if_cancelled(cancellable, error))
+		return FALSE;
+	g_subprocess_launcher_set_cwd(launcher, directory);
+	for (i = 0; environment[i] != NULL; i++) {
+		if (g_str_has_prefix(environment[i], "GIT_")) {
+			g_autofree gchar *name = g_strndup(environment[i],
+				(gsize)(strchr(environment[i], '=') - environment[i]));
+			g_subprocess_launcher_unsetenv(launcher, name);
+		}
+	}
+	g_subprocess_launcher_setenv(launcher, "GIT_CONFIG_NOSYSTEM", "1", TRUE);
+	g_subprocess_launcher_setenv(launcher, "GIT_CONFIG_GLOBAL", "/dev/null", TRUE);
+	g_subprocess_launcher_setenv(launcher, "GIT_ATTR_NOSYSTEM", "1", TRUE);
+	g_ptr_array_add(argv, (gpointer)"git");
+	g_ptr_array_add(argv, (gpointer)"-c");
+	g_ptr_array_add(argv, (gpointer)"core.hooksPath=/dev/null");
+	g_ptr_array_add(argv, (gpointer)"-c");
+	g_ptr_array_add(argv, (gpointer)"core.attributesFile=/dev/null");
+	g_ptr_array_add(argv, (gpointer)"-c");
+	g_ptr_array_add(argv, (gpointer)"core.excludesFile=/dev/null");
+	g_ptr_array_add(argv, (gpointer)"-c");
+	g_ptr_array_add(argv, (gpointer)"user.name=Libresite");
+	g_ptr_array_add(argv, (gpointer)"-c");
+	g_ptr_array_add(argv, (gpointer)"user.email=libresite@localhost");
+	for (i = 0; arguments[i] != NULL; i++)
+		g_ptr_array_add(argv, (gpointer)arguments[i]);
+	g_ptr_array_add(argv, NULL);
+	process = g_subprocess_launcher_spawnv(launcher, (const gchar *const *)argv->pdata, error);
+	if (process == NULL) {
+		g_prefix_error(error, "Cannot run git %s: ", arguments[0]);
+		return FALSE;
+	}
+	if (!g_subprocess_communicate_utf8(process, NULL, cancellable, output != NULL ? &captured : NULL,
+		&diagnostic, error)) {
+		g_subprocess_force_exit(process);
+		g_subprocess_wait(process, NULL, NULL);
+		return FALSE;
+	}
+	if (!g_subprocess_get_successful(process)) {
+		g_set_error(error, LS_ERROR, LS_ERROR_CONFLICT, "git %s failed: %s",
+			arguments[0], diagnostic != NULL ? diagnostic : "no diagnostic");
+		return FALSE;
+	}
+	if (output != NULL)
+		*output = captured != NULL ? g_steal_pointer(&captured) : g_strdup("");
+	return TRUE;
+}

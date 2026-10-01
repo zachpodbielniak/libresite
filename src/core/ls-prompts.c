@@ -180,6 +180,33 @@ ls_prompts_render_spec(LsPrompts *self, LsRecipe *recipe, JsonObject *step,
 	return result;
 }
 
+gchar *
+ls_prompts_render_stage(LsPrompts *self, const gchar *stage, const gchar *reference, const gchar *task,
+	GError **error){
+	JsonObject *root;
+	const gchar *stage_text, *system;
+	gchar *result;
+	g_return_val_if_fail(LS_IS_PROMPTS(self) && stage != NULL && task != NULL, NULL);
+	root = json_node_get_object(self->root);
+	stage_text = ls_string(json_object_get_object_member(root, "stages"), stage);
+	system = ls_prompts_get_spec_system(self);
+	if (system == NULL || stage_text == NULL) {
+		g_set_error(error, LS_ERROR, LS_ERROR_INVALID,
+			"The prompt catalog needs spec_system and a '%s' stage", stage);
+		return NULL;
+	}
+	result = g_strdup_printf("STAGE CONTRACT\n%s\n\nREFERENCE\n%s\n\nTASK (JSON)\n%s\n",
+		stage_text, reference != NULL ? reference : "(none)", task);
+	if (self->max_bytes != 0 && strlen(result) + strlen(system) > self->max_bytes) {
+		g_set_error(error, LS_ERROR, LS_ERROR_LIMIT,
+			"Prompt needs %" G_GSIZE_FORMAT " bytes; limit is %" G_GSIZE_FORMAT "; raise --max-prompt-bytes",
+			strlen(result) + strlen(system), self->max_bytes);
+		g_free(result);
+		return NULL;
+	}
+	return result;
+}
+
 const gchar *
 ls_prompts_get_digest(LsPrompts *self){
 	return self->digest;

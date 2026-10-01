@@ -60,6 +60,20 @@ gchar *ls_prompts_render(
  */
 const gchar *ls_prompts_get_spec_system(LsPrompts *self);
 /**
+ * ls_prompts_render_stage:
+ * @self: a catalog with spec_system
+ * @stage: stages entry holding the stage contract
+ * @reference: (nullable): reference text such as the component catalog
+ * @task: JSON task data for this call
+ * @error: return location for an error
+ *
+ * Builds a prompt that needs no recipe, such as an edit of a delivered
+ * site: stage contract, reference and task, in that order.
+ * Returns: (transfer full) (nullable): prompt text
+ */
+gchar *ls_prompts_render_stage(LsPrompts *self, const gchar *stage, const gchar *reference, const gchar *task,
+	GError **error);
+/**
  * ls_prompts_render_spec:
  * @self: a catalog with spec_system
  * @recipe: recipe and site brief

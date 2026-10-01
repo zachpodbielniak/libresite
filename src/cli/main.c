@@ -145,6 +145,26 @@ run_thread(gpointer data){
 	g_idle_add_full(G_PRIORITY_DEFAULT, quit_loop, run->loop, NULL);
 	return NULL;
 }
+/* An edit runs on a worker too, for the same signal handling. */
+typedef struct {
+	GMainLoop *loop;
+	LsEditor *editor;
+	GCancellable *cancellable;
+	const gchar *project;
+	const gchar *change;
+	gboolean okay;
+	GError *error;
+	gchar *summary;
+	gchar *commit;
+} EditRun;
+static gpointer
+edit_thread(gpointer data){
+	EditRun *run = (EditRun *)data;
+	run->okay = ls_editor_apply(run->editor, run->project, run->change, &run->summary, &run->commit,
+		run->cancellable, &run->error);
+	g_idle_add_full(G_PRIORITY_DEFAULT, quit_loop, run->loop, NULL);
+	return NULL;
+}
 static gboolean
 cancel_run(gpointer data){
 	g_cancellable_cancel(G_CANCELLABLE(data));
@@ -157,6 +177,12 @@ print_progress(const gchar *id, guint index, const gchar *message){
 	g_autofree gchar *timestamp = g_date_time_format(now, "%Y-%m-%dT%H:%M:%S%z");
 	/* Capture each event's local wall time and offset on the emitting thread. */
 	g_printerr("[%s] [%u] %s: %s\n", timestamp, index + 1, id, message);
+}
+static void
+edit_progress(LsEditor *editor, const gchar *message, gpointer data){
+	(void)editor;
+	(void)data;
+	print_progress("edit", 0, message);
 }
 static void
 step_started(LsPipeline *pipeline, const gchar *id, guint index, gpointer data){
@@ -314,6 +340,7 @@ main(int argc, char **argv){
 	g_autoptr(LsPipeline) pipeline = NULL;
 	g_autofree gchar *yaml = NULL;
 	g_autofree gchar *project = NULL;
+	g_autofree gchar *edit_path = NULL, *change = NULL;
 	g_autofree gchar *usage_path = NULL, *rates_path = NULL;
 	g_autoptr(LsContext) preview_context = NULL;
 	GOptionEntry entries[] = {
@@ -328,6 +355,9 @@ main(int argc, char **argv){
 		 "Price checkpoint or run usage as JSON using --rates", "FILE"},
 		{"rates", 0, 0, G_OPTION_ARG_FILENAME, &rates_path,
 		 "YAML provider/model rate card for --price-usage", "FILE"},
+		{"edit", 0, 0, G_OPTION_ARG_FILENAME, &edit_path,
+		 "Change a built site in place and commit a new version (with --change)", "DIR"},
+		{"change", 0, 0, G_OPTION_ARG_STRING, &change, "The change for --edit, in plain words", "TEXT"},
 		{"revise", 0, 0, G_OPTION_ARG_FILENAME, &project,
 		 "Load an existing text project; site.brief describes the changes", "DIR"},
 		{"qa", 0, 0, G_OPTION_ARG_FILENAME, &qa_path,
@@ -418,6 +448,7 @@ main(int argc, char **argv){
 		"libresite -r recipes/landing.yaml -o ./my-site\n  libresite -r recipes/landing.yaml -o "
 		"./my-site --resume --approve design-gate\n  libresite -r recipes/studio.yaml -o ./my-site "
 		"--provider codex\n  libresite --qa ./my-site\n  "
+		"libresite --edit ./my-site --change \"Make the header darker\"\n  "
 		"libresite -r recipes/revision.yaml --revise ./my-site "
 		"-o ./my-site-v2\n\nProviders: codex, claude-code, grok-build, cursor, "
 		"antigravity.\nGeneration uses your installed and authenticated provider CLI.\nGenerated "
@@ -496,6 +527,71 @@ main(int argc, char **argv){
 		if (report != NULL && (fputs(report, stdout) == EOF || fflush(stdout) == EOF)) {
 			g_set_error_literal(&error, G_IO_ERROR, G_IO_ERROR_FAILED, "Cannot write QA report");
 			goto fail;
+		}
+		return finish_events(&events, 0);
+	}
+	if (edit_path != NULL || change != NULL) {
+		g_autoptr(LsEditor) editor = NULL;
+		g_autoptr(JsonObject) settings = json_object_new();
+		const gchar *agents[] = {"codex", "claude-code", "cursor", "grok-build", "antigravity"};
+		gboolean known = agent == NULL;
+		guint a;
+		if (edit_path == NULL || change == NULL || recipe_path != NULL || package_path != NULL ||
+			seal_path != NULL || form_path != NULL || output != NULL || project != NULL || resume ||
+			validate || plan || preview != NULL || emit_yaml || license || version || list ||
+			plugins != NULL || unlimited || usage_path != NULL || rates_path != NULL ||
+			approvals != NULL || approve_all) {
+			g_set_error_literal(&error, LS_ERROR, LS_ERROR_INVALID,
+				"Use --edit DIR --change TEXT, optionally with --provider, --model, --timeout, --prompts, "
+				"--max-prompt-bytes and --debug");
+			goto fail;
+		}
+		for (a = 0; agent != NULL && a < G_N_ELEMENTS(agents); a++)
+			known = known || g_str_equal(agent, agents[a]);
+		if (!known || (model != NULL && agent == NULL) || timeout < -1 || timeout > 86400) {
+			g_set_error_literal(&error, LS_ERROR, LS_ERROR_INVALID,
+				"--provider must be codex, claude-code, cursor, grok-build or antigravity, --model needs "
+				"--provider, and --timeout is 0 to 86400 seconds");
+			goto fail;
+		}
+		prompts = ls_prompts_new(catalog, &error);
+		if (prompts == NULL)
+			goto fail;
+		if (max_prompt_bytes < 0) {
+			g_set_error_literal(&error, LS_ERROR, LS_ERROR_INVALID, "--max-prompt-bytes must be nonnegative");
+			goto fail;
+		}
+		ls_prompts_set_max_bytes(prompts, (gsize)max_prompt_bytes);
+		json_object_set_string_member(settings, "provider", agent != NULL ? agent : "claude-code");
+		if (model != NULL)
+			json_object_set_string_member(settings, "model", model);
+		json_object_set_int_member(settings, "timeout", timeout >= 0 ? timeout : 0);
+		json_object_set_int_member(settings, "retries", 1);
+		json_object_set_int_member(settings, "max_tokens", 0);
+		provider = ls_ai_provider_new();
+		ls_ai_provider_set_debug(provider, debug);
+		editor = ls_editor_new(LS_PROVIDER(provider), prompts, settings);
+		g_signal_connect(editor, "progress", G_CALLBACK(edit_progress), NULL);
+		{
+			g_autoptr(GMainLoop) loop = g_main_loop_new(NULL, FALSE);
+			g_autoptr(GCancellable) cancellable = g_cancellable_new();
+			EditRun run = {loop, editor, cancellable, edit_path, change, FALSE, NULL, NULL, NULL};
+			guint interrupt = g_unix_signal_add(SIGINT, cancel_run, cancellable);
+			guint terminate = g_unix_signal_add(SIGTERM, cancel_run, cancellable);
+			GThread *thread = g_thread_new("libresite-edit", edit_thread, &run);
+			g_main_loop_run(loop);
+			g_thread_join(thread);
+			g_source_remove(interrupt);
+			g_source_remove(terminate);
+			if (!run.okay) {
+				error = run.error;
+				/* A request or directory the editor cannot take is a usage error. */
+				failure_code = g_error_matches(error, LS_ERROR, LS_ERROR_INVALID) ? 2 : 1;
+				goto fail;
+			}
+			g_print("Committed %s: %s\n", run.commit, run.summary);
+			g_free(run.commit);
+			g_free(run.summary);
 		}
 		return finish_events(&events, 0);
 	}

@@ -54,6 +54,8 @@ Open a generated static =index.html= directly. For an application, follow its =R
 
 ** Revise an existing project
 
+Edit a site built from components in place with =--edit DIR --change TEXT=: one model call changes only what the request touches, the builder checks and recomposes the whole site, and the result is committed as =feat: SUMMARY= on the site's own history. See [[file:docs/editing.org][editing.org]].
+
 Use =--revise DIR= with a change recipe whose =site.brief= describes the requested edits. Existing files enter the pipeline as context; omitted files survive and explicit deletions are transactional. The source stays unchanged and the new output receives its own =feat: revise existing project= commit. The input supports regular UTF-8 text, binary assets (PNG, WebP, ICO, fonts) and executable intent; symlinks and special files are rejected. See [[file:docs/revision.org][revision.org]] for input selection, limits and source-bound resume.
 
 #+begin_src bash
@@ -159,6 +161,7 @@ Repository skills live in [[file:skills/libresite-landing/SKILL.md][skills/libre
 - [[file:docs/building.org][Build, install and dependency modes]]
 - [[file:docs/operations.org][CLI, checkpoints, limits and troubleshooting]]
 - [[file:docs/revision.org][Existing-project revisions and incremental file operations]]
+- [[file:docs/editing.org][Editing a built site in place]]
 - [[file:docs/testing.org][Verification and its limits]]
 - [[file:docs/qa.org][Published-tree QA runner]]
 - [[file:docs/robustness-review.org][Robustness review and deterministic acceptance]]

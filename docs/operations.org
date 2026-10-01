@@ -26,6 +26,8 @@
 | =--preview STEP-ID= | System and task prompt, or native gate/scaffold text |
 | =--resume= | Reuse a matching =OUTPUT.libresite-work= |
 | =--revise DIR= | Import an existing project; =site.brief= is the change brief |
+| =--edit DIR= | Change a built composed site in place and commit a new version; needs =--change= |
+| =--change TEXT= | The plain-language change for =--edit= |
 | =--approve STEP-ID= | Approve a native gate (repeatable) |
 | =--approve-all= | Approve every native gate for this run |
 | =--qa DIR= | Inspect a published tree; no generation |
@@ -155,6 +157,8 @@ Optional =validate.options.checks= enforce literal content and inclusive byte bo
 Inputs with quoted numeric/boolean/null values now retain their YAML string type. This corrects dependency scalar coercion; it can invalidate a checkpoint whose original recipe depended on that bug. Keep the original binary/catalog for recovering such existing work or generate into a fresh output with a corrected recipe. Existing shipped recipe and catalog bytes are unchanged by this review.
 
 * Incremental revision
+
+=--edit DIR --change TEXT= edits a site built from components in place: it refuses uncommitted changes or files that no longer match the run record, makes one checked change and commits =feat: SUMMARY= on the site's own history. It accepts =--provider=, =--model=, =--timeout=, =--prompts=, =--max-prompt-bytes= and =--debug=, and no recipe. See [[file:editing.org][editing.org]].
 
 =--revise DIR= imports an existing text project and interprets =site.brief= as a change brief. It works with =--validate=, =--plan= and =--preview=; generation still requires a new =--output= outside the source tree. The revision result has its own Git repository and =feat: revise existing project= commit. Resume also verifies the current source snapshot. See [[file:revision.org][revision.org]] for commands, supported files and exclusions.
 

@@ -1,0 +1,55 @@
+#+title: Editing a built site
+#+description: Plain-language changes to a composed site, committed as new versions on its own history
+#+authors: Ben Doty
+#+categories: libresite, editing, operations
+#+created: 2026-09-30T21:00:00-04:00
+#+updated: 2026-09-30T21:00:00-04:00
+#+version: 0.1.0
+
+* Change this thing
+
+A site built from components keeps its plan and page specifications in =.libresite/run.json= (see [[file:components.org][composed sites]]). =--edit= changes that site in place from one plain-language request and commits the result as a new version on the site's own Git history:
+
+#+begin_src bash
+libresite --edit ./my-site --change "We're closed Thanksgiving week, November 23 to 27. Add a notice on the home and contact pages."
+libresite --edit ./my-site --change "Swap the yellow accent for a deep brick red"
+libresite --edit ./my-site --change "Add a Fleet accounts page and link it from the menu"
+git -C ./my-site log --oneline
+#+end_src
+
+Each edit is one model call. The model sees the request, the plan (without the dealt structure), every page specification, the signature layer and the component catalog, and answers with only what changes: a one-line =summary=, the plan members it replaces, the complete specifications of pages it changes or adds, routes to =remove=, and optionally a new =signature=. Everything else is kept exactly as it is. The commit message is =feat: SUMMARY=.
+
+Optional flags: =--provider= and =--model= (default =claude-code= with its default model), =--timeout= (seconds; 0 waits without limit, the default), =--prompts= for a replacement catalog with an =edit= stage, =--max-prompt-bytes= and =--debug=. The answer gets one retry with the exact rejection.
+
+* What the builder checks
+
+Before any model call:
+
+- the directory has a run record with a saved plan, so only composed sites can be edited this way;
+- the Git working tree has no uncommitted or untracked changes;
+- every published file still matches the run record, so the saved outlines describe the site the owner has. A file changed or committed outside libresite stops the edit with its name.
+
+Before writing anything:
+
+- builder-owned plan members (=structure=, =photos=, =social=, =signature=, =missing=) cannot be replaced; the signature changes only through its own field and passes the same checks as when it was written;
+- an edit cannot add artwork, since that would need drawing; it reuses planned art and the site's photos;
+- removed routes leave the plan, and every new route needs its complete specification;
+- the merged plan is repaired and checked, and every page, changed or not, is checked against it, so a removed page cannot leave a dead link;
+- the whole site is recomposed and must load as a valid context (paths, sizes, conflicts), and the edit must change at least one published file.
+
+Then the builder writes the changed files with the export's private modes, removes deleted pages, rewrites the run record with the new plan, specifications, signature and fingerprint, and commits. If writing, recording or committing fails, it restores every file and the record and unstages, so the site and its history are as they were. A lock in =.libresite= keeps two edits of one site from running at once.
+
+* Behaviour worth knowing
+
+- Edits recompose with the current component library. Library fixes made since the last build reach the edited site too, so a commit can include small style changes the request did not mention. A site built from a sealed package is edited with today's library, not its sealed copy.
+- The recipe's acceptance literals are not part of the run record, so they are not rechecked; the edit stage tells the model to keep everything the request does not mention.
+- The run record is local metadata and stays out of Git. Going back to an earlier version by hand (=git revert=, =git checkout=) makes the files disagree with the record, and the next edit refuses rather than guessing. Versioning the outlines with the site is a planned follow-up.
+- The edit never runs generated code, hooks or project scripts; Git runs without user hooks, attributes or signing, as for publication.
+
+* Library interface
+
+=ls_editor_new()= takes a provider, a prompt catalog and provider settings; =ls_editor_apply()= takes the site directory, the request, a cancellable, and returns the summary and the new commit hash. The =progress= signal is emitted on the calling thread. See =src/core/ls-edit.h=.
+
+* Verification
+
+=tests/test-ls-edit.c= builds a composed site through the pipeline with a controlled provider, then checks an edited page, a plan change followed by a second edit, rejected answers that leave files, record and history untouched, refusals for uncommitted and out-of-band committed changes, and a directory that is not a built site. =tests/edit.sh= checks the command-line rules and refusals, also from an installed binary. Live runs on a delivered garage site took 29 seconds for a two-page notice, 10 seconds for an accent colour and 27 seconds for a new linked page; these measure orchestration and one model, not edit quality in general.

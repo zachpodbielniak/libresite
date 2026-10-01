@@ -74,6 +74,7 @@ Timeout, unlimited and approvals are execution-only: they do not change =ls_reci
 | =ls_prompts_render(self, recipe, step, context, error)= | full, nullable | Task prompt for one generation step |
 | =ls_prompts_get_spec_system(self)= | none, nullable | System prompt for component steps, or NULL |
 | =ls_prompts_render_spec(self, recipe, step, stage, reference, task, error)= | full, nullable | Compact component-step prompt; see [[file:prompts.org][prompts.org]] |
+| =ls_prompts_render_stage(self, stage, reference, task, error)= | full, nullable | Recipe-free prompt (stage, reference, task), used by edits |
 
 A replacement catalog is complete: there is no merge with embedded styles, stages or stacks. Catalog schema lives in [[file:prompts.org][prompts.org]].
 
@@ -205,6 +206,8 @@ CLI plugins export =gboolean ls_plugin_register(LsPipeline *pipeline, GError **e
 | =ls_usage_validate(records, error)= | Typed usage array |
 | =ls_usage_price(usage_json, rates_yaml, error)= | Owned JSON price report; refuses incomplete history |
 | =ls_qa_check(directory, report, cancellable, error)= | Published-tree structural scan |
+| =ls_editor_new(provider, prompts, settings)= | Editor for built composed sites; =progress= signal on the calling thread |
+| =ls_editor_apply(self, project, request, summary, commit, cancellable, error)= | One plain-language change, checked, recomposed and committed; see [[file:editing.org][editing.org]] |
 
 Call =ls_pipeline_validate()= before =ls_package_save()=. Load never substitutes the embedded catalog or current native templates. Pricing and rate-card schema are in [[file:usage.org][usage.org]]. QA report format is in [[file:qa.org][qa.org]].
 
@@ -221,6 +224,7 @@ These parser and path helpers ship in the public headers because recipe, artifac
 | =ls_object_keys(object, keys, error)= | Allowlist; pipe-delimited names, rejects delimiter-in-key bypasses |
 | =ls_string(object, key)= | Borrowed string member or NULL |
 | =ls_path_valid(path)= | Safe relative artifact path |
+| =ls_git_run(directory, arguments, output, cancellable, error)= | Git without inherited GIT_* state, global config, hooks or signing |
 
 * Embedding sketch
 

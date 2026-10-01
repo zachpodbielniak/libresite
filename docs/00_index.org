@@ -10,6 +10,7 @@
 
 - [[file:packages.org][Sold SKU catalog, fixed scopes and archived recipe/catalog pins]]
 - [[file:revision.org][Existing-project revisions and incremental file operations]]
+- [[file:editing.org][Editing a built site in place, one committed version per change]]
 - [[file:recipe-format.org][Recipe reference]]
 - [[file:components.org][Composed sites: plan, parallel pages and the component library]]
 - [[file:scaffold.org][Native static scaffolding and contact contract]]

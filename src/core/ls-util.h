@@ -33,4 +33,19 @@ gboolean ls_focus_valid(const gchar *focus);
 gchar *ls_json_encode(JsonNode *node);
 /* Strict JSON boundary: rejects duplicate members, NUL escapes and deep trees. */
 JsonNode *ls_json_parse(const gchar *text, GError **error);
+/**
+ * ls_git_run:
+ * @directory: working directory for git
+ * @arguments: (array zero-terminated=1): git arguments after the command name
+ * @output: (out) (optional) (transfer full): standard output when requested
+ * @cancellable: (nullable): cancellation token
+ * @error: return location for an error
+ *
+ * Runs git without inherited GIT_* variables, system or global configuration,
+ * hooks, attribute files or signing, committing as Libresite. Cancellation
+ * reaps the child.
+ * Returns: whether git exited successfully
+ */
+gboolean ls_git_run(const gchar *directory, const gchar *const *arguments, gchar **output,
+	GCancellable *cancellable, GError **error);
 G_END_DECLS

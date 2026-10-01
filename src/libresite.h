@@ -14,4 +14,5 @@
 #include "core/ls-qa.h"
 #include "core/ls-template.h"
 #include "core/ls-components.h"
+#include "core/ls-edit.h"
 #define LS_VERSION "0.1.0"
