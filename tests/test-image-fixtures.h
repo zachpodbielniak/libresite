@@ -27,7 +27,6 @@ image_fixture(gint width, gint height, gboolean alpha, const gchar *suffix){
 	void *buffer = NULL;
 	size_t length = 0;
 	gint x, y;
-	g_assert_cmpint(VIPS_INIT("libresite-test"), ==, 0);
 	{
 		static gsize quiet = 0;
 		if (g_once_init_enter(&quiet)) {
@@ -35,6 +34,7 @@ image_fixture(gint width, gint height, gboolean alpha, const gchar *suffix){
 			g_once_init_leave(&quiet, 1);
 		}
 	}
+	g_assert_cmpint(VIPS_INIT("libresite-test"), ==, 0);
 	for (y = 0; y < height; y++)
 		for (x = 0; x < width; x++) {
 			guint8 *pixel = pixels + ((gsize)y * (gsize)width + (gsize)x) * (gsize)bands;
