@@ -6,6 +6,16 @@
 #include <vips/vips.h>
 #include <string.h>
 
+/* GTest prints every info message; libvips narrates each resize at that
+ * level. Warnings and errors still reach the fatal-warnings handler. */
+static void
+drop_vips_chatter(const gchar *domain, GLogLevelFlags level, const gchar *message, gpointer data){
+	(void)domain;
+	(void)level;
+	(void)message;
+	(void)data;
+}
+
 /* @suffix is a libvips save suffix such as ".png", ".jpg[Q=90]" or ".webp". */
 static GBytes *
 image_fixture(gint width, gint height, gboolean alpha, const gchar *suffix){
@@ -18,6 +28,13 @@ image_fixture(gint width, gint height, gboolean alpha, const gchar *suffix){
 	size_t length = 0;
 	gint x, y;
 	g_assert_cmpint(VIPS_INIT("libresite-test"), ==, 0);
+	{
+		static gsize quiet = 0;
+		if (g_once_init_enter(&quiet)) {
+			g_log_set_handler("VIPS", G_LOG_LEVEL_INFO | G_LOG_LEVEL_DEBUG, drop_vips_chatter, NULL);
+			g_once_init_leave(&quiet, 1);
+		}
+	}
 	for (y = 0; y < height; y++)
 		for (x = 0; x < width; x++) {
 			guint8 *pixel = pixels + ((gsize)y * (gsize)width + (gsize)x) * (gsize)bands;
