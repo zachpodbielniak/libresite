@@ -25,6 +25,22 @@ rg -q 'missing <!doctype html' "$test_dir/bad-report"
 printf '%s' '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Hi</title></head><body><h1>Hi</h1></body></html>' > "$test_dir/good/index.html"
 "$binary" --qa "$test_dir/good" > "$test_dir/good-report"
 rg -q 'OK structural' "$test_dir/good-report"
+# Every srcset candidate must be published, not only the src.
+mkdir -p "$test_dir/sized/assets"
+printf 'RIFF' > "$test_dir/sized/assets/bench-800w.webp"
+printf '%s' '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>Hi</title></head><body><img src="assets/bench-800w.webp" srcset="assets/bench-480w.webp 480w, assets/bench-800w.webp 800w" sizes="100vw" alt="" width="800" height="533"></body></html>' > "$test_dir/sized/index.html"
+if "$binary" --qa "$test_dir/sized" > "$test_dir/sized-report"
+then
+	exit 1
+fi
+rg -q 'missing local asset assets/bench-480w.webp' "$test_dir/sized-report"
+if rg -q 'missing local asset assets/bench-800w.webp' "$test_dir/sized-report"
+then
+	exit 1
+fi
+printf 'RIFF' > "$test_dir/sized/assets/bench-480w.webp"
+"$binary" --qa "$test_dir/sized" > "$test_dir/sized-report"
+rg -q 'OK structural' "$test_dir/sized-report"
 export CODEX_PATH="$root/tests/fixtures/provider.sh"
 export LS_TEST_ARGS="$test_dir/args" LS_TEST_INPUT="$test_dir/input" LS_TEST_CWD="$test_dir/cwd"
 export LS_TEST_PROVIDER=codex

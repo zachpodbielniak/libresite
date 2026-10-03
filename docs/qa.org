@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, quality, testing
 #+created: 2026-09-10T18:40:00-04:00
-#+updated: 2026-09-10T20:00:00-04:00
+#+updated: 2026-10-03T12:00:00-04:00
 #+version: 0.1.0
 
 * Boundary
@@ -33,6 +33,7 @@ Each finding is a =FAIL= line naming the artifact and defect, followed by a find
 - Regular files only, using the same import exclusions as revision (=.git=, =.libresite=, =*.libresite-work=)
 - HTML documents: =<!doctype html=, =lang=, =<title=, viewport meta, charset
 - Local =href=/=src= targets on common tags, plus =url()= in CSS and =og:image= content when present
+- Every candidate of an =img= or =source= =srcset=, since a phone may pick any of them
 - Binary assets (PNG, fonts, ICO and similar) are counted and must exist when referenced
 - Missing HTML documents are a finding
 

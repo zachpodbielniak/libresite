@@ -155,6 +155,33 @@ scan_css_urls(LsContext *context, GPtrArray *findings, const gchar *path, const 
 	}
 }
 
+/* Every candidate of an img or source srcset ("url 480w, url 800w") must be
+ * published too: a phone may pick any of them. */
+static void
+scan_srcset(LsContext *context, GPtrArray *findings, const gchar *path, const gchar *html, const gchar *tag_name){
+	g_autofree gchar *open = g_strdup_printf("<%s", tag_name);
+	g_autofree gchar *lower = g_ascii_strdown(html, -1);
+	const gchar *cursor = lower;
+	while ((cursor = strstr(cursor, open)) != NULL) {
+		const gchar *end = strchr(cursor, '>');
+		g_autofree gchar *tag = NULL, *value = NULL;
+		g_auto(GStrv) candidates = NULL;
+		guint i;
+		if (end == NULL)
+			break;
+		tag = g_ascii_strdown(html + (cursor - lower), (gssize)(end - cursor + 1));
+		value = attr_value(tag, "srcset");
+		candidates = value != NULL ? g_strsplit(value, ",", -1) : NULL;
+		for (i = 0; candidates != NULL && candidates[i] != NULL; i++) {
+			gchar *url = g_strstrip(candidates[i]);
+			url[strcspn(url, " \t\r\n")] = '\0';
+			if (*url != '\0')
+				missing_asset(context, findings, path, url);
+		}
+		cursor = end + 1;
+	}
+}
+
 static void
 check_html(LsContext *context, GPtrArray *findings, const gchar *path, const gchar *html){
 	const gchar *attrs[][2] = {
@@ -175,6 +202,8 @@ check_html(LsContext *context, GPtrArray *findings, const gchar *path, const gch
 		add_finding(findings, path, "missing charset");
 	for (i = 0; attrs[i][0] != NULL; i++)
 		scan_tags(context, findings, path, html, attrs[i][0], attrs[i][1]);
+	scan_srcset(context, findings, path, html, "img");
+	scan_srcset(context, findings, path, html, "source");
 	if (ascii_has(html, "og:image")) {
 		g_autofree gchar *lower = g_ascii_strdown(html, -1);
 		const gchar *og = strstr(lower, "og:image");
