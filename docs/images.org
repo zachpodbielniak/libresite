@@ -12,7 +12,7 @@ A walk of a generated site measured a 5.5 MB page, almost all of it two 1536x102
 
 * Where images enter and where they are sized
 
-Raster images enter a composed site in one place: the recipe's =site.photos=, each a binary seed under =assets/= (see [[file:components.org::*Photographs][photographs]]). That includes images an embedder generated with an image model before the order, which arrive as supplied photos. Planned art is SVG drawn by the model, the brand mark is SVG, and the scaffold ships no raster files, so none of those are touched.
+Raster images enter a composed site in one place: the recipe's =site.photos=, each a binary seed under =assets/= (see [[file:components.org::*Photographs][photographs]]). An embedder that generates images with an image model must pass them the same way, as =site.photos= seeds, to have them sized; files an embedder copies into a published site afterwards are not processed. Planned art is SVG drawn by the model, the brand mark is SVG, and the scaffold ships no raster files, so none of those are touched.
 
 The =plan= step sizes the photos. After it reads each photo's header for the plan prompt and before it calls the model, it decodes every photo and writes:
 
