@@ -862,6 +862,25 @@ retry_step(void){
 	}
 	g_assert_nonnull(ls_context_lookup(context, "index.html"));
 }
+/* A generate step after a native step archived a file (a sized photo's
+ * original, a pruned note) keeps the archive and still applies its answer. */
+static void
+archived_step(void){
+	g_autoptr(GObject) provider = g_object_new(fixture_provider_get_type(), NULL);
+	g_autoptr(LsPrompts) prompts = ls_prompts_new(NULL, NULL);
+	g_autoptr(LsRecipe) recipe = ls_recipe_new(recipe_text, NULL);
+	g_autoptr(LsContext) context = ls_context_new();
+	g_autoptr(LsStep) step = g_object_new(LS_TYPE_GENERATE_STEP, NULL);
+	g_autoptr(GError) error = NULL;
+	JsonObject *config = json_array_get_object_element(ls_recipe_get_steps(recipe), 0);
+	g_assert_true(ls_context_apply(context, "{\"files\":[{\"path\":\"assets/old.txt\",\"content\":\"kept\"}]}", NULL));
+	g_assert_true(ls_context_archive(context, "assets/old.txt", NULL));
+	g_assert_true(ls_step_execute(step, recipe, config, prompts, context, LS_PROVIDER(provider), NULL, &error));
+	g_assert_no_error(error);
+	g_assert_nonnull(ls_context_lookup(context, "index.html"));
+	g_assert_null(ls_context_lookup(context, "assets/old.txt"));
+	g_assert_cmpstr(ls_artifact_get_content(ls_context_lookup_archived(context, "assets/old.txt")), ==, "kept");
+}
 /* A valid JSON bundle can still violate the output contract. Reject it before
  * checkpointing, retry with feedback, and retain none of its incidental files. */
 static void
@@ -1709,6 +1728,7 @@ main(int argc, char **argv){
 	g_test_add_func("/artifact/boxed", boxed_artifact);
 	g_test_add_func("/artifact/replace", artifact_replace);
 	g_test_add_func("/step/retry", retry_step);
+	g_test_add_func("/step/archived", archived_step);
 	g_test_add_data_func("/step/acceptance-retry", GINT_TO_POINTER(FALSE), acceptance_retry);
 	g_test_add_data_func("/step/acceptance-exhaustion", GINT_TO_POINTER(TRUE), acceptance_retry);
 	g_test_add_func("/prompt/limit", prompt_limit);

@@ -76,7 +76,7 @@ execute(
 		);
 		/* Trial output remains isolated until structural and downstream checks
 		 * pass. Failed attempts must not contaminate the next retry or checkpoint. */
-		if (response != NULL && ls_context_apply(candidate, snapshot, &local_error) &&
+		if (response != NULL && ls_context_restore(candidate, snapshot, &local_error) &&
 			ls_context_apply(candidate, response, &local_error) &&
 			check_acceptance(recipe, config, prompts, candidate, provider, cancellable, &local_error)) {
 			if (g_cancellable_set_error_if_cancelled(cancellable, error))
