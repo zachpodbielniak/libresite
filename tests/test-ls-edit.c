@@ -2,6 +2,7 @@
 #include "libresite.h"
 #include <glib/gstdio.h>
 #include <string.h>
+#include "test-image-fixtures.h"
 
 #define FIXTURE "tests/fixtures/composed/"
 
@@ -116,11 +117,11 @@ on_progress(LsEditor *editor, const gchar *message, gpointer data){
 	g_string_append_printf((GString *)data, "%s\n", message);
 }
 
-/* A published site from the fixture, ready to edit. */
+/* A published site from @text, ready to edit. */
 static void
-site_setup(Site *site){
+site_setup_recipe(Site *site, const gchar *text){
 	g_autoptr(GError) error = NULL;
-	g_autoptr(LsRecipe) recipe = ls_recipe_new(recipe_text, &error);
+	g_autoptr(LsRecipe) recipe = ls_recipe_new(text, &error);
 	g_autoptr(LsPipeline) pipeline = NULL;
 	g_assert_no_error(error);
 	site->temp = g_dir_make_tmp("libresite-edit-XXXXXX", NULL);
@@ -137,6 +138,12 @@ site_setup(Site *site){
 	json_object_set_int_member(site->settings, "timeout", 0);
 	site->progress = g_string_new(NULL);
 	site->provider->calls = 0;
+}
+
+/* A published site from the fixture, ready to edit. */
+static void
+site_setup(Site *site){
+	site_setup_recipe(site, recipe_text);
 }
 
 static void
@@ -484,10 +491,61 @@ test_edit_older_site(void){
 	site_teardown(&site);
 }
 
+/* A site with a supplied photo publishes its phone-sized WebP files and not
+ * the original. An edit shows the model the photo's supplied path, never the
+ * builder's variants, and keeps the sized files published. */
+static void
+test_edit_photos(void){
+	Site site;
+	g_autoptr(GError) error = NULL;
+	g_autoptr(GBytes) png = image_fixture(1200, 800, FALSE, ".png");
+	g_autofree gchar *png64 = g_base64_encode(g_bytes_get_data(png, NULL), g_bytes_get_size(png));
+	g_autofree gchar *text = NULL, *summary = NULL, *commit = NULL, *work = NULL, *answer = NULL;
+	g_autofree gchar *original = NULL, *variant = NULL;
+	const gchar *task;
+	text = g_strdup_printf(
+		"version: 1\n"
+		"name: harbor\n"
+		"site:\n"
+		"  brief: An illustrative furniture repair workshop\n"
+		"  style: editorial\n"
+		"  photos:\n"
+		"    - {path: assets/harbor.png, alt: The workshop at dawn}\n"
+		"seed_artifacts:\n"
+		"  - {path: assets/harbor.png, encoding: base64, content: %s}\n"
+		"ai: {provider: claude-code, retries: 1}\n"
+		"pipeline:\n"
+		"  steps:\n"
+		"    - {id: plan, type: plan}\n"
+		"    - {id: pages, type: pages, options: {parallel: 4, base_url: 'https://harbor.example/'}}\n"
+		"    - {id: specs, type: prune, options: {prefixes: [site/], archive: true}}\n", png64);
+	site_setup_recipe(&site, text);
+	original = g_build_filename(site.site, "assets", "harbor.png", NULL);
+	variant = g_build_filename(site.site, "assets", "harbor-800w.webp", NULL);
+	g_assert_true(g_file_test(variant, G_FILE_TEST_IS_REGULAR));
+	g_assert_false(g_file_test(original, G_FILE_TEST_EXISTS));
+	work = work_with_heading("Recent repairs");
+	answer = g_strdup_printf("{\"summary\": \"Rename the work page heading.\", \"pages\": [%s]}", work);
+	g_ptr_array_add(site.provider->answers, g_steal_pointer(&answer));
+	{
+		gboolean okay = apply(&site, "Call the work page Recent repairs", &summary, &commit, &error);
+		g_assert_no_error(error);
+		g_assert_true(okay);
+	}
+	task = strstr(site.provider->last_prompt, "TASK (JSON)");
+	g_assert_nonnull(task);
+	g_assert_nonnull(strstr(task, "\"path\":\"assets/harbor.png\""));
+	g_assert_null(strstr(task, "harbor-800w.webp"));
+	g_assert_true(g_file_test(variant, G_FILE_TEST_IS_REGULAR));
+	g_assert_false(g_file_test(original, G_FILE_TEST_EXISTS));
+	site_teardown(&site);
+}
+
 int
 main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
 	g_test_add_func("/edit/page", test_edit_page);
+	g_test_add_func("/edit/photos", test_edit_photos);
 	g_test_add_func("/edit/plan-twice", test_edit_plan_twice);
 	g_test_add_func("/edit/rejected", test_edit_rejected);
 	g_test_add_func("/edit/unchanged", test_edit_unchanged);

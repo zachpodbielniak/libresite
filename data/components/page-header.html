@@ -7,5 +7,5 @@
 {{/lede}}{{#has_meta}}<dl class="page-header__meta">{{#meta}}<div><dt>{{label}}</dt><dd>{{value}}</dd></div>{{/meta}}</dl>
 {{/has_meta}}{{#has_actions}}<p class="actions">{{#actions}}<a class="button{{^primary}} button--ghost{{/primary}}" href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{label}}</a>{{/actions}}</p>
 {{/has_actions}}</div>
-{{#art}}<figure class="page-header__art"><img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}" fetchpriority="high" decoding="async"></figure>
+{{#art}}<figure class="page-header__art"><img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}"{{#srcset}} srcset="{{srcset}}" sizes="(max-width: 48rem) 100vw, 50vw"{{/srcset}} fetchpriority="high" decoding="async"></figure>
 {{/art}}</div>

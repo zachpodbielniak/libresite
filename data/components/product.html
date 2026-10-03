@@ -1,6 +1,6 @@
 <div class="wrap product__layout">
 <div class="product__gallery">
-{{#gallery}}<figure class="product__shot">{{#art}}<img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}" decoding="async">{{/art}}</figure>
+{{#gallery}}<figure class="product__shot">{{#art}}<img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}"{{#srcset}} srcset="{{srcset}}" sizes="(max-width: 48rem) 100vw, 50vw"{{/srcset}} decoding="async">{{/art}}</figure>
 {{/gallery}}</div>
 <div class="product__details">
 <{{htag}} id="{{id}}-h" class="product__name">{{{heading_html}}}</{{htag}}>

@@ -1411,6 +1411,90 @@ test_photos(void){
 	g_clear_error(&error);
 }
 
+/* A photo sized for phones (docs/images.org) is shown as its largest variant
+ * with a srcset of every variant, the layout's sizes and the capped
+ * dimensions; its focus rule follows the shown file; malformed variants fail
+ * the plan check. */
+static void
+test_photo_variants(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(JsonNode) plan = load("plan.json");
+	g_autoptr(JsonObject) pages = fixture_pages();
+	g_autoptr(GError) error = NULL;
+	g_autofree gchar *text = NULL;
+	g_autoptr(JsonNode) bundle = NULL;
+	JsonObject *root = json_node_get_object(plan);
+	const gchar *html;
+	static const gchar *const bad[] = {
+		"[{'path':'assets/b-480w.webp','width':480,'height':320}]",
+		"[{'path':'assets/b-480w.webp','width':480,'height':320},{'path':'assets/b-1600w.webp','width':1600,'height':900}]",
+		"[{'path':'assets/b-800w.webp','width':800,'height':533},{'path':'assets/b-480w.webp','width':480,'height':320},"
+			"{'path':'assets/b-1600w.webp','width':1600,'height':1067}]",
+		"[{'path':'assets/b-1600w.png','width':1600,'height':1067}]",
+		"[{'path':'../b-1600w.webp','width':1600,'height':1067}]",
+		"[{'path':'assets/b 1600w.webp','width':1600,'height':1067}]",
+		"[{'path':'assets/b-1600w.webp','width':1600,'height':1067,'x':1}]",
+		"[]", NULL
+	};
+	guint i;
+	json_object_set_member(root, "photos", json(
+		"[{'path':'assets/bench.png','alt':'A workbench','focus':'top','width':1600,'height':1067,'variants':["
+		"{'path':'assets/bench-480w.webp','width':480,'height':320},"
+		"{'path':'assets/bench-800w.webp','width':800,'height':533},"
+		"{'path':'assets/bench-1600w.webp','width':1600,'height':1067}]}]"));
+	g_assert_true(ls_components_check_plan(components, plan, &error));
+	g_assert_no_error(error);
+	json_object_set_member(pages, "work.html", json(
+		"{'path':'work.html','sections':[{'component':'page-header','content':{'heading':'Work'}},"
+		"{'component':'media','content':{'art':{'src':'assets/bench.png','alt':'A workbench'},'caption':'The bench.'}}]}"));
+	text = ls_components_compose(components, plan, pages, NULL, &error);
+	g_assert_no_error(error);
+	bundle = ls_json_parse(text, NULL);
+	html = file_content(bundle, "work.html");
+	contains(html, "<img src=\"assets/bench-1600w.webp\" alt=\"A workbench\" width=\"1600\" height=\"1067\" "
+		"srcset=\"assets/bench-480w.webp 480w, assets/bench-800w.webp 800w, assets/bench-1600w.webp 1600w\" "
+		"sizes=\"(max-width: 48rem) 100vw, 50vw\" loading=\"lazy\"");
+	lacks(html, "assets/bench.png");
+	contains(file_content(bundle, "styles.css"), "img[src=\"assets/bench-1600w.webp\"] { object-position: top; }");
+	for (i = 0; bad[i] != NULL; i++) {
+		g_autofree gchar *photos = g_strdup_printf("[{'path':'assets/bench.png','alt':'a','width':1600,'height':1067,"
+			"'variants':%s}]", bad[i]);
+		json_object_set_member(root, "photos", json(photos));
+		g_assert_false(ls_components_check_plan(components, plan, &error));
+		g_assert_nonnull(strstr(error->message, "photos[0].variants"));
+		g_clear_error(&error);
+	}
+}
+
+/* Every component that shows art offers a sized photo's srcset with sizes
+ * for its own layout, so a new component cannot ship full-size photos. */
+static void
+test_templates_srcset(void){
+	g_autoptr(GDir) dir = g_dir_open("data/components", 0, NULL);
+	const gchar *name;
+	guint seen = 0;
+	g_assert_nonnull(dir);
+	while ((name = g_dir_read_name(dir)) != NULL) {
+		g_autofree gchar *path = NULL, *text = NULL;
+		const gchar *at;
+		if (!g_str_has_suffix(name, ".html"))
+			continue;
+		path = g_build_filename("data/components", name, NULL);
+		g_assert_true(g_file_get_contents(path, &text, NULL, NULL));
+		for (at = strstr(text, "<img "); at != NULL; at = strstr(at + 1, "<img ")) {
+			const gchar *end = strchr(at, '>');
+			g_autofree gchar *tag = g_strndup(at, (gsize)(end - at));
+			/* Art has its planned size; the brand mark is a fixed 32 px drawing. */
+			if (strstr(tag, "src=\"{{src}}\"") == NULL || strstr(tag, "height=\"{{height}}\"") == NULL)
+				continue;
+			if (strstr(tag, "height=\"{{height}}\"{{#srcset}} srcset=\"{{srcset}}\" sizes=\"") == NULL)
+				g_error("%s: an art <img> lacks srcset and sizes: %s", name, tag);
+			seen++;
+		}
+	}
+	g_assert_cmpuint(seen, >=, 26);
+}
+
 /* Axes with plain: N deal their default to about N percent of sites, so
  * textures and backdrops stay occasional; other axes spread evenly. */
 static void
@@ -2226,6 +2310,8 @@ main(int argc, char **argv){
 	g_test_add_func("/components/menu-filter", test_menu_filter);
 	g_test_add_func("/components/identities", test_identities);
 	g_test_add_func("/components/photos", test_photos);
+	g_test_add_func("/components/photo-variants", test_photo_variants);
+	g_test_add_func("/components/templates-srcset", test_templates_srcset);
 	g_test_add_func("/components/scheme-sitemap-focus", test_scheme_sitemap_focus);
 	g_test_add_func("/components/new-components", test_new_components);
 	g_test_add_func("/components/plain-share", test_plain_share);

@@ -4,6 +4,7 @@
  * then composes the site natively. See docs/components.org. */
 #include "steps/ls-step.h"
 #include "core/ls-components.h"
+#include "core/ls-images.h"
 #include <string.h>
 #include <math.h>
 
@@ -170,13 +171,17 @@ check_plan_options(LsRecipe *recipe, JsonObject *config, GError **error){
 	g_autoptr(LsComponents) components = NULL;
 	if (options == NULL)
 		return TRUE;
-	if (!ls_object_keys(options, "|theme|sector|", NULL) ||
+	if (!ls_object_keys(options, "|theme|sector|images|", NULL) ||
 		(json_object_has_member(options, "theme") && ls_string(options, "theme") == NULL) ||
-		(json_object_has_member(options, "sector") && ls_string(options, "sector") == NULL)) {
+		(json_object_has_member(options, "sector") && ls_string(options, "sector") == NULL) ||
+		(json_object_has_member(options, "images") && !JSON_NODE_HOLDS_OBJECT(json_object_get_member(options, "images")))) {
 		g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID,
-			"plan options allow only theme (a theme name) and sector (a sector name)");
+			"plan options allow only theme (a theme name) and sector (a sector name), plus images "
+			"({max, widths, quality}; see docs/images.org)");
 		return FALSE;
 	}
+	if (!ls_images_check_options(member_object_of(options, "images"), error))
+		return FALSE;
 	components = ls_recipe_new_components(recipe, error);
 	if (components == NULL)
 		return FALSE;
@@ -329,25 +334,28 @@ first_line(const gchar *text){
 	return line;
 }
 
+/* The plan and the photo sizes it names land together in one bundle; only
+ * then are the originals no page uses moved to the archive, so they stay in
+ * the run record but are never published. */
 static gboolean
-store(LsContext *context, const gchar *path, const gchar *content, GError **error){
-	g_autoptr(JsonBuilder) builder = json_builder_new();
-	g_autoptr(JsonNode) root = NULL;
+store_plan(LsContext *context, const gchar *text, JsonArray *files, GPtrArray *retired, GError **error){
+	g_autoptr(JsonNode) root = json_node_new(JSON_NODE_OBJECT);
 	g_autofree gchar *bundle = NULL;
-	json_builder_begin_object(builder);
-	json_builder_set_member_name(builder, "files");
-	json_builder_begin_array(builder);
-	json_builder_begin_object(builder);
-	json_builder_set_member_name(builder, "path");
-	json_builder_add_string_value(builder, path);
-	json_builder_set_member_name(builder, "content");
-	json_builder_add_string_value(builder, content);
-	json_builder_end_object(builder);
-	json_builder_end_array(builder);
-	json_builder_end_object(builder);
-	root = json_builder_get_root(builder);
+	JsonObject *object = json_object_new();
+	JsonObject *plan = json_object_new();
+	guint i;
+	json_object_set_string_member(plan, "path", PLAN_PATH);
+	json_object_set_string_member(plan, "content", text);
+	json_array_add_object_element(files, plan);
+	json_object_set_array_member(object, "files", json_array_ref(files));
+	json_node_take_object(root, object);
 	bundle = ls_json_encode(root);
-	return ls_context_apply(context, bundle, error);
+	if (!ls_context_apply(context, bundle, error))
+		return FALSE;
+	for (i = 0; i < retired->len; i++)
+		if (!ls_context_archive(context, g_ptr_array_index(retired, i), error))
+			return FALSE;
+	return TRUE;
 }
 
 static JsonObject *
@@ -438,6 +446,8 @@ plan_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *prom
 	g_autoptr(JsonObject) settings = NULL;
 	g_autoptr(JsonObject) identity = NULL;
 	g_autoptr(JsonArray) photos = NULL;
+	g_autoptr(JsonArray) sized = json_array_new();
+	g_autoptr(GPtrArray) retired = g_ptr_array_new_with_free_func(g_free);
 	g_autofree gchar *prompt = NULL, *retry = NULL;
 	const gchar *system = ls_prompts_get_spec_system(prompts);
 	const gchar *theme;
@@ -468,6 +478,21 @@ plan_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *prom
 	prompt = plan_prompt(prompts, recipe, config, components, identity, photos, error);
 	if (prompt == NULL)
 		return FALSE;
+	/* Photos are sized for phones before any call, so a photo that cannot be
+	 * decoded costs nothing; the model saw the supplied sizes. */
+	if (!ls_images_prepare_photos(context, photos, member_object_of(step_options(config), "images"), sized, retired,
+		cancellable, error))
+		return FALSE;
+	if (json_array_get_length(sized) > 0) {
+		guint count = 0, i;
+		g_autofree gchar *note = NULL;
+		for (i = 0; i < json_array_get_length(photos); i++)
+			count += json_object_has_member(json_array_get_object_element(photos, i), "variants") ? 1 : 0;
+		note = g_strdup_printf("sized %u photo%s for phones: %u WebP file%s, %u original%s kept out of the "
+			"published site", count, count == 1 ? "" : "s", json_array_get_length(sized),
+			json_array_get_length(sized) == 1 ? "" : "s", retired->len, retired->len == 1 ? "" : "s");
+		g_signal_emit_by_name(self, "progress", note);
+	}
 	for (attempt = 0; attempt <= retries; attempt++) {
 		g_autoptr(GError) local_error = NULL;
 		g_autoptr(JsonNode) plan = NULL;
@@ -553,7 +578,7 @@ plan_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *prom
 				g_signal_emit_by_name(self, "progress", note->str);
 				g_string_free(note, TRUE);
 			}
-			return store(context, PLAN_PATH, text, error);
+			return store_plan(context, text, sized, retired, error);
 		}
 		if (attempt == retries || g_cancellable_is_cancelled(cancellable) ||
 			g_error_matches(local_error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
@@ -828,6 +853,7 @@ page_prompt(LsPrompts *prompts, LsRecipe *recipe, JsonObject *config, const gcha
 		if (plan_copy == NULL)
 			return NULL;
 	}
+	ls_images_strip_variants(json_node_get_object(plan_copy));
 	pages = json_object_get_array_member(json_node_get_object(plan_copy), "pages");
 	for (i = 0; i < json_array_get_length(pages); i++) {
 		JsonObject *page = json_array_get_object_element(pages, i);
@@ -1147,7 +1173,7 @@ pages_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *pro
 		Job *culprit;
 		if (bundle == NULL)
 			return FALSE;
-		if (ls_context_apply(candidate, snapshot, &local_error) && ls_context_apply(candidate, bundle, &local_error) &&
+		if (ls_context_restore(candidate, snapshot, &local_error) && ls_context_apply(candidate, bundle, &local_error) &&
 			check_acceptance(recipe, config, prompts, candidate, provider, cancellable, &local_error)) {
 			if (g_cancellable_set_error_if_cancelled(cancellable, error))
 				return FALSE;

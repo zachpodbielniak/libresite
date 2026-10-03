@@ -1849,8 +1849,37 @@ supplied_form_content(JsonObject *plan, JsonObject *content){
 	return out;
 }
 
+/* A sized photo's variants: 1..9 safe assets/ WebP files by ascending width,
+ * the last one at the photo's own (capped) size. See docs/images.org. */
+static gboolean
+variants_valid(JsonNode *node, gint64 width, gint64 height){
+	JsonArray *variants = JSON_NODE_HOLDS_ARRAY(node) ? json_node_get_array(node) : NULL;
+	gint64 previous = 0;
+	guint i, length;
+	if (variants == NULL || (length = json_array_get_length(variants)) < 1 || length > 9)
+		return FALSE;
+	for (i = 0; i < length; i++) {
+		JsonNode *element = json_array_get_element(variants, i);
+		JsonObject *variant = JSON_NODE_HOLDS_OBJECT(element) ? json_node_get_object(element) : NULL;
+		const gchar *path = variant != NULL ? ls_string(variant, "path") : NULL;
+		JsonNode *w = variant != NULL ? json_object_get_member(variant, "width") : NULL;
+		JsonNode *h = variant != NULL ? json_object_get_member(variant, "height") : NULL;
+		if (variant == NULL || !ls_object_keys(variant, "|path|width|height|", NULL) || path == NULL ||
+			!g_str_has_prefix(path, "assets/") || !g_str_has_suffix(path, ".webp") || strstr(path, "..") != NULL ||
+			strpbrk(path, " ,\"'<>\\") != NULL || w == NULL || h == NULL ||
+			json_node_get_value_type(w) != G_TYPE_INT64 || json_node_get_value_type(h) != G_TYPE_INT64 ||
+			json_node_get_int(w) <= previous || json_node_get_int(w) > 20000 ||
+			json_node_get_int(h) < 1 || json_node_get_int(h) > 20000)
+			return FALSE;
+		previous = json_node_get_int(w);
+		if (i + 1 == length && (json_node_get_int(w) != width || json_node_get_int(h) != height))
+			return FALSE;
+	}
+	return TRUE;
+}
+
 /* photos is written by the builder from the recipe and the seeded images:
- * {path, alt, credit, width, height}. */
+ * {path, alt, credit, width, height, variants}. */
 static void
 check_photos(Problems *problems, JsonObject *plan){
 	JsonArray *photos = member_array(plan, "photos");
@@ -1867,7 +1896,7 @@ check_photos(Problems *problems, JsonObject *plan){
 		const gchar *path = photo != NULL ? ls_string(photo, "path") : NULL;
 		JsonNode *width = photo != NULL ? json_object_get_member(photo, "width") : NULL;
 		JsonNode *height = photo != NULL ? json_object_get_member(photo, "height") : NULL;
-		if (photo == NULL || !ls_object_keys(photo, "|path|alt|credit|focus|width|height|", NULL) || path == NULL ||
+		if (photo == NULL || !ls_object_keys(photo, "|path|alt|credit|focus|width|height|variants|", NULL) || path == NULL ||
 			(json_object_has_member(photo, "focus") && !ls_focus_valid(ls_string(photo, "focus"))) ||
 			!g_str_has_prefix(path, "assets/") || strstr(path, "..") != NULL || strpbrk(path, " \"'<>\\") != NULL ||
 			ls_string(photo, "alt") == NULL || width == NULL || height == NULL ||
@@ -1875,6 +1904,10 @@ check_photos(Problems *problems, JsonObject *plan){
 			json_node_get_int(width) < 1 || json_node_get_int(height) < 1 ||
 			json_node_get_int(width) > 20000 || json_node_get_int(height) > 20000)
 			problem(problems, "photos[%u] must be {path under assets/, alt, credit, width, height}", i);
+		else if (json_object_has_member(photo, "variants") && !variants_valid(json_object_get_member(photo, "variants"),
+			json_node_get_int(width), json_node_get_int(height)))
+			problem(problems, "photos[%u].variants must be 1 to 9 {path, width, height} assets/ WebP files by "
+				"ascending width, the last at the photo's width and height", i);
 	}
 }
 
@@ -3636,20 +3669,59 @@ ui_text(Render *render, const gchar *key){
 	return ls_string(render->ui, key);
 }
 
+/* The supplied photograph at @src, or %NULL. */
+static JsonObject *
+plan_photo(JsonObject *plan, const gchar *src){
+	JsonArray *photos = member_array(plan, "photos");
+	guint i;
+	for (i = 0; photos != NULL && i < json_array_get_length(photos); i++) {
+		JsonObject *photo = json_array_get_object_element(photos, i);
+		if (g_strcmp0(ls_string(photo, "path"), src) == 0)
+			return photo;
+	}
+	return NULL;
+}
+
+/* The file a page shows for @src: a sized photo's largest variant, otherwise
+ * @src itself. Pages, link previews and focus rules all use this name. */
+static const gchar *
+shown_src(JsonObject *plan, const gchar *src){
+	JsonObject *photo = plan_photo(plan, src);
+	JsonArray *variants = photo != NULL ? member_array(photo, "variants") : NULL;
+	if (variants == NULL || json_array_get_length(variants) == 0)
+		return src;
+	return ls_string(json_array_get_object_element(variants, json_array_get_length(variants) - 1), "path");
+}
+
+/* "path 480w, path 800w, ..." for a sized photo, or %NULL. */
+static gchar *
+photo_srcset(JsonObject *plan, const gchar *src){
+	JsonObject *photo = plan_photo(plan, src);
+	JsonArray *variants = photo != NULL ? member_array(photo, "variants") : NULL;
+	GString *out;
+	guint i;
+	if (variants == NULL || json_array_get_length(variants) == 0)
+		return NULL;
+	out = g_string_new(NULL);
+	for (i = 0; i < json_array_get_length(variants); i++) {
+		JsonObject *variant = json_array_get_object_element(variants, i);
+		g_string_append_printf(out, "%s%s %" G_GINT64_FORMAT "w", i > 0 ? ", " : "", ls_string(variant, "path"),
+			json_object_get_int_member(variant, "width"));
+	}
+	return g_string_free(out, FALSE);
+}
+
 static void
 art_size(JsonObject *plan, const gchar *src, gint64 *width, gint64 *height){
 	JsonArray *art = member_array(plan, "art");
-	JsonArray *photos = member_array(plan, "photos");
+	JsonObject *photo = plan_photo(plan, src);
 	const gchar *ratio = "16:9";
 	guint i;
-	/* A photograph keeps its own pixel size. */
-	for (i = 0; photos != NULL && i < json_array_get_length(photos); i++) {
-		JsonObject *photo = json_array_get_object_element(photos, i);
-		if (g_strcmp0(ls_string(photo, "path"), src) == 0) {
-			*width = json_object_get_int_member(photo, "width");
-			*height = json_object_get_int_member(photo, "height");
-			return;
-		}
+	/* A photograph keeps its own (capped) pixel size. */
+	if (photo != NULL) {
+		*width = json_object_get_int_member(photo, "width");
+		*height = json_object_get_int_member(photo, "height");
+		return;
 	}
 	for (i = 0; art != NULL && i < json_array_get_length(art); i++) {
 		JsonObject *work = json_array_get_object_element(art, i);
@@ -3754,8 +3826,12 @@ convert_value(Render *render, JsonObject *slot, JsonNode *value, gboolean eager)
 		JsonObject *image = json_node_get_object(value);
 		JsonObject *view = json_object_new();
 		gint64 width, height;
+		g_autofree gchar *srcset = photo_srcset(render->plan, ls_string(image, "src"));
 		art_size(render->plan, ls_string(image, "src"), &width, &height);
-		json_object_set_string_member(view, "src", ls_string(image, "src"));
+		json_object_set_string_member(view, "src", shown_src(render->plan, ls_string(image, "src")));
+		/* Templates write srcset with their own sizes for the layout. */
+		if (srcset != NULL)
+			json_object_set_string_member(view, "srcset", srcset);
 		json_object_set_string_member(view, "alt", ls_string(image, "alt"));
 		json_object_set_int_member(view, "width", width);
 		json_object_set_int_member(view, "height", height);
@@ -4810,7 +4886,7 @@ focus_css(JsonObject *plan){
 		JsonObject *photo = json_array_get_object_element(photos, i);
 		if (ls_string(photo, "focus") != NULL)
 			g_string_append_printf(out, "img[src=\"%s\"] { object-position: %s; }\n",
-				ls_string(photo, "path"), ls_string(photo, "focus"));
+				shown_src(plan, ls_string(photo, "path")), ls_string(photo, "focus"));
 	}
 	return g_string_free(out, FALSE);
 }

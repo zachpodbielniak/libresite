@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
 #include "libresite.h"
 #include <string.h>
+#include "test-image-fixtures.h"
 
 #define FIXTURE "tests/fixtures/composed/"
 
@@ -20,6 +21,7 @@ typedef struct {
 	gboolean default_plan;	/* first plan answer uses the house default colors */
 	gint bad_signature;		/* invalid signature answers to give first */
 	gboolean block;			/* wait for cancellation */
+	const gchar *photo;		/* a supplied photo swapped in for the bench drawing on index and journal */
 	GCancellable *started;		/* cancelled when a call begins */
 	gchar *last_schema;
 } FakeProvider;
@@ -133,6 +135,12 @@ fake_generate(LsProvider *provider, JsonObject *settings, const gchar *system,
 				gchar *note = strstr(answer, "Nothing is sent.");
 				memcpy(note, "Nothing leaves.!", 16);
 				self->drop_note = FALSE;
+			}
+			if (self->photo != NULL && (g_str_equal(key, "index.html") || g_str_equal(key, "journal.html"))) {
+				gchar **parts = g_strsplit(answer, "assets/bench.svg", -1);
+				g_free(answer);
+				answer = g_strjoinv(self->photo, parts);
+				g_strfreev(parts);
 			}
 			g_mutex_unlock(&self->lock);
 		}
@@ -665,7 +673,9 @@ static void
 test_plan_options(void){
 	const gchar *cases[][2] = {{"{theme: nope}", "Unknown theme 'nope'; available: editorial"},
 		{"{theme: midnight, extra: 1}", "plan options allow only theme"}, {"{theme: 3}", "plan options allow only theme"},
-		{"{sector: nope}", "Unknown sector 'nope'; available: trades"}, {"{sector: 3}", "and sector"}};
+		{"{sector: nope}", "Unknown sector 'nope'; available: trades"}, {"{sector: 3}", "and sector"},
+		{"{images: {max: 10}}", "options.images allows max"}, {"{images: 3}", "plus images"},
+		{"{images: {widths: [480], format: avif}}", "options.images allows max"}};
 	guint i;
 	for (i = 0; i < G_N_ELEMENTS(cases); i++) {
 		Fixture fixture;
@@ -720,29 +730,44 @@ test_plan_identity(void){
 
 /* Supplied photographs reach the plan prompt with their pixel sizes read
  * from the seeds (PNG, JPEG and WebP headers), and the builder writes them
- * into the stored plan; a photo without a readable seed stops the step. */
-static const gchar *photo_recipe =
-	"version: 1\n"
-	"name: harbor\n"
-	"site:\n"
-	"  brief: An illustrative furniture repair workshop\n"
-	"  style: editorial\n"
-	"  photos:\n"
-	"    - {path: assets/bench.png, alt: A workbench with clamps, credit: Test}\n"
-	"    - {path: assets/chair.jpg, alt: A repaired chair}\n"
-	"    - {path: assets/shop.webp, alt: The shop front}\n"
-	"seed_artifacts:\n"
-	"  - {path: assets/bench.png, encoding: base64, content: iVBORw0KGgoAAAANSUhEUgAAAoAAAAHgCAIAAAAAAAAA}\n"
-	"  - {path: assets/chair.jpg, encoding: base64, content: /9j/4AAQSkZJRgABAQAAAQABAAD/wgARCASwBwgDAAAAAAAAAAAA}\n"
-	"  - {path: assets/shop.webp, encoding: base64, content: UklGRh4AAABXRUJQVlA4WAoAAAAAAAAAPwYAgwMA}\n"
-	"ai: {provider: claude-code, retries: 1}\n"
-	"pipeline:\n"
-	"  steps:\n"
-	"    - {id: plan, type: plan, instructions: Plan three pages.}\n"
-	"    - {id: pages, type: pages}\n"
-	"    - id: acceptance\n"
-	"      type: validate\n"
-	"      options: {required: [index.html]}\n";
+ * into the stored plan, sized for phones; a photo without a readable seed
+ * stops the step. The seeds are real images drawn at test time. */
+static gchar *
+base64_of(GBytes *bytes){
+	return g_base64_encode(g_bytes_get_data(bytes, NULL), g_bytes_get_size(bytes));
+}
+
+static gchar *
+photo_recipe(void){
+	g_autoptr(GBytes) bench = image_fixture(640, 480, FALSE, ".png");
+	g_autoptr(GBytes) chair = image_fixture(1800, 1200, FALSE, ".jpg[Q=85]");
+	g_autoptr(GBytes) shop = image_fixture(1600, 900, FALSE, ".webp");
+	g_autofree gchar *bench64 = base64_of(bench);
+	g_autofree gchar *chair64 = base64_of(chair);
+	g_autofree gchar *shop64 = base64_of(shop);
+	return g_strdup_printf(
+		"version: 1\n"
+		"name: harbor\n"
+		"site:\n"
+		"  brief: An illustrative furniture repair workshop\n"
+		"  style: editorial\n"
+		"  photos:\n"
+		"    - {path: assets/bench.png, alt: A workbench with clamps, credit: Test}\n"
+		"    - {path: assets/chair.jpg, alt: A repaired chair}\n"
+		"    - {path: assets/shop.webp, alt: The shop front}\n"
+		"seed_artifacts:\n"
+		"  - {path: assets/bench.png, encoding: base64, content: %s}\n"
+		"  - {path: assets/chair.jpg, encoding: base64, content: %s}\n"
+		"  - {path: assets/shop.webp, encoding: base64, content: %s}\n"
+		"ai: {provider: claude-code, retries: 1}\n"
+		"pipeline:\n"
+		"  steps:\n"
+		"    - {id: plan, type: plan, instructions: Plan three pages.}\n"
+		"    - {id: pages, type: pages}\n"
+		"    - id: acceptance\n"
+		"      type: validate\n"
+		"      options: {required: [index.html]}\n", bench64, chair64, shop64);
+}
 
 /* @text with the first @needle replaced by @value. */
 static gchar *
@@ -758,7 +783,7 @@ replace_once(const gchar *text, const gchar *needle, const gchar *value){
 static void
 test_plan_social(void){
 	g_autoptr(GError) error = NULL;
-	g_autofree gchar *text = g_strdup(photo_recipe);
+	g_autofree gchar *text = photo_recipe();
 	g_autofree gchar *with_social = NULL;
 	g_autoptr(LsPrompts) prompts = ls_prompts_new(NULL, &error);
 	const gchar *variants[2];
@@ -804,7 +829,8 @@ test_plan_social(void){
 static void
 test_plan_photos(void){
 	g_autoptr(GError) error = NULL;
-	g_autoptr(LsRecipe) recipe = ls_recipe_new(photo_recipe, &error);
+	g_autofree gchar *text = photo_recipe();
+	g_autoptr(LsRecipe) recipe = ls_recipe_new(text, &error);
 	g_autoptr(LsPrompts) prompts = ls_prompts_new(NULL, &error);
 	g_autoptr(LsContext) context = NULL;
 	FakeProvider *provider = g_object_new(fake_provider_get_type(), NULL);
@@ -827,14 +853,30 @@ test_plan_photos(void){
 	plan = ls_json_parse(ls_artifact_get_content(ls_context_lookup(context, "site/plan.json")), NULL);
 	photos = json_object_get_array_member(json_node_get_object(plan), "photos");
 	g_assert_cmpuint(json_array_get_length(photos), ==, 3);
-	g_assert_cmpint(json_object_get_int_member(json_array_get_object_element(photos, 1), "width"), ==, 1800);
+	/* Stored photos are sized for phones: the 1800 px chair is capped at
+	 * 1600 with smaller widths beside it, and the original is archived, out
+	 * of the published tree but still in the run record. */
+	{
+		JsonObject *chair = json_array_get_object_element(photos, 1);
+		JsonArray *variants = json_object_get_array_member(chair, "variants");
+		const LsArtifact *variant = ls_context_lookup(context, "assets/chair-800w.webp");
+		g_assert_cmpint(json_object_get_int_member(chair, "width"), ==, 1600);
+		g_assert_cmpint(json_object_get_int_member(chair, "height"), ==, 1067);
+		g_assert_cmpuint(json_array_get_length(variants), ==, 4);
+		g_assert_nonnull(variant);
+		g_assert_true(ls_artifact_is_binary(variant));
+		g_assert_null(ls_context_lookup(context, "assets/chair.jpg"));
+		g_assert_nonnull(ls_context_lookup_archived(context, "assets/chair.jpg"));
+		g_assert_cmpuint(json_array_get_length(json_object_get_array_member(json_array_get_object_element(photos, 0),
+			"variants")), ==, 2);
+	}
 	/* A preview lists the photos without reading any seed. */
 	preview = ls_spec_step_preview(prompts, recipe, json_array_get_object_element(ls_recipe_get_steps(recipe), 0), &error);
 	g_assert_no_error(error);
 	g_assert_nonnull(strstr(preview, "\"supplied_photos\":[{\"path\":\"assets/bench.png\""));
 	/* A photo whose seed is not an image stops the step before any call. */
 	{
-		g_autofree gchar *broken = g_strdup(photo_recipe);
+		g_autofree gchar *broken = photo_recipe();
 		g_autoptr(LsRecipe) bad = NULL;
 		g_autoptr(LsContext) bad_context = NULL;
 		FakeProvider *quiet = g_object_new(fake_provider_get_type(), NULL);
@@ -856,6 +898,133 @@ test_plan_photos(void){
 	g_object_unref(provider);
 }
 
+/* The issue's case end to end: a 1536x1024 PNG shown as the home page's hero
+ * and in the journal. */
+static gchar *
+phone_recipe(GBytes *png){
+	g_autofree gchar *png64 = base64_of(png);
+	return g_strdup_printf(
+		"version: 1\n"
+		"name: harbor\n"
+		"site:\n"
+		"  brief: An illustrative furniture repair workshop\n"
+		"  style: editorial\n"
+		"  photos:\n"
+		"    - {path: assets/photos/harbor.png, alt: The workshop at dawn}\n"
+		"seed_artifacts:\n"
+		"  - {path: assets/photos/harbor.png, encoding: base64, content: %s}\n"
+		"ai: {provider: claude-code, retries: 1}\n"
+		"pipeline:\n"
+		"  steps:\n"
+		"    - {id: plan, type: plan, instructions: Plan three pages.}\n"
+		"    - {id: pages, type: pages, options: {parallel: 4, base_url: 'https://harbor.example/'}}\n", png64);
+}
+
+static LsContext *
+build_with_photo(GBytes *png){
+	g_autoptr(GError) error = NULL;
+	g_autofree gchar *text = phone_recipe(png);
+	g_autoptr(LsRecipe) recipe = ls_recipe_new(text, &error);
+	g_autoptr(LsPrompts) prompts = ls_prompts_new(NULL, &error);
+	g_autoptr(LsStep) plan = g_object_new(LS_TYPE_PLAN_STEP, NULL);
+	g_autoptr(LsStep) pages = g_object_new(LS_TYPE_PAGES_STEP, NULL);
+	FakeProvider *provider = g_object_new(fake_provider_get_type(), NULL);
+	LsContext *context;
+	g_assert_no_error(error);
+	context = ls_recipe_create_context(recipe, &error);
+	g_assert_no_error(error);
+	provider->photo = "assets/photos/harbor.png";
+	g_assert_true(ls_step_execute(plan, recipe, json_array_get_object_element(ls_recipe_get_steps(recipe), 0),
+		prompts, context, LS_PROVIDER(provider), NULL, &error));
+	g_assert_no_error(error);
+	ls_step_execute(pages, recipe, json_array_get_object_element(ls_recipe_get_steps(recipe), 1),
+		prompts, context, LS_PROVIDER(provider), NULL, &error);
+	g_assert_no_error(error);
+	/* Page writers name the supplied photo; its sized files are the builder's. */
+	{
+		const gchar *task = strstr(g_ptr_array_index(prompts_for(provider, "index.html"), 0), "TASK (JSON)");
+		g_assert_nonnull(strstr(task, "\"path\":\"assets/photos/harbor.png\""));
+		g_assert_null(strstr(task, "harbor-480w.webp"));
+		g_assert_null(strstr(task, "harbor-1536w.webp"));
+	}
+	g_object_unref(provider);
+	return context;
+}
+
+/* Every <img> tag in @html that shows @src. */
+static GPtrArray *
+img_tags(const gchar *html, const gchar *src){
+	g_autofree gchar *needle = g_strdup_printf("<img src=\"%s\"", src);
+	GPtrArray *tags = g_ptr_array_new_with_free_func(g_free);
+	const gchar *at = html;
+	while ((at = strstr(at, needle)) != NULL) {
+		const gchar *end = strchr(at, '>');
+		g_assert_nonnull(end);
+		g_ptr_array_add(tags, g_strndup(at, (gsize)(end - at + 1)));
+		at = end;
+	}
+	return tags;
+}
+
+static gsize
+artifact_size(LsContext *context, const gchar *path){
+	const LsArtifact *artifact = ls_context_lookup(context, path);
+	gsize size = 0;
+	g_assert_nonnull(artifact);
+	g_assert_true(ls_artifact_is_binary(artifact));
+	ls_artifact_get_data(artifact, &size);
+	return size;
+}
+
+/* Pages reference the phone-sized WebP variants with srcset, sizes and
+ * dimensions; the hero loads eagerly at high priority and the journal's
+ * photos lazily; link previews use the capped variant; the original PNG is
+ * archived, not published; and two runs produce identical sites. */
+static void
+test_phone_images(void){
+	g_autoptr(GBytes) png = image_fixture(1536, 1024, FALSE, ".png");
+	g_autoptr(LsContext) context = build_with_photo(png);
+	g_autoptr(LsContext) again = build_with_photo(png);
+	const gchar *srcset = "srcset=\"assets/photos/harbor-480w.webp 480w, assets/photos/harbor-800w.webp 800w, "
+		"assets/photos/harbor-1200w.webp 1200w, assets/photos/harbor-1536w.webp 1536w\"";
+	const gchar *pages[] = {"index.html", "journal.html", "styles.css"};
+	g_autoptr(GPtrArray) hero = img_tags(artifact_text(context, "index.html"), "assets/photos/harbor-1536w.webp");
+	g_autoptr(GPtrArray) journal = img_tags(artifact_text(context, "journal.html"), "assets/photos/harbor-1536w.webp");
+	g_autofree gchar *first = NULL, *second = NULL;
+	gsize before, phone, desktop;
+	guint i;
+	g_assert_cmpuint(hero->len, ==, 1);
+	g_assert_nonnull(strstr(g_ptr_array_index(hero, 0), srcset));
+	g_assert_nonnull(strstr(g_ptr_array_index(hero, 0), " sizes=\""));
+	g_assert_nonnull(strstr(g_ptr_array_index(hero, 0), "width=\"1536\" height=\"1024\""));
+	g_assert_nonnull(strstr(g_ptr_array_index(hero, 0), "fetchpriority=\"high\""));
+	g_assert_null(strstr(g_ptr_array_index(hero, 0), "loading=\"lazy\""));
+	g_assert_cmpuint(journal->len, >=, 1);
+	for (i = 0; i < journal->len; i++) {
+		g_assert_nonnull(strstr(g_ptr_array_index(journal, i), srcset));
+		g_assert_nonnull(strstr(g_ptr_array_index(journal, i), "loading=\"lazy\""));
+		g_assert_null(strstr(g_ptr_array_index(journal, i), "fetchpriority"));
+	}
+	g_assert_nonnull(strstr(artifact_text(context, "index.html"),
+		"https://harbor.example/assets/photos/harbor-1536w.webp"));
+	for (i = 0; i < G_N_ELEMENTS(pages); i++)
+		g_assert_null(strstr(artifact_text(context, pages[i]), "harbor.png"));
+	g_assert_null(ls_context_lookup(context, "assets/photos/harbor.png"));
+	g_assert_nonnull(ls_context_lookup_archived(context, "assets/photos/harbor.png"));
+	/* Page weight for the photo: the old page shipped the PNG to everyone; a
+	 * phone 390 px wide at 2x now picks the 800w file, a desktop the largest. */
+	before = g_bytes_get_size(png);
+	phone = artifact_size(context, "assets/photos/harbor-800w.webp");
+	desktop = artifact_size(context, "assets/photos/harbor-1536w.webp");
+	g_test_message("hero photo weight: PNG %" G_GSIZE_FORMAT " bytes; phone 800w WebP %" G_GSIZE_FORMAT
+		"; desktop 1536w WebP %" G_GSIZE_FORMAT, before, phone, desktop);
+	g_assert_cmpuint(phone * 10, <, before);
+	g_assert_cmpuint(desktop * 4, <, before);
+	first = ls_context_snapshot(context);
+	second = ls_context_snapshot(again);
+	g_assert_cmpstr(first, ==, second);
+}
+
 int
 main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
@@ -865,6 +1034,7 @@ main(int argc, char **argv){
 	g_test_add_func("/pages/plan-identity", test_plan_identity);
 	g_test_add_func("/pages/plan-photos", test_plan_photos);
 	g_test_add_func("/pages/plan-social", test_plan_social);
+	g_test_add_func("/pages/phone-images", test_phone_images);
 	g_test_add_func("/pages/signature-fallback", test_signature_fallback);
 	g_test_add_func("/pages/sameness-run", test_sameness_run);
 	g_test_add_func("/pages/parallel", test_parallel);

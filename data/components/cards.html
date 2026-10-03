@@ -5,7 +5,7 @@
 {{/intro}}</div>
 {{/heading}}<ul class="cards__list" role="list">
 {{#items}}<li class="card">
-{{#art}}<figure class="card__art"><img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}" loading="lazy" decoding="async"></figure>
+{{#art}}<figure class="card__art"><img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}"{{#srcset}} srcset="{{srcset}}" sizes="(max-width: 40rem) 100vw, (max-width: 64rem) 50vw, 33vw"{{/srcset}} loading="lazy" decoding="async"></figure>
 {{/art}}<div class="card__text">
 {{#tag}}<p class="kicker card__tag">{{tag}}</p>
 {{/tag}}<{{subtag}} class="card__title">{{#link}}<a href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{title}}</a>{{/link}}{{^link}}{{title}}{{/link}}</{{subtag}}>

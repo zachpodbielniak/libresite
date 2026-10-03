@@ -1,7 +1,7 @@
 <div class="wrap">
 {{#heading}}<div class="section-head"><{{htag}} id="{{id}}-h">{{{heading_html}}}</{{htag}}></div>
 {{/heading}}<div class="story__grid">
-{{#art}}<figure class="story__art"><img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}" loading="lazy" decoding="async"></figure>
+{{#art}}<figure class="story__art"><img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}"{{#srcset}} srcset="{{srcset}}" sizes="(max-width: 48rem) 100vw, 50vw"{{/srcset}} loading="lazy" decoding="async"></figure>
 {{/art}}<ol class="story__steps" role="list">
 {{#items}}<li class="story__step">
 {{#kicker}}<p class="kicker">{{kicker}}</p>

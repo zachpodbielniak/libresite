@@ -7,7 +7,7 @@
 <p class="filter__status muted" role="status" aria-live="polite" data-filter-status data-template-one="{{count_one}}" data-template-many="{{count_many}}"></p>
 {{/filtered}}<ul class="news__list" role="list">
 {{#items}}<li class="news__item"{{#filtered}} data-filter-item="{{category_key}}"{{/filtered}}>
-{{#art}}<figure class="news__art"><img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}" loading="lazy" decoding="async"></figure>
+{{#art}}<figure class="news__art"><img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}"{{#srcset}} srcset="{{srcset}}" sizes="(max-width: 40rem) 100vw, (max-width: 64rem) 50vw, 33vw"{{/srcset}} loading="lazy" decoding="async"></figure>
 {{/art}}<div class="news__text">
 <p class="news__meta muted">{{#date}}<span>{{date}}</span>{{/date}}{{#tag}}<span class="news__tag">{{tag}}</span>{{/tag}}</p>
 <{{subtag}} class="news__title">{{#link}}<a href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{title}}</a>{{/link}}{{^link}}{{title}}{{/link}}</{{subtag}}>

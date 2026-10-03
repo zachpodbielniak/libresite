@@ -1,0 +1,120 @@
+#+title: Photographs sized for phones
+#+description: How supplied raster images are capped, resized, encoded and referenced with srcset; caps, defaults and how to change them
+#+authors: Libresite
+#+categories: libresite, generation, performance
+#+created: 2026-10-03T12:00:00-04:00
+#+updated: 2026-10-03T12:00:00-04:00
+#+version: 0.1.0
+
+* Why
+
+A walk of a generated site measured a 5.5 MB page, almost all of it two 1536x1024 PNGs shown about 350 px wide on a phone; the page took about 5 s on a mid-speed connection. Every raster image the builder publishes is now sized for the page that shows it.
+
+* Where images enter and where they are sized
+
+Raster images enter a composed site in one place: the recipe's =site.photos=, each a binary seed under =assets/= (see [[file:components.org::*Photographs][photographs]]). That includes images an embedder generated with an image model before the order, which arrive as supplied photos. Planned art is SVG drawn by the model, the brand mark is SVG, and the scaffold ships no raster files, so none of those are touched.
+
+The =plan= step sizes the photos. After it reads each photo's header for the plan prompt and before it calls the model, it decodes every photo and writes:
+
+- the largest size, the photo with its long edge capped (default 1600 px);
+- each configured width smaller than that (default 480, 800 and 1200 px), at the photo's aspect ratio;
+- all of them as WebP, named after the original: =assets/photos/harbor.png= gives =assets/photos/harbor-480w.webp= up to =harbor-1536w.webp=.
+
+The plan stores each sized photo with its capped =width= and =height= and a =variants= list of ={path, width, height}= by ascending width. The variant files and =site/plan.json= are stored in one bundle, so they are checkpointed together. A photo that cannot be decoded stops the step before any model call; the model still sees the supplied pixel sizes, which only tell it the photo's shape.
+
+After the bundle is stored, an original that no page uses any more moves to the context archive (=ls_context_archive()=). It stays in the checkpoint and the run record, so resume, a second plan and in-place [[file:editing.org][editing]] still find it, but it is never exported, so the oversized original is not published. Composition and editing render from =plan.photos=, so a page never names the original. Page writers and the editor see the plan with the =variants= removed (=ls_images_strip_variants()=): pages name a photo by its supplied path and the builder picks the files.
+
+Untouched:
+
+- SVG art and the brand mark;
+- a photo no wider than the smallest width and within the cap, such as a 400x300 badge: it is published as supplied, with no srcset.
+
+Nothing is ever upscaled: a 1000x3000 portrait is capped by its height to 533x1600, and only the 480 px width is made below it.
+
+* Markup
+
+Composition shows a sized photo as its largest variant with every variant in =srcset=, the capped =width= and =height= (so the layout does not jump while it loads) and a =sizes= value for the component's layout:
+
+#+begin_src html
+<img src="assets/photos/harbor-1536w.webp" alt="The workshop at dawn" width="1536" height="1024"
+  srcset="assets/photos/harbor-480w.webp 480w, assets/photos/harbor-800w.webp 800w,
+          assets/photos/harbor-1200w.webp 1200w, assets/photos/harbor-1536w.webp 1536w"
+  sizes="(max-width: 48rem) 100vw, 50vw" fetchpriority="high" decoding="async">
+#+end_src
+
+Each component template writes its own =sizes= inside ={{#srcset}}...{{/srcset}}=, so the value matches its layout without C conditionals:
+
+| Layout | Components | =sizes= |
+|--------+------------+---------|
+| Full bleed | cover, poster | =100vw= |
+| Half width beside text | hero, media, page-header, story, showcase, profile, compare, location, locations, areas, product | =(max-width: 48rem) 100vw, 50vw= |
+| Reading column | article, figure | =(max-width: 48rem) 100vw, 48rem= |
+| Grids and rows | cards, filter, products, news, recipe, gallery, strip, carousel, team, bento | =(max-width: 40rem) 100vw, (max-width: 64rem) 50vw, 33vw= |
+
+A new component that shows art must do the same; =/components/templates-srcset= fails otherwise.
+
+Loading is unchanged and already split by position. In the hero, cover, media and poster components an image in the page's first section loads eagerly with =fetchpriority="high"= and lazily anywhere else; the page-header opening always loads with high priority; every other component's image is =loading="lazy"=, except the product gallery, which leaves loading to the browser. Link previews (=og:image=), the gallery's click-to-enlarge and photo focus rules use the largest variant. =--qa= checks that every =srcset= candidate is published, not only the =src= (see [[file:qa.org][QA]]).
+
+* Format
+
+All variants are WebP: lossy at the configured quality, alpha kept where the source has it (lossless alpha), EXIF orientation applied, embedded colour profiles converted to sRGB, then all metadata stripped. Stripping also removes camera location data that a customer's own photo may carry.
+
+There is no JPEG or PNG fallback. Every current browser engine (Chromium, Firefox, and Safari 14 or newer) decodes WebP, so a fallback would only add files and markup. Link-preview crawlers receive the largest WebP. Libresite has not tested each social network's crawler; one that rejects WebP shows the text card without a picture, as for a site without photos. If that matters for an embedder, a JPEG preview file is the change to make. AVIF would be smaller still, but its encoder is far slower and is not in every libvips build, so it is not offered.
+
+* Settings
+
+The plan step's =options.images= changes the caps and quality. Every key is optional; unknown keys and out-of-range values fail preflight, before any call.
+
+| Key | Default | Range | Meaning |
+|-----+---------+-------+---------|
+| =max= | 1600 | 160..8192 | long-edge cap in pixels; the largest variant |
+| =widths= | =[480, 800, 1200]= | 1..8 widths, strictly ascending, 80 up to below =max= | the smaller variants, as widths; one at or above the capped width is skipped |
+| =quality= | 80 | 1..100 | WebP quality |
+
+#+begin_src yaml
+pipeline:
+  steps:
+    - id: plan
+      type: plan
+      instructions: ...
+      options:
+        sector: food
+        images: {max: 2000, widths: [480, 960, 1440], quality: 75}
+#+end_src
+
+The smallest width is also the "small image" threshold. The defaults live in =src/core/ls-images.h= (=LS_IMAGES_DEFAULT_MAX=, =LS_IMAGES_DEFAULT_QUALITY=) and =src/core/ls-images.c=.
+
+* Library
+
+Sizing uses [[https://www.libvips.org/][libvips]] (LGPL-2.1-or-later), 8.15 or newer, through its pkg-config module =vips=. One library decodes PNG, JPEG and WebP, shrinks JPEG and WebP while decoding, resizes with a Lanczos kernel, converts colour and encodes WebP, streaming in small regions so a large photo does not need its whole bitmap in memory. Alternatives were considered and set aside:
+
+- gdk-pixbuf: decodes whole bitmaps into memory and needs a separate WebP plugin to write WebP;
+- libwebp, libpng and libjpeg directly: three libraries plus a hand-written resampler and colour handling;
+- ImageMagick (MagickWand): a much larger dependency with a long security history, for no benefit here.
+
+Fedora packages: =vips-devel= to build, =vips= at run time. Libresite links it through =config.mk=, and the installed =libresite-1.0.pc= lists it in =Requires.private=, so an embedder that links the static archive (such as the Lightsite daemon) links libvips too and its host needs the =vips= package.
+
+libvips starts once per process. Libresite blocks the loaders libvips marks untrusted (only the PNG, JPEG and WebP loaders are used), turns its operation cache off so a long-running embedder does not keep decoded photos in memory, refuses images over 100 megapixels, refuses PNG and WebP files that are cut short, and decodes with =fail_on=error= so a damaged file is an error rather than grey pixels.
+
+* Determinism and checkpoints
+
+The output bytes depend only on the input bytes and the options: libvips' resize and WebP encoder are deterministic and no timestamps or metadata are written. =/images/deterministic= and =/pages/phone-images= compare two runs byte for byte, the latter as whole context snapshots. The variants are part of the plan step's checkpointed bundle; a resumed run that already completed the plan step does not size the photos again. A checkpoint written before this change has a plan without =variants=, and its pages render the original photos as before.
+
+* Measured
+
+=/pages/phone-images= runs plan and pages end to end with a drawn 1536x1024 photo-like PNG (gradient and grain) as the home page's hero and in the journal:
+
+| Visitor | Before | After |
+|---------+--------+-------|
+| Phone, 390 px at 2x (picks the 800w file) | 4,150,794 bytes (PNG) | 32,430 bytes |
+| Desktop (largest, 1536w) | 4,150,794 bytes (PNG) | 355,380 bytes |
+
+=/images/large-png= caps a drawn 2400x1600 PNG of 10,060,545 bytes at 1600x1067 (210,216 bytes). The drawn grain compresses differently from a real photograph, so real savings vary; these figures are fixture evidence, not a browser measurement.
+
+* Tests
+
+- =tests/test-ls-images.c=: sizes and format of a large PNG's variants, determinism, alpha kept transparent, small images untouched, portrait cap without upscaling, option ranges, truncated and non-image input, and plan photo preparation (archived originals, name clashes).
+- =tests/test-ls-pages-step.c=: =/pages/plan-photos= with real PNG, JPEG and WebP seeds and =/pages/phone-images= end to end (srcset, sizes, dimensions, eager hero, lazy journal photos, WebP link preview, original archived, identical runs).
+- =tests/test-ls-components.c=: =/components/photo-variants= and =/components/templates-srcset=.
+- =tests/test-ls-edit.c=: =/edit/photos= publishes a site with a photo through the full pipeline (variants exported, original not), edits it, and checks the editor never shows the model a variant file.
+- =tests/test-ls-qa.c= and =tests/qa.sh=: missing =srcset= candidates are QA findings.

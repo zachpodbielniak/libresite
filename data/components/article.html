@@ -12,7 +12,7 @@
 {{#parts}}<section class="article__part" id="{{part_id}}" aria-labelledby="{{part_id}}-h">
 <{{subtag}} id="{{part_id}}-h">{{heading}}</{{subtag}}>
 <div class="prose">{{{body}}}</div>
-{{#art}}<figure class="article__figure"><img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}" loading="lazy" decoding="async">{{#caption}}<figcaption>{{caption}}</figcaption>{{/caption}}</figure>
+{{#art}}<figure class="article__figure"><img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}"{{#srcset}} srcset="{{srcset}}" sizes="(max-width: 48rem) 100vw, 48rem"{{/srcset}} loading="lazy" decoding="async">{{#caption}}<figcaption>{{caption}}</figcaption>{{/caption}}</figure>
 {{/art}}</section>
 {{/parts}}{{#has_notes}}<ol class="article__notes">
 {{#notes}}<li id="{{id}}-note-{{n}}">{{{text}}}</li>

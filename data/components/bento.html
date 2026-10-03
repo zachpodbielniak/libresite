@@ -5,7 +5,7 @@
 {{/intro}}</div>
 {{/heading}}<ul class="bento__grid" role="list">
 {{#tiles}}<li class="bento__tile bento__tile--{{#size}}{{size}}{{/size}}{{^size}}small{{/size}}{{#art}} bento__tile--art{{/art}}">
-{{#art}}<img class="bento__art" src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}" loading="lazy" decoding="async">
+{{#art}}<img class="bento__art" src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}"{{#srcset}} srcset="{{srcset}}" sizes="(max-width: 40rem) 100vw, (max-width: 64rem) 50vw, 33vw"{{/srcset}} loading="lazy" decoding="async">
 {{/art}}<div class="bento__text">
 {{#kicker}}<p class="kicker">{{kicker}}</p>
 {{/kicker}}<{{subtag}} class="bento__title">{{#link}}<a href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{title}}</a>{{/link}}{{^link}}{{title}}{{/link}}</{{subtag}}>

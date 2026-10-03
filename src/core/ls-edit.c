@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
 #include "core/ls-edit.h"
 #include "core/ls-components.h"
+#include "core/ls-images.h"
 #include "core/ls-context.h"
 #include "model/ls-artifact.h"
 #include <glib/gstdio.h>
@@ -685,6 +686,7 @@ ls_editor_apply(LsEditor *self, const gchar *project, const gchar *request, gcha
 		g_autoptr(GList) names = json_object_get_members(old_pages);
 		GList *name;
 		json_object_remove_member(json_node_get_object(shown), "structure");
+		ls_images_strip_variants(json_node_get_object(shown));
 		json_object_set_string_member(task, "request", request);
 		json_object_set_member(task, "plan", g_steal_pointer(&shown));
 		for (name = names; name != NULL; name = name->next)

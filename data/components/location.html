@@ -5,5 +5,5 @@
 {{#directions}}<div class="location__directions prose">{{{directions}}}</div>
 {{/directions}}{{#has_actions}}<p class="actions">{{#actions}}<a class="button{{^primary}} button--ghost{{/primary}}" href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{label}}</a>{{/actions}}</p>
 {{/has_actions}}</div>
-{{#art}}<figure class="location__map"><img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}" loading="lazy" decoding="async"></figure>
+{{#art}}<figure class="location__map"><img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}"{{#srcset}} srcset="{{srcset}}" sizes="(max-width: 48rem) 100vw, 50vw"{{/srcset}} loading="lazy" decoding="async"></figure>
 {{/art}}</div>

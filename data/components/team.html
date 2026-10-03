@@ -5,7 +5,7 @@
 {{/intro}}</div>
 {{/heading}}<ul class="team__list" role="list">
 {{#people}}<li class="team__person">
-{{#art}}<img class="team__art" src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}" loading="lazy" decoding="async">
+{{#art}}<img class="team__art" src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}"{{#srcset}} srcset="{{srcset}}" sizes="(max-width: 40rem) 100vw, (max-width: 64rem) 50vw, 33vw"{{/srcset}} loading="lazy" decoding="async">
 {{/art}}<{{subtag}} class="team__name">{{name}}</{{subtag}}>
 {{#role}}<p class="team__role muted">{{role}}</p>
 {{/role}}{{#bio}}<div class="prose">{{{bio}}}</div>

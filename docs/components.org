@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite
 #+created: 2026-09-28T16:00:00-04:00
-#+updated: 2026-09-28T19:00:00-04:00
+#+updated: 2026-10-03T12:00:00-04:00
 #+version: 0.3.0
 
 * Why it exists
@@ -215,6 +215,8 @@ seed_artifacts:
 
 The plan step reads each photo's pixel size from its PNG, JPEG or WebP header and passes the list to the model as =supplied_photos=; a photo whose seed is missing or unreadable stops the step before any call. The builder then writes the list into the plan as =photos= (the model cannot change it), so any image slot may use a photo path as well as a planned art path, and pages render it at its real size. The prompts ask the plan to feature the photos where they fit and to draw art only for marks, motifs and diagrams. Photos never grow taller than the screen: a tall one crops to cover its box, and a photo in the page's opening stays under 60 percent of the screen height so the headline is on the first screen. A photo may name a =focus=, one or two of =left=, =center=, =right=, =top=, =bottom=, or two percentages such as =70% 30%=; the builder writes it as the image's crop position so the subject stays in frame. Credits are kept in the plan for the operator; licensed stock such as Unsplash and Pexels needs no on-page credit, and the model may still show one in a caption.
 
+The plan step also sizes every photo for phones: a capped largest size and smaller widths as WebP, stored in the plan as =variants= and shown with =srcset=, =sizes= and the capped dimensions, while an oversized original moves to the run record instead of the published site. Small photos are published as supplied. See [[file:images.org][photographs sized for phones]] for the caps, defaults and =options.images=.
+
 * Social profiles and sharing
 
 A recipe can list the business's own social profiles. Nothing is generated: the builder links only the addresses supplied, and a site without them has no social links.
@@ -237,7 +239,7 @@ With profiles, the builder adds:
 
 The =share= component (row, stacked, quiet or pills) offers email, Facebook, X, LinkedIn, WhatsApp and Bluesky links, a copy-link button and the device share sheet. With a site address (=pages.options.base_url= or the recipe's deployment URL) the links are complete in the HTML; without one they stay hidden until =site.js= fills them from the visitor's own address. Copy and the share sheet appear only where the browser supports them. Nothing loads from any network until a visitor follows a link: there are no embedded widgets, trackers or third-party scripts.
 
-With a site address, a page whose first picture is a supplied photograph (PNG, JPEG or WebP) gets =og:image= and a large preview card; drawings are not used as previews.
+With a site address, a page whose first picture is a supplied photograph (PNG, JPEG or WebP) gets =og:image= and a large preview card; drawings are not used as previews. A sized photo previews as its largest WebP variant.
 
 * Supplied form
 

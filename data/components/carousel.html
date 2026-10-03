@@ -5,6 +5,6 @@
 <button class="carousel__button" type="button" data-carousel-next aria-label="{{next_label}}">&rarr;</button>
 </div>
 <ul class="carousel__track" role="list" tabindex="0" aria-label="{{scroll_label}}">
-{{#items}}<li class="carousel__item"><figure>{{#art}}<img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}" loading="lazy" decoding="async">{{/art}}{{#caption}}<figcaption class="muted">{{caption}}</figcaption>{{/caption}}</figure></li>
+{{#items}}<li class="carousel__item"><figure>{{#art}}<img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}"{{#srcset}} srcset="{{srcset}}" sizes="(max-width: 40rem) 100vw, (max-width: 64rem) 50vw, 33vw"{{/srcset}} loading="lazy" decoding="async">{{/art}}{{#caption}}<figcaption class="muted">{{caption}}</figcaption>{{/caption}}</figure></li>
 {{/items}}</ul>
 </div>

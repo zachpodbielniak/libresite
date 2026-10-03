@@ -1,5 +1,5 @@
 <div class="cover__frame">
-{{#art}}<figure class="cover__art"><img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}"{{#eager}} fetchpriority="high"{{/eager}}{{^eager}} loading="lazy"{{/eager}} decoding="async"></figure>{{/art}}
+{{#art}}<figure class="cover__art"><img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}"{{#srcset}} srcset="{{srcset}}" sizes="100vw"{{/srcset}}{{#eager}} fetchpriority="high"{{/eager}}{{^eager}} loading="lazy"{{/eager}} decoding="async"></figure>{{/art}}
 <div class="cover__text">
 <div class="wrap">
 {{#kicker}}<p class="kicker">{{kicker}}</p>

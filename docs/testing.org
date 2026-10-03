@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, testing
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-10T20:00:00-04:00
+#+updated: 2026-10-03T12:00:00-04:00
 #+version: 0.1.0
 
 * Generated Git repository checks
@@ -53,7 +53,7 @@ CLI integration tests use actual =LsAiProvider= and ai-glib adapters with contro
 
 * Composed-site coverage
 
-Every =tests/test-*.c= file is one GTest binary; =make tests= builds and runs them all. =test-ls-template= covers the Mustache subset and its escaping. =test-ls-components= loads the embedded catalog, checks plan and page contracts (every rejection names the section and slot), plan repair, rich text, SVG safety, schemas and a full composition of =tests/fixtures/composed/= with the built-in pages. =test-ls-pages-step= drives =plan= and =pages= through a thread-safe scripted provider: real concurrency, sequential mode, a single rejected page retried alone, exhausted retries leaving the project untouched, acceptance failures sent to the right page, cancellation joining every worker, review mode and option checks; it also asserts that no step or provider signal fires off the calling thread. =test-ls-pipeline= runs a composed recipe end to end through publication and prefix pruning, and checks preflight. =test-ls-provider= covers dispatch and usage recording, including from threads. These tests prove orchestration and rendering. They do not prove live model output quality, browser rendering or accessibility conformance.
+Every =tests/test-*.c= file is one GTest binary; =make tests= builds and runs them all. =test-ls-template= covers the Mustache subset and its escaping. =test-ls-components= loads the embedded catalog, checks plan and page contracts (every rejection names the section and slot), plan repair, rich text, SVG safety, schemas and a full composition of =tests/fixtures/composed/= with the built-in pages. =test-ls-pages-step= drives =plan= and =pages= through a thread-safe scripted provider: real concurrency, sequential mode, a single rejected page retried alone, exhausted retries leaving the project untouched, acceptance failures sent to the right page, cancellation joining every worker, review mode and option checks; it also asserts that no step or provider signal fires off the calling thread. =test-ls-pipeline= runs a composed recipe end to end through publication and prefix pruning, and checks preflight. =test-ls-provider= covers dispatch and usage recording, including from threads. =test-ls-images= sizes drawn PNG, JPEG and WebP fixtures with libvips (caps, widths, WebP, alpha, small images untouched, determinism, broken input) and =test-ls-qa= checks that =srcset= candidates are published; =/pages/phone-images= runs plan and pages end to end with a large photo and compares two runs byte for byte ([[file:images.org][images.org]]). These tests prove orchestration and rendering. They do not prove live model output quality, browser rendering or accessibility conformance.
 
 * Accessibility contract coverage
 

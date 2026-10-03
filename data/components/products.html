@@ -10,7 +10,7 @@
 <p class="filter__status muted" role="status" aria-live="polite" data-filter-status data-template-one="{{count_one}}" data-template-many="{{count_many}}"></p>
 {{/filtered}}<ul class="products__list" role="list">
 {{#items}}<li class="product-card"{{#filtered}} data-filter-item="{{category_key}}"{{/filtered}}>
-{{#art}}<figure class="product-card__art"><img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}" loading="lazy" decoding="async"></figure>
+{{#art}}<figure class="product-card__art"><img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}"{{#srcset}} srcset="{{srcset}}" sizes="(max-width: 40rem) 100vw, (max-width: 64rem) 50vw, 33vw"{{/srcset}} loading="lazy" decoding="async"></figure>
 {{/art}}<div class="product-card__text">
 {{#badge}}<p class="product-card__badge">{{badge}}</p>
 {{/badge}}{{#category}}<p class="kicker">{{category}}</p>

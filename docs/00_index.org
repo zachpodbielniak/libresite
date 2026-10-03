@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-28T16:00:00-04:00
+#+updated: 2026-10-03T12:00:00-04:00
 #+version: 0.1.0
 
 * Guides
@@ -13,6 +13,7 @@
 - [[file:editing.org][Editing a built site in place, one committed version per change]]
 - [[file:recipe-format.org][Recipe reference]]
 - [[file:components.org][Composed sites: plan, parallel pages and the component library]]
+- [[file:images.org][Photographs sized for phones: caps, WebP variants, srcset and how to change them]]
 - [[file:scaffold.org][Native static scaffolding and contact contract]]
 - [[file:structured-recipes.org][Structured recipes, platform forms and YAML export]]
 - [[file:copy-lock.org][Lock approved client sentences and contact details]]

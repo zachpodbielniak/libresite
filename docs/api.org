@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, development, api
 #+created: 2026-09-10T20:00:00-04:00
-#+updated: 2026-09-10T20:00:00-04:00
+#+updated: 2026-10-03T12:00:00-04:00
 #+version: 0.1.0
 
 * Boundary
@@ -161,6 +161,19 @@ Built-in final types and helpers:
 | =ls_pages_step_check_options(options, error)= | =parallel= 1..16, =mode= write or review, =base_url= https |
 | =ls_spec_step_check(prompts, recipe, step, error)= | Preflight: catalog stages, options and a preceding plan |
 | =ls_spec_step_preview(prompts, recipe, step, error)= | Plan prompt, or the writers' contract and reference |
+
+* Images
+
+Supplied photographs sized for phones with libvips ([[file:images.org][images.org]]).
+
+| Function | Transfer | Role |
+|----------+----------+------|
+| =LsImageVariant= (=LS_TYPE_IMAGE_VARIANT=), =ls_image_variant_copy(variant)=, =ls_image_variant_free(variant)= | full | Boxed {path, width, height, data} of one WebP size |
+| =ls_images_check_options(options, error)= | — | Plan =options.images=: max, widths, quality; nullable |
+| =ls_images_variant_path(path, width)= | full | =assets/x.png= to =assets/x-480w.webp= |
+| =ls_images_variants(path, source, options, error)= | full, nullable | Variants by ascending width; empty for a small image; NULL with error |
+| =ls_images_prepare_photos(context, photos, options, files, retired, cancellable, error)= | — | Size plan photos, append base64 files, list originals to archive |
+| =ls_images_strip_variants(plan)= | — | Remove photo variants from a plan copy shown to a model |
 
 * Components
 

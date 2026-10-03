@@ -5,5 +5,5 @@
 {{#lede}}<div class="hero__lede lede prose">{{{lede}}}</div>
 {{/lede}}{{#has_actions}}<p class="actions">{{#actions}}<a class="button{{^primary}} button--ghost{{/primary}}" href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{label}}</a>{{/actions}}</p>
 {{/has_actions}}</div>
-{{#art}}<figure class="hero__art"><img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}"{{#eager}} fetchpriority="high"{{/eager}}{{^eager}} loading="lazy"{{/eager}} decoding="async"></figure>
+{{#art}}<figure class="hero__art"><img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}"{{#srcset}} srcset="{{srcset}}" sizes="(max-width: 48rem) 100vw, 50vw"{{/srcset}}{{#eager}} fetchpriority="high"{{/eager}}{{^eager}} loading="lazy"{{/eager}} decoding="async"></figure>
 {{/art}}</div>
