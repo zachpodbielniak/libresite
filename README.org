@@ -28,7 +28,7 @@ The bundled recipes use =timeout: 0= and =max_tokens: 0= for unlimited testing. 
 
 ** Build requirements
 
-Fedora packages for the builder: =gcc=, =make=, =pkgconf-pkg-config=, =glib2-devel=, =json-glib-devel=, =libsoup3-devel=, =libyaml-devel=, =libxml2-devel= and =libdex-devel=. Testing also uses =ShellCheck=, =ripgrep= and =coreutils=; generation needs =ShellCheck= for recipes that lint emitted scripts. The default builds the pinned dependencies from =deps/=; a recursive submodule checkout is the documented first step, and =bundled-deps= initializes missing nested ai-glib gitlinks if you skip it. Alternatively, =DEPS=system= uses compatible installed =ai-glib-1.0= and =yaml-glib-1.0= development builds. See [[file:docs/building.org][building.org]] for details.
+Fedora packages for the builder: =gcc=, =make=, =pkgconf-pkg-config=, =glib2-devel=, =json-glib-devel=, =libsoup3-devel=, =libyaml-devel=, =libxml2-devel=, =libdex-devel= and =vips-devel= (libvips 8.15 or newer, which sizes supplied photos for phones; =vips= at run time, also for programs that embed the library). Testing also uses =ShellCheck=, =ripgrep= and =coreutils=; generation needs =ShellCheck= for recipes that lint emitted scripts. The default builds the pinned dependencies from =deps/=; a recursive submodule checkout is the documented first step, and =bundled-deps= initializes missing nested ai-glib gitlinks if you skip it. Alternatively, =DEPS=system= uses compatible installed =ai-glib-1.0= and =yaml-glib-1.0= development builds. See [[file:docs/building.org][building.org]] for details.
 
 On Immutablue/Hyacinth Macaw add missing packages to the image build. No host package installation or writable-/usr overlay is part of this project.
 

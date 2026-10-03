@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, development
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-09-10T20:00:00-04:00
+#+updated: 2026-10-03T12:00:00-04:00
 #+version: 0.1.0
 
 * Three-file build
@@ -14,9 +14,9 @@
 
 * Packages and dependency modes
 
-Generation and the test suite require the =git= executable (Fedora package =git-core=). Git initializes and commits each generated output before publication; no libgit2 dependency is needed. The build prerequisites remain =gcc=, =make=, =pkgconf-pkg-config=, =glib2-devel=, =json-glib-devel=, =libsoup3-devel=, =libyaml-devel=, =libxml2-devel= and =libdex-devel=; verification also uses =ShellCheck=, =ripgrep= and =coreutils=. Generation also needs =ShellCheck= when a recipe's =validate= rule sets =shellcheck: true= (the flagship recipe does); preflight names it if it is missing.
+Generation and the test suite require the =git= executable (Fedora package =git-core=). Git initializes and commits each generated output before publication; no libgit2 dependency is needed. The build prerequisites are =gcc=, =make=, =pkgconf-pkg-config=, =glib2-devel=, =json-glib-devel=, =libsoup3-devel=, =libyaml-devel=, =libxml2-devel=, =libdex-devel= and =vips-devel=; verification also uses =ShellCheck=, =ripgrep= and =coreutils=. Generation also needs =ShellCheck= when a recipe's =validate= rule sets =shellcheck: true= (the flagship recipe does); preflight names it if it is missing.
 
-Fedora builder packages: =gcc=, =make=, =pkgconf-pkg-config=, =glib2-devel=, =json-glib-devel=, =libsoup3-devel= and =libyaml-devel=. =DEPS=system= optionally uses compatible installed =ai-glib-1.0= and =yaml-glib-1.0= development builds. Those are the user's own libraries, not assumed Fedora distribution packages. Their pkg-config metadata resolves transitive requirements. The pinned ai-glib revision includes Codex, Claude Code, Grok Build, Cursor and Antigravity CLI classes.
+Fedora builder packages: =gcc=, =make=, =pkgconf-pkg-config=, =glib2-devel=, =json-glib-devel=, =libsoup3-devel=, =libyaml-devel= and =vips-devel=. libvips (pkg-config =vips=, 8.15 or newer) sizes supplied photos for phones ([[file:images.org][images.org]]); =vips= is its run-time package, needed by the CLI and by any program that links =liblibresite-1.0.a=, whose =libresite-1.0.pc= lists it in =Requires.private=. =DEPS=system= optionally uses compatible installed =ai-glib-1.0= and =yaml-glib-1.0= development builds. Those are the user's own libraries, not assumed Fedora distribution packages. Their pkg-config metadata resolves transitive requirements. The pinned ai-glib revision includes Codex, Claude Code, Grok Build, Cursor and Antigravity CLI classes.
 
 =DEPS=bundled= is the default and builds pinned ai-glib/yaml-glib and links their static archives plus ai-glib's bundled mcp-glib archive. Also provide Fedora =libxml2-devel= and =libdex-devel= for ai-glib. A full recursive checkout is still the documented first step. If ai-glib's nested =mcp-glib= / =yaml-glib= gitlinks are empty, =bundled-deps= runs =git submodule update --init --recursive= for those paths before compiling, so =make DEBUG=1 clean all= does not fail with a missing inner =lib= target:
 

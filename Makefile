@@ -46,7 +46,7 @@ tests test: all $(UNIT_BINS)
 stack-tests:
 	bash tests/stack-api.sh
 $(OUTDIR)/libresite-1.0.pc: config.mk $(OUTDIR)/.flags | $(OUTDIR)
-	printf '%s\n' 'prefix=$(PREFIX)' 'libdir=$(LIBDIR)' 'includedir=$(INCLUDEDIR)' 'Name: libresite' 'Description: Recipe-driven GLib AI site builder' 'Version: $(VERSION)' 'Requires: gio-2.0 gobject-2.0 json-glib-1.0' 'Requires.private: ai-glib-1.0 yaml-glib-1.0 yaml-0.1' 'Libs: -L$${libdir} -llibresite-1.0' 'Cflags: -I$${includedir}/libresite-1.0' > $@
+	printf '%s\n' 'prefix=$(PREFIX)' 'libdir=$(LIBDIR)' 'includedir=$(INCLUDEDIR)' 'Name: libresite' 'Description: Recipe-driven GLib AI site builder' 'Version: $(VERSION)' 'Requires: gio-2.0 gobject-2.0 json-glib-1.0' 'Requires.private: ai-glib-1.0 yaml-glib-1.0 yaml-0.1 vips' 'Libs: -L$${libdir} -llibresite-1.0' 'Cflags: -I$${includedir}/libresite-1.0' > $@
 install: all
 	install -d $(DESTDIR)$(BINDIR) $(DESTDIR)$(LIBDIR)/pkgconfig $(DESTDIR)$(DATADIR)/libresite
 	install -m755 $(CLI) $(DESTDIR)$(BINDIR)/

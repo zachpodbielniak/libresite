@@ -13,7 +13,9 @@ DEBUG ?= 0
 ASAN ?= 0
 UBSAN ?= 0
 DEPS ?= bundled
-PKG_DEPS = glib-2.0 gobject-2.0 gio-2.0 gio-unix-2.0 gmodule-2.0 'json-glib-1.0 >= 1.10' libsoup-3.0 yaml-0.1
+# libvips sizes supplied photographs for phones (docs/images.org).
+# Fedora: vips-devel to build, vips at run time.
+PKG_DEPS = glib-2.0 gobject-2.0 gio-2.0 gio-unix-2.0 gmodule-2.0 'json-glib-1.0 >= 1.10' libsoup-3.0 yaml-0.1 'vips >= 8.15'
 ifeq ($(DEPS),bundled)
 # Bundled static archives avoid build-tree runtime search paths. ai-glib's
 # archive contains its own objects, so its mcp-glib archive is linked explicitly.
