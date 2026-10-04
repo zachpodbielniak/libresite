@@ -250,6 +250,7 @@ These parser and path helpers ship in the public headers because recipe, artifac
 | =ls_string(object, key)= | Borrowed string member or NULL |
 | =ls_phone_tel(phone)= | Checked phone number to an owned =tel:= address of =+= and digits, or NULL |
 | =ls_email_valid(email)= | Whether text is one plain email address |
+| =ls_credit_valid(credit)= | Whether an object is a caller's footer credit ={text, url}= |
 | =ls_form_action_valid(action)= | Whether text is a same-site path or https:// address a live form may post to |
 | =ls_path_valid(path)= | Safe relative artifact path |
 | =ls_git_run(directory, arguments, output, cancellable, error)= | Git without inherited GIT_* state, global config, hooks or signing |

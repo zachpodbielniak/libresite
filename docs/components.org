@@ -169,6 +169,22 @@ Two dozen dealt plumbing firms show why it matters and where it stops: without t
 
 A thin order makes a thin site, and a site should not guess an address or an event date. So the plan names what is missing: =plan.missing= holds up to 12 short questions (at most 200 characters each) about facts a visitor to this kind of business would expect that the order did not supply, such as opening hours, prices or a date. The pages write around those gaps rather than filling them. The plan step reports them as one progress line, =facts to ask the owner: ...=, and the plan keeps them in the run record, so whoever gathers the order can ask the owner and build again.
 
+Those questions are for the owner, never for visitors. Any text a visitor can read (page slots, the footer note, titles and descriptions) that talks about inputs nobody supplied is refused and sent back with the reason: phrases such as "have not been supplied", "not supplied", "were not provided", "to be confirmed", "to be announced", "details to come", "will be posted", "not published yet" and the words TBD, TBC and TBA, matched as whole words in any case. A missing item is left out silently.
+
+* Footer credit
+
+A caller, such as a hosting service, may pass one credit line for the footer as =site.credit: {text, url}=: =text= one line of 1 to 80 characters and =url= an https:// address with a host, at most 300 bytes, without spaces, quotes or angle brackets (=ls_credit_valid()=). The plan step copies it into the plan as =credit=, and every page, the built-in 404, privacy and terms pages included, ends its footer with it:
+
+#+begin_src html
+<p class="wrap site-footer__credit"><a href="https://example.com/" rel="noopener">Built with Example</a></p>
+#+end_src
+
+It is small and unobtrusive in the site's own style: the muted text colour (checked at 4.5:1 on the footer surface) at the smallest step, under everything else in the footer. The text is escaped and shown exactly as supplied. No model is shown it, so no page repeats it, and an edit cannot change it; edits keep it. Without =site.credit= nothing is drawn.
+
+* Language and spelling
+
+Copy follows the business's locale: =languages.default= (such as =en-GB= or =en-AU=) or a place the brief names. When none is given the writers use US English spelling and usage (color, neighborhood, center). This is a prompt instruction; offline tests check that it is in the prompt, not the spelling of live output.
+
 * Themes
 
 A theme is a complete design applied to the whole site: every token, the web fonts, one value for every look axis and signature CSS. =data/components/themes.yaml= bundles twenty-four: swiss (white, black and red, numbered sections, a sitemap footer), magazine (Didone headlines, drop caps, split headings), terminal (phosphor monospace, scanlines), collage (taped images, turned prints, torn edges), deco (green and gold, stepped double frames), chrome (Y2K chrome buttons over a color mesh), editorial, brutalist, midnight, soft, civic, atelier, workshop, neon, terracotta, nordic, retro, zine, botanical, noir, sunrise, liquid-glass (frosted glass over dawn color fields), orbital (sci-fi mission control: HUD panels, scanlines, a horizon grid) and hologram (glass panels glowing over a violet starfield). Every component draws only on tokens and look classes, so applying a theme changes every component on every page together, while content, routes, navigation, art and component choices stay as they are.
@@ -430,7 +446,7 @@ Within an item, every declared field the model left out is set explicitly empty,
 
 * Plan contract
 
-Required: =name=, =tokens=, =nav=, =pages=, =art= (may be empty). The schema also requires =character= (see [[*Identities][identities]]). Optional: =tagline=, =lang=, =missing= (see [[*Missing facts][missing facts]]), =fonts=, =brand=, =action=, =footer=, =voice=, =css= and =ui= (interface strings for a non-English site). The builder writes =photos=, =social=, =form= and =contact= from the order (see [[*Call and quote actions][call and quote actions]]); a model answer never sets them.
+Required: =name=, =tokens=, =nav=, =pages=, =art= (may be empty). The schema also requires =character= (see [[*Identities][identities]]). Optional: =tagline=, =lang=, =missing= (see [[*Missing facts][missing facts]]), =fonts=, =brand=, =action=, =footer=, =voice=, =css= and =ui= (interface strings for a non-English site). The builder writes =photos=, =social=, =form=, =contact=, =modules= and =credit= from the order (see [[*Call and quote actions][call and quote actions]]); a model answer never sets them.
 
 - Tokens: seven =#rrggbb= colors with WCAG AA text pairs (ink and muted on paper and surface, accent_ink on accent, all 4.5:1), three font stacks of installed or generic families, and numeric scale, spacing, border, radius and heading settings within documented ranges.
 - Fonts: up to three open-source families served by Bunny Fonts; the builder writes the stylesheet URL. Omit them when a brief forbids remote fonts.
