@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
 #include "core/ls-components.h"
+#include "core/ls-module.h"
 #include "core/ls-template.h"
 #include "core/ls-util.h"
 #include <math.h>
@@ -1842,6 +1843,49 @@ check_contact(Problems *problems, JsonObject *plan){
 			"+ . - ( ) and a plain email address");
 }
 
+/* modules is written by the builder from site.modules: each supplied podbay
+ * module's id, title, snippet and stylesheet, checked again here because a
+ * plan restored from outlines draws them into pages. */
+static void
+check_modules(Problems *problems, JsonObject *plan){
+	JsonArray *modules = member_array(plan, "modules");
+	g_autoptr(GHashTable) seen = g_hash_table_new(g_str_hash, g_str_equal);
+	guint i;
+	if (!json_object_has_member(plan, "modules"))
+		return;
+	if (modules == NULL || json_array_get_length(modules) == 0 || json_array_get_length(modules) > 8) {
+		problem(problems, "modules must list the 1 to 8 supplied podbay modules");
+		return;
+	}
+	for (i = 0; i < json_array_get_length(modules); i++) {
+		JsonNode *node = json_array_get_element(modules, i);
+		JsonObject *module = JSON_NODE_HOLDS_OBJECT(node) ? json_node_get_object(node) : NULL;
+		const gchar *id = module != NULL ? ls_string(module, "id") : NULL;
+		g_autoptr(GError) why = NULL;
+		if (module == NULL || !ls_object_keys(module, "|id|title|snippet|css|", NULL) || !ls_module_id_valid(id) ||
+			!g_hash_table_add(seen, (gpointer)id)) {
+			problem(problems, "modules[%u] must be a supplied {id, title, snippet, css} with a unique id", i);
+			continue;
+		}
+		if (!ls_module_check_snippet(id, ls_string(module, "snippet"), &why) ||
+			!ls_module_check_css(id, ls_string(module, "css"), &why))
+			problem(problems, "modules[%u]: %s", i, why->message);
+	}
+}
+
+/* The supplied module @id in the plan, or NULL. */
+static JsonObject *
+plan_module(JsonObject *plan, const gchar *id){
+	JsonArray *modules = plan != NULL ? member_array(plan, "modules") : NULL;
+	guint i;
+	for (i = 0; id != NULL && modules != NULL && i < json_array_get_length(modules); i++) {
+		JsonNode *node = json_array_get_element(modules, i);
+		if (JSON_NODE_HOLDS_OBJECT(node) && g_strcmp0(ls_string(json_node_get_object(node), "id"), id) == 0)
+			return json_node_get_object(node);
+	}
+	return NULL;
+}
+
 /* The supplied phone as the builder links it: {phone, tel}, or NULL. */
 static JsonObject *
 call_view(JsonObject *plan){
@@ -2191,7 +2235,7 @@ check_plan_into(Problems *problems, LsComponents *self, JsonNode *node){
 		return;
 	}
 	if (!ls_object_keys(plan, "|name|tagline|lang|character|missing|tokens|fonts|brand|nav|action|footer|voice|look|"
-		"art|photos|social|form|contact|pages|css|restyle|ui|structure|signature|", NULL))
+		"art|photos|social|form|contact|modules|pages|css|restyle|ui|structure|signature|", NULL))
 		problem(problems, "unknown top-level key; allowed: name, tagline, lang, character, missing, tokens, fonts, "
 			"brand, nav, action, footer, voice, look, art, photos, pages, css, restyle, ui");
 	check_missing(problems, plan);
@@ -2199,6 +2243,7 @@ check_plan_into(Problems *problems, LsComponents *self, JsonNode *node){
 	check_social(problems, self, plan);
 	check_supplied_form(problems, plan);
 	check_contact(problems, plan);
+	check_modules(problems, plan);
 	check_structure(problems, self, plan);
 	check_look(problems, self, plan);
 	check_restyle(problems, self, plan);
@@ -3563,6 +3608,7 @@ check_page_into(LsComponents *self, Problems *problems, JsonNode *plan_node, con
 	LinkScope scope = {NULL, NULL, NULL};
 	PageCheck check = {problems, &scope};
 	g_autoptr(GPtrArray) ids = NULL;
+	g_autoptr(GHashTable) modules_placed = g_hash_table_new(g_str_hash, g_str_equal);
 	const gchar *kind_name;
 	JsonObject *kind;
 	guint i;
@@ -3645,6 +3691,16 @@ check_page_into(LsComponents *self, Problems *problems, JsonNode *plan_node, con
 		if (g_str_equal(name, "social") && (plan == NULL || member_array(plan, "social") == NULL ||
 			json_array_get_length(member_array(plan, "social")) == 0))
 			problem(problems, "%s: social lists the site's supplied profiles, and this site has none; remove it", where);
+		/* A module section draws a supplied podbay module, once per page so
+		 * its element ids stay unique. */
+		if (g_str_equal(name, "module")) {
+			const gchar *module = content != NULL ? ls_string(content, "module") : NULL;
+			if (plan_module(plan, module) == NULL)
+				problem(problems, "%s: module '%s' is not one of the site's supplied podbay modules; use one the plan "
+					"lists in modules, or remove the section", where, module != NULL ? module : "");
+			else if (!g_hash_table_add(modules_placed, (gpointer)module))
+				problem(problems, "%s: module '%s' may appear only once on a page", where, module);
+		}
 		/* So is the phone: no phone, no call section. */
 		if (g_str_equal(name, "call")) {
 			g_autoptr(JsonObject) call = call_view(plan);
@@ -3703,6 +3759,7 @@ typedef struct {
 	const gchar *wordmark;
 	const gchar *base;		/* normalized https:// site address, or NULL */
 	const gchar *quote;		/* the live form on its page, for the quote action, or NULL */
+	GHashTable *modules;		/* supplied podbay module ids drawn anywhere */
 } Render;
 
 static void derived_filter(Render *render, JsonObject *view, const gchar *field);
@@ -4304,6 +4361,16 @@ render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArra
 			JsonObject *call = call_view(render->plan);
 			if (call != NULL)
 				json_object_set_object_member(view, "call", call);
+		} else if (g_str_equal(name, "module")) {
+			/* The supplied snippet, as podbay drew it and checked again with
+			 * the plan; it also posts without scripts. */
+			JsonObject *module = plan_module(render->plan, ls_string(content, "module"));
+			g_autofree gchar *snippet = module != NULL
+				? ls_module_snippet_html(ls_string(module, "snippet"), ui_text(render, "send_failed")) : NULL;
+			if (snippet != NULL) {
+				json_object_set_string_member(view, "snippet", snippet);
+				g_hash_table_add(render->modules, (gpointer)ls_string(module, "id"));
+			}
 		}
 		if (ls_string(content, "heading") != NULL) {
 			g_autofree gchar *plain = heading_markup(ls_string(content, "heading"), FALSE);
@@ -5016,9 +5083,10 @@ quote_href(JsonObject *plan, JsonObject *pages){
 gchar *
 ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages, const gchar *base_url, GError **error){
 	Problems problems = {g_ptr_array_new_with_free_func(g_free)};
-	Render render = {self, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+	Render render = {self, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 	g_autoptr(JsonObject) ui = json_object_new();
 	g_autoptr(GHashTable) used = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+	g_autoptr(GHashTable) modules = g_hash_table_new(g_str_hash, g_str_equal);
 	g_autoptr(JsonNode) root = json_node_new(JSON_NODE_OBJECT);
 	g_autoptr(JsonObject) bundle = json_object_new();
 	g_autofree gchar *base = NULL;
@@ -5063,6 +5131,7 @@ ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages
 	render.plan = plan;
 	render.ui = ui;
 	render.used = used;
+	render.modules = modules;
 	render.base = base;
 	render.quote = quote;
 	if (base != NULL) {
@@ -5097,7 +5166,7 @@ ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages
 	/* Library styles sit in cascade layers; the plan's restyles and CSS are
 	 * unlayered, so any rule a site writes overrides any library rule. */
 	css = g_string_new("/* Generated by libresite from the site plan and component library. */\n"
-		"@layer ls-base, ls-components, ls-look, ls-signature;\n"
+		"@layer ls-base, ls-modules, ls-components, ls-look, ls-signature;\n"
 		"@media (prefers-reduced-motion: no-preference) { @view-transition { navigation: auto; } }\n");
 	{
 		g_autofree gchar *tokens = token_css(member_object(plan, "tokens"), member_object(plan, "structure"));
@@ -5110,6 +5179,19 @@ ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages
 		g_string_append(css, focus);
 	}
 	g_string_append_printf(css, "@layer ls-base {\n%s}\n", file_text(self, "base.css"));
+	/* Supplied podbay module styles sit under the library, whose module
+	 * component retunes them to the site's tokens. */
+	if (g_hash_table_size(modules) > 0) {
+		JsonArray *supplied = member_array(plan, "modules");
+		g_string_append(css, "@layer ls-modules {\n");
+		for (i = 0; i < json_array_get_length(supplied); i++) {
+			JsonObject *module = json_array_get_object_element(supplied, i);
+			if (g_hash_table_contains(modules, ls_string(module, "id")))
+				g_string_append_printf(css, "/* podbay module: %s */\n%s\n", ls_string(module, "id"),
+					ls_string(module, "css"));
+		}
+		g_string_append(css, "}\n");
+	}
 	js = g_string_new("/* Generated by libresite from the component library. */\n");
 	g_string_append(js, file_text(self, "nav.js"));
 	for (i = 0; i < self->order->len; i++) {

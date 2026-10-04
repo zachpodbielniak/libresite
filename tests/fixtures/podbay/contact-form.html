@@ -1,0 +1,8 @@
+<form class="podbay podbay-contact-form" hx-post="/forms/contact" hx-target="#contact-result" hx-swap="innerHTML">
+<div class="podbay-field"><label for="contact-first-name">First name</label><input id="contact-first-name" name="first-name" type="text" maxlength="100" required></div>
+<div class="podbay-field"><label for="contact-last-name">Last name</label><input id="contact-last-name" name="last-name" type="text" maxlength="100" required></div>
+<div class="podbay-field"><label for="contact-email">Email</label><input id="contact-email" name="email" type="email" maxlength="254" required></div>
+<div class="podbay-field"><label for="contact-message">Message</label><textarea id="contact-message" name="message" maxlength="4000" required></textarea></div>
+<button type="submit">Send message</button>
+<div id="contact-result" class="podbay-outcome" data-podbay-outcome="thank-you" aria-live="polite"></div>
+</form>

@@ -1,0 +1,28 @@
+/* Defaults only. A site overrides any rule with its own stylesheet loaded
+ * after this one, or retunes it through the custom properties. */
+.podbay-contact-form {
+  display: grid;
+  gap: var(--podbay-gap, 1rem);
+  max-width: var(--podbay-width, 36rem);
+}
+.podbay-contact-form .podbay-field {
+  display: grid;
+  gap: var(--podbay-label-gap, 0.25rem);
+}
+.podbay-contact-form input, .podbay-contact-form textarea {
+  font: inherit;
+  padding: var(--podbay-input-padding, 0.5rem);
+  border: 1px solid var(--podbay-border, currentColor);
+  border-radius: var(--podbay-radius, 0.25rem);
+}
+.podbay-contact-form textarea {
+  min-height: 8rem;
+}
+.podbay-contact-form button {
+  font: inherit;
+  justify-self: start;
+  padding: var(--podbay-button-padding, 0.5rem 1.25rem);
+}
+.podbay-contact-form .podbay-outcome:empty {
+  display: none;
+}

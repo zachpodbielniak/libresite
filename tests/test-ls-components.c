@@ -619,6 +619,8 @@ sample_content(const gchar *name, JsonObject *component){
 	if (g_str_equal(name, "filter"))
 		return json("{'heading':'Filtered','all_label':'All','categories':[{'label':'Chairs'},{'label':'Tables'}],"
 			"'empty':'None yet.','items':[{'title':'Ladderback','category':'Chairs'},{'title':'Drop-leaf','category':'Tables'}]}");
+	if (g_str_equal(name, "module"))
+		return json("{'heading':'Write to us','module':'contact-form'}");
 	if (g_str_equal(name, "custom"))
 		return json("{'label':'Custom region','html':'<div><p>Custom sample</p></div>'}");
 	if (g_str_equal(name, "hours"))
@@ -653,6 +655,21 @@ test_every_variant(void){
 	all = json_object_get_object_member(json_node_get_object(catalog), "components");
 	/* Builder-fed components need their supplied facts: profiles come with the fixture, a phone here. */
 	json_object_set_member(json_node_get_object(plan), "contact", json("{'phone':'+1 555 0100'}"));
+	/* ...and a supplied podbay module for the module component. */
+	{
+		JsonArray *modules = json_array_new();
+		JsonObject *module = json_object_new();
+		gchar *text = NULL;
+		json_object_set_string_member(module, "id", "contact-form");
+		g_assert_true(g_file_get_contents("tests/fixtures/podbay/contact-form.html", &text, NULL, NULL));
+		json_object_set_string_member(module, "snippet", text);
+		g_free(text);
+		g_assert_true(g_file_get_contents("tests/fixtures/podbay/contact-form.css", &text, NULL, NULL));
+		json_object_set_string_member(module, "css", text);
+		g_free(text);
+		json_array_add_object_element(modules, module);
+		json_object_set_array_member(json_node_get_object(plan), "modules", modules);
+	}
 	names = json_object_get_members(all);
 	for (name = names; name != NULL; name = name->next) {
 		JsonObject *component = json_object_get_object_member(all, name->data);
@@ -833,7 +850,7 @@ test_look_and_restyle(void){
 	contains(file_content(bundle, "work.html"), "look-panels-outlined look-rhythm-bands");
 	contains(file_content(bundle, "404.html"), "look-footer-big");
 	css = file_content(bundle, "styles.css");
-	layers = strstr(css, "@layer ls-base, ls-components, ls-look, ls-signature;");
+	layers = strstr(css, "@layer ls-base, ls-modules, ls-components, ls-look, ls-signature;");
 	hero = strstr(css, "@layer ls-components {\n.hero {");
 	look = strstr(css, "@layer ls-look {");
 	restyle = strstr(css, "/* Site restyle: hero */\n.hero__title { font-style: italic; }");
@@ -1306,7 +1323,7 @@ test_signature_rules(void){
 		css = file_content(bundle, "styles.css");
 		g_assert_nonnull(strstr(css, "/* Site signature */"));
 		g_assert_true(g_str_has_suffix(css, "border-bottom: 2px dashed currentColor; }\n}\n"));
-		g_assert_nonnull(strstr(css, "@layer ls-base, ls-components, ls-look, ls-signature;"));
+		g_assert_nonnull(strstr(css, "@layer ls-base, ls-modules, ls-components, ls-look, ls-signature;"));
 		g_assert_nonnull(strstr(css, "/* Site signature */\n@layer ls-signature {\n"));
 		json_object_set_string_member(json_node_get_object(plan), "signature", bad[0]);
 		g_clear_pointer(&text, g_free);
@@ -2478,10 +2495,105 @@ test_contact_actions(void){
 	}
 }
 
+/* The fixture snippet and stylesheet podbay drew for its contact form. */
+static gchar *
+podbay_text(const gchar *name){
+	g_autofree gchar *path = g_strconcat("tests/fixtures/podbay/", name, NULL);
+	gchar *text = NULL;
+	g_assert_true(g_file_get_contents(path, &text, NULL, NULL));
+	return text;
+}
+
+/* A supplied podbay module is drawn where a page places a module section:
+ * its snippet as podbay drew it, posting without scripts too, its stylesheet
+ * in its own layer under the site's overrides, and the posting script. Only
+ * pages that use one carry any of it. */
+static void
+test_supplied_modules(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(JsonNode) plan = load("plan.json");
+	g_autoptr(JsonObject) pages = fixture_pages();
+	g_autoptr(GError) error = NULL;
+	g_autoptr(JsonNode) bundle = NULL;
+	g_autofree gchar *snippet = podbay_text("contact-form.html");
+	g_autofree gchar *style = podbay_text("contact-form.css");
+	g_autoptr(JsonNode) module_page = json(
+		"{'path':'visit.html','sections':[{'component':'page-header','content':{'heading':'Visit'}},"
+		"{'component':'module','variant':'card','content':{'heading':'Write to the bench','module':'contact-form'}}]}");
+	JsonObject *root = json_node_get_object(plan);
+	JsonArray *modules = json_array_new();
+	JsonObject *entry = json_object_new();
+	const gchar *visit, *css, *js, *layers;
+	json_object_set_string_member(entry, "id", "contact-form");
+	json_object_set_string_member(entry, "title", "Contact us");
+	json_object_set_string_member(entry, "snippet", snippet);
+	json_object_set_string_member(entry, "css", style);
+	json_array_add_object_element(modules, entry);
+	json_object_set_array_member(root, "modules", modules);
+	g_assert_true(ls_components_check_plan(components, plan, &error));
+	g_assert_no_error(error);
+	g_assert_true(ls_components_check_page(components, plan, "visit.html", module_page, &error));
+	g_assert_no_error(error);
+	json_object_set_member(pages, "visit.html", json_node_copy(module_page));
+	bundle = compose_bundle(components, plan, pages);
+	visit = file_content(bundle, "visit.html");
+	contains(visit, "class=\"block block--module module module--card");
+	contains(visit, "Write to the bench");
+	contains(visit, "<form action=\"/forms/contact\" method=\"post\" data-podbay-form "
+		"data-failed=\"Your message was not sent. Please try again.\" class=\"podbay podbay-contact-form\" "
+		"hx-post=\"/forms/contact\" hx-target=\"#contact-result\" hx-swap=\"innerHTML\">");
+	contains(visit, "<div id=\"contact-result\" class=\"podbay-outcome\" data-podbay-outcome=\"thank-you\" "
+		"aria-live=\"polite\"></div>");
+	css = file_content(bundle, "styles.css");
+	layers = strstr(css, "@layer ls-base, ls-modules, ls-components,");
+	g_assert_nonnull(layers);
+	contains(css, "@layer ls-modules {\n/* podbay module: contact-form */");
+	contains(css, ".podbay-contact-form textarea {");
+	/* The site's overrides come after, in a later layer, from its own tokens. */
+	g_assert_true(strstr(css, "@layer ls-modules {") < strstr(css, "--podbay-border: var(--line-strong)"));
+	contains(css, ".podbay button[type=\"submit\"]");
+	js = file_content(bundle, "site.js");
+	contains(js, "[data-podbay-form]");
+	contains(js, "\"HX-Request\": \"true\"");
+	g_clear_pointer(&bundle, json_node_unref);
+	/* A site whose pages place no module ships none of it. */
+	json_object_set_member(pages, "visit.html", load("visit.json"));
+	bundle = compose_bundle(components, plan, pages);
+	lacks(file_content(bundle, "styles.css"), "podbay-contact-form");
+	lacks(file_content(bundle, "site.js"), "data-podbay-form");
+	g_clear_pointer(&bundle, json_node_unref);
+	/* A module section names a supplied module, once per page. */
+	{
+		g_autoptr(JsonNode) unknown = json(
+			"{'path':'visit.html','sections':[{'component':'page-header','content':{'heading':'Visit'}},"
+			"{'component':'module','content':{'module':'booking'}}]}");
+		g_autoptr(JsonNode) twice = json(
+			"{'path':'visit.html','sections':[{'component':'page-header','content':{'heading':'Visit'}},"
+			"{'component':'module','content':{'module':'contact-form'}},"
+			"{'component':'module','content':{'module':'contact-form'}}]}");
+		g_assert_false(ls_components_check_page(components, plan, "visit.html", unknown, &error));
+		g_assert_nonnull(strstr(error->message, "booking"));
+		g_clear_error(&error);
+		g_assert_false(ls_components_check_page(components, plan, "visit.html", twice, &error));
+		g_assert_nonnull(strstr(error->message, "once"));
+		g_clear_error(&error);
+	}
+	/* The plan's modules are the checked ones the builder wrote. */
+	json_object_set_string_member(entry, "css", "body { color: red; }");
+	g_assert_false(ls_components_check_plan(components, plan, &error));
+	g_assert_nonnull(strstr(error->message, "modules"));
+	g_clear_error(&error);
+	json_object_remove_member(root, "modules");
+	g_assert_false(ls_components_check_page(components, plan, "visit.html", module_page, &error));
+	g_assert_nonnull(strstr(error->message, "module"));
+	g_clear_error(&error);
+}
+
 int
 main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
 	g_test_add_func("/components/catalog", test_catalog);
+	g_test_add_func("/components/supplied-modules", test_supplied_modules);
 	g_test_add_func("/components/schemas", test_schemas);
 	g_test_add_func("/components/plan/valid", test_plan_valid);
 	g_test_add_func("/components/plan/errors", test_plan_errors);

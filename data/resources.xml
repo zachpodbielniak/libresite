@@ -63,6 +63,9 @@
     <file>components/form.css</file>
     <file>components/form.html</file>
     <file>components/form.js</file>
+    <file>components/module.css</file>
+    <file>components/module.html</file>
+    <file>components/module.js</file>
     <file>components/gallery.css</file>
     <file>components/gallery.html</file>
     <file>components/hero.css</file>

@@ -328,6 +328,16 @@ ls_email_valid(const gchar *email){
 			return FALSE;
 	return TRUE;
 }
+gboolean
+ls_form_action_valid(const gchar *action){
+	if (action == NULL || strlen(action) < 2 || strlen(action) > 300 ||
+		strpbrk(action, " \t\r\n\"'<>\\`#?") != NULL)
+		return FALSE;
+	if (g_str_has_prefix(action, "https://"))
+		return strlen(action) > 8 && action[8] != '/' && g_uri_is_valid(action, G_URI_FLAGS_NONE, NULL);
+	return action[0] == '/' && action[1] != '/' && strstr(action, "..") == NULL &&
+		strspn(action, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/_.-") == strlen(action);
+}
 gchar *
 ls_json_encode(JsonNode *node){
 	g_autoptr(JsonGenerator) generator = json_generator_new();

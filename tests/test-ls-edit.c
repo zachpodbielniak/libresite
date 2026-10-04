@@ -348,6 +348,22 @@ test_edit_unchanged(void){
 	site_teardown(&site);
 }
 
+/* Supplied podbay modules are the builder's too: an edit cannot replace them. */
+static void
+test_edit_modules(void){
+	Site site;
+	g_autoptr(GError) error = NULL;
+	g_autofree gchar *count = NULL;
+	site_setup(&site);
+	g_ptr_array_add(site.provider->answers, g_strdup("{\"summary\": \"x\", \"plan\": {\"modules\": []}, \"pages\": []}"));
+	g_assert_false(apply(&site, "Add a booking form", NULL, NULL, &error));
+	g_assert_error(error, LS_ERROR, LS_ERROR_VALIDATION);
+	g_assert_nonnull(strstr(site.provider->last_prompt, "plan.modules is the builder's"));
+	count = git(site.site, "rev-list", "--count", "HEAD");
+	g_assert_cmpstr(count, ==, "1");
+	site_teardown(&site);
+}
+
 /* The business phone and email are the builder's, like the live form: an
  * edit that tries to change them is refused and the site stays as it is. */
 static void
@@ -569,6 +585,7 @@ main(int argc, char **argv){
 	g_test_add_func("/edit/rejected", test_edit_rejected);
 	g_test_add_func("/edit/unchanged", test_edit_unchanged);
 	g_test_add_func("/edit/contact", test_edit_contact);
+	g_test_add_func("/edit/modules", test_edit_modules);
 	g_test_add_func("/edit/refuses-drift", test_edit_refuses_drift);
 	g_test_add_func("/edit/not-a-site", test_edit_not_a_site);
 	g_test_add_func("/edit/after-revert", test_edit_after_revert);

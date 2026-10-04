@@ -1204,6 +1204,16 @@ components:
       body: {type: rich, max: 600}
       items: {type: items, min_items: 1, max_items: 6, fields: {label: {type: text, required: true, max: 40}, value: {type: text, required: true, max: 120}, link: {type: link}}}
       actions: {type: links, max_items: 2}
+  module:
+    summary: One of the site's supplied podbay modules, such as a booking or contact form, drawn by the builder from the plan's modules. Only when the plan lists modules; set module to its id and write only the words around it. At most once per page.
+    variants:
+      stacked: The heading above the module.
+      aside: Heading and notes beside the module on wide screens.
+      card: The module in a raised card.
+    slots:
+      heading: {type: text, max: 140}
+      body: {type: rich, max: 600}
+      module: {type: text, required: true, max: 64, note: "The id of a module the plan lists in modules. Never invent one."}
   call:
     summary: The business's supplied phone number as one large click-to-call button, with the supplied email beside it. From the builder; only when the site has a supplied phone. Never write the number yourself.
     variants:

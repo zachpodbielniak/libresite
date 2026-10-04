@@ -175,6 +175,18 @@ Supplied photographs sized for phones with libvips ([[file:images.org][images.or
 | =ls_images_prepare_photos(context, photos, options, files, retired, cancellable, error)= | — | Size plan photos, append base64 files, list originals to archive |
 | =ls_images_strip_variants(plan)= | — | Remove photo variants from a plan copy shown to a model |
 
+* Podbay modules
+
+Supplied podbay module snippets and stylesheets ([[file:components.org::*Podbay modules][podbay modules]]).
+
+| Function | Transfer | Role |
+|----------+----------+------|
+| =ls_module_id_valid(id)= | — | podbay's module id grammar |
+| =ls_module_check_snippet(id, snippet, error)= | — | One form of podbay's restricted markup; =LS_ERROR_INVALID= names the reason |
+| =ls_module_check_css(id, css, error)= | — | podbay's flat, scoped stylesheet rules |
+| =ls_module_snippet_html(snippet, failed)= | full, nullable | The snippet as a page carries it: action, method and script markers added |
+| =ls_module_strip_markup(plan)= | — | Reduce plan modules to id and title in a plan copy shown to a model |
+
 * Components
 
 =LsComponents= is the immutable, thread-safe component library ([[file:components.org][components.org]]).
@@ -238,6 +250,7 @@ These parser and path helpers ship in the public headers because recipe, artifac
 | =ls_string(object, key)= | Borrowed string member or NULL |
 | =ls_phone_tel(phone)= | Checked phone number to an owned =tel:= address of =+= and digits, or NULL |
 | =ls_email_valid(email)= | Whether text is one plain email address |
+| =ls_form_action_valid(action)= | Whether text is a same-site path or https:// address a live form may post to |
 | =ls_path_valid(path)= | Safe relative artifact path |
 | =ls_git_run(directory, arguments, output, cancellable, error)= | Git without inherited GIT_* state, global config, hooks or signing |
 

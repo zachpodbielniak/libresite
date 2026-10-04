@@ -3,8 +3,8 @@
 #+authors: Zach Podbielniak
 #+categories: libresite
 #+created: 2026-09-28T16:00:00-04:00
-#+updated: 2026-10-03T12:00:00-04:00
-#+version: 0.4.0
+#+updated: 2026-10-04T12:00:00-04:00
+#+version: 0.5.0
 
 * Why it exists
 
@@ -94,7 +94,7 @@ Home pages rotate openings: the plan task carries a =suggested_opening= (compone
 
 The first value of each axis is the default, and plan repair fills a missing axis with it. An axis may set =plain: N= in the catalog: the builder then deals its default to about N percent of sites. Texture and backdrop use 50, so busy backgrounds stay occasional instead of appearing on every site (=/components/plain-share=). Inverted areas swap the working color tokens locally, so every component inside them keeps its contrast pairs. So that sites do not converge on a favorite set, the plan task carries a =suggested_look= that =ls_components_suggest_look()= derives from a hash of the recipe name and brief: different sites start from different skeletons, and the same site always gets the same suggestion. The plan keeps a suggested value unless the subject argues against it.
 
-Every component can be overridden. =styles.css= declares =@layer ls-base, ls-components, ls-look, ls-signature=; the base stylesheet, each component's styles, the look and the site's signature layer sit in those layers, and everything else a site writes is unlayered after them:
+Every component can be overridden. =styles.css= declares =@layer ls-base, ls-modules, ls-components, ls-look, ls-signature=; the base stylesheet, each component's styles, the look and the site's signature layer sit in those layers, and everything else a site writes is unlayered after them:
 
 1. =restyle=, a plan map from component name to CSS, is emitted after the look and only for components the site uses. Target =.NAME=, =.NAME--VARIANT= and =.NAME__PART=.
 2. The plan's =css= follows, for site-wide signature rules.
@@ -148,7 +148,7 @@ Stock flourishes become fingerprints: once a visitor has seen the same double ru
 - The pages step adds one more job beside the pages and artwork: the =signature= prompt stage sees the plan's name, character, voice, tokens, fonts and look, plus seven numbers dealt from the site (curve, rhythm, weight, angle, density, scale, roundness). It chooses one motif of the real business and returns ={"css": ...}= styling a fixed set of hooks: the divider between sections (=main > .block + .block::before=), marked words (=.em=), labels (=.kicker=), section headings, the page opening, header, footer, links and selection.
 - =ls_components_check_signature()= accepts only CSS of at most 8000 bytes whose colours are the site's custom properties (no literals, =rgb()=, =hsl()= or =color-mix()=), whose =url()= values are percent-encoded SVG data images without scripts or links, and which never uses =display: none=, =visibility: hidden=, =position: fixed=, =!important=, imports or markup. A rejected layer goes back once with the reason; a layer that never passes is left out and the site builds plainly. It never falls back to a stock flourish.
 - The accepted layer is kept as =site/signature.css= beside the page specifications, so rebuilds and reviews reuse it, and joins the plan as its builder-owned =signature= member when the site is composed.
-- In =styles.css= it sits in the last cascade layer, =@layer ls-base, ls-components, ls-look, ls-signature=: it leads over every library rule, the site's own plan CSS and restyles still lead over it, and a few library guards declared =!important= in an earlier layer (focus rings, the page-header index label) hold against it.
+- In =styles.css= it sits in the last cascade layer, =@layer ls-base, ls-modules, ls-components, ls-look, ls-signature=: it leads over every library rule, the site's own plan CSS and restyles still lead over it, and a few library guards declared =!important= in an earlier layer (focus rings, the page-header index label) hold against it.
 - Themed sites and page reviews write no new signature; a replacement prompt catalog without the =signature= stage simply goes without one.
 
 Live runs of the bookshop and the dog farm each wrote their layer in about 21 seconds, beside the pages and inside the usual build time, first try: drawer-pull dividers, shelf-bay lines behind the opening and a brass rule for the bookshop; fence-rail dividers with posts, a post line along the header and footer and a lattice edge for the dog farm.
@@ -262,6 +262,39 @@ site:
 The plan step writes the form into the plan as =form= after the model answers, replacing anything the model wrote, and an edit cannot change it. Every =form= section on the site then renders in endpoint mode with that action and those fields, whatever mode, target or fields the model wrote; the model writes only the heading, the words around the form and the button label. Without =site.form=, a form section keeps its own =local=, =mailto= or =endpoint= mode, and an endpoint target may be a supplied https:// address or same-site path.
 
 An endpoint form is an ordinary =POST= of URL-encoded fields, so it works without scripts. With =site.js= it sends the same fields in the background, disables the button while pending, reports the =sending= interface string in a polite status region, asks for JSON, and after an answer that the message was received clears the form and shows a confirmation panel in its place; after a refusal or a failure it shows the =send_failed= string in an error banner, marks the field the host named and keeps every entry. Without scripts the host's own answer is what the visitor sees (see [[*Confirmation after sending][confirmation after sending]]). Offline tests check the rendered markup and script; they do not exercise a host or a browser submission.
+
+* Podbay modules
+
+A site can carry site features from podbay, the catalog of first-party modules, such as a booking or contact form. The platform that orders the site loads each module with podbay's library, draws its default snippet with =pb_module_render()= and its stylesheet with =pb_module_get_css()=, and passes both in =site.modules=; libresite does not link podbay and never receives submissions.
+
+#+begin_src yaml
+site:
+  modules:
+    - id: contact-form
+      title: Contact us
+      snippet: |
+        <form class="podbay podbay-contact-form" hx-post="/forms/contact" hx-target="#contact-result" hx-swap="innerHTML">
+        <div class="podbay-field"><label for="contact-email">Email</label><input id="contact-email" name="email" type="email" maxlength="254" required></div>
+        <button type="submit">Send message</button>
+        <div id="contact-result" class="podbay-outcome" data-podbay-outcome="thank-you" aria-live="polite"></div>
+        </form>
+      css: |
+        .podbay-contact-form { display: grid; gap: var(--podbay-gap, 1rem); }
+#+end_src
+
+There are 1 to 8 modules with unique ids (podbay's grammar: lowercase words joined by single hyphens, at most 64 characters) and an optional title of up to 80 characters. Both texts are checked before anything is generated (=ls_module_check_snippet()=, =ls_module_check_css()=), again when the plan is checked, and so again when an edit recomposes a site:
+
+- The snippet must be exactly one =form= of podbay's restricted markup, at most 64 KiB: class =podbay podbay-ID=; =hx-post= a same-site path or https:// address under the same rules as =site.form= actions; =hx-target= =#= and the id of an element in the snippet; =hx-swap= one of podbay's eight modes; optional =hx-encoding= =multipart/form-data=. Inside it only =div=, =label=, =input= (text, email, tel, url, number, checkbox, date, time or file), =textarea=, =select=, =option= and submit =button= elements, each with attributes from a fixed list, double-quoted values, unique ids, at least one button, and text and values that use only =&amp;=, =&lt;=, =&gt;=, =&quot;= and numeric references. Scripts, styles, event handlers, links, images, comments and anything else are refused with the reason.
+- The stylesheet follows podbay's rules: at least one rule, only flat rules, every selector starting with =.podbay-ID= and not extending that class name, none of =@ \ < " ' ! &= (so no at-rules, imports, escapes, strings or =!important=) and only the functions =var=, =calc=, =min=, =max=, =clamp=, =rgb=, =rgba=, =hsl=, =hsla=, =not=, =is=, =where=, =nth-child= and =nth-of-type=, so it fetches nothing.
+
+The plan step writes the modules into the plan as =modules=, replacing anything the model wrote, and an edit cannot change them. The planner, page writers and the editor see only each module's id and title. A page places a module with a =module= section: =module= is the id, and the model writes only an optional heading and body; a section naming a module the plan does not list is refused, and each module appears at most once on a page so its element ids stay unique.
+
+The page carries the snippet as it was supplied, with one change: the =form= also gets =action= and =method="post"= from its =hx-post=, so it posts as an ordinary form without scripts, plus =data-podbay-form= and =data-failed= (the site's =send_failed= words). Only a site whose pages place a module ships any of this:
+
+- =styles.css= puts each placed module's stylesheet in its own cascade layer, =ls-modules=, before =ls-components=. The =module= component's styles in the later layer set podbay's =--podbay-*= custom properties from the site's tokens (spacing, lines, radius) and give labels, fields and the submit button the site's type and button look, so the module matches the site without editing its file. A plan =restyle= for =module= or the site's own CSS still leads over both.
+- =site.js= gains =module.js=: with scripts, a module form sends its fields in the background as htmx would, with =HX-Request: true=, and places the host's answer into its =hx-target= with its =hx-swap=; elements of the answer marked =hx-swap-oob= replace the page element with the same id. The answer is parsed with =DOMParser= and its scripts dropped, never run. A 2xx answer clears the form. When nothing comes back, or the network fails, the target shows the =send_failed= words and every entry is kept. A page that loads htmx itself is left to htmx.
+
+podbay's specification also lets the builder draw its own markup from a module's data definition instead of the default snippet; libresite currently draws the supplied snippet. Offline tests check the checks, the composed markup and styles, and the script's text; they do not run a host, htmx or a browser submission.
 
 * Call and quote actions
 

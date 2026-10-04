@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
 #include "core/ls-recipe.h"
 #include "core/ls-context.h"
+#include "core/ls-module.h"
 #include <string.h>
 #include <yaml-glib.h>
 struct _LsRecipe {
@@ -330,14 +331,7 @@ form_spec(JsonObject *site, GError **error){
 	if (form == NULL || !ls_object_keys(form, "|action|fields|honeypot|", NULL))
 		goto invalid;
 	action = ls_string(form, "action");
-	if (action == NULL || strlen(action) < 2 || strlen(action) > 300 ||
-		strpbrk(action, " \t\r\n\"'<>\\`#?") != NULL)
-		goto invalid;
-	if (g_str_has_prefix(action, "https://")) {
-		if (strlen(action) <= 8 || action[8] == '/' || !g_uri_is_valid(action, G_URI_FLAGS_NONE, NULL))
-			goto invalid;
-	} else if (action[0] != '/' || action[1] == '/' || strstr(action, "..") != NULL ||
-		strspn(action, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/_.-") != strlen(action))
+	if (!ls_form_action_valid(action))
 		goto invalid;
 	node = json_object_get_member(form, "fields");
 	fields = node != NULL && JSON_NODE_HOLDS_ARRAY(node) ? json_node_get_array(node) : NULL;
@@ -359,6 +353,38 @@ invalid:
 		"https:// address, without spaces, quotes, ? or #; fields 1 to 12 unique {name, label, type, required, "
 		"autocomplete, maxlength, hint} with names of lowercase letters, digits, - or _ and type text, email, tel, "
 		"url, number, date or textarea; honeypot an optional field name not among the fields");
+	return FALSE;
+}
+/* site.modules: podbay modules the order supplies, each the snippet and
+ * stylesheet podbay drew for it; both are drawn into pages as they are, so
+ * both pass podbay's restricted rules here. */
+static gboolean
+module_list(JsonObject *site, GError **error){
+	JsonNode *node = json_object_get_member(site, "modules");
+	JsonArray *list = node != NULL && JSON_NODE_HOLDS_ARRAY(node) ? json_node_get_array(node) : NULL;
+	g_autoptr(GHashTable) seen = g_hash_table_new(g_str_hash, g_str_equal);
+	guint i;
+	if (list == NULL || json_array_get_length(list) == 0 || json_array_get_length(list) > 8)
+		goto invalid;
+	for (i = 0; i < json_array_get_length(list); i++) {
+		JsonNode *entry = json_array_get_element(list, i);
+		JsonObject *module = JSON_NODE_HOLDS_OBJECT(entry) ? json_node_get_object(entry) : NULL;
+		const gchar *id = module != NULL ? ls_string(module, "id") : NULL;
+		if (module == NULL || !ls_object_keys(module, "|id|title|snippet|css|", NULL) || !ls_module_id_valid(id) ||
+			!g_hash_table_add(seen, (gpointer)id) || ls_string(module, "snippet") == NULL ||
+			ls_string(module, "css") == NULL || !text_member(module, "title", FALSE, NULL) ||
+			(ls_string(module, "title") != NULL && g_utf8_strlen(ls_string(module, "title"), -1) > 80))
+			goto invalid;
+		if (!ls_module_check_snippet(id, ls_string(module, "snippet"), error) ||
+			!ls_module_check_css(id, ls_string(module, "css"), error))
+			return FALSE;
+	}
+	return TRUE;
+invalid:
+	g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID,
+		"site.modules needs 1 to 8 supplied podbay modules {id, title, snippet, css}: unique ids of lowercase words "
+		"joined by hyphens, the snippet and stylesheet podbay drew for each, and an optional title of up to 80 "
+		"characters");
 	return FALSE;
 }
 /* site.avoid: fingerprints of earlier sites, as written by the builder, so
@@ -396,7 +422,7 @@ validate_site(JsonObject *site, GError **error){
 	guint i;
 	if (!ls_object_keys(site,
 		"|brief|audience|style|stack|frontend|backend|database|requirements|pages|offers|contact|brand|copy_lock|languages|"
-		"photos|social|avoid|form|",
+		"photos|social|avoid|form|modules|",
 		error))
 		return FALSE;
 	if (!json_object_has_member(site, "brief")) {
@@ -423,6 +449,9 @@ validate_site(JsonObject *site, GError **error){
 				return FALSE;
 		} else if (g_str_equal(key, "form")) {
 			if (!form_spec(site, error))
+				return FALSE;
+		} else if (g_str_equal(key, "modules")) {
+			if (!module_list(site, error))
 				return FALSE;
 		} else if (g_str_equal(key, "copy_lock")) {
 			if (!text_list(site, key, 0, error))

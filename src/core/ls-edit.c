@@ -2,6 +2,7 @@
 #include "core/ls-edit.h"
 #include "core/ls-components.h"
 #include "core/ls-images.h"
+#include "core/ls-module.h"
 #include "core/ls-context.h"
 #include "model/ls-artifact.h"
 #include <glib/gstdio.h>
@@ -317,9 +318,10 @@ site_base_url(GHashTable *files){
 	return end != NULL && g_str_has_prefix(start, "https://") ? g_strndup(start, (gsize)(end - start)) : NULL;
 }
 
-/* Plan members the builder owns: dealt layout, supplied photos, profiles, form and
- * contact, the separately written signature layer and the order's missing facts. */
-static const gchar *const builder_members[] = {"structure", "photos", "social", "form", "contact", "signature",
+/* Plan members the builder owns: dealt layout, supplied photos, profiles, form,
+ * contact and podbay modules, the separately written signature layer and the
+ * order's missing facts. */
+static const gchar *const builder_members[] = {"structure", "photos", "social", "form", "contact", "modules", "signature",
 	"missing", NULL};
 
 typedef struct {
@@ -688,6 +690,7 @@ ls_editor_apply(LsEditor *self, const gchar *project, const gchar *request, gcha
 		GList *name;
 		json_object_remove_member(json_node_get_object(shown), "structure");
 		ls_images_strip_variants(json_node_get_object(shown));
+		ls_module_strip_markup(json_node_get_object(shown));
 		json_object_set_string_member(task, "request", request);
 		json_object_set_member(task, "plan", g_steal_pointer(&shown));
 		for (name = names; name != NULL; name = name->next)

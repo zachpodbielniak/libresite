@@ -867,6 +867,78 @@ test_plan_contact(void){
 	}
 }
 
+/* @text indented by @spaces on every line, for a YAML block scalar. */
+static gchar *
+indented(const gchar *text, const gchar *spaces){
+	g_auto(GStrv) lines = g_strsplit(text, "\n", -1);
+	GString *out = g_string_new(NULL);
+	guint i;
+	for (i = 0; lines[i] != NULL; i++)
+		if (*lines[i] != '\0')
+			g_string_append_printf(out, "%s%s\n", spaces, lines[i]);
+	return g_string_free(out, FALSE);
+}
+
+/* Supplied podbay modules are builder facts: the stored plan carries each
+ * one's snippet and stylesheet as supplied, replacing any the model wrote,
+ * while the planner sees only ids and titles, never the markup. */
+static void
+test_plan_modules(void){
+	g_autoptr(GError) error = NULL;
+	g_autoptr(LsPrompts) prompts = ls_prompts_new(NULL, &error);
+	g_autofree gchar *snippet = fixture("../podbay/contact-form.html");
+	g_autofree gchar *css = fixture("../podbay/contact-form.css");
+	g_autofree gchar *snippet_yaml = indented(snippet, "        ");
+	g_autofree gchar *css_yaml = indented(css, "        ");
+	g_autofree gchar *modules = g_strdup_printf("  modules:\n    - id: contact-form\n      title: Contact us\n"
+		"      snippet: |\n%s      css: |\n%s  photos:\n", snippet_yaml, css_yaml);
+	g_autofree gchar *base = photo_recipe();
+	g_autofree gchar *text = replace_once(base, "  photos:\n", modules);
+	g_autoptr(LsRecipe) recipe = ls_recipe_new(text, &error);
+	g_autoptr(LsContext) context = NULL;
+	FakeProvider *provider = g_object_new(fake_provider_get_type(), NULL);
+	g_autoptr(LsStep) step = g_object_new(LS_TYPE_PLAN_STEP, NULL);
+	g_autoptr(JsonNode) plan = NULL;
+	JsonArray *stored;
+	JsonObject *module;
+	GPtrArray *seen;
+	const gchar *prompt;
+	g_assert_no_error(error);
+	context = ls_recipe_create_context(recipe, &error);
+	g_assert_no_error(error);
+	g_assert_true(ls_step_execute(step, recipe, json_array_get_object_element(ls_recipe_get_steps(recipe), 0),
+		prompts, context, LS_PROVIDER(provider), NULL, &error));
+	g_assert_no_error(error);
+	plan = ls_json_parse(ls_artifact_get_content(ls_context_lookup(context, "site/plan.json")), NULL);
+	stored = json_object_get_array_member(json_node_get_object(plan), "modules");
+	g_assert_nonnull(stored);
+	g_assert_cmpuint(json_array_get_length(stored), ==, 1);
+	module = json_array_get_object_element(stored, 0);
+	g_assert_cmpstr(json_object_get_string_member(module, "id"), ==, "contact-form");
+	g_assert_cmpstr(json_object_get_string_member(module, "title"), ==, "Contact us");
+	g_assert_cmpstr(json_object_get_string_member(module, "snippet"), ==, snippet);
+	g_assert_cmpstr(json_object_get_string_member(module, "css"), ==, css);
+	seen = g_hash_table_lookup(provider->prompts, "plan");
+	g_assert_nonnull(seen);
+	prompt = g_ptr_array_index(seen, 0);
+	g_assert_nonnull(strstr(prompt, "contact-form"));
+	g_assert_null(strstr(prompt, "hx-post"));
+	g_assert_null(strstr(prompt, "--podbay-gap"));
+	/* Page writers see the plan's modules by id and title only. */
+	{
+		g_autoptr(LsStep) pages = g_object_new(LS_TYPE_PAGES_STEP, NULL);
+		GPtrArray *home;
+		g_assert_true(ls_step_execute(pages, recipe, json_array_get_object_element(ls_recipe_get_steps(recipe), 1),
+			prompts, context, LS_PROVIDER(provider), NULL, &error));
+		g_assert_no_error(error);
+		home = g_hash_table_lookup(provider->prompts, "index.html");
+		g_assert_nonnull(home);
+		g_assert_nonnull(strstr(g_ptr_array_index(home, 0), "\"modules\":[{\"id\":\"contact-form\",\"title\":\"Contact us\"}]"));
+		g_assert_null(strstr(g_ptr_array_index(home, 0), "hx-post"));
+	}
+	g_object_unref(provider);
+}
+
 static void
 test_plan_photos(void){
 	g_autoptr(GError) error = NULL;
@@ -1077,6 +1149,7 @@ main(int argc, char **argv){
 	g_test_add_func("/pages/plan-social", test_plan_social);
 	g_test_add_func("/pages/phone-images", test_phone_images);
 	g_test_add_func("/pages/plan-contact", test_plan_contact);
+	g_test_add_func("/pages/plan-modules", test_plan_modules);
 	g_test_add_func("/pages/signature-fallback", test_signature_fallback);
 	g_test_add_func("/pages/sameness-run", test_sameness_run);
 	g_test_add_func("/pages/parallel", test_parallel);

@@ -127,16 +127,35 @@ ls_prompts_get_spec_system(LsPrompts *self){
 /* Component calls get only what they need: no bundle protocol, acceptance
  * dump or project manifest. Untrusted text stays inside JSON data. */
 /* SITE DATA for a prompt: the order's site facts, minus site.avoid, which
- * is builder input (earlier sites' fingerprints) that no model needs to read. */
+ * is builder input (earlier sites' fingerprints) that no model needs to read,
+ * and with each supplied podbay module reduced to its id and title: the
+ * builder draws its markup and styles. */
 static gchar *
 site_data_json(JsonObject *site){
 	g_autoptr(JsonNode) data = json_node_new(JSON_NODE_OBJECT);
 	JsonObject *copy = json_object_new();
 	g_autoptr(GList) members = site != NULL ? json_object_get_members(site) : NULL;
 	GList *member;
-	for (member = members; member != NULL; member = member->next)
-		if (!g_str_equal(member->data, "avoid"))
-			json_object_set_member(copy, member->data, json_node_copy(json_object_get_member(site, member->data)));
+	for (member = members; member != NULL; member = member->next) {
+		JsonNode *value = json_object_get_member(site, member->data);
+		if (g_str_equal(member->data, "avoid"))
+			continue;
+		if (g_str_equal(member->data, "modules") && JSON_NODE_HOLDS_ARRAY(value)) {
+			JsonArray *named = json_array_new();
+			guint i;
+			for (i = 0; i < json_array_get_length(json_node_get_array(value)); i++) {
+				JsonObject *module = json_array_get_object_element(json_node_get_array(value), i);
+				JsonObject *entry = json_object_new();
+				if (ls_string(module, "id") != NULL)
+					json_object_set_string_member(entry, "id", ls_string(module, "id"));
+				if (ls_string(module, "title") != NULL)
+					json_object_set_string_member(entry, "title", ls_string(module, "title"));
+				json_array_add_object_element(named, entry);
+			}
+			json_object_set_array_member(copy, member->data, named);
+		} else
+			json_object_set_member(copy, member->data, json_node_copy(value));
+	}
 	json_node_take_object(data, copy);
 	return ls_json_encode(data);
 }

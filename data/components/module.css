@@ -1,0 +1,29 @@
+.module__head { max-width: var(--measure); margin-bottom: var(--space-6); }
+.module__body { max-width: 40rem; }
+@container (min-width: 56rem) {
+	.module--aside .module__inner { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: var(--space-8); align-items: start; }
+	.module--aside .module__head { position: sticky; top: var(--space-5); }
+}
+.module--card .module__inner { max-width: 46rem; padding: var(--space-6); background: var(--surface); border: var(--border) solid var(--line); border-radius: var(--radius); }
+.module--card .module__body { max-width: none; }
+/* The site's look for every supplied podbay module. podbay's own defaults
+ * sit in an earlier layer and read these properties, so the module takes
+ * the site's spacing, lines, radius and buttons without editing its file. */
+.podbay {
+	--podbay-gap: var(--space-4); --podbay-label-gap: var(--space-1); --podbay-width: 40rem;
+	--podbay-input-padding: 0.6em 0.75em; --podbay-border: var(--line-strong); --podbay-radius: var(--radius);
+	--podbay-button-padding: 0.7em 1.25em;
+}
+.podbay label { font-family: var(--font-display); font-weight: 600; }
+.podbay input, .podbay select, .podbay textarea { width: 100%; min-height: 44px; border-width: var(--border-strong); background: var(--field); color: var(--ink); }
+.podbay input[type="checkbox"] { width: 1.25rem; min-height: 1.25rem; accent-color: var(--accent); }
+.podbay button[type="submit"] {
+	display: inline-flex; align-items: center; justify-content: center; min-height: 44px;
+	border: var(--border-strong) solid var(--accent); border-radius: var(--radius);
+	background: var(--accent); color: var(--accent-ink);
+	font-family: var(--font-display); font-weight: 600; line-height: 1.2; cursor: pointer;
+}
+.podbay button[type="submit"]:hover { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+.podbay button[disabled] { opacity: 0.55; cursor: not-allowed; }
+.podbay .podbay-outcome { font-weight: 600; }
+.podbay .podbay-outcome[data-state="failed"] { color: var(--danger); }

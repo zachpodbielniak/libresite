@@ -42,6 +42,17 @@ gboolean ls_focus_valid(const gchar *focus);
 gchar *ls_phone_tel(const gchar *phone);
 /* A plain email address: one @, a dotted domain, no spaces, quotes or brackets. */
 gboolean ls_email_valid(const gchar *email);
+/**
+ * ls_form_action_valid:
+ * @action: (nullable): where a supplied live form posts
+ *
+ * A same-site path such as /api/forms/contact (letters, digits, / _ . -, no
+ * "//" start and no "..") or an https:// address with a host; 2 to 300
+ * bytes, without spaces, quotes, angle brackets, backslashes, backquotes,
+ * ? or #.
+ * Returns: whether @action is a form action the builder draws
+ */
+gboolean ls_form_action_valid(const gchar *action);
 gchar *ls_json_encode(JsonNode *node);
 /* Strict JSON boundary: rejects duplicate members, NUL escapes and deep trees. */
 JsonNode *ls_json_parse(const gchar *text, GError **error);

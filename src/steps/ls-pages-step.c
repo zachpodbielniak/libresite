@@ -5,6 +5,7 @@
 #include "steps/ls-step.h"
 #include "core/ls-components.h"
 #include "core/ls-images.h"
+#include "core/ls-module.h"
 #include <string.h>
 #include <math.h>
 
@@ -553,6 +554,19 @@ plan_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *prom
 				json_object_set_member(root, "form", ls_json_parse(text, NULL));
 			}
 		}
+		/* So are supplied podbay modules: their snippets and stylesheets are
+		 * drawn into pages as supplied. */
+		if (plan != NULL && JSON_NODE_HOLDS_OBJECT(plan)) {
+			JsonObject *root = json_node_get_object(plan);
+			JsonObject *site = member_object_of(ls_recipe_get_root(recipe), "site");
+			JsonNode *modules = site != NULL ? json_object_get_member(site, "modules") : NULL;
+			if (json_object_has_member(root, "modules"))
+				json_object_remove_member(root, "modules");
+			if (modules != NULL && JSON_NODE_HOLDS_ARRAY(modules)) {
+				g_autofree gchar *text = ls_json_encode(modules);
+				json_object_set_member(root, "modules", ls_json_parse(text, NULL));
+			}
+		}
 		/* And the business phone and email the builder links: a call action
 		 * on every page and in the confirmation after a send. Nothing when none
 		 * was given. */
@@ -874,6 +888,7 @@ page_prompt(LsPrompts *prompts, LsRecipe *recipe, JsonObject *config, const gcha
 			return NULL;
 	}
 	ls_images_strip_variants(json_node_get_object(plan_copy));
+	ls_module_strip_markup(json_node_get_object(plan_copy));
 	pages = json_object_get_array_member(json_node_get_object(plan_copy), "pages");
 	for (i = 0; i < json_array_get_length(pages); i++) {
 		JsonObject *page = json_array_get_object_element(pages, i);
