@@ -305,17 +305,36 @@ out:
 
 gchar *
 ls_module_snippet_html(const gchar *snippet, const gchar *failed){
-	const gchar *start, *tag_end, *post, *close;
+	const gchar *start, *c;
 	g_autofree gchar *action = NULL, *escaped = NULL;
 	g_return_val_if_fail(snippet != NULL && failed != NULL, NULL);
 	start = snippet + strspn(snippet, " \t\r\n");
-	if (!g_str_has_prefix(start, "<form ") || (tag_end = strchr(start, '>')) == NULL)
+	if (!g_str_has_prefix(start, "<form") || strchr(" \t\n", start[5]) == NULL || start[5] == '\0')
 		return NULL;
-	post = g_strstr_len(start, tag_end - start, " hx-post=\"");
-	if (post == NULL || (close = strchr(post + 10, '"')) == NULL || close > tag_end)
-		return NULL;
-	/* The value was checked as a form action: no quotes, brackets or &. */
-	action = g_strndup(post + 10, close - post - 10);
+	/* Walk the form's attributes as the reader does, so a value can never be
+	 * mistaken for an attribute and any whitespace may separate them. */
+	for (c = start + 5; action == NULL;) {
+		const gchar *name;
+		gsize length;
+		c += strspn(c, " \t\n");
+		if (*c == '>' || *c == '\0')
+			return NULL;
+		name = c;
+		while (g_ascii_islower(*c) || *c == '-')
+			c++;
+		length = (gsize)(c - name);
+		if (length == 0)
+			return NULL;
+		if (*c == '=') {
+			const gchar *close;
+			if (c[1] != '"' || (close = strchr(c + 2, '"')) == NULL)
+				return NULL;
+			/* The value was checked as a form action: no quotes, brackets or &. */
+			if (length == 7 && strncmp(name, "hx-post", 7) == 0)
+				action = g_strndup(c + 2, (gsize)(close - c - 2));
+			c = close + 1;
+		}
+	}
 	escaped = ls_template_escape(failed);
 	return g_strdup_printf("<form action=\"%s\" method=\"post\" data-podbay-form data-failed=\"%s\"%s", action, escaped,
 		start + 5);

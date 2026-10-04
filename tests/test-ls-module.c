@@ -166,6 +166,26 @@ test_snippet_html(void){
 		"data-failed=\"Not sent &amp; try again\" class=\"podbay podbay-contact-form\""));
 	g_assert_nonnull(strstr(html, rest));
 	g_assert_null(ls_module_snippet_html("<div></div>", "x"));
+	/* Any whitespace may separate attributes, and only the hx-post attribute
+	 * itself gives the action, never text inside another value. */
+	{
+		g_autoptr(GError) error = NULL;
+		g_autofree gchar *lines = replace_once(snippet, "<form class=", "<form\nclass=");
+		g_autofree gchar *decoy = replace_once(snippet, "class=\"podbay podbay-contact-form\"",
+			"class=\"podbay podbay-contact-form hx-post=\"");
+		g_autofree gchar *drawn = NULL;
+		g_assert_true(ls_module_check_snippet("contact-form", lines, &error));
+		g_assert_no_error(error);
+		drawn = ls_module_snippet_html(lines, "x");
+		g_assert_nonnull(drawn);
+		g_assert_true(g_str_has_prefix(drawn, "<form action=\"/forms/contact\" method=\"post\""));
+		g_clear_pointer(&drawn, g_free);
+		g_assert_true(ls_module_check_snippet("contact-form", decoy, &error));
+		g_assert_no_error(error);
+		drawn = ls_module_snippet_html(decoy, "x");
+		g_assert_nonnull(drawn);
+		g_assert_true(g_str_has_prefix(drawn, "<form action=\"/forms/contact\" method=\"post\""));
+	}
 }
 
 /* The posting script, read offline: it never runs the host's answer as
@@ -183,7 +203,10 @@ test_script(void){
 	g_assert_nonnull(strstr(js, "credentials: \"same-origin\""));
 	parsed = strstr(js, "new DOMParser().parseFromString(");
 	g_assert_nonnull(parsed);
-	g_assert_nonnull(strstr(parsed, "querySelectorAll(\"script\")"));
+	g_assert_nonnull(strstr(parsed, "querySelectorAll(\"script, iframe, frame, object, embed, base, meta, link\")"));
+	/* Handlers and script addresses are dropped from what remains. */
+	g_assert_nonnull(strstr(parsed, "name.indexOf(\"on\") === 0"));
+	g_assert_nonnull(strstr(parsed, "/^(javascript|vbscript):/"));
 	g_assert_null(strstr(js, ".innerHTML ="));
 	g_assert_null(strstr(js, "insertAdjacentHTML"));
 	g_assert_null(strstr(js, "eval("));
