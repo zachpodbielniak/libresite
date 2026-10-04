@@ -355,7 +355,7 @@ test_edit_credit(void){
 	g_autoptr(GError) error = NULL;
 	g_autofree gchar *with_credit = NULL, *work = NULL, *index = NULL, *page = NULL;
 	g_auto(GStrv) parts = g_strsplit(recipe_text, "style: editorial}", 2);
-	with_credit = g_strjoin("style: editorial, credit: {text: Built with Example, url: 'https://example.com/'}}",
+	with_credit = g_strjoin("style: editorial, credit: {text: Built with Lightsite, url: 'https://lightsite.app'}}",
 		parts[0], parts[1], NULL);
 	site_setup_recipe(&site, with_credit);
 	g_ptr_array_add(site.provider->answers, g_strdup("{\"summary\": \"x\", \"plan\": {\"credit\": "
@@ -376,9 +376,9 @@ test_edit_credit(void){
 	g_assert_no_error(error);
 	page = read_file(site.site, "work.html");
 	g_assert_nonnull(strstr(page, "Lately on the bench"));
-	g_assert_nonnull(strstr(page, "<a href=\"https://example.com/\" rel=\"noopener\">Built with Example</a>"));
+	g_assert_nonnull(strstr(page, "<a href=\"https://lightsite.app\" rel=\"noopener\">Built with Lightsite</a>"));
 	index = read_file(site.site, "index.html");
-	g_assert_nonnull(strstr(index, "Built with Example"));
+	g_assert_nonnull(strstr(index, "Built with Lightsite"));
 	g_assert_null(strstr(index, "other.example"));
 	site_teardown(&site);
 }

@@ -76,6 +76,29 @@ credit_recipe(void){
 		g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
 		g_assert_nonnull(strstr(error->message, "site.credit"));
 	}
+	/* The exact credit Lightsite sends, through a JSON recipe and the
+	 * structured form adapter alike. */
+	{
+		const gchar *credit = "{\"text\":\"Built with Lightsite\",\"url\":\"https://lightsite.app\"}";
+		g_autofree gchar *json = g_strdup_printf("{\"version\": 1, \"name\": \"test\", \"site\": {\"brief\": \"hi\", "
+			"\"credit\": %s}, \"pipeline\": {\"steps\": [{\"id\": \"a\", \"type\": \"frontend\"}]}}", credit);
+		g_autofree gchar *form = g_strdup_printf("{\"name\":\"t\",\"site\":{\"pages\":[{\"path\":\"/\",\"title\":\"Home\"}],"
+			"\"offers\":[],\"contact\":{},\"brand\":{\"name\":\"T\"},\"copy_lock\":[],"
+			"\"languages\":{\"default\":\"en\",\"supported\":[\"en\"]},\"credit\":%s}}", credit);
+		g_autoptr(GError) error = NULL;
+		g_autoptr(LsRecipe) from_json = ls_recipe_new(json, &error);
+		g_autoptr(LsRecipe) from_form = NULL;
+		JsonObject *kept;
+		g_assert_no_error(error);
+		g_assert_nonnull(from_json);
+		from_form = ls_recipe_from_form(form, &error);
+		g_assert_no_error(error);
+		g_assert_nonnull(from_form);
+		kept = json_object_get_object_member(json_object_get_object_member(ls_recipe_get_root(from_form), "site"),
+			"credit");
+		g_assert_cmpstr(json_object_get_string_member(kept, "text"), ==, "Built with Lightsite");
+		g_assert_cmpstr(json_object_get_string_member(kept, "url"), ==, "https://lightsite.app");
+	}
 }
 
 /* A recipe whose site carries @modules (JSON), built as JSON so snippets and
