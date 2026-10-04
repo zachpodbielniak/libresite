@@ -35,7 +35,9 @@ Before writing anything:
 - an edit cannot add artwork, since that would need drawing; it reuses planned art and the site's photos;
 - removed routes leave the plan, and every new route needs its complete specification;
 - the merged plan is repaired and checked, and every page, changed or not, is checked against it, so a removed page cannot leave a dead link;
-- the whole site is recomposed and must load as a valid context (paths, sizes, conflicts), and the edit must change at least one published file.
+- the whole site is recomposed and must load as a valid context (paths, sizes, conflicts).
+
+An answer that changes no published file is a no-op, not a failure: nothing is written or committed, the command prints =Unchanged: …= and exits 0.
 
 Then the builder writes the changed files with the export's private modes, removes deleted pages, writes the new outlines (and the local run record when there is one), and commits them together. If writing, recording or committing fails, it restores every file, the outlines and the record and unstages, so the site and its history are as they were. A lock in =.libresite= keeps two edits of one site from running at once.
 
@@ -50,8 +52,8 @@ Then the builder writes the changed files with the export's private modes, remov
 
 * Library interface
 
-=ls_editor_new()= takes a provider, a prompt catalog and provider settings; =ls_editor_apply()= takes the site directory, the request, a cancellable, and returns the summary and the new commit hash. The =progress= signal is emitted on the calling thread. See =src/core/ls-edit.h=.
+=ls_editor_new()= takes a provider, a prompt catalog and provider settings; =ls_editor_apply()= takes the site directory, the request, a cancellable, and returns the summary and the new commit hash. An edit that changes nothing returns =FALSE= without an error, leaves the commit unset and puts the explanation in the summary, so an embedder can tell it apart from a refused answer without reading message text. The =progress= signal is emitted on the calling thread. See =src/core/ls-edit.h=.
 
 * Verification
 
-=tests/test-ls-edit.c= builds a composed site through the pipeline with a controlled provider, then checks an edited page and its committed outlines, a plan change followed by a second edit, rejected answers that leave files, record and history untouched, refusals for uncommitted and out-of-band committed changes, a directory that is not a built site, an edit after =git revert=, and an older site that starts tracking its outlines and can then be reverted and edited again. =tests/edit.sh= checks the command-line rules and refusals, also from an installed binary. Live runs on a delivered garage site took 29 seconds for a two-page notice, 10 seconds for an accent colour and 27 seconds for a new linked page; these measure orchestration and one model, not edit quality in general.
+=tests/test-ls-edit.c= builds a composed site through the pipeline with a controlled provider, then checks an edited page and its committed outlines, a plan change followed by a second edit, rejected answers that leave files, record and history untouched, an answer that changes nothing reported as a no-op without an error, refusals for uncommitted and out-of-band committed changes, a directory that is not a built site, an edit after =git revert=, and an older site that starts tracking its outlines and can then be reverted and edited again. =tests/edit.sh= checks the command-line rules and refusals, also from an installed binary. Live runs on a delivered garage site took 29 seconds for a two-page notice, 10 seconds for an accent colour and 27 seconds for a new linked page; these measure orchestration and one model, not edit quality in general.

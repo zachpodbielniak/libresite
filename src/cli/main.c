@@ -583,6 +583,12 @@ main(int argc, char **argv){
 			g_thread_join(thread);
 			g_source_remove(interrupt);
 			g_source_remove(terminate);
+			if (!run.okay && run.error == NULL) {
+				/* An edit that changes nothing is a no-op, not a failure. */
+				g_print("Unchanged: %s\n", run.summary != NULL ? run.summary : "nothing was committed");
+				g_free(run.summary);
+				return finish_events(&events, 0);
+			}
 			if (!run.okay) {
 				error = run.error;
 				/* A request or directory the editor cannot take is a usage error. */

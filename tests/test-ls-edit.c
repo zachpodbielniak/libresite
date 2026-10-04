@@ -314,6 +314,33 @@ test_edit_rejected(void){
 	site_teardown(&site);
 }
 
+/* An answer that changes nothing is a no-op, not a failure: no error, no
+ * commit, the explanation in the summary and the site as it was. */
+static void
+test_edit_unchanged(void){
+	Site site;
+	g_autoptr(GError) error = NULL;
+	g_autofree gchar *summary = NULL, *commit = NULL, *before = NULL, *after = NULL;
+	g_autofree gchar *count = NULL, *status = NULL;
+	site_setup(&site);
+	before = read_file(site.site, "work.html");
+	g_ptr_array_add(site.provider->answers, g_strdup("{\"summary\": \"Keep everything\", \"pages\": []}"));
+	g_assert_false(apply(&site, "Leave it as it is", &summary, &commit, &error));
+	g_assert_no_error(error);
+	g_assert_null(commit);
+	g_assert_nonnull(summary);
+	g_assert_nonnull(strstr(summary, "no visible change"));
+	g_assert_cmpint(site.provider->edit_calls, ==, 1);
+	after = read_file(site.site, "work.html");
+	g_assert_cmpstr(after, ==, before);
+	count = git(site.site, "rev-list", "--count", "HEAD");
+	g_assert_cmpstr(count, ==, "1");
+	status = git(site.site, "status", "--porcelain", NULL);
+	g_assert_cmpstr(status, ==, "");
+	g_assert_null(strstr(site.progress->str, "committed"));
+	site_teardown(&site);
+}
+
 /* Uncommitted changes, or committed changes the record does not know about,
  * stop the edit before any model call. */
 static void
@@ -463,6 +490,7 @@ main(int argc, char **argv){
 	g_test_add_func("/edit/page", test_edit_page);
 	g_test_add_func("/edit/plan-twice", test_edit_plan_twice);
 	g_test_add_func("/edit/rejected", test_edit_rejected);
+	g_test_add_func("/edit/unchanged", test_edit_unchanged);
 	g_test_add_func("/edit/refuses-drift", test_edit_refuses_drift);
 	g_test_add_func("/edit/not-a-site", test_edit_not_a_site);
 	g_test_add_func("/edit/after-revert", test_edit_after_revert);

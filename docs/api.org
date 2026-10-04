@@ -207,7 +207,7 @@ CLI plugins export =gboolean ls_plugin_register(LsPipeline *pipeline, GError **e
 | =ls_usage_price(usage_json, rates_yaml, error)= | Owned JSON price report; refuses incomplete history |
 | =ls_qa_check(directory, report, cancellable, error)= | Published-tree structural scan |
 | =ls_editor_new(provider, prompts, settings)= | Editor for built composed sites; =progress= signal on the calling thread |
-| =ls_editor_apply(self, project, request, summary, commit, cancellable, error)= | One plain-language change, checked, recomposed and committed; see [[file:editing.org][editing.org]] |
+| =ls_editor_apply(self, project, request, summary, commit, cancellable, error)= | One plain-language change, checked, recomposed and committed; =FALSE= with no error when it changes nothing; see [[file:editing.org][editing.org]] |
 
 Call =ls_pipeline_validate()= before =ls_package_save()=. Load never substitutes the embedded catalog or current native templates. Pricing and rate-card schema are in [[file:usage.org][usage.org]]. QA report format is in [[file:qa.org][qa.org]].
 

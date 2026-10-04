@@ -833,9 +833,11 @@ ls_editor_apply(LsEditor *self, const gchar *project, const gchar *request, gcha
 			if (!g_hash_table_contains(new_files, key))
 				touched = TRUE;
 	}
+	/* Nothing to commit is an answer, not a failure: FALSE without an error. */
 	if (!touched) {
-		g_set_error_literal(error, LS_ERROR, LS_ERROR_VALIDATION,
-			"The edit made no visible change to the site; nothing was committed");
+		say(self, "no visible change; the site stays as it was");
+		if (summary != NULL)
+			*summary = g_strdup("The edit made no visible change to the site; nothing was committed");
 		goto out;
 	}
 	if (g_cancellable_set_error_if_cancelled(cancellable, error))

@@ -37,7 +37,10 @@ LsEditor *ls_editor_new(LsProvider *provider, LsPrompts *prompts, JsonObject *se
  * and commits a new version on the site's own history. The site must have
  * no uncommitted changes and its files must still match the outlines. An
  * older site's first edit starts tracking its outlines. Any failure leaves
- * the files, outlines, record and history as they were.
+ * the files, outlines, record and history as they were. An answer that
+ * changes no published file is not an error: the function returns %FALSE
+ * without setting @error, leaves @commit unset and puts the explanation in
+ * @summary.
  * Returns: whether a new version was committed
  */
 gboolean ls_editor_apply(LsEditor *self, const gchar *project, const gchar *request, gchar **summary,
