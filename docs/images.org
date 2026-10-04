@@ -1,6 +1,6 @@
 #+title: Photographs sized for phones
 #+description: How supplied raster images are capped, resized, encoded and referenced with srcset; caps, defaults and how to change them
-#+authors: Libresite
+#+authors: Ben Doty
 #+categories: libresite, generation, performance
 #+created: 2026-10-03T12:00:00-04:00
 #+updated: 2026-10-03T12:00:00-04:00
@@ -92,7 +92,7 @@ Sizing uses [[https://www.libvips.org/][libvips]] (LGPL-2.1-or-later), 8.15 or n
 - libwebp, libpng and libjpeg directly: three libraries plus a hand-written resampler and colour handling;
 - ImageMagick (MagickWand): a much larger dependency with a long security history, for no benefit here.
 
-Fedora packages: =vips-devel= to build, =vips= at run time. Libresite links it through =config.mk=, and the installed =libresite-1.0.pc= lists it in =Requires.private=, so an embedder that links the static archive (such as the Lightsite daemon) links libvips too and its host needs the =vips= package.
+Fedora packages: =vips-devel= to build, =vips= at run time. Libresite links it through =config.mk=, and the installed =libresite-1.0.pc= lists it in =Requires.private=, so an embedder that links the static archive links libvips too and its host needs the =vips= package.
 
 libvips starts once per process. Libresite blocks the loaders libvips marks untrusted (only the PNG, JPEG and WebP loaders are used), turns its operation cache off so a long-running embedder does not keep decoded photos in memory, refuses images over 100 megapixels, refuses PNG and WebP files that are cut short, and decodes with =fail_on=error= so a damaged file is an error rather than grey pixels.
 
