@@ -826,6 +826,47 @@ test_plan_social(void){
 	}
 }
 
+/* The business phone and email are the builder's too: the stored plan
+ * carries exactly the supplied ones, and nothing when none was supplied. */
+static void
+test_plan_contact(void){
+	g_autoptr(GError) error = NULL;
+	g_autoptr(LsPrompts) prompts = ls_prompts_new(NULL, &error);
+	const gchar *contacts[] = {
+		"  contact: {phone: '+1 (555) 014-2270', email: hello@harbor.example, address: 1 Quay Street}\n  photos:\n",
+		"  contact: {address: 1 Quay Street}\n  photos:\n",
+		"  photos:\n"};
+	guint v;
+	g_assert_no_error(error);
+	for (v = 0; v < G_N_ELEMENTS(contacts); v++) {
+		g_autofree gchar *base = photo_recipe();
+		g_autofree gchar *text = replace_once(base, "  photos:\n", contacts[v]);
+		g_autoptr(LsRecipe) recipe = ls_recipe_new(text, &error);
+		g_autoptr(LsContext) context = NULL;
+		FakeProvider *provider = g_object_new(fake_provider_get_type(), NULL);
+		g_autoptr(LsStep) step = g_object_new(LS_TYPE_PLAN_STEP, NULL);
+		g_autoptr(JsonNode) plan = NULL;
+		JsonObject *root;
+		g_assert_no_error(error);
+		context = ls_recipe_create_context(recipe, &error);
+		g_assert_no_error(error);
+		g_assert_true(ls_step_execute(step, recipe, json_array_get_object_element(ls_recipe_get_steps(recipe), 0),
+			prompts, context, LS_PROVIDER(provider), NULL, &error));
+		g_assert_no_error(error);
+		plan = ls_json_parse(ls_artifact_get_content(ls_context_lookup(context, "site/plan.json")), NULL);
+		root = json_node_get_object(plan);
+		if (v == 0) {
+			JsonObject *contact = json_object_get_object_member(root, "contact");
+			g_assert_nonnull(contact);
+			g_assert_cmpuint(json_object_get_size(contact), ==, 2);
+			g_assert_cmpstr(json_object_get_string_member(contact, "phone"), ==, "+1 (555) 014-2270");
+			g_assert_cmpstr(json_object_get_string_member(contact, "email"), ==, "hello@harbor.example");
+		} else
+			g_assert_false(json_object_has_member(root, "contact"));
+		g_object_unref(provider);
+	}
+}
+
 static void
 test_plan_photos(void){
 	g_autoptr(GError) error = NULL;
@@ -1035,6 +1076,7 @@ main(int argc, char **argv){
 	g_test_add_func("/pages/plan-photos", test_plan_photos);
 	g_test_add_func("/pages/plan-social", test_plan_social);
 	g_test_add_func("/pages/phone-images", test_phone_images);
+	g_test_add_func("/pages/plan-contact", test_plan_contact);
 	g_test_add_func("/pages/signature-fallback", test_signature_fallback);
 	g_test_add_func("/pages/sameness-run", test_sameness_run);
 	g_test_add_func("/pages/parallel", test_parallel);

@@ -1576,13 +1576,14 @@ static const gchar *const ui_keys[] = {"skip", "menu", "nav", "footer_nav", "con
 	"count_one", "count_many", "required", "reset", "preview", "download", "error_required",
 	"error_invalid", "error_summary", "breadcrumb", "pager", "previous", "next", "letters", "scroll",
 	"checklist_yes", "checklist_no", "close", "ingredients", "method", "social", "share", "copy_link", "copied",
-	"sending", "sent", "send_failed"};
+	"sending", "sent", "send_failed", "call", "quote", "quick_actions", "send_another"};
 static const gchar *const ui_defaults[] = {"Skip to content", "Menu", "Primary", "Footer", "Contents",
 	"Filter entries", "{n} entry shown", "{n} entries shown", "required", "Clear", "Preview",
 	"Download text file", "Fill in this field.", "Check this entry.", "{n} fields need attention.",
 	"Breadcrumb", "More pages", "Previous", "Next", "Jump to letter", "Scrollable list", "Included",
 	"Not included", "Close", "Ingredients", "Method", "Follow us", "Share this page", "Copy link", "Link copied",
-	"Sending your message.", "Thank you. Your message was sent.", "Your message was not sent. Please try again."};
+	"Sending your message.", "Thank you. Your message was sent.", "Your message was not sent. Please try again.",
+	"Call", "Request a quote", "Get in touch", "Send another message"};
 static const gchar *const art_ratios[] = {"16:9", "4:3", "3:2", "1:1", "3:4", "2:1", "3:1", "21:9", NULL};
 
 static gdouble
@@ -1822,6 +1823,40 @@ check_supplied_form(Problems *problems, JsonObject *plan){
 		if (field == NULL || blank(ls_string(field, "name")) || blank(ls_string(field, "label")))
 			problem(problems, "form.fields[%u] must have a name and a label", i);
 	}
+}
+
+/* contact is written by the builder from site.contact: the phone and email
+ * it links, each already checked there and checked again here. */
+static void
+check_contact(Problems *problems, JsonObject *plan){
+	JsonObject *contact = member_object(plan, "contact");
+	const gchar *phone = contact != NULL ? ls_string(contact, "phone") : NULL;
+	const gchar *email = contact != NULL ? ls_string(contact, "email") : NULL;
+	g_autofree gchar *tel = phone != NULL ? ls_phone_tel(phone) : NULL;
+	if (!json_object_has_member(plan, "contact"))
+		return;
+	if (contact == NULL || !ls_object_keys(contact, "|phone|email|", NULL) || json_object_get_size(contact) == 0 ||
+		(json_object_has_member(contact, "phone") && tel == NULL) ||
+		(json_object_has_member(contact, "email") && (email == NULL || !ls_email_valid(email))))
+		problem(problems, "contact must be the supplied {phone, email}: a phone number of digits, spaces, "
+			"+ . - ( ) and a plain email address");
+}
+
+/* The supplied phone as the builder links it: {phone, tel}, or NULL. */
+static JsonObject *
+call_view(JsonObject *plan){
+	JsonObject *contact = plan != NULL ? member_object(plan, "contact") : NULL;
+	const gchar *phone = contact != NULL ? ls_string(contact, "phone") : NULL;
+	g_autofree gchar *tel = phone != NULL ? ls_phone_tel(phone) : NULL;
+	JsonObject *view;
+	if (tel == NULL)
+		return NULL;
+	view = json_object_new();
+	json_object_set_string_member(view, "phone", phone);
+	json_object_set_string_member(view, "tel", tel);
+	if (ls_string(contact, "email") != NULL && ls_email_valid(ls_string(contact, "email")))
+		json_object_set_string_member(view, "email", ls_string(contact, "email"));
+	return view;
 }
 
 /* A form section on a site with a supplied form takes its target and fields
@@ -2156,13 +2191,14 @@ check_plan_into(Problems *problems, LsComponents *self, JsonNode *node){
 		return;
 	}
 	if (!ls_object_keys(plan, "|name|tagline|lang|character|missing|tokens|fonts|brand|nav|action|footer|voice|look|"
-		"art|photos|social|form|pages|css|restyle|ui|structure|signature|", NULL))
+		"art|photos|social|form|contact|pages|css|restyle|ui|structure|signature|", NULL))
 		problem(problems, "unknown top-level key; allowed: name, tagline, lang, character, missing, tokens, fonts, "
 			"brand, nav, action, footer, voice, look, art, photos, pages, css, restyle, ui");
 	check_missing(problems, plan);
 	check_photos(problems, plan);
 	check_social(problems, self, plan);
 	check_supplied_form(problems, plan);
+	check_contact(problems, plan);
 	check_structure(problems, self, plan);
 	check_look(problems, self, plan);
 	check_restyle(problems, self, plan);
@@ -3609,6 +3645,12 @@ check_page_into(LsComponents *self, Problems *problems, JsonNode *plan_node, con
 		if (g_str_equal(name, "social") && (plan == NULL || member_array(plan, "social") == NULL ||
 			json_array_get_length(member_array(plan, "social")) == 0))
 			problem(problems, "%s: social lists the site's supplied profiles, and this site has none; remove it", where);
+		/* So is the phone: no phone, no call section. */
+		if (g_str_equal(name, "call")) {
+			g_autoptr(JsonObject) call = call_view(plan);
+			if (call == NULL)
+				problem(problems, "%s: call shows the site's supplied phone number, and this site has none; remove it", where);
+		}
 		if ((g_str_equal(name, "hero") || g_str_equal(name, "cover") || g_str_equal(name, "poster")) && g_strcmp0(kind_name, "home") != 0)
 			problem(problems, "%s: %s belongs only on the home page; open this %s page with page-header",
 				where, name, kind_name);
@@ -3660,6 +3702,7 @@ typedef struct {
 	const gchar *page_title;
 	const gchar *wordmark;
 	const gchar *base;		/* normalized https:// site address, or NULL */
+	const gchar *quote;		/* the live form on its page, for the quote action, or NULL */
 } Render;
 
 static void derived_filter(Render *render, JsonObject *view, const gchar *field);
@@ -3872,6 +3915,14 @@ form_view(Render *render, JsonObject *view, JsonObject *content, const gchar *id
 		const gchar *trap = form != NULL ? ls_string(form, "honeypot") : NULL;
 		if (trap != NULL)
 			json_object_set_string_member(view, "honeypot", trap);
+		/* After a send the visitor stays on the page and sees a confirmation
+		 * panel in place of the form, repeating the supplied phone. Only the
+		 * script shows it; it needs no id and reserves none. */
+		{
+			JsonObject *call = call_view(render->plan);
+			if (call != NULL)
+				json_object_set_object_member(view, "sent_call", call);
+		}
 		json_object_set_string_member(view, "sending", ui_text(render, "sending"));
 		json_object_set_string_member(view, "sent", ui_text(render, "sent"));
 		json_object_set_string_member(view, "send_failed", ui_text(render, "send_failed"));
@@ -4249,6 +4300,10 @@ render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArra
 		} else if (g_str_equal(name, "share")) {
 			json_object_set_array_member(view, "targets", share_views(render));
 			json_object_set_string_member(view, "share_title", render->page_title);
+		} else if (g_str_equal(name, "call")) {
+			JsonObject *call = call_view(render->plan);
+			if (call != NULL)
+				json_object_set_object_member(view, "call", call);
 		}
 		if (ls_string(content, "heading") != NULL) {
 			g_autofree gchar *plain = heading_markup(ls_string(content, "heading"), FALSE);
@@ -4555,6 +4610,26 @@ render_page(Render *render, const gchar *path, const gchar *title, const gchar *
 	if (member_object(plan, "action") != NULL) {
 		JsonObject *action = link_view(member_object(plan, "action"), TRUE);
 		json_object_set_object_member(view, "action", action);
+	}
+	/* The supplied phone and the live form stay in reach on every page. */
+	{
+		JsonObject *call = call_view(plan);
+		gboolean quote = render->quote != NULL;
+		if (call != NULL || quote) {
+			JsonObject *bar = json_object_new();
+			json_object_set_string_member(bar, "label", ui_text(render, "quick_actions"));
+			json_object_set_string_member(bar, "call_label", ui_text(render, "call"));
+			if (call != NULL)
+				json_object_set_object_member(bar, "call", call);
+			if (quote) {
+				JsonObject *link = json_object_new();
+				json_object_set_string_member(link, "href", render->quote);
+				json_object_set_string_member(link, "label", ui_text(render, "quote"));
+				json_object_set_object_member(bar, "quote", link);
+			}
+			json_object_set_object_member(view, "actions", bar);
+			g_hash_table_add(render->used, g_strdup("call"));
+		}
 	}
 	render->page_path = path;
 	render->page_title = title;
@@ -4913,15 +4988,41 @@ normalize_base(const gchar *base_url, GError **error){
 	return g_str_has_suffix(base_url, "/") ? g_strdup(base_url) : g_strconcat(base_url, "/", NULL);
 }
 
+/* The quote action leads to the first planned page showing a form section,
+ * at that section: "visit.html#quote-form". NULL when no page has one. */
+static gchar *
+quote_href(JsonObject *plan, JsonObject *pages){
+	JsonArray *planned = member_array(plan, "pages");
+	guint i;
+	for (i = 0; planned != NULL && i < json_array_get_length(planned); i++) {
+		const gchar *path = ls_string(json_array_get_object_element(planned, i), "path");
+		JsonNode *node = path != NULL ? json_object_get_member(pages, path) : NULL;
+		JsonArray *sections = node != NULL && JSON_NODE_HOLDS_OBJECT(node)
+			? member_array(json_node_get_object(node), "sections") : NULL;
+		guint s;
+		for (s = 0; sections != NULL && s < json_array_get_length(sections); s++) {
+			JsonNode *section = json_array_get_element(sections, s);
+			if (JSON_NODE_HOLDS_OBJECT(section) &&
+				g_strcmp0(ls_string(json_node_get_object(section), "component"), "form") == 0) {
+				g_autoptr(GHashTable) anchors = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+				g_autoptr(GPtrArray) ids = section_ids(sections, anchors);
+				return g_strdup_printf("%s#%s", path, (const gchar *)g_ptr_array_index(ids, s));
+			}
+		}
+	}
+	return NULL;
+}
+
 gchar *
 ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages, const gchar *base_url, GError **error){
 	Problems problems = {g_ptr_array_new_with_free_func(g_free)};
-	Render render = {self, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+	Render render = {self, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 	g_autoptr(JsonObject) ui = json_object_new();
 	g_autoptr(GHashTable) used = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 	g_autoptr(JsonNode) root = json_node_new(JSON_NODE_OBJECT);
 	g_autoptr(JsonObject) bundle = json_object_new();
 	g_autofree gchar *base = NULL;
+	g_autofree gchar *quote = NULL;
 	JsonArray *files = json_array_new();
 	JsonArray *planned;
 	JsonObject *plan;
@@ -4951,6 +5052,9 @@ ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages
 		check_page_into(self, &problems, plan_node, utility_routes[i], self->utility[i], TRUE);
 	if (!finish(&problems, "The composed site", error))
 		goto fail;
+	/* A site with a live form offers the quote action that leads to it. */
+	if (member_object(plan, "form") != NULL)
+		quote = quote_href(plan, pages);
 	for (i = 0; i < G_N_ELEMENTS(ui_keys); i++) {
 		JsonObject *custom = member_object(plan, "ui");
 		json_object_set_string_member(ui, ui_keys[i], custom != NULL && ls_string(custom, ui_keys[i]) != NULL
@@ -4960,6 +5064,7 @@ ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages
 	render.ui = ui;
 	render.used = used;
 	render.base = base;
+	render.quote = quote;
 	if (base != NULL) {
 		sitemap = g_string_new("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
 			"<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n");

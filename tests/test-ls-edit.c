@@ -348,6 +348,25 @@ test_edit_unchanged(void){
 	site_teardown(&site);
 }
 
+/* The business phone and email are the builder's, like the live form: an
+ * edit that tries to change them is refused and the site stays as it is. */
+static void
+test_edit_contact(void){
+	Site site;
+	g_autoptr(GError) error = NULL;
+	g_autofree gchar *before = NULL, *after = NULL;
+	site_setup(&site);
+	before = read_file(site.site, "index.html");
+	g_ptr_array_add(site.provider->answers, g_strdup("{\"summary\": \"x\", \"plan\": {\"contact\": {\"phone\": \"+1 555 0100\"}}, \"pages\": []}"));
+	g_ptr_array_add(site.provider->answers, g_strdup("{\"summary\": \"y\", \"plan\": {\"contact\": {}}, \"pages\": []}"));
+	g_assert_false(apply(&site, "Change the phone number", NULL, NULL, &error));
+	g_assert_error(error, LS_ERROR, LS_ERROR_VALIDATION);
+	g_assert_nonnull(strstr(site.provider->last_prompt, "plan.contact is the builder's"));
+	after = read_file(site.site, "index.html");
+	g_assert_cmpstr(after, ==, before);
+	site_teardown(&site);
+}
+
 /* Uncommitted changes, or committed changes the record does not know about,
  * stop the edit before any model call. */
 static void
@@ -549,6 +568,7 @@ main(int argc, char **argv){
 	g_test_add_func("/edit/plan-twice", test_edit_plan_twice);
 	g_test_add_func("/edit/rejected", test_edit_rejected);
 	g_test_add_func("/edit/unchanged", test_edit_unchanged);
+	g_test_add_func("/edit/contact", test_edit_contact);
 	g_test_add_func("/edit/refuses-drift", test_edit_refuses_drift);
 	g_test_add_func("/edit/not-a-site", test_edit_not_a_site);
 	g_test_add_func("/edit/after-revert", test_edit_after_revert);

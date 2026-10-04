@@ -317,9 +317,10 @@ site_base_url(GHashTable *files){
 	return end != NULL && g_str_has_prefix(start, "https://") ? g_strndup(start, (gsize)(end - start)) : NULL;
 }
 
-/* Plan members the builder owns: dealt layout, supplied photos, profiles and form,
- * the separately written signature layer and the order's missing facts. */
-static const gchar *const builder_members[] = {"structure", "photos", "social", "form", "signature", "missing", NULL};
+/* Plan members the builder owns: dealt layout, supplied photos, profiles, form and
+ * contact, the separately written signature layer and the order's missing facts. */
+static const gchar *const builder_members[] = {"structure", "photos", "social", "form", "contact", "signature",
+	"missing", NULL};
 
 typedef struct {
 	gchar *summary;

@@ -436,6 +436,21 @@ validate_site(JsonObject *site, GError **error){
 				"|email|phone|address|url|" : "|name|tagline|tone|colors|fonts|logo|", error) ||
 				(g_str_equal(key, "brand") && !text_member(object, "name", TRUE, error)))
 				return FALSE;
+			/* The builder links these: a call button and a mail link. */
+			if (g_str_equal(key, "contact")) {
+				g_autofree gchar *tel = ls_string(object, "phone") != NULL ? ls_phone_tel(ls_string(object, "phone")) : NULL;
+				if (ls_string(object, "phone") != NULL && tel == NULL) {
+					g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID,
+						"contact.phone needs a phone number: digits, spaces, + . - ( ) only, 3 to 15 digits, "
+						"at most 40 characters, + only before the first digit");
+					return FALSE;
+				}
+				if (ls_string(object, "email") != NULL && !ls_email_valid(ls_string(object, "email"))) {
+					g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID,
+						"contact.email needs one plain address such as hello@example.com, without spaces, quotes or brackets");
+					return FALSE;
+				}
+			}
 		} else if (g_str_equal(key, "languages")) {
 			JsonObject *object;
 			JsonArray *supported;

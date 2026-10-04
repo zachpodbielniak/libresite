@@ -4,7 +4,7 @@
 #+categories: libresite
 #+created: 2026-09-28T16:00:00-04:00
 #+updated: 2026-10-03T12:00:00-04:00
-#+version: 0.3.0
+#+version: 0.4.0
 
 * Why it exists
 
@@ -261,9 +261,64 @@ site:
 
 The plan step writes the form into the plan as =form= after the model answers, replacing anything the model wrote, and an edit cannot change it. Every =form= section on the site then renders in endpoint mode with that action and those fields, whatever mode, target or fields the model wrote; the model writes only the heading, the words around the form and the button label. Without =site.form=, a form section keeps its own =local=, =mailto= or =endpoint= mode, and an endpoint target may be a supplied https:// address or same-site path.
 
-An endpoint form is an ordinary =POST= of URL-encoded fields, so it works without scripts. With =site.js= it sends the same fields in the background, disables the button while pending, reports the =sending=, =sent= or =send_failed= interface string in a polite status region, clears the form only after a successful response and keeps every entry after a failure. Offline tests check the rendered markup and script; they do not exercise a host or a browser submission.
+An endpoint form is an ordinary =POST= of URL-encoded fields, so it works without scripts. With =site.js= it sends the same fields in the background, disables the button while pending, reports the =sending= interface string in a polite status region, asks for JSON, and after an answer that the message was received clears the form and shows a confirmation panel in its place; after a refusal or a failure it shows the =send_failed= string in an error banner, marks the field the host named and keeps every entry. Without scripts the host's own answer is what the visitor sees (see [[*Confirmation after sending][confirmation after sending]]). Offline tests check the rendered markup and script; they do not exercise a host or a browser submission.
+
+* Call and quote actions
+
+A business site should turn a visitor into a call or a quote request in one tap. The order supplies the facts; the builder draws the actions and never invents them.
+
+#+begin_src yaml
+site:
+  contact:
+    phone: '+1 (555) 014-2270'
+    email: hello@harbor.example
+  form: {action: /api/forms/contact, fields: [...]}
+#+end_src
+
+=site.contact.phone= is a phone number as a person writes it: digits, spaces, =+=, =.=, =-=, =(= and =)= only, at most 40 characters, 3 to 15 digits, and a =+= only before the first digit. =site.contact.email= is one plain address (one =@=, a dotted domain, no spaces, quotes or brackets, at most 254 characters). Both are optional; recipes and forms with anything else are refused with the rule. =ls_phone_tel()= builds the =tel:= address from the =+= and the digits only, so =+1 (555) 014-2270= links to =tel:+15550142270= and is shown as written.
+
+The plan step writes the supplied phone and email into the plan as =contact= after the model answers, replacing anything the model wrote; other contact facts (address, url) are not copied. An edit cannot change it. With them the builder adds:
+
+- an action bar on every page: a =nav= landmark named by the =quick_actions= interface string (default "Get in touch") at the end of =main=, kept at the bottom of the screen with =position: sticky= while the page scrolls and settling above the footer at its end, so it is on the first phone screen and in reach on every screen after. It holds a call button (the =call= string and the number as supplied) when there is a phone, and a request-a-quote link (the =quote= string, default "Request a quote") when the site has a supplied form, leading to the first planned page that shows a =form= section, at that section (for example =contact.html#quote=). The bar's buttons are at least 44 px tall, use the site's checked button colours, keep the global focus ring, add no motion, are hidden in print, and reserve =scroll-padding-bottom= so a focused control is never left under the bar. Without a phone and without a supplied form there is no bar;
+- the =call= component (panel, band, inline), which pages may use where a visit invites a call, usually the contact or visit page. The model writes only an optional heading and body; the builder draws the number, the =tel:= link and a =mailto:= link when an email was supplied. Composition refuses a =call= section on a planned page of a site without a phone;
+- the supplied phone repeated as a call link in the confirmation panel that replaces a live form after sending (see [[*Confirmation after sending][confirmation after sending]]).
+
+Without a phone the site has no =tel:= link from the builder, no call button and no call section, and nothing is put in their place.
 
 Icons come from Simple Icons 16.33.0 (CC0 1.0). Brand marks remain their owners' trademarks and link only to the business's own profiles. LinkedIn has no Simple Icons mark, so it and unrecognised hosts use the builder's own link glyph. A library archived before =networks.yaml= existed still loads, with the link glyph for every profile.
+
+* Confirmation after sending
+
+A visitor who sends a live form stays on the page. There is no thank-you page: a confirmation panel takes the form's place, so the page they were reading, the call button and the navigation stay where they were.
+
+Every endpoint form renders, just before the =form= element and inside a =form__body= wrapper, a hidden panel:
+
+#+begin_src html
+<div class="form__sent" role="status" aria-live="polite" tabindex="-1" data-form-sent hidden>
+<p class="form__sent-message">Thank you. Your message was sent.</p>
+<p class="form__sent-actions"><a class="button form__sent-call" href="tel:+15550142270">Call <span class="form__sent-number">+1 (555) 014-2270</span></a>
+<a class="form__sent-again" href="#contact-form" data-form-again>Send another message</a></p>
+</div>
+#+end_src
+
+The message is the =sent= interface string, the call link the supplied phone (left out when the site has none, so nothing is invented), and the last link the =send_another= string (default "Send another message"), which brings the form back. The panel is a polite status region, takes focus with a visible ring (=3px solid var(--focus)=) when it appears, uses ink on surface, a pair the builder checks for contrast, and has no animation.
+
+The panel has no id and the builder reserves none: the script finds it as the panel just before its form, and moves focus to the element itself. Only the script shows it; the stylesheet never does, so without scripts it stays hidden.
+
+The host decides nothing about display; the page does. Libresite's script follows the host's form answers described below; it never receives submissions itself.
+
+*With scripts*, the form posts its fields in the background with =Accept: application/json=:
+
+| Answer | What the page does |
+|--------+--------------------|
+| 2xx with JSON ={"status": "received", ...}= | clears and hides the form, shows the panel, moves focus to it and scrolls it into view |
+| JSON ={"error": ..., "field": NAME, ...}= (422) | shows the =send_failed= string in the error banner (=role="alert"=), marks the form field named =NAME= with =aria-invalid= and the =error_invalid= string in its error slot, and moves focus to it |
+| JSON error with =field: null= (400, 429, 503) | shows the error banner and scrolls it into view |
+| anything else: a 2xx that is not ="received"=, an answer that is not JSON, or no answer at all | shows the error banner |
+
+Every refusal keeps the form and every entry; the next send clears the marks first. The visible words are the site's own interface strings, in the site's language; the host's English =message= is not shown. Scrolling is instant when the visitor prefers reduced motion.
+
+*Back from a send without scripts.* The host answers a plain =POST= with =303 See Other=: to the site's =thank_you= address when it sets one, otherwise back to the page the form was sent from with =?sent=1= or =?error=CODE= (=CODE= a field name, =invalid=, =rate-limited= or =unavailable=), and no fragment. When a page opens with =?sent=1=, the script shows the panel of the page's first live form as above; with =?error=CODE= it shows that form's error banner and marks the field =CODE= names, if the form has one. A visitor with no scripts at all sees the page again with the form, since nothing shows the panel without a script: a site that wants a confirmation for those visitors has the host redirect to a page of its own.
 
 * What the builder produces
 
@@ -301,7 +356,7 @@ Components (60, with 177 variants):
 - Offers: =offer= (one highlighted package or ticket with its supplied price).
 - Lists and navigation: =cards= (now also overlap, polaroid and minimal), =bento= (tiles of four sizes), =strip= (horizontally scrolling cards), =entries=, =filter=, =directory= (entries grouped by initial letter with a jump list), =links=, =pager=.
 - Sequences: =features=, =split= (two panels), =steps=, =timeline=, =schedule=.
-- Business facts: =facts=, =numbers=, =specs= (grouped specification sheets), =hours=, =location= (with a drawn map, never an embedded map service), =locations=, =areas= (places served), =contact-card=, =notice=, =menu= (sections, dotted leaders, supplied prices, tags; =all_label= adds a filter button per section, reusing the =filter= script and styles, and every dish stays visible without JavaScript), =services=, =pricing=, =checklist= (included and not included), =team= (supplied people only), =voices= and =partners= (supplied quotes and names only).
+- Business facts: =call= (the supplied phone as one large click-to-call button; only with a supplied phone), =facts=, =numbers=, =specs= (grouped specification sheets), =hours=, =location= (with a drawn map, never an embedded map service), =locations=, =areas= (places served), =contact-card=, =notice=, =menu= (sections, dotted leaders, supplied prices, tags; =all_label= adds a filter button per section, reusing the =filter= script and styles, and every dish stays visible without JavaScript), =services=, =pricing=, =checklist= (included and not included), =team= (supplied people only), =voices= and =partners= (supplied quotes and names only).
 - Shop: =products= (a grid, list or feature layout; with =all_label=, filter buttons are built from the items' categories), =product= (pictures, supplied price, options, specifications and how to buy). The =shop= page kind uses them.
 - Food and classes: =recipe= (facts, ingredients and numbered method), =specials= (a board or list of supplied dishes and prices), =timetable= (days of sessions).
 - Content: =news= (dated posts; with =all_label=, filter buttons from the tags), =jobs= (supplied roles with how to apply), =press= (supplied quotes word for word with the outlet named), =jumpnav= (a bar of links to the page's own sections, sticky or in place).
@@ -342,7 +397,7 @@ Within an item, every declared field the model left out is set explicitly empty,
 
 * Plan contract
 
-Required: =name=, =tokens=, =nav=, =pages=, =art= (may be empty). The schema also requires =character= (see [[*Identities][identities]]). Optional: =tagline=, =lang=, =missing= (see [[*Missing facts][missing facts]]), =fonts=, =brand=, =action=, =footer=, =voice=, =css= and =ui= (interface strings for a non-English site).
+Required: =name=, =tokens=, =nav=, =pages=, =art= (may be empty). The schema also requires =character= (see [[*Identities][identities]]). Optional: =tagline=, =lang=, =missing= (see [[*Missing facts][missing facts]]), =fonts=, =brand=, =action=, =footer=, =voice=, =css= and =ui= (interface strings for a non-English site). The builder writes =photos=, =social=, =form= and =contact= from the order (see [[*Call and quote actions][call and quote actions]]); a model answer never sets them.
 
 - Tokens: seven =#rrggbb= colors with WCAG AA text pairs (ink and muted on paper and surface, accent_ink on accent, all 4.5:1), three font stacks of installed or generic families, and numeric scale, spacing, border, radius and heading settings within documented ranges.
 - Fonts: up to three open-source families served by Bunny Fonts; the builder writes the stylesheet URL. Omit them when a brief forbids remote fonts.

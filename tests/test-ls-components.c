@@ -651,6 +651,8 @@ test_every_variant(void){
 	catalog = ls_yaml_parse(yaml, NULL);
 	g_assert_nonnull(catalog);
 	all = json_object_get_object_member(json_node_get_object(catalog), "components");
+	/* Builder-fed components need their supplied facts: profiles come with the fixture, a phone here. */
+	json_object_set_member(json_node_get_object(plan), "contact", json("{'phone':'+1 555 0100'}"));
 	names = json_object_get_members(all);
 	for (name = names; name != NULL; name = name->next) {
 		JsonObject *component = json_object_get_object_member(all, name->data);
@@ -2242,7 +2244,13 @@ test_supplied_form(void){
 	bundle = ls_json_parse(text, NULL);
 	html = file_content(bundle, "visit.html");
 	contains(html, "action=\"/api/v1/sites/harbor/enquiries\" method=\"post\" data-endpoint-form");
-	contains(html, "data-sent=\"Thank you. Your message was sent.\"");
+	/* The confirmation is a panel in the page, not a message on the form. */
+	lacks(html, "data-sent=");
+	contains(html, "<div class=\"form__sent\" role=\"status\" aria-live=\"polite\" tabindex=\"-1\" data-form-sent hidden>");
+	/* A field the host refuses is marked in the site's own words. */
+	contains(html, "data-failed=\"Your message was not sent. Please try again.\" data-error-invalid=\"Check this entry.\"");
+	contains(html, "data-failed=\"Your message was not sent. Please try again.\"");
+	contains(html, "role=\"alert\" data-form-summary hidden");
 	contains(html, "name=\"first-name\" required autocomplete=\"given-name\"");
 	contains(html, "autocomplete=\"given-name\"");
 	contains(html, "<textarea id=");
@@ -2271,6 +2279,201 @@ test_supplied_form(void){
 				"'fields':[{'name':'email','label':'Email','type':'email'}]}}]}", targets[i]);
 			g_autoptr(JsonNode) candidate = json(spec);
 			g_assert_cmpint(ls_components_check_page(components, plan, "visit.html", candidate, NULL), ==, ok[i]);
+		}
+	}
+}
+
+/* Every page of a composed bundle, joined. */
+static gchar *
+all_pages(JsonNode *bundle){
+	JsonArray *files = json_object_get_array_member(json_node_get_object(bundle), "files");
+	GString *out = g_string_new(NULL);
+	guint i;
+	for (i = 0; i < json_array_get_length(files); i++) {
+		JsonObject *file = json_array_get_object_element(files, i);
+		if (g_str_has_suffix(ls_string(file, "path"), ".html"))
+			g_string_append(out, ls_string(file, "content"));
+	}
+	return g_string_free(out, FALSE);
+}
+
+static JsonNode *
+compose_bundle(LsComponents *components, JsonNode *plan, JsonObject *pages){
+	g_autoptr(GError) error = NULL;
+	g_autofree gchar *text = ls_components_compose(components, plan, pages, "https://harbor.example/", &error);
+	g_assert_no_error(error);
+	g_assert_nonnull(text);
+	return ls_json_parse(text, NULL);
+}
+
+/* The confirmation panel right before the form @form_id on @html, from its
+ * opening tag to its end; it holds no nested div and carries no id. */
+static gchar *
+sent_panel(const gchar *html, const gchar *form_id){
+	static const gchar open[] = "<div class=\"form__sent\" role=\"status\" aria-live=\"polite\" "
+		"tabindex=\"-1\" data-form-sent hidden>";
+	g_autofree gchar *form = g_strdup_printf("</div>\n<form class=\"form__form\" id=\"%s\"", form_id);
+	const gchar *start = html;
+	while (start != NULL && (start = strstr(start, open)) != NULL) {
+		const gchar *end = strstr(start, "</div>");
+		if (end != NULL && g_str_has_prefix(end, form))
+			return g_strndup(start, end - start);
+		start += sizeof open - 1;
+	}
+	g_error("no confirmation panel before '%s' in:\n%.4000s", form_id, html != NULL ? html : "(null)");
+	return NULL;
+}
+
+static guint
+occurrences(const gchar *text, const gchar *needle){
+	guint n = 0;
+	const gchar *at = text;
+	while ((at = strstr(at, needle)) != NULL) {
+		n++;
+		at += strlen(needle);
+	}
+	return n;
+}
+
+/* A supplied phone becomes a click-to-call link that stays in reach on every
+ * page, and a quote action leads to the live form. After a send the visitor
+ * stays on the page: each live form carries a hidden confirmation panel,
+ * shown in place only by the script (after a JSON "received", or when the
+ * host returns to ?sent=1); it repeats the number when there is one. There
+ * is no thank-you page and no :target or #sent anchor. Without a phone
+ * there are no call parts. */
+static void
+test_contact_actions(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(JsonNode) plan = load("plan.json");
+	g_autoptr(JsonObject) pages = fixture_pages();
+	g_autoptr(GError) error = NULL;
+	g_autoptr(JsonNode) bundle = NULL;
+	g_autoptr(JsonNode) call_page = json(
+		"{'path':'journal.html','sections':[{'component':'page-header','content':{'heading':'Notes'}},"
+		"{'component':'call','variant':'band','content':{'heading':'Talk to the bench'}}]}");
+	g_autofree gchar *every = NULL;
+	g_autofree gchar *panel = NULL;
+	const gchar *home, *visit, *journal, *css, *js;
+	JsonObject *root = json_node_get_object(plan);
+	json_object_set_member(root, "form", json(
+		"{'action':'/api/v1/sites/harbor/enquiries','fields':["
+		"{'name':'email','label':'Email','type':'email','required':true},"
+		"{'name':'message','label':'Message','type':'textarea','required':true}]}"));
+	/* Two forms on one page, and a heading whose slug would be "sent". */
+	json_object_set_member(pages, "visit.html", json(
+		"{'path':'visit.html','sections':[{'component':'page-header','content':{'heading':'Sent'}},"
+		"{'component':'form','id':'quote-form','content':{'heading':'Ask for an estimate','mode':'endpoint',"
+		"'target':'/x','submit':'Send','fields':[{'name':'email','label':'Email'}]}},"
+		"{'component':'form','id':'second','content':{'heading':'Or write again','mode':'endpoint',"
+		"'target':'/x','submit':'Send','fields':[{'name':'email','label':'Email'}]}}]}"));
+	json_object_set_member(root, "contact", json("{'phone':'+1 (555) 014-2270','email':'hello@harbor.example'}"));
+	g_assert_true(ls_components_check_plan(components, plan, &error));
+	g_assert_no_error(error);
+	/* The builder draws the number in a call section; the model writes only the words. */
+	g_assert_true(ls_components_check_page(components, plan, "journal.html", call_page, &error));
+	g_assert_no_error(error);
+	json_object_set_member(pages, "journal.html", json_node_copy(call_page));
+	bundle = compose_bundle(components, plan, pages);
+	home = file_content(bundle, "index.html");
+	contains(home, "<nav class=\"action-bar\" aria-label=\"Get in touch\">");
+	contains(home, "<a class=\"button action-bar__call\" href=\"tel:+15550142270\">");
+	contains(home, "<span class=\"action-bar__number\">+1 (555) 014-2270</span>");
+	contains(home, "<a class=\"button button--ghost action-bar__quote\" href=\"start.html#repair-request\">Request a quote</a>");
+	/* The bar sits in the page column, after the content, so it is in reach without covering the footer. */
+	g_assert_true(strstr(home, "action-bar") < strstr(home, "</main>"));
+	/* No separate thank-you page anywhere. */
+	g_assert_null(file_content(bundle, "thanks.html"));
+	every = all_pages(bundle);
+	lacks(every, "thanks.html");
+	lacks(every, "data-thanks");
+	lacks(file_content(bundle, "sitemap.xml"), "thanks.html");
+	visit = file_content(bundle, "visit.html");
+	contains(visit, "action=\"/api/v1/sites/harbor/enquiries\" method=\"post\" data-endpoint-form");
+	/* Panels carry no id and reserve none: a heading whose slug is "sent"
+	 * keeps that id, and it is the only one on the page. */
+	g_assert_cmpuint(occurrences(visit, "id=\"sent\""), ==, 1);
+	lacks(visit, "id=\"sent-2\"");
+	lacks(visit, "-sent\"");
+	g_assert_cmpuint(occurrences(visit, "data-form-sent hidden>"), ==, 2);
+	panel = sent_panel(visit, "quote-form-form");
+	contains(panel, "<p class=\"form__sent-message\">Thank you. Your message was sent.</p>");
+	contains(panel, "<a class=\"button form__sent-call\" href=\"tel:+15550142270\">Call "
+		"<span class=\"form__sent-number\">+1 (555) 014-2270</span></a>");
+	contains(panel, "<a class=\"form__sent-again\" href=\"#quote-form-form\" data-form-again>Send another message</a>");
+	g_clear_pointer(&panel, g_free);
+	panel = sent_panel(visit, "second-form");
+	contains(panel, "href=\"tel:+15550142270\"");
+	g_clear_pointer(&panel, g_free);
+	/* Every supplied form gets a panel, including the quote action's form. */
+	panel = sent_panel(file_content(bundle, "start.html"), "repair-request-form");
+	contains(panel, "href=\"#repair-request-form\"");
+	g_clear_pointer(&panel, g_free);
+	journal = file_content(bundle, "journal.html");
+	contains(journal, "call--band");
+	contains(journal, "href=\"tel:+15550142270\"");
+	css = file_content(bundle, "styles.css");
+	contains(css, ".action-bar {");
+	contains(css, "position: sticky;");
+	/* Without scripts the panel stays hidden: nothing in the stylesheet
+	 * shows it from the address. A site wanting a no-script confirmation
+	 * sets the host's thank-you address. */
+	lacks(css, ":target");
+	contains(css, ".form__sent:focus { outline: 3px solid var(--focus);");
+	js = file_content(bundle, "site.js");
+	contains(js, "[data-form-sent]");
+	contains(js, "/[?&]sent=1(&|$)/");
+	contains(js, "/[?&]error=([^&]*)/");
+	lacks(js, "#sent");
+	lacks(js, "data-thanks");
+	g_clear_pointer(&bundle, json_node_unref);
+	g_clear_pointer(&every, g_free);
+	/* The plan's contact is the checked one the builder wrote. */
+	json_object_set_member(root, "contact", json("{'phone':'call us'}"));
+	g_assert_false(ls_components_check_plan(components, plan, &error));
+	g_assert_nonnull(strstr(error->message, "contact"));
+	g_clear_error(&error);
+	json_object_set_member(root, "contact", json("{'phone':'+1 555 0100','address':'1 Quay Street'}"));
+	g_assert_false(ls_components_check_plan(components, plan, &error));
+	g_clear_error(&error);
+	/* No phone: no call link, no call section, nothing invented; the confirmation stays. */
+	json_object_set_member(root, "contact", json("{'email':'hello@harbor.example'}"));
+	g_assert_false(ls_components_check_page(components, plan, "journal.html", call_page, &error));
+	g_assert_nonnull(strstr(error->message, "call"));
+	g_clear_error(&error);
+	json_object_remove_member(pages, "journal.html");
+	json_object_set_member(pages, "journal.html", load("journal.json"));
+	bundle = compose_bundle(components, plan, pages);
+	every = all_pages(bundle);
+	lacks(every, "tel:");
+	lacks(every, "action-bar__call");
+	lacks(every, "call__");
+	lacks(every, "form__sent-call");
+	contains(file_content(bundle, "index.html"), "href=\"start.html#repair-request\">Request a quote</a>");
+	panel = sent_panel(file_content(bundle, "visit.html"), "quote-form-form");
+	contains(panel, "Thank you. Your message was sent.");
+	g_assert_null(file_content(bundle, "thanks.html"));
+	g_clear_pointer(&panel, g_free);
+	g_clear_pointer(&bundle, json_node_unref);
+	g_clear_pointer(&every, g_free);
+	/* No phone and no live form: no bar, no confirmation panel. */
+	json_object_remove_member(root, "contact");
+	json_object_remove_member(root, "form");
+	json_object_set_member(pages, "visit.html", load("visit.json"));
+	bundle = compose_bundle(components, plan, pages);
+	every = all_pages(bundle);
+	lacks(every, "action-bar");
+	lacks(every, "data-form-sent");
+	g_assert_null(file_content(bundle, "thanks.html"));
+	/* thanks.html is an ordinary route now: the builder no longer reserves it. */
+	{
+		g_autoptr(JsonNode) planned = load("plan.json");
+		JsonArray *list = json_object_get_array_member(json_node_get_object(planned), "pages");
+		json_array_add_element(list, json("{'path':'thanks.html','title':'Thanks','description':'Thanks.',"
+			"'brief':'Thanks','kind':'general'}"));
+		if (!ls_components_check_plan(components, planned, &error)) {
+			g_assert_null(strstr(error->message, "thanks.html"));
+			g_clear_error(&error);
 		}
 	}
 }
@@ -2323,5 +2526,6 @@ main(int argc, char **argv){
 	g_test_add_func("/components/address-breaks", test_address_breaks);
 	g_test_add_func("/components/accent-text", test_accent_text);
 	g_test_add_func("/components/supplied-form", test_supplied_form);
+	g_test_add_func("/components/contact-actions", test_contact_actions);
 	return g_test_run();
 }

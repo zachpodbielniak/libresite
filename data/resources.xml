@@ -13,6 +13,8 @@
     <file>components/themes.yaml</file>
     <file>components/identities.yaml</file>
     <file>components/networks.yaml</file>
+    <file>components/call.css</file>
+    <file>components/call.html</file>
     <file>components/social.css</file>
     <file>components/social.html</file>
     <file>components/share.css</file>

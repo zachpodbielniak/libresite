@@ -270,7 +270,7 @@ kinds:
   contact:
     summary: How to reach the business. Contact details, a form only with a real endpoint, and where to find it.
     openings: [page-header]
-    suggested: [contact-card, form, location, hours, locations, faq, social]
+    suggested: [contact-card, call, form, location, hours, locations, faq, social]
   gallery:
     summary: A portfolio or photo page. Artworks first, words second.
     openings: [page-header]
@@ -1204,6 +1204,15 @@ components:
       body: {type: rich, max: 600}
       items: {type: items, min_items: 1, max_items: 6, fields: {label: {type: text, required: true, max: 40}, value: {type: text, required: true, max: 120}, link: {type: link}}}
       actions: {type: links, max_items: 2}
+  call:
+    summary: The business's supplied phone number as one large click-to-call button, with the supplied email beside it. From the builder; only when the site has a supplied phone. Never write the number yourself.
+    variants:
+      panel: A bordered panel with the call button set large.
+      band: A full-width tinted band.
+      inline: One quiet line under a rule.
+    slots:
+      heading: {type: text, max: 140}
+      body: {type: rich, max: 400}
   notice:
     summary: A short announcement, such as holiday hours or a change of address.
     variants:

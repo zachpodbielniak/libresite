@@ -61,7 +61,13 @@
 </div>
 </div>
 {{/sidebar}}{{^sidebar}}{{{main}}}
-{{/sidebar}}</main>
+{{/sidebar}}{{#actions}}<nav class="action-bar" aria-label="{{label}}">
+<div class="wrap action-bar__inner">
+{{#call}}<a class="button action-bar__call" href="{{tel}}">{{call_label}} <span class="action-bar__number">{{phone}}</span></a>
+{{/call}}{{#quote}}<a class="button button--ghost action-bar__quote" href="{{href}}">{{label}}</a>
+{{/quote}}</div>
+</nav>
+{{/actions}}</main>
 <footer class="site-footer">
 {{#has_sitemap}}<div class="wrap"><ul class="site-footer__map" role="list">
 {{#sitemap}}<li><a href="{{href}}"{{#current}} aria-current="page"{{/current}}>{{label}}</a></li>

@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, reference, integration
 #+created: 2026-09-10T17:00:00-04:00
-#+updated: 2026-09-10T17:00:00-04:00
+#+updated: 2026-10-03T12:00:00-04:00
 #+version: 0.1.0
 
 * Workflow
@@ -29,7 +29,7 @@ A structured site requires all six fields below. =offers: []=, =contact: {}= and
 |-------+---------------------------|
 | pages | 1..128 records: required unique =path= and =title= strings; optional =purpose= string and ordered =sections= list of 1..4096 unique strings |
 | offers | 0..128 records: required unique =id= and =name= strings; optional =description=, =price=, =cta_label= and =cta_url= strings; CTA label and URL must occur together |
-| contact | Mapping of optional =email=, =phone=, =address= and =url= strings; empty means no contact facts supplied |
+| contact | Mapping of optional =email=, =phone=, =address= and =url= strings; empty means no contact facts supplied. =phone= is digits, spaces, =+ . - ( )= only, 3 to 15 digits, at most 40 characters, =+= only before the first digit; =email= is one plain address. Composed sites link both: see [[file:components.org::*Call and quote actions][call and quote actions]] |
 | brand | Required =name= string; optional =tagline=, =tone=, =colors=, =fonts= and =logo= strings; logo is a supplied asset reference |
 | copy_lock | 0..4096 unique nonempty exact strings; multiline text and leading/trailing whitespace are preserved |
 | languages | Required =default= string and =supported= list of 1..4096 unique language tags; default must match an entry exactly |

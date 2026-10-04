@@ -553,6 +553,26 @@ plan_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *prom
 				json_object_set_member(root, "form", ls_json_parse(text, NULL));
 			}
 		}
+		/* And the business phone and email the builder links: a call action
+		 * on every page and in the confirmation after a send. Nothing when none
+		 * was given. */
+		if (plan != NULL && JSON_NODE_HOLDS_OBJECT(plan)) {
+			JsonObject *root = json_node_get_object(plan);
+			JsonObject *site = member_object_of(ls_recipe_get_root(recipe), "site");
+			JsonObject *supplied = site != NULL ? member_object_of(site, "contact") : NULL;
+			JsonObject *contact = json_object_new();
+			const gchar *keys[] = {"phone", "email"};
+			guint k;
+			if (json_object_has_member(root, "contact"))
+				json_object_remove_member(root, "contact");
+			for (k = 0; k < G_N_ELEMENTS(keys); k++)
+				if (supplied != NULL && ls_string(supplied, keys[k]) != NULL)
+					json_object_set_string_member(contact, keys[k], ls_string(supplied, keys[k]));
+			if (json_object_get_size(contact) > 0)
+				json_object_set_object_member(root, "contact", contact);
+			else
+				json_object_unref(contact);
+		}
 		if (plan != NULL) {
 			g_autofree gchar *repairs = ls_components_repair_plan(components, plan);
 			if (repairs != NULL) {

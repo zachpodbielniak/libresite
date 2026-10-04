@@ -285,6 +285,49 @@ ls_focus_valid(const gchar *focus){
 			return FALSE;
 	return TRUE;
 }
+
+/* A phone number as a person writes it: digits, spaces, + . - ( ) only, at
+ * most 40 bytes, 3 to 15 digits and a + only before the first digit. The
+ * tel: address keeps the + and the digits. */
+gchar *
+ls_phone_tel(const gchar *phone){
+	GString *tel;
+	const gchar *c;
+	guint digits = 0;
+	if (phone == NULL || strlen(phone) > 40 || strspn(phone, "0123456789 +-().") != strlen(phone))
+		return NULL;
+	tel = g_string_new("tel:");
+	for (c = phone; *c != '\0'; c++) {
+		if (g_ascii_isdigit(*c)) {
+			g_string_append_c(tel, *c);
+			digits++;
+		} else if (*c == '+') {
+			if (tel->len != 4 || strspn(phone, " ") != (gsize)(c - phone))
+				break;
+			g_string_append_c(tel, '+');
+		}
+	}
+	if (*c != '\0' || digits < 3 || digits > 15) {
+		g_string_free(tel, TRUE);
+		return NULL;
+	}
+	return g_string_free(tel, FALSE);
+}
+
+/* One @ between a local part of up to 64 and a dotted domain, printable
+ * ASCII without spaces, quotes, brackets or separators; at most 254 bytes. */
+gboolean
+ls_email_valid(const gchar *email){
+	const gchar *at = email != NULL ? strchr(email, '@') : NULL;
+	const gchar *c;
+	if (at == NULL || strlen(email) > 254 || at == email || at - email > 64 || strchr(at + 1, '@') != NULL ||
+		strchr(at + 1, '.') == NULL || at[1] == '.' || g_str_has_suffix(email, ".") || strstr(at, "..") != NULL)
+		return FALSE;
+	for (c = email; *c != '\0'; c++)
+		if (*c <= ' ' || *c > '~' || strchr("\"'<>()[]\\,;:`", *c) != NULL)
+			return FALSE;
+	return TRUE;
+}
 gchar *
 ls_json_encode(JsonNode *node){
 	g_autoptr(JsonGenerator) generator = json_generator_new();

@@ -30,6 +30,18 @@ const gchar *ls_string(JsonObject *object, const gchar *key);
 gboolean ls_path_valid(const gchar *path);
 /* A CSS object-position: one or two of left/center/right/top/bottom, or two 0-100% values. */
 gboolean ls_focus_valid(const gchar *focus);
+/**
+ * ls_phone_tel:
+ * @phone: (nullable): a phone number as supplied, such as "+1 (555) 014-2270"
+ *
+ * Checks a supplied phone number (digits, spaces, + . - ( ) only, at most 40
+ * bytes, 3 to 15 digits, + only before the first digit) and builds its tel:
+ * address from the + and the digits.
+ * Returns: (transfer full) (nullable): the tel: address, or NULL when @phone is not a phone number
+ */
+gchar *ls_phone_tel(const gchar *phone);
+/* A plain email address: one @, a dotted domain, no spaces, quotes or brackets. */
+gboolean ls_email_valid(const gchar *email);
 gchar *ls_json_encode(JsonNode *node);
 /* Strict JSON boundary: rejects duplicate members, NUL escapes and deep trees. */
 JsonNode *ls_json_parse(const gchar *text, GError **error);

@@ -17,3 +17,14 @@
 .form__status { margin-top: var(--space-4); font-weight: 600; }
 .form__status:empty { display: none; }
 .form__status[data-state="failed"] { color: var(--danger); }
+/* After a send: the confirmation panel takes the form's place. Only the
+ * script shows it, so without one it stays hidden and the host's answer
+ * (a thank-you page, or the page again) is what the visitor sees. Text is
+ * ink on surface, a pair the builder checks; nothing moves. */
+.form__sent { margin-bottom: var(--space-5); padding: var(--space-5); background: var(--surface); color: var(--ink); border: var(--border) solid var(--line-strong); border-left: var(--border-strong) solid var(--accent); border-radius: var(--radius); }
+.form__sent:focus { outline: 3px solid var(--focus); outline-offset: 3px; }
+.form__sent-message { margin: 0; font-size: var(--step-1); font-weight: 600; }
+.form__sent-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-3) var(--space-5); margin: var(--space-4) 0 0; }
+.form__sent-call { min-height: 2.75rem; }
+.form__sent-number { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.form__sent-again { color: var(--ink); }

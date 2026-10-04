@@ -236,6 +236,8 @@ These parser and path helpers ship in the public headers because recipe, artifac
 | =ls_read_text(path, error)= | Entire UTF-8 file within document limits |
 | =ls_object_keys(object, keys, error)= | Allowlist; pipe-delimited names, rejects delimiter-in-key bypasses |
 | =ls_string(object, key)= | Borrowed string member or NULL |
+| =ls_phone_tel(phone)= | Checked phone number to an owned =tel:= address of =+= and digits, or NULL |
+| =ls_email_valid(email)= | Whether text is one plain email address |
 | =ls_path_valid(path)= | Safe relative artifact path |
 | =ls_git_run(directory, arguments, output, cancellable, error)= | Git without inherited GIT_* state, global config, hooks or signing |
 
