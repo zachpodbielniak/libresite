@@ -867,6 +867,49 @@ test_plan_contact(void){
 	}
 }
 
+/* A caller's footer credit is the builder's: the stored plan carries it as
+ * supplied, and no model is shown it to copy into pages. */
+static void
+test_plan_credit(void){
+	g_autoptr(GError) error = NULL;
+	g_autoptr(LsPrompts) prompts = ls_prompts_new(NULL, &error);
+	g_autofree gchar *base = photo_recipe();
+	g_autofree gchar *text = replace_once(base, "  photos:\n",
+		"  credit: {text: Built with Example, url: 'https://example.com/'}\n  photos:\n");
+	g_autoptr(LsRecipe) recipe = ls_recipe_new(text, &error);
+	g_autoptr(LsContext) context = NULL;
+	FakeProvider *provider = g_object_new(fake_provider_get_type(), NULL);
+	g_autoptr(LsStep) step = g_object_new(LS_TYPE_PLAN_STEP, NULL);
+	g_autoptr(JsonNode) plan = NULL;
+	JsonObject *credit;
+	g_assert_no_error(error);
+	context = ls_recipe_create_context(recipe, &error);
+	g_assert_no_error(error);
+	g_assert_true(ls_step_execute(step, recipe, json_array_get_object_element(ls_recipe_get_steps(recipe), 0),
+		prompts, context, LS_PROVIDER(provider), NULL, &error));
+	g_assert_no_error(error);
+	plan = ls_json_parse(ls_artifact_get_content(ls_context_lookup(context, "site/plan.json")), NULL);
+	credit = json_object_get_object_member(json_node_get_object(plan), "credit");
+	g_assert_nonnull(credit);
+	g_assert_cmpstr(json_object_get_string_member(credit, "text"), ==, "Built with Example");
+	g_assert_cmpstr(json_object_get_string_member(credit, "url"), ==, "https://example.com/");
+	g_assert_null(strstr(g_ptr_array_index((GPtrArray *)g_hash_table_lookup(provider->prompts, "plan"), 0),
+		"Built with Example"));
+	{
+		g_autoptr(LsStep) pages = g_object_new(LS_TYPE_PAGES_STEP, NULL);
+		const gchar *home;
+		g_assert_true(ls_step_execute(pages, recipe, json_array_get_object_element(ls_recipe_get_steps(recipe), 1),
+			prompts, context, LS_PROVIDER(provider), NULL, &error));
+		g_assert_no_error(error);
+		g_assert_null(strstr(g_ptr_array_index((GPtrArray *)g_hash_table_lookup(provider->prompts, "index.html"), 0),
+			"Built with Example"));
+		home = ls_artifact_get_content(ls_context_lookup(context, "index.html"));
+		g_assert_nonnull(strstr(home, "site-footer__credit\"><a href=\"https://example.com/\" rel=\"noopener\">"
+			"Built with Example</a>"));
+	}
+	g_object_unref(provider);
+}
+
 /* @text indented by @spaces on every line, for a YAML block scalar. */
 static gchar *
 indented(const gchar *text, const gchar *spaces){
@@ -1157,6 +1200,7 @@ main(int argc, char **argv){
 	g_test_add_func("/pages/retry-one", test_retry_one);
 	g_test_add_func("/pages/failure", test_failure);
 	g_test_add_func("/pages/acceptance", test_acceptance);
+	g_test_add_func("/pages/plan-credit", test_plan_credit);
 	g_test_add_func("/pages/cancel", test_cancel);
 	g_test_add_func("/pages/review", test_review);
 	g_test_add_func("/pages/requires-plan", test_requires_plan);

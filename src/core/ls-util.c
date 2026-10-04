@@ -330,6 +330,22 @@ ls_email_valid(const gchar *email){
 			return FALSE;
 	return strspn(at + 1, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-") == strlen(at + 1);
 }
+/* {text, url}: one line of 1 to 80 characters and an https:// address with
+ * a host, at most 300 bytes, without spaces, quotes or markup characters. */
+gboolean
+ls_credit_valid(JsonObject *credit){
+	const gchar *text = credit != NULL ? ls_string(credit, "text") : NULL;
+	const gchar *url = credit != NULL ? ls_string(credit, "url") : NULL;
+	const gchar *c;
+	if (text == NULL || url == NULL || !ls_object_keys(credit, "|text|url|", NULL) ||
+		!g_utf8_validate(text, -1, NULL) || g_utf8_strlen(text, -1) > 80 || strspn(text, " \t") == strlen(text))
+		return FALSE;
+	for (c = text; *c != '\0'; c++)
+		if ((guchar)*c < 0x20 || *c == 0x7f)
+			return FALSE;
+	return g_str_has_prefix(url, "https://") && strlen(url) > 8 && url[8] != '/' && strlen(url) <= 300 &&
+		strpbrk(url, " \t\r\n\"'<>\\`") == NULL && g_uri_is_valid(url, G_URI_FLAGS_NONE, NULL);
+}
 gboolean
 ls_form_action_valid(const gchar *action){
 	if (action == NULL || strlen(action) < 2 || strlen(action) > 300 ||

@@ -2495,6 +2495,99 @@ test_contact_actions(void){
 	}
 }
 
+/* A caller's credit shows in the footer of every page, small and in the
+ * site's own style, with its text escaped; none is drawn without one, and a
+ * plan carrying another than the checked shape is refused. */
+static void
+test_footer_credit(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(JsonNode) plan = load("plan.json");
+	g_autoptr(JsonObject) pages = fixture_pages();
+	g_autoptr(GError) error = NULL;
+	g_autoptr(JsonNode) bundle = NULL;
+	g_autofree gchar *every = NULL;
+	const gchar *credit = "<p class=\"wrap site-footer__credit\"><a href=\"https://example.com/?ref=site\" "
+		"rel=\"noopener\">Built with A &amp; B</a></p>";
+	JsonObject *root = json_node_get_object(plan);
+	guint pages_seen = 0;
+	json_object_set_member(root, "credit", json("{'text':'Built with A & B','url':'https://example.com/?ref=site'}"));
+	g_assert_true(ls_components_check_plan(components, plan, &error));
+	g_assert_no_error(error);
+	bundle = compose_bundle(components, plan, pages);
+	{
+		JsonArray *files = json_object_get_array_member(json_node_get_object(bundle), "files");
+		guint i;
+		for (i = 0; i < json_array_get_length(files); i++) {
+			JsonObject *file = json_array_get_object_element(files, i);
+			if (!g_str_has_suffix(ls_string(file, "path"), ".html"))
+				continue;
+			contains(ls_string(file, "content"), credit);
+			g_assert_true(strstr(ls_string(file, "content"), credit) > strstr(ls_string(file, "content"),
+				"<footer class=\"site-footer\">"));
+			pages_seen++;
+		}
+	}
+	/* The planned pages and the built-in 404, privacy and terms pages. */
+	g_assert_cmpuint(pages_seen, >=, 4);
+	contains(file_content(bundle, "styles.css"), ".site-footer__credit {");
+	g_clear_pointer(&bundle, json_node_unref);
+	/* Only the checked {text, url} shape. */
+	json_object_set_member(root, "credit", json("{'text':'Built with Example','url':'javascript:alert(1)'}"));
+	g_assert_false(ls_components_check_plan(components, plan, &error));
+	g_assert_nonnull(strstr(error->message, "credit"));
+	g_clear_error(&error);
+	/* None passed: no credit anywhere. */
+	json_object_remove_member(root, "credit");
+	bundle = compose_bundle(components, plan, pages);
+	every = all_pages(bundle);
+	lacks(every, "site-footer__credit");
+}
+
+/* Notes about inputs nobody supplied never reach visitors: a footer note or
+ * page text that talks about them is sent back to be left out silently. */
+static void
+test_missing_talk(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(JsonNode) plan = load("plan.json");
+	g_autoptr(GError) error = NULL;
+	JsonObject *root = json_node_get_object(plan);
+	const gchar *notes[] = {
+		"Prices, opening hours and delivery details have not been supplied for this site, so none are listed.",
+		"Opening hours were not provided.", "Prices to be confirmed.", "Hours: TBD", "Menu details to come."};
+	const gchar *fine[] = {"All work is illustrative.", "Parking is supplied free on Quay Street.",
+		"We confirm every booking by email."};
+	guint i;
+	for (i = 0; i < G_N_ELEMENTS(notes); i++) {
+		g_autoptr(JsonNode) footer = json_node_new(JSON_NODE_OBJECT);
+		JsonObject *object = json_object_new();
+		json_object_set_string_member(object, "note", notes[i]);
+		json_node_take_object(footer, object);
+		json_object_set_member(root, "footer", g_steal_pointer(&footer));
+		if (ls_components_check_plan(components, plan, &error))
+			g_error("'%s' was accepted", notes[i]);
+		g_assert_nonnull(strstr(error->message, "footer.note"));
+		g_assert_nonnull(strstr(error->message, "not supplied"));
+		g_clear_error(&error);
+	}
+	for (i = 0; i < G_N_ELEMENTS(fine); i++) {
+		g_autoptr(JsonNode) footer = json_node_new(JSON_NODE_OBJECT);
+		JsonObject *object = json_object_new();
+		json_object_set_string_member(object, "note", fine[i]);
+		json_node_take_object(footer, object);
+		json_object_set_member(root, "footer", g_steal_pointer(&footer));
+		if (!ls_components_check_plan(components, plan, &error))
+			g_error("'%s' was refused: %s", fine[i], error->message);
+	}
+	/* Page text too. */
+	{
+		g_autoptr(JsonNode) page = json(
+			"{'path':'journal.html','sections':[{'component':'page-header','content':{'heading':'Opening hours "
+			"have not been supplied'}}]}");
+		g_assert_false(ls_components_check_page(components, plan, "journal.html", page, &error));
+		g_assert_nonnull(strstr(error->message, "not supplied"));
+	}
+}
+
 /* The fixture snippet and stylesheet podbay drew for its contact form. */
 static gchar *
 podbay_text(const gchar *name){
@@ -2639,5 +2732,7 @@ main(int argc, char **argv){
 	g_test_add_func("/components/accent-text", test_accent_text);
 	g_test_add_func("/components/supplied-form", test_supplied_form);
 	g_test_add_func("/components/contact-actions", test_contact_actions);
+	g_test_add_func("/components/footer-credit", test_footer_credit);
+	g_test_add_func("/components/missing-talk", test_missing_talk);
 	return g_test_run();
 }

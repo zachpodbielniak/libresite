@@ -53,6 +53,31 @@ contact_invalid(void){
 	}
 }
 
+/* A caller's footer credit is checked where the recipe is read. */
+static void
+credit_recipe(void){
+	const gchar *valid = "version: 1\nname: test\nsite: {brief: hi, credit: {text: Built with Example, "
+		"url: 'https://example.com/'}}\npipeline: {steps: [{id: a, type: frontend}]}";
+	const gchar *invalid[] = {"{text: Built with Example}", "{text: Built with Example, url: 'http://example.com/'}",
+		"{text: '', url: 'https://example.com/'}", "Built with Example"};
+	guint i;
+	{
+		g_autoptr(GError) error = NULL;
+		g_autoptr(LsRecipe) recipe = ls_recipe_new(valid, &error);
+		g_assert_no_error(error);
+		g_assert_nonnull(recipe);
+	}
+	for (i = 0; i < G_N_ELEMENTS(invalid); i++) {
+		g_autofree gchar *text = g_strdup_printf("version: 1\nname: test\nsite: {brief: hi, credit: %s}\n"
+			"pipeline: {steps: [{id: a, type: frontend}]}", invalid[i]);
+		g_autoptr(GError) error = NULL;
+		g_autoptr(LsRecipe) recipe = ls_recipe_new(text, &error);
+		g_assert_null(recipe);
+		g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+		g_assert_nonnull(strstr(error->message, "site.credit"));
+	}
+}
+
 /* A recipe whose site carries @modules (JSON), built as JSON so snippets and
  * stylesheets need no YAML quoting. */
 static gchar *
@@ -149,6 +174,7 @@ main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
 	g_test_add_func("/recipe/contact-valid", contact_valid);
 	g_test_add_func("/recipe/contact-invalid", contact_invalid);
+	g_test_add_func("/recipe/credit", credit_recipe);
 	g_test_add_func("/recipe/modules-valid", modules_valid);
 	g_test_add_func("/recipe/modules-invalid", modules_invalid);
 	return g_test_run();

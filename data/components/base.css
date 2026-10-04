@@ -167,6 +167,9 @@ main :is(.wrap, [class$="__list"], [class*="__list "], [class$="__grid"], [class
 .site-footer__inner { display: grid; gap: var(--space-5); }
 .site-footer__note { max-width: var(--measure); color: var(--muted); font-size: var(--step--1); }
 .site-footer__note > :last-child { margin-bottom: 0; }
+/* A caller's credit: one small muted line under everything else. */
+.site-footer__credit { margin-top: var(--space-5); margin-bottom: 0; color: var(--muted); font-size: var(--step--1); }
+.site-footer__credit a { color: inherit; }
 .site-footer ul { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); margin: 0; padding: 0; list-style: none; font-size: var(--step--1); }
 .site-footer a { display: inline-flex; align-items: center; min-height: 44px; }
 @media (min-width: 48rem) {

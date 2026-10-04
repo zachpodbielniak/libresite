@@ -348,6 +348,41 @@ test_edit_unchanged(void){
 	site_teardown(&site);
 }
 
+/* A caller's footer credit survives an edit, and a model cannot change it. */
+static void
+test_edit_credit(void){
+	Site site;
+	g_autoptr(GError) error = NULL;
+	g_autofree gchar *with_credit = NULL, *work = NULL, *index = NULL, *page = NULL;
+	g_auto(GStrv) parts = g_strsplit(recipe_text, "style: editorial}", 2);
+	with_credit = g_strjoin("style: editorial, credit: {text: Built with Example, url: 'https://example.com/'}}",
+		parts[0], parts[1], NULL);
+	site_setup_recipe(&site, with_credit);
+	g_ptr_array_add(site.provider->answers, g_strdup("{\"summary\": \"x\", \"plan\": {\"credit\": "
+		"{\"text\": \"Other\", \"url\": \"https://other.example/\"}}, \"pages\": []}"));
+	g_ptr_array_add(site.provider->answers, g_strdup("{\"summary\": \"x\", \"plan\": {\"credit\": "
+		"{\"text\": \"Other\", \"url\": \"https://other.example/\"}}, \"pages\": []}"));
+	g_assert_false(apply(&site, "Change the credit", NULL, NULL, &error));
+	g_assert_error(error, LS_ERROR, LS_ERROR_VALIDATION);
+	g_clear_error(&error);
+	g_ptr_array_set_size(site.provider->answers, 0);
+	site.provider->edit_calls = 0;
+	work = work_with_heading("Lately on the bench");
+	{
+		g_autofree gchar *answer = g_strdup_printf("{\"summary\": \"Rename the work heading\", \"pages\": [%s]}", work);
+		g_ptr_array_add(site.provider->answers, g_steal_pointer(&answer));
+	}
+	g_assert_true(apply(&site, "Rename the work heading", NULL, NULL, &error));
+	g_assert_no_error(error);
+	page = read_file(site.site, "work.html");
+	g_assert_nonnull(strstr(page, "Lately on the bench"));
+	g_assert_nonnull(strstr(page, "<a href=\"https://example.com/\" rel=\"noopener\">Built with Example</a>"));
+	index = read_file(site.site, "index.html");
+	g_assert_nonnull(strstr(index, "Built with Example"));
+	g_assert_null(strstr(index, "other.example"));
+	site_teardown(&site);
+}
+
 /* A damaged record is an error, never mistaken for an unchanged site. */
 static void
 test_edit_bad_record(void){
@@ -601,6 +636,7 @@ main(int argc, char **argv){
 	g_test_add_func("/edit/rejected", test_edit_rejected);
 	g_test_add_func("/edit/unchanged", test_edit_unchanged);
 	g_test_add_func("/edit/bad-record", test_edit_bad_record);
+	g_test_add_func("/edit/credit", test_edit_credit);
 	g_test_add_func("/edit/contact", test_edit_contact);
 	g_test_add_func("/edit/modules", test_edit_modules);
 	g_test_add_func("/edit/refuses-drift", test_edit_refuses_drift);

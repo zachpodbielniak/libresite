@@ -1593,9 +1593,30 @@ token_number(JsonObject *tokens, const NumberToken *token){
 	return is_number(node) ? json_node_get_double(node) : token->fallback;
 }
 
+/* Talk about inputs nobody supplied, which visitors must never read: the
+ * matched phrase, or NULL. Whole words only, case-insensitive. */
+static const gchar *
+missing_talk(const gchar *text){
+	static const gchar *const phrases[] = {"not been supplied", "not supplied", "not been provided",
+		"were not provided", "was not provided", "not been given", "to be confirmed", "to be announced",
+		"details to come", "will be posted", "not published yet", "not yet published", "tbd", "tbc", "tba", NULL};
+	g_autofree gchar *lower = g_ascii_strdown(text, -1);
+	guint i;
+	for (i = 0; phrases[i] != NULL; i++) {
+		const gchar *at;
+		for (at = strstr(lower, phrases[i]); at != NULL; at = strstr(at + 1, phrases[i])) {
+			gchar after = at[strlen(phrases[i])];
+			if ((at == lower || !g_ascii_isalnum(at[-1])) && !g_ascii_isalnum(after))
+				return phrases[i];
+		}
+	}
+	return NULL;
+}
+
 static void
 check_text(Problems *problems, const gchar *where, JsonNode *node, gboolean required, gsize max){
 	const gchar *text;
+	const gchar *talk;
 	if (node == NULL || JSON_NODE_HOLDS_NULL(node)) {
 		if (required)
 			problem(problems, "%s is required", where);
@@ -1611,6 +1632,9 @@ check_text(Problems *problems, const gchar *where, JsonNode *node, gboolean requ
 	else if (max > 0 && (gsize)g_utf8_strlen(text, -1) > max)
 		problem(problems, "%s has %ld characters; the limit is %" G_GSIZE_FORMAT, where,
 			g_utf8_strlen(text, -1), max);
+	else if ((talk = missing_talk(text)) != NULL)
+		problem(problems, "%s tells visitors about facts that were not supplied (\"%s\"); leave anything missing "
+			"out silently and write about what is true", where, talk);
 }
 
 static gboolean
@@ -2235,7 +2259,7 @@ check_plan_into(Problems *problems, LsComponents *self, JsonNode *node){
 		return;
 	}
 	if (!ls_object_keys(plan, "|name|tagline|lang|character|missing|tokens|fonts|brand|nav|action|footer|voice|look|"
-		"art|photos|social|form|contact|modules|pages|css|restyle|ui|structure|signature|", NULL))
+		"art|photos|social|form|contact|modules|credit|pages|css|restyle|ui|structure|signature|", NULL))
 		problem(problems, "unknown top-level key; allowed: name, tagline, lang, character, missing, tokens, fonts, "
 			"brand, nav, action, footer, voice, look, art, photos, pages, css, restyle, ui");
 	check_missing(problems, plan);
@@ -2244,6 +2268,9 @@ check_plan_into(Problems *problems, LsComponents *self, JsonNode *node){
 	check_supplied_form(problems, plan);
 	check_contact(problems, plan);
 	check_modules(problems, plan);
+	/* credit is the caller's footer line, copied by the builder from site.credit. */
+	if (json_object_has_member(plan, "credit") && !ls_credit_valid(member_object(plan, "credit")))
+		problem(problems, "credit must be the supplied {text, url}: one line of up to 80 characters and an https:// address");
 	check_structure(problems, self, plan);
 	check_look(problems, self, plan);
 	check_restyle(problems, self, plan);
@@ -4623,6 +4650,9 @@ render_page(Render *render, const gchar *path, const gchar *title, const gchar *
 	guint i;
 	json_object_set_string_member(view, "lang", ls_string(plan, "lang") != NULL ? ls_string(plan, "lang") : "en");
 	json_object_set_string_member(view, "title", title);
+	/* The caller's credit line, in every footer, exactly as supplied. */
+	if (ls_credit_valid(member_object(plan, "credit")))
+		json_object_set_object_member(view, "credit", json_object_ref(member_object(plan, "credit")));
 	json_object_set_string_member(view, "full_title", full);
 	json_object_set_string_member(view, "description", description);
 	json_object_set_boolean_member(view, "noindex", noindex);

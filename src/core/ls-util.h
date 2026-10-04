@@ -44,6 +44,16 @@ gchar *ls_phone_tel(const gchar *phone);
  * spaces, quotes, brackets or ? # %, so it is safe in a mailto: link. */
 gboolean ls_email_valid(const gchar *email);
 /**
+ * ls_credit_valid:
+ * @credit: (nullable): a caller's footer credit, as supplied
+ *
+ * A footer credit is exactly {text, url}: text one line of 1 to 80
+ * characters, url an https:// address with a host of at most 300 bytes,
+ * without spaces, quotes, angle brackets, backslashes or backquotes.
+ * Returns: whether @credit is a credit the builder draws
+ */
+gboolean ls_credit_valid(JsonObject *credit);
+/**
  * ls_form_action_valid:
  * @action: (nullable): where a supplied live form posts
  *

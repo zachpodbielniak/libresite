@@ -39,10 +39,42 @@ email_addresses(void){
 	g_assert_false(ls_email_valid(NULL));
 }
 
+/* A footer credit: a short line of text and an https:// address, both required. */
+static void
+credits(void){
+	const gchar *good[] = {"{\"text\": \"Built with Example\", \"url\": \"https://example.com/\"}",
+		"{\"text\": \"Hosted by A & B\", \"url\": \"https://hosting.example/?ref=site\"}"};
+	const gchar *bad[] = {"{}", "{\"text\": \"Built with Example\"}", "{\"url\": \"https://example.com/\"}",
+		"{\"text\": \"   \", \"url\": \"https://example.com/\"}",
+		"{\"text\": \"Built\\nwith\", \"url\": \"https://example.com/\"}",
+		"{\"text\": \"Built with Example\", \"url\": \"http://example.com/\"}",
+		"{\"text\": \"Built with Example\", \"url\": \"javascript:alert(1)\"}",
+		"{\"text\": \"Built with Example\", \"url\": \"https:///path\"}",
+		"{\"text\": \"Built with Example\", \"url\": \"https://example.com/\\\"onmouseover\"}",
+		"{\"text\": \"Built with Example\", \"url\": \"https://example.com/\", \"logo\": \"x\"}",
+		"{\"text\": 3, \"url\": \"https://example.com/\"}",
+		"{\"text\": \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\", "
+		"\"url\": \"https://example.com/\"}"};
+	guint i;
+	for (i = 0; i < G_N_ELEMENTS(good); i++) {
+		g_autoptr(JsonNode) node = ls_json_parse(good[i], NULL);
+		if (!ls_credit_valid(json_node_get_object(node)))
+			g_error("'%s' was refused", good[i]);
+	}
+	for (i = 0; i < G_N_ELEMENTS(bad); i++) {
+		g_autoptr(JsonNode) node = ls_json_parse(bad[i], NULL);
+		g_assert_nonnull(node);
+		if (ls_credit_valid(json_node_get_object(node)))
+			g_error("'%s' was accepted", bad[i]);
+	}
+	g_assert_false(ls_credit_valid(NULL));
+}
+
 int
 main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
 	g_test_add_func("/util/phone-numbers", phone_numbers);
 	g_test_add_func("/util/email-addresses", email_addresses);
+	g_test_add_func("/util/credits", credits);
 	return g_test_run();
 }

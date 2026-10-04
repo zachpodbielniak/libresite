@@ -567,6 +567,20 @@ plan_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *prom
 				json_object_set_member(root, "modules", ls_json_parse(text, NULL));
 			}
 		}
+		/* And the caller's footer credit, drawn on every page as supplied. */
+		if (plan != NULL && JSON_NODE_HOLDS_OBJECT(plan)) {
+			JsonObject *root = json_node_get_object(plan);
+			JsonObject *site = member_object_of(ls_recipe_get_root(recipe), "site");
+			JsonObject *credit = site != NULL ? member_object_of(site, "credit") : NULL;
+			if (json_object_has_member(root, "credit"))
+				json_object_remove_member(root, "credit");
+			if (credit != NULL) {
+				JsonObject *copy = json_object_new();
+				json_object_set_string_member(copy, "text", ls_string(credit, "text"));
+				json_object_set_string_member(copy, "url", ls_string(credit, "url"));
+				json_object_set_object_member(root, "credit", copy);
+			}
+		}
 		/* And the business phone and email the builder links: a call action
 		 * on every page and in the confirmation after a send. Nothing when none
 		 * was given. */
@@ -889,6 +903,9 @@ page_prompt(LsPrompts *prompts, LsRecipe *recipe, JsonObject *config, const gcha
 	}
 	ls_images_strip_variants(json_node_get_object(plan_copy));
 	ls_module_strip_markup(json_node_get_object(plan_copy));
+	/* The footer credit is drawn by the builder; writers never repeat it. */
+	if (json_object_has_member(json_node_get_object(plan_copy), "credit"))
+		json_object_remove_member(json_node_get_object(plan_copy), "credit");
 	pages = json_object_get_array_member(json_node_get_object(plan_copy), "pages");
 	for (i = 0; i < json_array_get_length(pages); i++) {
 		JsonObject *page = json_array_get_object_element(pages, i);

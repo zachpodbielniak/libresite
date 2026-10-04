@@ -128,6 +128,7 @@ ls_prompts_get_spec_system(LsPrompts *self){
  * dump or project manifest. Untrusted text stays inside JSON data. */
 /* SITE DATA for a prompt: the order's site facts, minus site.avoid, which
  * is builder input (earlier sites' fingerprints) that no model needs to read,
+ * minus site.credit, the caller's footer line the builder draws itself,
  * and with each supplied podbay module reduced to its id and title: the
  * builder draws its markup and styles. */
 static gchar *
@@ -138,7 +139,7 @@ site_data_json(JsonObject *site){
 	GList *member;
 	for (member = members; member != NULL; member = member->next) {
 		JsonNode *value = json_object_get_member(site, member->data);
-		if (g_str_equal(member->data, "avoid"))
+		if (g_str_equal(member->data, "avoid") || g_str_equal(member->data, "credit"))
 			continue;
 		if (g_str_equal(member->data, "modules") && JSON_NODE_HOLDS_ARRAY(value)) {
 			JsonArray *named = json_array_new();

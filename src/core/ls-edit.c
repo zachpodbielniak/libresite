@@ -319,10 +319,10 @@ site_base_url(GHashTable *files){
 }
 
 /* Plan members the builder owns: dealt layout, supplied photos, profiles, form,
- * contact and podbay modules, the separately written signature layer and the
- * order's missing facts. */
-static const gchar *const builder_members[] = {"structure", "photos", "social", "form", "contact", "modules", "signature",
-	"missing", NULL};
+ * contact, podbay modules and the caller's footer credit, the separately
+ * written signature layer and the order's missing facts. */
+static const gchar *const builder_members[] = {"structure", "photos", "social", "form", "contact", "modules", "credit",
+	"signature", "missing", NULL};
 
 typedef struct {
 	gchar *summary;

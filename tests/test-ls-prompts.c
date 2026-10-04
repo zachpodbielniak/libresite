@@ -116,6 +116,10 @@ test_embedded(void){
 	guint i;
 	g_assert_no_error(error);
 	g_assert_nonnull(ls_prompts_get_spec_system(prompts));
+	/* Copy follows the business's locale, US English when none is given,
+	 * and never tells visitors what was not supplied, footer included. */
+	g_assert_nonnull(strstr(ls_prompts_get_spec_system(prompts), "US English"));
+	g_assert_nonnull(strstr(ls_prompts_get_spec_system(prompts), "never tell visitors"));
 	for (i = 0; i < G_N_ELEMENTS(stages); i++) {
 		g_autofree gchar *text = ls_prompts_render_spec(prompts, site, first_step(site), stages[i],
 			NULL, "{}", &error);
