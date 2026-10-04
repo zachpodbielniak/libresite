@@ -17,7 +17,19 @@ document.querySelectorAll("form[data-podbay-form]").forEach(function (form) {
 	}
 	function nodes(html) {
 		var body = new DOMParser().parseFromString("<body>" + html + "</body>", "text/html").body;
-		Array.prototype.slice.call(body.querySelectorAll("script")).forEach(function (s) { s.remove(); });
+		/* Nothing in the answer runs: no script or embedded document, no
+		 * event handler attribute and no javascript: address. */
+		Array.prototype.slice.call(body.querySelectorAll("script, iframe, frame, object, embed, base, meta, link"))
+			.forEach(function (s) { s.remove(); });
+		Array.prototype.slice.call(body.querySelectorAll("*")).forEach(function (element) {
+			Array.prototype.slice.call(element.attributes).forEach(function (attribute) {
+				var name = attribute.name.toLowerCase();
+				var value = attribute.value.replace(/[\u0000-\u0020]/g, "").toLowerCase();
+				if (name.indexOf("on") === 0 || (/^(javascript|vbscript):/.test(value) &&
+					["href", "src", "action", "formaction", "xlink:href"].indexOf(name) >= 0))
+					element.removeAttribute(attribute.name);
+			});
+		});
 		Array.prototype.slice.call(body.querySelectorAll("[hx-swap-oob][id]")).forEach(function (oob) {
 			var old = document.getElementById(oob.id);
 			oob.remove();
