@@ -40,7 +40,8 @@ gboolean ls_focus_valid(const gchar *focus);
  * Returns: (transfer full) (nullable): the tel: address, or NULL when @phone is not a phone number
  */
 gchar *ls_phone_tel(const gchar *phone);
-/* A plain email address: one @, a dotted domain, no spaces, quotes or brackets. */
+/* A plain email address: one @, a dotted domain of letters, digits, . and -, no
+ * spaces, quotes, brackets or ? # %, so it is safe in a mailto: link. */
 gboolean ls_email_valid(const gchar *email);
 /**
  * ls_form_action_valid:

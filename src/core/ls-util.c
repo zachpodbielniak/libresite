@@ -314,8 +314,10 @@ ls_phone_tel(const gchar *phone){
 	return g_string_free(tel, FALSE);
 }
 
-/* One @ between a local part of up to 64 and a dotted domain, printable
- * ASCII without spaces, quotes, brackets or separators; at most 254 bytes. */
+/* One @ between a local part of up to 64 and a dotted domain of letters,
+ * digits, dots and hyphens; printable ASCII without spaces, quotes,
+ * brackets, separators or the ? # % that would change a mailto: link; at
+ * most 254 bytes. */
 gboolean
 ls_email_valid(const gchar *email){
 	const gchar *at = email != NULL ? strchr(email, '@') : NULL;
@@ -324,9 +326,9 @@ ls_email_valid(const gchar *email){
 		strchr(at + 1, '.') == NULL || at[1] == '.' || g_str_has_suffix(email, ".") || strstr(at, "..") != NULL)
 		return FALSE;
 	for (c = email; *c != '\0'; c++)
-		if (*c <= ' ' || *c > '~' || strchr("\"'<>()[]\\,;:`", *c) != NULL)
+		if (*c <= ' ' || *c > '~' || strchr("\"'<>()[]\\,;:`?#%", *c) != NULL)
 			return FALSE;
-	return TRUE;
+	return strspn(at + 1, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789.-") == strlen(at + 1);
 }
 gboolean
 ls_form_action_valid(const gchar *action){

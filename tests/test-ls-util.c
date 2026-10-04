@@ -27,7 +27,8 @@ static void
 email_addresses(void){
 	const gchar *good[] = {"hello@harbor.example", "a.b+c@x.example", "a_b-c@mail.x.example"};
 	const gchar *bad[] = {"not-an-address", "a b@x.example", "a@b@x.example", "@x.example", "a@example",
-		"a@.example", "a@x.example.", "a@x..example", "<a@x.example>", "a@x.example\n", "o'hara@x.example", ""};
+		"a@.example", "a@x.example.", "a@x..example", "<a@x.example>", "a@x.example\n", "o'hara@x.example", "",
+		"a@x.example?cc=b", "a@x.example/path", "a@x.example#top", "a?b@x.example", "a@x_y.example"};
 	guint i;
 	for (i = 0; i < G_N_ELEMENTS(good); i++)
 		if (!ls_email_valid(good[i]))
