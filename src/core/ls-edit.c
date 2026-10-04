@@ -613,9 +613,13 @@ ls_editor_apply(LsEditor *self, const gchar *project, const gchar *request, gcha
 	}
 	if (have_record) {
 		record_text = ls_read_text(record_path, error);
-		if (record_text == NULL || (record_node = ls_json_parse(record_text, error)) == NULL ||
-			!JSON_NODE_HOLDS_OBJECT(record_node))
+		if (record_text == NULL || (record_node = ls_json_parse(record_text, error)) == NULL)
 			goto out;
+		/* Returning FALSE without an error means "unchanged" to the caller. */
+		if (!JSON_NODE_HOLDS_OBJECT(record_node)) {
+			g_set_error(error, LS_ERROR, LS_ERROR_INVALID, "%s is not a build record", record_path);
+			goto out;
+		}
 	}
 	record = record_node != NULL ? json_node_get_object(record_node) : NULL;
 	/* The committed outlines follow the site through its history; a site
@@ -657,8 +661,12 @@ ls_editor_apply(LsEditor *self, const gchar *project, const gchar *request, gcha
 		goto out;
 	}
 	old_plan = ls_json_parse(ls_string(plan_entry, "content"), error);
-	if (old_plan == NULL || !JSON_NODE_HOLDS_OBJECT(old_plan))
+	if (old_plan == NULL)
 		goto out;
+	if (!JSON_NODE_HOLDS_OBJECT(old_plan)) {
+		g_set_error(error, LS_ERROR, LS_ERROR_INVALID, "%s has a saved plan that is not an object", absolute);
+		goto out;
+	}
 	routes = plan_routes(json_node_get_object(old_plan));
 	for (i = 0; i < json_array_get_length(routes); i++) {
 		const gchar *route = json_array_get_string_element(routes, i);

@@ -348,6 +348,22 @@ test_edit_unchanged(void){
 	site_teardown(&site);
 }
 
+/* A damaged record is an error, never mistaken for an unchanged site. */
+static void
+test_edit_bad_record(void){
+	Site site;
+	g_autoptr(GError) error = NULL;
+	g_autofree gchar *summary = NULL, *path = NULL;
+	site_setup(&site);
+	path = g_build_filename(site.site, ".libresite", "run.json", NULL);
+	g_assert_true(g_file_set_contents(path, "[]", -1, NULL));
+	g_assert_false(apply(&site, "Anything", &summary, NULL, &error));
+	g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+	g_assert_null(summary);
+	g_assert_cmpint(site.provider->edit_calls, ==, 0);
+	site_teardown(&site);
+}
+
 /* Supplied podbay modules are the builder's too: an edit cannot replace them. */
 static void
 test_edit_modules(void){
@@ -584,6 +600,7 @@ main(int argc, char **argv){
 	g_test_add_func("/edit/plan-twice", test_edit_plan_twice);
 	g_test_add_func("/edit/rejected", test_edit_rejected);
 	g_test_add_func("/edit/unchanged", test_edit_unchanged);
+	g_test_add_func("/edit/bad-record", test_edit_bad_record);
 	g_test_add_func("/edit/contact", test_edit_contact);
 	g_test_add_func("/edit/modules", test_edit_modules);
 	g_test_add_func("/edit/refuses-drift", test_edit_refuses_drift);
