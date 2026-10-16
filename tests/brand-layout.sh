@@ -59,7 +59,9 @@ for width in 1440 390; do
 	call POST "/session/$session/window/rect" "{\"width\":$width,\"height\":1000}" >/dev/null
 	for fixture in "$output"/*/index.html; do
 		variant=$(basename "$(dirname "$fixture")")
-		call POST "/session/$session/url" "$(jq -nc --arg url "file://$fixture" '{url:$url}')" >/dev/null
+		url="file://$fixture"
+		if [[ -n ${BRAND_LAYOUT_URL:-} ]]; then url="${BRAND_LAYOUT_URL%/}/$variant/index.html"; fi
+		call POST "/session/$session/url" "$(jq -nc --arg url "$url" '{url:$url}')" >/dev/null
 		sleep 0.2
 		result=$(call POST "/session/$session/execute/sync" "$(jq -nc --arg script "$measure" '{script:$script,args:[]}')" | jq -c .value)
 		printf '%s %s %s\n' "$variant" "$width" "$result"

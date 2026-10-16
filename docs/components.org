@@ -427,3 +427,7 @@ bash tests/brand-layout.sh "$WEBDRIVER_URL" build/brand-layout
 
 These pages are rendered by the built component library from synthetic
 plans. They test layout, not a model's choice of content or design.
+
+Set =BRAND_LAYOUT_URL= to the served fixture directory when running against
+HTTP instead of local files. Serve the fixture artwork at the site's root
+asset path as on a normal site; the layout measurements are the same.
