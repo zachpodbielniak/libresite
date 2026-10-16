@@ -83,6 +83,15 @@ gchar *ls_images_variant_path(const gchar *path, gint64 width);
 GPtrArray *ls_images_variants(const gchar *path, GBytes *source, JsonObject *options, GError **error);
 
 /**
+ * ls_images_strip_variants:
+ * @plan: (transfer none): a private copy of a plan, about to be shown to a model
+ *
+ * Removes every photo's variants. Pages name a photo by its supplied path;
+ * the sized files are the builder's, and a model that saw them might use one.
+ */
+void ls_images_strip_variants(JsonObject *plan);
+
+/**
  * ls_images_prepare_photos:
  * @context: the run's artifact store; seeds are read from its tree or archive
  * @photos: (transfer none): plan photo entries {path, alt, width, height, ...}
@@ -101,15 +110,6 @@ GPtrArray *ls_images_variants(const gchar *path, GBytes *source, JsonObject *opt
  * changed; on failure @photos, @files and @retired must be discarded.
  * Returns: whether every photo was prepared
  */
-/**
- * ls_images_strip_variants:
- * @plan: (transfer none): a private copy of a plan, about to be shown to a model
- *
- * Removes every photo's variants. Pages name a photo by its supplied path;
- * the sized files are the builder's, and a model that saw them might use one.
- */
-void ls_images_strip_variants(JsonObject *plan);
-
 gboolean ls_images_prepare_photos(LsContext *context, JsonArray *photos, JsonObject *options, JsonArray *files,
 	GPtrArray *retired, GCancellable *cancellable, GError **error);
 G_END_DECLS

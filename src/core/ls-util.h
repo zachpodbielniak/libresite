@@ -40,8 +40,16 @@ gboolean ls_focus_valid(const gchar *focus);
  * Returns: (transfer full) (nullable): the tel: address, or NULL when @phone is not a phone number
  */
 gchar *ls_phone_tel(const gchar *phone);
-/* A plain email address: one @, a dotted domain of letters, digits, . and -, no
- * spaces, quotes, brackets or ? # %, so it is safe in a mailto: link. */
+/**
+ * ls_email_valid:
+ * @email: (nullable): an address as supplied
+ *
+ * One @ between a local part of up to 64 characters and a dotted domain of
+ * letters, digits, dots and hyphens. Printable ASCII, without spaces, quotes,
+ * brackets, separators or the ? # % that would change a mailto: link. At most
+ * 254 bytes.
+ * Returns: whether @email is safe to draw as a mailto: link
+ */
 gboolean ls_email_valid(const gchar *email);
 /**
  * ls_credit_valid:
