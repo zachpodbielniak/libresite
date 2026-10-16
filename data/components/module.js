@@ -4,7 +4,8 @@
  * HX-Request: true, and places the host's answer into its hx-target using
  * its hx-swap, one of podbay's eight modes; elements of the answer marked
  * hx-swap-oob replace the page element with the same id. The answer is
- * parsed, never run as script. When nothing comes back the target shows the
+ * parsed, never run as script: svg and math are dropped so they cannot set
+ * a handler after the walk. When nothing comes back the target shows the
  * site's own "not sent" words and every entry is kept. A page that loads
  * htmx itself is left to htmx. */
 document.querySelectorAll("form[data-podbay-form]").forEach(function (form) {
@@ -17,16 +18,18 @@ document.querySelectorAll("form[data-podbay-form]").forEach(function (form) {
 	}
 	function nodes(html) {
 		var body = new DOMParser().parseFromString("<body>" + html + "</body>", "text/html").body;
-		/* Nothing in the answer runs: no script or embedded document, no
-		 * event handler attribute and no javascript: address. */
-		Array.prototype.slice.call(body.querySelectorAll("script, iframe, frame, object, embed, base, meta, link"))
+		/* Nothing in the answer runs. Drop scripts and embedded documents,
+		 * plus svg and math: an animate or set element can write an event
+		 * handler or a javascript: address onto a live node after this walk.
+		 * A template's contents are not in this tree, so drop the template too. */
+		Array.prototype.slice.call(body.querySelectorAll("script, iframe, frame, object, embed, base, meta, link, svg, math, template, animate, set, animatetransform, animatemotion"))
 			.forEach(function (s) { s.remove(); });
 		Array.prototype.slice.call(body.querySelectorAll("*")).forEach(function (element) {
 			Array.prototype.slice.call(element.attributes).forEach(function (attribute) {
 				var name = attribute.name.toLowerCase();
 				var value = attribute.value.replace(/[\u0000-\u0020]/g, "").toLowerCase();
-				if (name.indexOf("on") === 0 || (/^(javascript|vbscript):/.test(value) &&
-					["href", "src", "action", "formaction", "xlink:href"].indexOf(name) >= 0))
+				if (name.indexOf("on") === 0 || (/^(javascript|vbscript|data):/.test(value) &&
+					["href", "src", "action", "formaction", "xlink:href", "srcset", "poster"].indexOf(name) >= 0))
 					element.removeAttribute(attribute.name);
 			});
 		});

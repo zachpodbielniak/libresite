@@ -203,10 +203,14 @@ test_script(void){
 	g_assert_nonnull(strstr(js, "credentials: \"same-origin\""));
 	parsed = strstr(js, "new DOMParser().parseFromString(");
 	g_assert_nonnull(parsed);
-	g_assert_nonnull(strstr(parsed, "querySelectorAll(\"script, iframe, frame, object, embed, base, meta, link\")"));
-	/* Handlers and script addresses are dropped from what remains. */
+	g_assert_nonnull(strstr(parsed, "querySelectorAll(\"script, iframe, frame, object, embed, base, meta, link, "
+		"svg, math, template, animate, set, animatetransform, animatemotion\")"));
+	/* Handlers and script addresses are dropped from what remains. SVG and
+	 * MathML go too: SMIL can set a handler after this walk. */
 	g_assert_nonnull(strstr(parsed, "name.indexOf(\"on\") === 0"));
-	g_assert_nonnull(strstr(parsed, "/^(javascript|vbscript):/"));
+	g_assert_nonnull(strstr(parsed, "/^(javascript|vbscript|data):/"));
+	g_assert_nonnull(strstr(parsed, "\"srcset\""));
+	g_assert_nonnull(strstr(parsed, "\"poster\""));
 	g_assert_null(strstr(js, ".innerHTML ="));
 	g_assert_null(strstr(js, "insertAdjacentHTML"));
 	g_assert_null(strstr(js, "eval("));

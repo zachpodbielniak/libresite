@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite
 #+created: 2026-09-28T16:00:00-04:00
-#+updated: 2026-10-04T12:00:00-04:00
+#+updated: 2026-10-16T12:00:00-04:00
 #+version: 0.5.0
 
 * Why it exists
@@ -308,7 +308,7 @@ The plan step writes the modules into the plan as =modules=, replacing anything 
 The page carries the snippet as it was supplied, with one change: the =form= also gets =action= and =method="post"= from its =hx-post=, so it posts as an ordinary form without scripts, plus =data-podbay-form= and =data-failed= (the site's =send_failed= words). Only a site whose pages place a module ships any of this:
 
 - =styles.css= puts each placed module's stylesheet in its own cascade layer, =ls-modules=, before =ls-components=. The =module= component's styles in the later layer set podbay's =--podbay-*= custom properties from the site's tokens (spacing, lines, radius) and give labels, fields and the submit button the site's type and button look, so the module matches the site without editing its file. A plan =restyle= for =module= or the site's own CSS still leads over both.
-- =site.js= gains =module.js=: with scripts, a module form sends its fields in the background as htmx would, with =HX-Request: true=, and places the host's answer into its =hx-target= with its =hx-swap=; elements of the answer marked =hx-swap-oob= replace the page element with the same id. The answer is parsed with =DOMParser=; its scripts, embedded documents (=iframe=, =object=, =embed=), =base=, =meta= and =link= elements, event handler attributes and =javascript:= addresses are dropped before it is placed, so nothing in it runs. A 2xx answer clears the form. When nothing comes back, or the network fails, the target shows the =send_failed= words and every entry is kept. A page that loads htmx itself is left to htmx.
+- =site.js= gains =module.js=: with scripts, a module form sends its fields in the background as htmx would, with =HX-Request: true=, and places the host's answer into its =hx-target= with its =hx-swap=; elements of the answer marked =hx-swap-oob= replace the page element with the same id. The answer is parsed with =DOMParser=. Before it is placed, the script drops scripts, embedded documents (=iframe=, =object=, =embed=), =base=, =meta=, =link= and =template= elements, =svg= and =math= (an =animate= or =set= can write a handler onto a live node after the walk), event handler attributes, and =javascript:=, =vbscript:= and =data:= addresses on =href=, =src=, =action=, =formaction=, =xlink:href=, =srcset= and =poster=. Nothing in the answer runs. A 2xx answer clears the form. When nothing comes back, or the network fails, the target shows the =send_failed= words and every entry is kept. A page that loads htmx itself is left to htmx.
 
 podbay's specification also lets the builder draw its own markup from a module's data definition instead of the default snippet; libresite currently draws the supplied snippet. Offline tests check the checks, the composed markup and styles, and the script's text; they do not run a host, htmx or a browser submission.
 
