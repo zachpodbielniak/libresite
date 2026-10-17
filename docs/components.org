@@ -125,10 +125,7 @@ Dealt structure multiplies the layouts a component meets: seven frames, four hea
 - Fluid type uses container units: =main= and the footer are inline-size containers, so display sizes follow the content column beside a side menu instead of the screen. Full-bleed pieces break out to that column and skip the offset margin and hanging-heading indent.
 - Headings never hyphenate automatically. =site.js= shrinks any large text (22 px and up) whose longest word overflows its box, or whose box has been pushed past the right edge of a container, down to 30 percent of its size; without scripts such a word wraps at its last point. Headings hanging into the left margin are not treated as overflow.
 - Side panels (rail and split frames) own their header: header looks built for a top bar are reset inside them, and the panel never wraps into a second column. No frame borders or insets the whole page: every site fills the screen.
-- Split section titles and introductions share a row only when each can keep
-  an 18rem reading column; otherwise they stack. Side-positioned section
-  headings reserve at least 18rem rather than splitting a narrow column again.
-  Phone layouts below the existing breakpoint are unchanged.
+- Split section titles and introductions share a row only when each can keep an 18rem reading column; otherwise they stack. Side-positioned section headings reserve at least 18rem rather than splitting a narrow column again. Phone layouts below the existing breakpoint are unchanged.
 - Container queries scope CSS counters, so numbered headings do not count with them: the builder writes each labelled section's number (after the opening) into the page as =--ls-n=, and the numbered look prints it.
 - Accent-painted variants and panels (=cta/band=, =statement/band=, =marquee/accent=, the offer stub, the accent notice box and the contrast split panel) take the same token swap as accent section bands, even against a plan restyle that colours their text with =var(--accent)=; so labels, rules, emphasis and buttons inside them stay visible. In the reading column, which has no page gutter, painted sections carry their own inset and a smaller heading.
 - =--accent-text= is the accent only when it reads at 4.5:1 on both the paper and the surface tint; otherwise the builder deepens it toward the ink in the smallest step that does.
@@ -143,13 +140,12 @@ Dealt structure multiplies the layouts a component meets: seven frames, four hea
 
 =/components/layout-lint= fails on a grid track without a zero floor, automatic hyphenation, a viewport unit inside a component, unwrappable text outside the two scrolling components, or a frame that borders the whole page.
 
-=test-section-layout= composes rail and top frames with side and top headings
-and three feature layouts. Render with =SECTION_LAYOUT_OUTPUT= set, then run
-=tests/section-layout.sh WEBDRIVER_URL OUTPUT_DIR= to measure actual title and
-introduction widths and line counts at 390 and 1440. The regression first
-found a seven-line heading in a 113px column; it now has two lines in 342px.
-The before/after phone capture is byte-identical. This uses saved synthetic
-content and the real composer, not a live generation or model evaluation.
+=/components/section-layout-matrix= composes rail and top frames with side and top headings and three feature layouts, and checks that =styles.css= keeps the 18rem split track and the 18rem side column. Set =SECTION_LAYOUT_OUTPUT= and run the browser script to measure title and introduction widths and line counts at 390 and 1440. The regression was a seven-line heading in a 113px column; the rail example is two lines in about 342px. The changed rules sit inside the existing wide breakpoints, so the phone layout stays as it was. This uses saved synthetic content and the real composer, not a live generation or model evaluation.
+
+#+begin_src sh
+SECTION_LAYOUT_OUTPUT="$PWD/build/section-layout" build/release/test-section-layout
+bash tests/section-layout.sh "$WEBDRIVER_URL" build/section-layout
+#+end_src
 
 A browser audit backs this up outside the test suite. A generated site places all 70 components in every variant (176 sections over 14 pages) with deliberately long words, is composed under each frame with other looks dealt per seed, and every page is checked at 1440, 1024, 768 and 390 px wide for pages that cannot scroll or scroll sideways, words wider than their box, text at the screen edge or jammed against a painted box, overlapping or clipped text, text shrunk below 11.5 px, and sections with no space between them. Findings fell from about 2,300 to under 90 during this pass; the remainder are sample prices and figures of fifteen-letter words in fixed-width stubs, which real content does not produce.
 

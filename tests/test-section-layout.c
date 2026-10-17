@@ -76,6 +76,23 @@ render_matrix(void)
 			g_assert_no_error(error);
 			files = json_object_get_array_member(json_node_get_object(bundle), "files");
 			g_assert_cmpuint(json_array_get_length(files), >, 10);
+			/* Two zero-floor halves, and a side column that could shrink to
+			 * 10rem, wrapped a heading down to one word per line. The composed
+			 * stylesheet has to keep the reading floor even when no browser
+			 * measurement is run. */
+			{
+				const gchar *css = NULL;
+				guint n;
+				for (n = 0; n < json_array_get_length(files); n++) {
+					JsonObject *file = json_array_get_object_element(files, n);
+					if (g_strcmp0(ls_string(file, "path"), "styles.css") == 0)
+						css = ls_string(file, "content");
+				}
+				g_assert_nonnull(css);
+				g_assert_nonnull(strstr(css, "minmax(min(100%, 18rem), 1fr)"));
+				g_assert_nonnull(strstr(css, "minmax(18rem, 1fr) minmax(0, 2fr)"));
+				g_assert_null(strstr(css, "minmax(10rem, 0.8fr)"));
+			}
 			if (output == NULL) continue;
 			{
 				g_autofree gchar *variant = g_strdup_printf("%s-%s", frames[f], headers[h]);
