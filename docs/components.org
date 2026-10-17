@@ -512,3 +512,28 @@ A composed recipe's checkpoint fingerprint includes the component library digest
 | 2026-09-30 | eight realistic orders at once (not bundled: garage, restaurant, tattoo studio, dentist, climbing gym, florist, surf school, preschool), each avoiding 13 earlier sites | 62 to 126 s | all first try as sites; five single-page or plan retries; every signature accepted in 12 to 22 s; dealt 29 to 46 percent like the closest earlier site; the eight scored 14 to 46 percent like each other |
 
 These are single live runs, on Claude Code with the default model unless noted. They establish timing, not design quality; a person must still look at every delivered site.
+
+* Sidebar wordmarks
+
+The rail and split frames size the header wordmark for their column, even
+when combined with the stacked header. Names wrap between words; the rail
+uses at most 1.5rem and the wider split panel at most 2rem. Other header
+frames and the footer retain their own type scale.
+
+The browser regression renders every header/frame combination with
+=Example's Plumbing & Heating= and a large type scale. It measures each
+word's character rectangles at 390 and 1440, checks the full name, readable
+size and page bounds, and saves the stacked sidebar screenshots. Run a
+local WebDriver service, then:
+
+#+begin_src sh
+BRAND_LAYOUT_OUTPUT="$PWD/build/brand-layout" build/release/test-brand-layout
+bash tests/brand-layout.sh "$WEBDRIVER_URL" build/brand-layout
+#+end_src
+
+These pages are rendered by the built component library from synthetic
+plans. They test layout, not a model's choice of content or design.
+
+Set =BRAND_LAYOUT_URL= to the served fixture directory when running against
+HTTP instead of local files. Serve the fixture artwork at the site's root
+asset path as on a normal site; the layout measurements are the same.

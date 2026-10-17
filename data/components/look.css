@@ -321,7 +321,10 @@ body main .page-header--index .kicker::before { content: none !important; }
 @media (min-width: 64rem) {
 	/* rail: a slim fixed navigation column. */
 	.look-frame-rail { display: grid; grid-template-columns: clamp(14rem, 19vw, 18rem) minmax(0, 1fr); }
-	:is(.look-frame-rail, .look-frame-split) .brand { white-space: normal; flex-wrap: wrap; overflow-wrap: anywhere; }
+	:is(.look-frame-rail, .look-frame-split) .brand { white-space: normal; flex-wrap: wrap; overflow-wrap: normal; }
+	/* A wordmark belongs to the narrow panel, not the stacked top-bar scale.
+	 * Keep whole words readable rather than making fragments fit the rail. */
+	.look-frame-rail .site-header .brand { max-width: 100%; font-size: min(var(--step-1), 1.5rem); line-height: 1.2; }
 	.look-frame-rail > .site-header { grid-column: 1; grid-row: 1 / span 2; position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto; border-bottom: 0; border-right: var(--border) solid var(--line-strong); }
 	.look-frame-rail > main, .look-frame-rail > .site-footer { grid-column: 2; min-width: 0; }
 	:is(.look-frame-rail, .look-frame-split) .site-header__inner { width: auto; height: 100%; margin: 0; padding: var(--space-6) var(--space-5); flex-direction: column; align-items: flex-start; justify-content: flex-start; gap: var(--space-6); border-radius: 0; }
@@ -341,7 +344,7 @@ body main .page-header--index .kicker::before { content: none !important; }
 	.look-frame-split > .site-header { grid-column: 1; grid-row: 1 / span 2; position: sticky; top: 0; align-self: start; height: 100vh; overflow-y: auto; border-bottom: 0; background: var(--surface); }
 	.look-frame-split > main, .look-frame-split > .site-footer { grid-column: 2; min-width: 0; }
 	.look-frame-split .site-header__inner { padding: clamp(2rem, 5vw, 4rem); }
-	.look-frame-split .brand { font-size: var(--step-3); line-height: 1.05; }
+	.look-frame-split .site-header .brand { max-width: 100%; font-size: min(var(--step-3), 2rem); line-height: 1.2; }
 	.look-frame-split .site-header__tagline { display: block; margin: 0; max-width: 24ch; font-family: var(--font-display); font-size: var(--step-2); line-height: 1.2; color: var(--muted); }
 	.look-frame-split .site-nav { margin-top: auto; }
 
