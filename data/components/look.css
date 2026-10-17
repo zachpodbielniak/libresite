@@ -52,7 +52,9 @@ body.look-nav-pill .site-nav ul { gap: var(--space-2); }
 /* Beside a picture, a form or a list the column is narrow: giant headings step down so they keep whole words per line. */
 .look-heads-giant main :is(.media--offset .media__text, .media--split .media__text, .media--portrait .media__text, .form--aside .form__head, .faq--split .section-head, .text--aside .text__inner) h2[id$="-h"] { font-size: var(--step-3); }
 @media (min-width: 56rem) {
-	.look-heads-split .section-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-7); max-width: none; align-items: end; }
+	/* A side heading may already occupy a narrow column. Split its title and
+	 * introduction only when both have reading room within that column. */
+	.look-heads-split .section-head { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: var(--space-7); max-width: none; align-items: end; }
 	.look-heads-split .section-head > h2 { margin: 0; }
 }
 
@@ -384,9 +386,9 @@ h1, h2, h3 { -webkit-hyphens: manual; hyphens: manual; }
 /* The narrow journal frame's column is too narrow for a heading beside a list or text. */
 .look-frame-center main :is(.faq--split > .wrap, .text--aside .text__inner, .contact-card--split .contact-card__box) { display: block; }
 .look-frame-center main :is(.faq--split .section-head, .text--aside .text__title) { position: static; }
-/* Side and hanging headings need a wide column; the narrow journal frame keeps them on top. */
+/* Side headings reserve reading room; the narrow journal frame keeps them on top. */
 @container (min-width: 52rem) {
-	.look-headpos-side:not(.look-frame-center) main > .block:not(.sec-w-narrow) > .wrap:has(> .section-head) { display: grid; grid-template-columns: minmax(10rem, 0.8fr) minmax(0, 2.2fr); column-gap: var(--space-7); align-items: start; }
+	.look-headpos-side:not(.look-frame-center) main > .block:not(.sec-w-narrow) > .wrap:has(> .section-head) { display: grid; grid-template-columns: minmax(18rem, 1fr) minmax(0, 2fr); column-gap: var(--space-7); align-items: start; }
 	.look-headpos-side:not(.look-frame-center) main > .block:not(.sec-w-narrow) > .wrap:has(> .section-head) > .section-head { grid-column: 1; grid-row: 1 / span 12; position: sticky; top: var(--space-6); margin-bottom: 0; }
 	.look-headpos-side:not(.look-frame-center) main > .block:not(.sec-w-narrow) > .wrap:has(> .section-head) > :not(.section-head) { grid-column: 2; min-width: 0; }
 	.look-headpos-side:not(.look-frame-center) main > .block > .wrap > .section-head :is(h2, h3) { font-size: min(var(--step-3), 2.1rem); }
