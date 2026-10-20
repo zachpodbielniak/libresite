@@ -280,5 +280,18 @@
     <file>components/look-nav-segmented.css</file>
     <file>components/look-nav-wavy.css</file>
     <file>components/look-nav-arrow.css</file>
+    <file>components/art-halftone.css</file>
+    <file>components/art-stamp.css</file>
+    <file>components/art-blueprint.css</file>
+    <file>components/art-window.css</file>
+    <file>components/art-layers.css</file>
+    <file>components/art-torn.css</file>
+    <file>components/art-glow.css</file>
+    <file>components/kit-curtain.css</file>
+    <file>components/kit-bloom.css</file>
+    <file>components/kit-hinge.css</file>
+    <file>components/kit-beacon.css</file>
+    <file>components/kit-spring.css</file>
+    <file>components/kit-wash.css</file>
   </gresource>
 </gresources>

@@ -1723,3 +1723,52 @@ wider:
       segmented: The main links on one rounded tinted track; the current page a raised segment.
       wavy: Italic links; the current page under a wavy accent line.
       arrow: An accent arrow leads the current page.
+  kits:
+    curtain:
+      summary: The opening's words and picture are uncovered by wipes, section headings wipe in as they scroll into view, and cards draw an accent edge under the pointer.
+      look: {motion: none}
+    bloom:
+      summary: The opening comes into focus from a soft blur, sections sharpen as they scroll into view, and cards and buttons glow under the pointer.
+      look: {motion: none}
+    hinge:
+      summary: The opening's lines swing down and its picture swings open like a door, cards flip up as they scroll into view, and cards turn on their hinge under the pointer.
+      look: {motion: none}
+    beacon:
+      summary: The opening's words drop into place, its first button sends out three slow rings, figures count up, and buttons hold a ring under the pointer.
+      look: {motion: none}
+      script: counters
+    spring:
+      summary: The opening pops in with a springy overshoot, cards spring in as they scroll into view, and buttons and cards bounce under the pointer.
+      look: {motion: none}
+    wash:
+      summary: The opening arrives under a wash of the accent that fades back while its heading darkens to ink, sections wash in as they scroll into view, and cards and buttons take on colour under the pointer.
+      look: {motion: none}
+  directions:
+    halftone:
+      summary: Drawn artwork dissolving into a printer's dot screen toward one corner.
+      look: {art: [flat, woodcut, cutpaper], images: [plain, rounded]}
+      brief: The site prints each artwork through a dot screen that takes over toward one corner, so fine detail there turns to dots. Keep the subject and its key detail toward the upper left, use bold shapes with strong light and dark contrast, and avoid thin lines.
+    stamp:
+      summary: Drawn artwork printed as a postage stamp with a perforated, tinted margin and a round postmark.
+      look: {art: [flat, line, woodcut, open], images: [plain, tilt]}
+      brief: The site prints each artwork as a postage stamp with a perforated margin and a postmark over its top right corner. Compose it like a stamp, one clear centred subject on a plain field, and keep the top right corner free of anything important.
+    blueprint:
+      summary: Drawn artwork mounted on a drafting sheet with a fine accent grid and a dimension line beneath.
+      look: {art: [blueprint, line], images: [plain, rounded]}
+      brief: The site mounts each artwork on a drafting sheet with a grid round it and a dimension line beneath. Draw it as a clean technical drawing on a plain light field, with thin even lines and a few short labels, centred with an even margin.
+    window:
+      summary: Drawn artwork seen through an arched window with glazing bars, a frame and a sill.
+      look: {art: [open, flat, cutpaper, line], images: [plain, rounded, blob]}
+      brief: The site shows each artwork through an arched window whose glazing bars cross it, a little above the middle and down the centre. Draw a scene or a view rather than one small object, keep faces and words off those two lines, and keep the top corners plain because the arch cuts them away.
+    layers:
+      summary: Drawn artwork lying on a stack of offset tinted sheets that step back up and to the left.
+      look: {art: [flat, cutpaper, open, neon], images: [plain, rounded]}
+      brief: The site lays each artwork on a stack of offset sheets tinted in the accent. Fill the whole canvas with a solid background in a colour other than the accent, so the artwork reads as the top sheet, and keep the subject inside a generous margin.
+    torn:
+      summary: Drawn artwork torn from a sheet with ragged top and bottom edges, lifting off the page on a soft shadow.
+      look: {art: [cutpaper, woodcut, flat], images: [plain, print, taped]}
+      brief: The site tears each artwork along its top and bottom edges. Fill the whole canvas with a solid paper-like background and keep the subject clear of the top and bottom twentieth, where the tear eats into it.
+    glow:
+      summary: Drawn artwork backlit like a lightbox sign, a rounded panel with a bright edge and a soft accent halo.
+      look: {art: [neon, line, flat], images: [plain, rounded]}
+      brief: The site backlights each artwork like a lightbox sign with a halo in the accent. Draw on a solid dark or deep-toned field that fills the whole canvas, with bright strokes and shapes that glow against it, and keep a margin inside the rounded corners.

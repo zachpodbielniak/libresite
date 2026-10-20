@@ -1,0 +1,9 @@
+/* Art direction: halftone. Drawn artwork dissolves into a printer's dot
+ * screen toward one corner, as if run off on a newspaper press; the screen
+ * turns the other way and coarsens on alternate sections. */
+.art-halftone main img[src$=".svg"]:not(.brand img) {
+	-webkit-mask: linear-gradient(125deg, #000 36%, transparent 74%), radial-gradient(circle, #000 0.16rem, transparent 0.18rem) 0 0 / 0.45rem 0.45rem;
+	mask: linear-gradient(125deg, #000 36%, transparent 74%), radial-gradient(circle, #000 0.16rem, transparent 0.18rem) 0 0 / 0.45rem 0.45rem; }
+.art-halftone main .block:nth-of-type(even) img[src$=".svg"]:not(.brand img) {
+	-webkit-mask: linear-gradient(235deg, #000 36%, transparent 74%), radial-gradient(circle, #000 0.24rem, transparent 0.26rem) 0 0 / 0.65rem 0.65rem;
+	mask: linear-gradient(235deg, #000 36%, transparent 74%), radial-gradient(circle, #000 0.24rem, transparent 0.26rem) 0 0 / 0.65rem 0.65rem; }

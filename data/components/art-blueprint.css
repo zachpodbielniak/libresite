@@ -1,0 +1,15 @@
+/* Art direction: blueprint. Drawn artwork is mounted on a drafting sheet:
+ * a fine accent grid with a heavier line every fifth square, and a
+ * dimension line with end ticks under the drawing. */
+.art-blueprint main img[src$=".svg"]:not(.brand img, .cover img, .poster__art) {
+	--grid: color-mix(in srgb, var(--accent) 40%, transparent); --fine: color-mix(in srgb, var(--accent) 16%, transparent); --mark: var(--accent-text);
+	padding: clamp(1rem, 4%, 1.75rem) clamp(1rem, 4%, 1.75rem) calc(clamp(1rem, 4%, 1.75rem) + 1.25rem); border: var(--border) solid var(--grid); border-radius: 0;
+	background:
+		linear-gradient(var(--mark), var(--mark)) 50% calc(100% - 0.95rem) / calc(100% - 2 * clamp(1rem, 4%, 1.75rem)) 1px no-repeat,
+		linear-gradient(var(--mark), var(--mark)) clamp(1rem, 4%, 1.75rem) calc(100% - 0.6rem) / 1px 0.75rem no-repeat,
+		linear-gradient(var(--mark), var(--mark)) calc(100% - clamp(1rem, 4%, 1.75rem)) calc(100% - 0.6rem) / 1px 0.75rem no-repeat,
+		linear-gradient(var(--grid) 1px, transparent 1px) -1px -1px / 2.5rem 2.5rem,
+		linear-gradient(90deg, var(--grid) 1px, transparent 1px) -1px -1px / 2.5rem 2.5rem,
+		linear-gradient(var(--fine) 1px, transparent 1px) -1px -1px / 0.5rem 0.5rem,
+		linear-gradient(90deg, var(--fine) 1px, transparent 1px) -1px -1px / 0.5rem 0.5rem,
+		color-mix(in srgb, var(--accent) 7%, var(--paper)); }
