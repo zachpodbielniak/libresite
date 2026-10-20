@@ -1,5 +1,0 @@
-/* panels/graph: surface cards printed with a faint drafting grid inside a hairline edge. */
-.look-panels-graph :is(.features--boxed .features__item, .cards--bordered .card, .pricing__tier, .bento__tile, .split__panel, .voices__item, .services--grid .services__item, .locations--cards .locations__item, .contact-card--card .contact-card__box, .facts--grid .facts__item, .team--cards .team__person, .entries--cards .entries__item, .steps--grid .steps__item, .links--cards .links__item a, .quote--boxed .quote__figure, .menu--board .menu__section, .cta--card .cta__inner, .form--card .form__inner, .location--card .location__inner, .hours--grid .hours__row, .faq--boxed .faq__item, .details--bordered .details__item) {
-	background: linear-gradient(color-mix(in srgb, var(--ink) 7%, transparent) 1px, transparent 1px) 0 0 / 1rem 1rem, linear-gradient(90deg, color-mix(in srgb, var(--ink) 7%, transparent) 1px, transparent 1px) 0 0 / 1rem 1rem, var(--surface);
-	border: var(--border) solid var(--line-strong); border-radius: 0; box-shadow: none;
-}

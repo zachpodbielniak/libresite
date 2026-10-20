@@ -1682,7 +1682,7 @@ wider:
       folded: Surface cards with the top corner turned down, like a dog-eared page.
       marker: No box; each item sits on a hairline led by a short thick accent mark.
       halo: Rounded paper cards ringed by an accent line set just off their edge.
-      graph: Surface cards printed with a faint drafting grid inside a hairline edge.
+      edge: Paper cards with a thick accent bar down their leading edge.
     footer:
       card: The footer's contents in a raised paper card on the surface band.
       slim: One compact row on the page colour, the name, note and links side by side.

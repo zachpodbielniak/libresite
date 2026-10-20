@@ -1,0 +1,4 @@
+/* panels/edge: paper cards with a thick accent bar down their leading edge. */
+.look-panels-edge :is(.features--boxed .features__item, .cards--bordered .card, .pricing__tier, .bento__tile, .split__panel, .voices__item, .services--grid .services__item, .locations--cards .locations__item, .contact-card--card .contact-card__box, .facts--grid .facts__item, .team--cards .team__person, .entries--cards .entries__item, .steps--grid .steps__item, .links--cards .links__item a, .quote--boxed .quote__figure, .menu--board .menu__section, .cta--card .cta__inner, .form--card .form__inner, .location--card .location__inner, .hours--grid .hours__row, .faq--boxed .faq__item, .details--bordered .details__item) {
+	background: var(--paper); border: var(--border) solid var(--line); border-inline-start: calc(var(--border) * 6) solid var(--accent); border-radius: 0 var(--radius) var(--radius) 0; box-shadow: none;
+}

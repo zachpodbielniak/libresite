@@ -255,7 +255,7 @@
     <file>components/look-panels-folded.css</file>
     <file>components/look-panels-marker.css</file>
     <file>components/look-panels-halo.css</file>
-    <file>components/look-panels-graph.css</file>
+    <file>components/look-panels-edge.css</file>
     <file>components/look-header-reversed.css</file>
     <file>components/look-header-accent.css</file>
     <file>components/look-header-spread.css</file>

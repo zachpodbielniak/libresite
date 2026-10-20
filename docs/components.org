@@ -907,3 +907,57 @@ The ten fixture sites, and an estimate over 40 invented businesses (ten trades, 
 | type | 0.07 | 0.07 | 0.07 | 0.07 | |
 
 The ten pass every limit; with screenshots the overall score is 0.191 (limit 0.20) and the worst pair 0.33 (limit 0.35), and =make gate= passed with contrast, reduced motion and page weight unchanged. Over forty, the average is under 0.20 but the worst of 780 pairs is 0.534: with independent deals, a few pairs still land close (here two businesses dealt near-identical light palettes, the same opening and three of four section forms, though different compositions and type). Steering each new site away from earlier ones in the same market (=site.avoid=) is the tool for that tail.
+
+* Sameness under a tenth
+
+Ben: "we should do 20+ options if we can." The aim was an average under 0.10, no pair over 0.25. The floor is arithmetic: a choice with k options, dealt evenly, matches between two sites about 1/k of the time, so a part can only fall under 0.10 if every choice in it has ten or more real options, more where one option is dealt more often than the rest.
+
+** Option counts and floors
+
+Counted on 2026-10-20 before this change, with the floor each count implies on its own (1/k for even deals; the share of the plain value squared where an axis deals it to a fixed share of sites):
+
+- Look axes: header 8 (0.13), navigation 8 (0.13), headings 9 (0.11), buttons 10 (0.10), panels 11 (0.09), footer 7 (0.14), rhythm 5 (0.20), lettering 7, plain on 20 percent (0.12), photos 6, natural on 40 percent (0.19), alignment 4 (0.25), heading position 4, top forced on narrow columns and five compositions (about 0.4), frame 7 (0.14), images and art 8 and 7 but narrowed by the art direction's lists (about 0.2), colour scheme 2, fixed on 50 percent (0.50). Texture, ornament, emphasis, labels, backdrops, edges and link marks are the retired flourishes: plain on every unthemed site and left out of the score, so widening them changes nothing a visitor sees, and they stay as they are.
+- Home compositions 8 (0.13), openings 15, through four per composition (0.07), motion kits 6 (0.17), art directions 5 (0.20).
+- Section forms: offers 5, process 4, questions 3, closing calls 3, extras 4.
+- Palettes: 21 curated and a generator with 5 modes, the hue anywhere on the wheel; type: 49 pairings.
+
+Plan per part: look and mix by widening their pools and steering; order by reading it as component and variant, as the item asks ("sections every trade needs must vary by variant and position, not just presence"); palette by widening the generator; type was already near zero.
+
+** What changed
+
+- *Steering.* A site built with =site.avoid= now weighs =LS_COMPONENTS_DEALS= (64) deals, its own seed and derived ones, and keeps the one whose highest similarity to any avoided site is lowest (it used to stop at the first under 0.6). The dealt fingerprint's home is the dealt section forms and extra, as the pages will have them. The sameness test builds its ten sites as one market, each avoiding those before it.
+- *The wider block* at the end of =catalog.yaml= joins new entries to their pools when the library loads: looks to their axes (=look-AXIS-VALUE.css=), openings to the home opening components (=COMPONENT--VARIANT.css=, dealt through the compositions that list them), layouts, kits and directions to theirs, forms and their fields to the section form families, modes to the palette generator. Each name must be new; =ls_components_get_catalog()= gives the catalog as loaded, and the tests that read pools now read that.
+- *New options*, each its own file, each passing the phone gate at 390, 768 and 1440: header 8 to 20, navigation 8 to 20, headings 9 to 20, buttons 10 to 20, panels 11 to 20, footer 7 to 20, rhythm 5 to 12, photos 6 to 12, lettering 7 to 12; home compositions 8 to 20; openings 15 to 21; motion kits 6 to 12; art directions 5 to 12; section forms gain directory (offers), split (process) and facts (questions).
+- *Palettes.* A sixth mode, earth: muted mid-tone papers such as clay, sage and stone with a deep accent. Two sites in three now take an ink that is a shade of the accent's hue (navy, forest, oxblood, umber on light papers; a pale tint on dark ones); it was near-black or near-white on every site and the largest single part of palette likeness. Every pair still passes the same AA guard.
+- *An opening fix.* When the dealt opening could not take the writer's words or picture, the builder fell back through the catalog in a fixed order, so a picture-led opening sent 22 of 40 businesses to the same poster. It now falls back to one of the composition's own openings, then any other, each entered at a point the site's structure picks.
+- *A bug found on the way*: the stamped poster's tilted title reached its kicker in a wide frame (fixed in =poster.css=).
+
+=tests/test-wider.c= checks each pool's width as loaded, that every wider value is dealt, that the catalog refuses a wider entry reusing a name or naming a block, family or mode that does not exist, and that a market of twelve built with =site.avoid= spreads further than the same seeds alone (0.163 against 0.209 library similarity).
+
+** Before and after
+
+The ten fixture sites, and the estimate over 40 invented businesses built the same way without steering between them:
+
+| Measure | Ten before | Ten after | Forty before | Forty after |
+|---------+------------+-----------+--------------+-------------|
+| structural mean | 0.181 | 0.096 | 0.196 | 0.120 |
+| worst pair | 0.322 | 0.178 | 0.534 | 0.302 |
+| look | 0.18 | 0.13 | 0.19 | 0.15 |
+| home order, component and variant | | 0.06 | | 0.09 |
+| home order, component only (old reading) | 0.25 | 0.23 | 0.26 | 0.23 |
+| component mix | 0.20 | 0.19 | 0.21 | 0.19 |
+| palette | 0.18 | 0.07 | 0.22 | 0.10 |
+| type | 0.07 | 0.00 | 0.07 | 0.03 |
+
+Read with the old order reading, the ten average 0.130.
+
+** Where it stops
+
+Two parts stay over 0.10, and the numbers say why.
+
+- *Look, 0.13.* Of the eighteen scored axes, six carry most of what is left: colour scheme 0.53 (two values, fixed on half of sites), heading position 0.36, images 0.29, alignment 0.22, frame 0.18, photos 0.16. Scheme alone adds 0.029 to the mean, and scheme, heading position, alignment, frame and photos together about 0.08, before any other axis matches. Under 0.10 the other thirteen axes would need to average under 0.03, about 35 even values each. Those six are short for design reasons: a site is light or dark; headings sit beside the content only where the column is wide; supplied photos of the customer's people stay natural.
+- *Component mix, 0.19.* Half of it is which components a site uses at all. Every site has a page header on each interior page and a contact card on its contact page, two of about eight components, which puts that half at 0.13 or more however wide the other pools grow; the four opening components add more. Even counting those two by variant only, the mix is 0.12 (0.13 over forty).
+
+Pushing either under 0.10 would mean fake options, making supplied photos and dark mode a coin toss, or a measure that ignores sections every site needs. That choice is Ben's.
+
+The gate's limits are now an average of at most 0.15 (with screenshots the ten score 0.124, structurally 0.096), no pair over 0.25 (worst 0.208 with screenshots), home order at most 0.15 and component mix at most 0.25.

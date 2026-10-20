@@ -13,11 +13,13 @@
 
 /* The gate: the ten sites may share at most this much on average, no two
  * may come out more alike than the pair limit, and the home section order
- * and the component mix may each average at most their own limit. */
-#define SAMENESS_MEAN_LIMIT 0.20
-#define SAMENESS_PAIR_LIMIT 0.35
-#define SAMENESS_ORDER_LIMIT 0.35
-#define SAMENESS_MIX_LIMIT 0.35
+ * and the component mix may each average at most their own limit. The aim
+ * is 0.10 on average; look and mix hold it above that for the reasons in
+ * docs/components.org, "Sameness under a tenth". */
+#define SAMENESS_MEAN_LIMIT 0.15
+#define SAMENESS_PAIR_LIMIT 0.25
+#define SAMENESS_ORDER_LIMIT 0.15
+#define SAMENESS_MIX_LIMIT 0.25
 
 static const gchar *const routes[] = {"index.html", "services.html", "contact.html"};
 
