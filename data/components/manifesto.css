@@ -6,6 +6,11 @@
 .manifesto--stacked .manifesto__line:nth-child(even) { font-weight: 400; color: var(--muted); }
 .manifesto--numbered .manifesto__line { display: grid; grid-template-columns: 3.5rem minmax(0, 1fr); gap: var(--space-3); }
 .manifesto--numbered .manifesto__n { display: block; font-family: var(--font-mono); font-size: var(--step--1); padding-top: 0.6em; color: var(--accent-text); }
-.manifesto--outlined .manifesto__line { color: transparent; -webkit-text-stroke: 1.5px var(--ink); }
-.manifesto--outlined .manifesto__line:first-child { color: var(--accent-text); -webkit-text-stroke: 0; }
-@supports not (-webkit-text-stroke: 1px black) { .manifesto--outlined .manifesto__line { color: var(--ink); } }
+/* outlined: the first line in the accent, the rest light; only lines of three
+ * words or fewer (marked by the builder) are set in outline, and only where
+ * the column is wide, so long lines and phones stay readable. */
+.manifesto--outlined .manifesto__line { color: var(--ink); font-weight: 400; }
+.manifesto--outlined .manifesto__line:first-child { color: var(--accent-text); font-weight: var(--heading-weight); }
+@container (min-width: 40rem) {
+	@supports (-webkit-text-stroke: 1px black) { .manifesto--outlined .manifesto__line--short:not(:first-child) { color: transparent; -webkit-text-stroke: max(1.5px, 0.03em) var(--ink); font-weight: var(--heading-weight); } }
+}

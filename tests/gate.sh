@@ -3,7 +3,7 @@
 set -euo pipefail
 case ${1:-} in
 -h|--help)
-	printf '%s\n' 'Usage: gate.sh WEBDRIVER_URL SITES_DIR' 'Render the sites first with SAMENESS_OUTPUT=SITES_DIR build/release/test-sameness (make gate does it all).' 'Opens every home page at 390 and 1440: text must reach WCAG AA contrast in the light and the dark' 'scheme, nothing may animate with reduced motion, no page may scroll sideways, and each home page' 'must stay within the page-weight budget. Writes gate.json and exits nonzero on any failure.'
+	printf '%s\n' 'Usage: gate.sh WEBDRIVER_URL SITES_DIR' 'Render the sites first with SAMENESS_OUTPUT=SITES_DIR build/release/test-sameness (make gate does it all).' 'Opens every home page at 390 and 1440: text must reach WCAG AA contrast in the light and the dark' 'scheme, stroke-only text must be three words or fewer and only on wide screens, nothing may' 'animate with reduced motion, no page may scroll sideways, and each home page must stay within the' 'page-weight budget. Writes gate.json and exits nonzero on any failure.'
 	exit 0 ;;
 --license) printf '%s\n' 'AGPL-3.0-or-later'; exit 0 ;;
 esac
@@ -62,13 +62,21 @@ const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) +
   for (let y = 0; y <= document.documentElement.scrollHeight; y += innerHeight / 2) { scrollTo(0, y); await new Promise(r => setTimeout(r, 60)); }
   scrollTo(0, 0);
   await new Promise(r => setTimeout(r, 300));
-  const low = []; let checked = 0, skipped = 0;
+  const low = [], stroked = []; let checked = 0, skipped = 0;
   for (const el of document.querySelectorAll("body *")) {
     if (![...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) continue;
     const style = getComputedStyle(el);
     if (style.visibility === "hidden" || style.display === "none" || el.closest("[aria-hidden='true'], .visually-hidden, dialog:not([open])")) continue;
     const box = el.getBoundingClientRect();
     if (box.width === 0 || box.height === 0) continue;
+    /* Stroke-only text reads only when it is short and the screen wide,
+     * whatever is behind it. */
+    const ink = parse(style.color);
+    if (ink && ink.length > 3 && ink[3] < 0.1 && parseFloat(style.webkitTextStrokeWidth || "0") > 0) {
+      const words = el.textContent.trim().split(/\s+/).length;
+      if (words > 3 || innerWidth < 640) stroked.push(`${el.tagName.toLowerCase()} "${el.textContent.trim().slice(0, 30)}"`);
+      skipped++; continue;
+    }
     let bg = null, over = false;
     for (let node = el; node; node = node.parentElement) {
       const s = getComputedStyle(node);
@@ -90,7 +98,7 @@ const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) +
      * CSS animation, or anything lasting 1ms or more, counts. */
     animations: document.getAnimations().filter(a => a instanceof CSSAnimation ||
       Number(a.effect.getComputedTiming().duration) >= 1).length,
-    checked, skipped, low: low.slice(0, 5), lowCount: low.length});
+    checked, skipped, low: low.slice(0, 5), lowCount: low.length, stroked});
 })();
 JS
 )
@@ -107,7 +115,7 @@ for scheme in 1 0; do
 			result=$(call POST "/session/$session/execute/async" "$(jq -nc --arg script "$measure" '{script:$script,args:[]}')" | jq -c --arg site "$site" --arg scheme "$name" '.value + {site:$site, scheme:$scheme}')
 			printf '%s\n' "$result"
 			results+=("$result")
-			jq -e --argjson width "$width" '.width == $width and .pageFits and .animations == 0 and .lowCount == 0 and .checked > 20' <<< "$result" >/dev/null || failed=1
+			jq -e --argjson width "$width" '.width == $width and .pageFits and .animations == 0 and .lowCount == 0 and (.stroked | length) == 0 and .checked > 20' <<< "$result" >/dev/null || failed=1
 		done
 	done
 	stop
@@ -127,6 +135,6 @@ weights=$(
 )
 printf '%s\n' "${results[@]}" | jq -s --argjson weights "$weights" --argjson raw "$weight_limit" --argjson gz "$gzip_limit" \
 	'{pages: ., weights: $weights, weight_limit: $raw, gzip_limit: $gz}' > "$output/gate.json"
-jq -r '"weight: largest home page \([.weights[].raw] | max) bytes (limit \(.weight_limit)), \([.weights[].gzip] | max) gzipped (limit \(.gzip_limit)); contrast: \([.pages[].checked] | add) text elements checked, \([.pages[].lowCount] | add) below AA, \([.pages[].skipped] | add) over pictures skipped; animations with reduced motion: \([.pages[].animations] | add); pages scrolling sideways: \([.pages[] | select(.pageFits | not)] | length)"' "$output/gate.json"
+jq -r '"weight: largest home page \([.weights[].raw] | max) bytes (limit \(.weight_limit)), \([.weights[].gzip] | max) gzipped (limit \(.gzip_limit)); contrast: \([.pages[].checked] | add) text elements checked, \([.pages[].lowCount] | add) below AA, \([.pages[].skipped] | add) over pictures or in outline skipped, \([.pages[].stroked[]] | length) in outline that is too long or on a phone; animations with reduced motion: \([.pages[].animations] | add); pages scrolling sideways: \([.pages[] | select(.pageFits | not)] | length)"' "$output/gate.json"
 jq -e '[.weights[] | select(.raw > $raw or .gzip > $gz)] | length == 0' --argjson raw "$weight_limit" --argjson gz "$gzip_limit" "$output/gate.json" >/dev/null || failed=1
 exit "$failed"

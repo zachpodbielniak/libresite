@@ -185,8 +185,11 @@ main > .block:first-child:not(.cover--full, .cover--split) img:is([src$=".jpg"],
 .look-lettering-smallcaps :is(.kicker, .site-nav a, th, .card__meta, .site-footer nav a) { font-variant-caps: all-small-caps; letter-spacing: 0.06em; }
 .look-lettering-gradient main h1 { background: linear-gradient(100deg, var(--ink) 30%, var(--accent-text)); -webkit-background-clip: text; background-clip: text; color: transparent; }
 @supports not ((background-clip: text) or (-webkit-background-clip: text)) { .look-lettering-gradient main h1 { color: var(--ink); background: none; } }
-.look-lettering-outline main h1 { color: transparent; -webkit-text-stroke: max(1px, 0.025em) var(--ink); }
-@supports not (-webkit-text-stroke: 1px black) { .look-lettering-outline main h1 { color: var(--ink); } }
+/* Outline lettering only on a main heading of three words or fewer, and only
+ * where the column is wide: a longer heading or a phone keeps it filled. */
+@container (min-width: 40rem) {
+	@supports (-webkit-text-stroke: 1px black) { .look-lettering-outline.h1-short main h1 { color: transparent; -webkit-text-stroke: max(1px, 0.025em) var(--ink); } }
+}
 
 /* Links in running text. */
 .look-links-thick main .prose a { text-decoration-color: var(--accent); text-decoration-thickness: 0.18em; text-underline-offset: 0.2em; }
@@ -273,8 +276,11 @@ body .split--contrast .split__panel:last-child { background: var(--accent); colo
 .look-emphasis-italic .em { font-style: italic; font-weight: calc(var(--heading-weight) - 100); letter-spacing: 0; }
 .look-emphasis-highlight .em { background: linear-gradient(transparent 55%, color-mix(in srgb, var(--accent) 45%, transparent) 55% 92%, transparent 92%); padding-inline: 0.06em; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
 .look-emphasis-underline .em { text-decoration: underline wavy var(--accent); text-decoration-thickness: 0.05em; text-underline-offset: 0.06em; text-decoration-skip-ink: none; }
-.look-emphasis-outline .em { color: transparent; -webkit-text-stroke: max(1px, 0.03em) currentColor; }
-@supports not (-webkit-text-stroke: 1px black) { .look-emphasis-outline .em { color: var(--accent-text); } }
+/* Outlined emphasis is filled on phones, where thin strokes break up. */
+.look-emphasis-outline .em { color: var(--accent-text); }
+@container (min-width: 40rem) {
+	@supports (-webkit-text-stroke: 1px black) { .look-emphasis-outline .em { color: transparent; -webkit-text-stroke: max(1px, 0.03em) currentColor; } }
+}
 .look-emphasis-block .em { display: inline-block; padding: 0 0.12em; background: var(--accent); color: var(--accent-ink); transform: rotate(-1.5deg); line-height: 1.05; margin-block: 0.06em; }
 
 /* Ornament between sections. */
