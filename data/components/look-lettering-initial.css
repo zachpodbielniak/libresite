@@ -1,0 +1,2 @@
+/* lettering/initial: the page headline opens on an oversized initial in the accent. */
+.look-lettering-initial main h1::first-letter { font-size: 1.32em; line-height: 0; color: var(--accent-text); }

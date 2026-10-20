@@ -1,0 +1,2 @@
+/* photos/cut: photos with two corners cut off on the diagonal, like a stamped metal plate. */
+.look-photos-cut main img:is([src$=".jpg"], [src$=".jpeg"], [src$=".png"], [src$=".webp"]):not(.cover img, .brand img) { --ls-cut: clamp(0.9rem, 4cqi, 2.25rem); border-radius: 0; clip-path: polygon(var(--ls-cut) 0, 100% 0, 100% calc(100% - var(--ls-cut)), calc(100% - var(--ls-cut)) 100%, 0 100%, 0 var(--ls-cut)); }

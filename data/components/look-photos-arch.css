@@ -1,0 +1,2 @@
+/* photos/arch: each photo shaped as an arch, rounded over the top and nearly square at the foot. */
+.look-photos-arch main img:is([src$=".jpg"], [src$=".jpeg"], [src$=".png"], [src$=".webp"]):not(.cover img, .brand img) { border-radius: 50% 50% 0.4rem 0.4rem / 34% 34% 0.4rem 0.4rem; }

@@ -1723,6 +1723,27 @@ wider:
       segmented: The main links on one rounded tinted track; the current page a raised segment.
       wavy: Italic links; the current page under a wavy accent line.
       arrow: An accent arrow leads the current page.
+    rhythm:
+      sheets: Every section a rounded paper sheet laid on a surface-coloured page.
+      stacked: Each section slides up over the one before with rounded top corners and a soft shadow.
+      fade: The page tone drifts from paper to surface and back, section by section, with no hard edge.
+      contrast: Every other section turns to ink, light and dark in turn.
+      spine: A thin rule runs down beside the column with an accent dot where each section starts.
+      ribbons: Every other section is a surface ribbon run in from one side and rounded at its end, the sides taking turns.
+      ledger: The column is ruled down both sides, with a double rule across it between sections.
+    photos:
+      matted: Each photo in a wide surface-coloured mat with a hairline edge, like a framed print.
+      arch: Each photo shaped as an arch, rounded over the top.
+      feather: Photos fade softly into the page along every edge.
+      cut: Photos with two corners cut off on the diagonal, like a stamped plate.
+      window: A fine light line drawn just inside each photo's edge, like a window mount.
+      stacked: Each photo sits on two offset sheets, like a small pile of prints.
+    lettering:
+      marker: A broad accent highlighter stroke under every line of the page headline.
+      shadow: The page headline casts a hard accent shadow, like a painted sign.
+      leadin: The first line of reading text opens in spaced small capitals.
+      initial: The page headline opens on an oversized initial in the accent.
+      twotone: The first line of the page headline in the accent, the rest in ink.
   kits:
     curtain:
       summary: The opening's words and picture are uncovered by wipes, section headings wipe in as they scroll into view, and cards draw an accent edge under the pointer.

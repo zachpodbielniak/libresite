@@ -293,5 +293,23 @@
     <file>components/kit-beacon.css</file>
     <file>components/kit-spring.css</file>
     <file>components/kit-wash.css</file>
+    <file>components/look-rhythm-sheets.css</file>
+    <file>components/look-rhythm-stacked.css</file>
+    <file>components/look-rhythm-fade.css</file>
+    <file>components/look-rhythm-contrast.css</file>
+    <file>components/look-rhythm-spine.css</file>
+    <file>components/look-rhythm-ribbons.css</file>
+    <file>components/look-rhythm-ledger.css</file>
+    <file>components/look-photos-matted.css</file>
+    <file>components/look-photos-arch.css</file>
+    <file>components/look-photos-feather.css</file>
+    <file>components/look-photos-cut.css</file>
+    <file>components/look-photos-window.css</file>
+    <file>components/look-photos-stacked.css</file>
+    <file>components/look-lettering-marker.css</file>
+    <file>components/look-lettering-shadow.css</file>
+    <file>components/look-lettering-leadin.css</file>
+    <file>components/look-lettering-initial.css</file>
+    <file>components/look-lettering-twotone.css</file>
   </gresource>
 </gresources>
