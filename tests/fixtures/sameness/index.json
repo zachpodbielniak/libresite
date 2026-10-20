@@ -1,0 +1,40 @@
+{
+  "path": "index.html",
+  "sections": [
+    {"component": "hero", "variant": "split", "content": {
+      "kicker": "Local {{trade}}",
+      "heading": "Dependable {{trade}} for your home",
+      "lede": "{{name}} handles {{s1}}, {{s2}} and {{s3}} with clear estimates and tidy work.",
+      "actions": [{"href": "contact.html", "label": "Get a free estimate"}, {"href": "services.html", "label": "Our services"}],
+      "art": {"src": "assets/hero.svg", "alt": "An illustration of {{trade}} work at a house"}
+    }},
+    {"component": "services", "variant": "grid", "id": "services", "content": {
+      "heading": "What we do",
+      "items": [
+        {"name": "{{s1}}", "summary": "Careful {{s1}} with the work explained before we start."},
+        {"name": "{{s2}}", "summary": "{{s2}} done neatly, with the area left clean."},
+        {"name": "{{s3}}", "summary": "{{s3}} planned around your home and your schedule."}
+      ]
+    }},
+    {"component": "steps", "variant": "row", "id": "how", "content": {
+      "heading": "How it works",
+      "items": [
+        {"title": "Tell us about the job", "body": "Describe what you need."},
+        {"title": "Get a written estimate", "body": "We explain the work and the price before we begin."},
+        {"title": "We do the work", "body": "We arrive on time and leave the place tidy."}
+      ]
+    }},
+    {"component": "faq", "variant": "list", "id": "questions", "content": {
+      "heading": "Common questions",
+      "items": [
+        {"question": "Do you give estimates?", "answer": "Yes. Every job starts with a written estimate."},
+        {"question": "Will you clean up afterwards?", "answer": "Yes. We leave the work area as we found it."}
+      ]
+    }},
+    {"component": "cta", "variant": "band", "content": {
+      "heading": "Ready to get started?",
+      "body": "Tell us about your {{trade}} job.",
+      "actions": [{"href": "contact.html", "label": "Get a free estimate"}]
+    }}
+  ]
+}

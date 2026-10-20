@@ -20,7 +20,7 @@ PUBLIC_HEADERS = $(wildcard src/*.h src/core/*.h src/interfaces/*.h src/model/*.
 UNIT_TESTS = $(patsubst tests/%.c,%,$(wildcard tests/test-*.c))
 UNIT_BINS = $(addprefix $(OUTDIR)/,$(UNIT_TESTS))
 include rules.mk
-.PHONY: all tests test stack-tests clean install help bundled-deps
+.PHONY: all tests test stack-tests sameness clean install help bundled-deps
 all: $(CLI) $(LIB_SHARED) $(OUTDIR)/libresite-1.0.pc
 $(LIB_STATIC): $(LIB_OBJECTS)
 	$(AR) rcs $@ $^
@@ -41,6 +41,13 @@ tests test: all $(UNIT_BINS)
 	bash tests/usage.sh $(CLI)
 	bash tests/scaffold.sh $(CLI)
 	bash tests/qa.sh $(CLI)
+# The variety gate: ten home-services briefs must not come out alike
+# (docs/components.org, "Measuring sameness"). With WEBDRIVER_URL the home
+# pages are also screenshotted and compared at 390 and 1440.
+sameness: all $(OUTDIR)/test-sameness
+	rm -rf $(OUTDIR)/sameness
+	SAMENESS_GATE=1 SAMENESS_OUTPUT=$(CURDIR)/$(OUTDIR)/sameness G_DEBUG=fatal-warnings $(OUTDIR)/test-sameness
+	if [ -n "$(WEBDRIVER_URL)" ]; then bash tests/sameness.sh "$(WEBDRIVER_URL)" $(OUTDIR)/sameness; fi
 # Optional probes compile against pinned generation libraries without making
 # database/client development packages mandatory for the builder itself.
 stack-tests:
@@ -69,5 +76,5 @@ bundled-deps:
 clean:
 	$(RM) -r $(OUTDIR)
 help:
-	@printf '%s\n' 'make [DEBUG=1] [ASAN=1] [UBSAN=1] [DEPS=bundled]' 'make tests | stack-tests | install DESTDIR=... PREFIX=... | clean'
+	@printf '%s\n' 'make [DEBUG=1] [ASAN=1] [UBSAN=1] [DEPS=bundled]' 'make tests | stack-tests | sameness [WEBDRIVER_URL=...] | install DESTDIR=... PREFIX=... | clean'
 endif
