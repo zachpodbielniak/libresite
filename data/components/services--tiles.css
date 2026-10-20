@@ -1,0 +1,8 @@
+/* services/tiles: solid tiles that alternate between the surface and the
+ * ink, the name set large and the summary below. */
+.services--tiles .services__list { gap: var(--space-3); }
+@container (min-width: 44rem) { .services--tiles .services__list { grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(15rem * var(--grid-scale, 1))), 1fr)); } }
+.services--tiles .services__item { padding: var(--space-6) var(--space-5); background: var(--surface); color: var(--ink); border-radius: max(var(--radius), 0.5rem); }
+.services--tiles .services__item:nth-child(even) { background: var(--ink); color: var(--paper); }
+.services--tiles .services__item:nth-child(even) :is(.services__price, .services__duration, a) { color: inherit; }
+.services--tiles .services__name { font-size: var(--step-3); line-height: 1.05; }

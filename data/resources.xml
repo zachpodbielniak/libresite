@@ -10,6 +10,20 @@
     <file>components/article.html</file>
     <file>components/base.css</file>
     <file>components/look.css</file>
+    <file>components/services--ledger.css</file>
+    <file>components/services--tiles.css</file>
+    <file>components/voices--stack.css</file>
+    <file>components/voices--ribbon.css</file>
+    <file>components/steps--path.css</file>
+    <file>components/steps--chapters.css</file>
+    <file>components/faq--chat.css</file>
+    <file>components/faq--index.css</file>
+    <file>components/cta--stripe.css</file>
+    <file>components/cta--note.css</file>
+    <file>components/contact-card--ticket.css</file>
+    <file>components/contact-card--postcard.css</file>
+    <file>components/gallery--polaroid.css</file>
+    <file>components/gallery--filmstrip.css</file>
     <file>components/kit-cascade.css</file>
     <file>components/kit-parallax.css</file>
     <file>components/kit-aurora.css</file>

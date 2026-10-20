@@ -1,0 +1,6 @@
+/* cta/note: the call is a pinned note, slightly turned, with a strip of
+ * tape across its top. */
+.cta--note .cta__inner { position: relative; max-width: 40rem; padding: var(--space-7) var(--space-6) var(--space-6); background: var(--surface); box-shadow: 0 0.8rem 1.6rem -1rem color-mix(in srgb, var(--ink) 45%, transparent); transform: rotate(-1deg); }
+.cta--note .cta__inner::before { content: ""; position: absolute; top: -0.7rem; left: 50%; width: 6rem; height: 1.4rem; transform: translateX(-50%) rotate(2deg); background: color-mix(in srgb, var(--accent) 45%, transparent); }
+.cta--note .cta__title { font-size: var(--step-3); }
+.block.cta--note { overflow-x: clip; }

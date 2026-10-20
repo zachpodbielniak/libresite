@@ -1,0 +1,4 @@
+/* cta/stripe: the call sits in a box framed by diagonal accent stripes. */
+.cta--stripe .cta__inner { position: relative; padding: var(--space-7) var(--space-6); background: var(--paper); border: var(--border) solid var(--line); }
+.cta--stripe .cta__inner::before { content: ""; position: absolute; inset: calc(-1 * var(--space-3)); z-index: -1; background: repeating-linear-gradient(-45deg, var(--accent) 0 0.6rem, transparent 0.6rem 1.2rem); }
+.block.cta--stripe { isolation: isolate; }
