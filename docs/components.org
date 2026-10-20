@@ -595,3 +595,36 @@ Score on 2026-10-20, before the variety work:
 | library fingerprint similarity, for comparison | 0.890 | |
 
 What the builder already deals (frame, header, rhythm, footer, motion, the structure genes and component variants) moves the look and the mix; nothing else differs, because the opening, the home section order, the palette and the type all come from the model. Side by side the ten home pages are one page with the names changed: the same split hero and house drawing, the same services, steps, questions and closing band. The fixture site is evidence for what the builder guarantees, not for what a live model would choose.
+
+* The seed decides
+
+Suggestions were not enough: a model given a dealt look, palette, type and opening still answers with its favourite, so ten businesses got one site. The builder now applies the seeded design itself and the model writes the words and art inside it. This supersedes the parts of [[*Look and overrides][look and overrides]], [[*Identities][identities]] and the opening rotation above that say the plan may keep or change a suggestion.
+
+- The plan step calls =ls_components_apply_seed()= on every answer, with the same seed and sector as before (so =site.avoid= re-dealing still applies). It runs =ls_components_apply_structure()=, then, without a theme, sets every look axis to =ls_components_suggest_look()= except the retired flourishes (still plain for the signature layer), the seven colour tokens to the dealt palette and, when the plan names web fonts, the font and heading tokens and =fonts= to the dealt type pairing. A plan with no web fonts (an order that forbids remote fonts) keeps its own installed stacks. A theme keeps its whole design, as before.
+- The home opening is part of the structure: =ls_components_deal_structure()= adds =structure.opening= (component/variant, the same deal as =suggested_opening=), and plan checks accept only a dealable opening there. When the home page's answer arrives, =ls_components_apply_opening()= rewrites its opening section (a hero, cover, poster or manifesto) as that component and variant, carrying the kicker, heading, lede, actions and picture; a manifesto states the lede sentence by sentence. A cover or split hero without a picture borrows the plan's first artwork other than the mark. If the dealt opening cannot hold the words (a heading too long for a poster, one sentence for a manifesto, no artwork at all), or would hide the writer's picture (a minimal hero, a type or stamped poster, a manifesto), the next opening in catalog order that can is used, and every candidate must pass the page check. A custom opening, a home page that does not start with an opening component, and plans without =structure.opening= are left alone.
+- The prompts say so: the plan copies =suggested_look=, the palette and type as given, and the home writer opens with =structure.opening=.
+- So the house default can no longer reach a site through its colours: a plan that falls back on cream and rust costs no retry, because its colours are replaced. =ls_components_check_identity()= still guards plans without web fonts.
+- Link previews take the page's first picture whatever its attribute order, so a poster's photograph (whose image tag carries a class first) is used as the preview again.
+
+=tests/test-seed.c= checks that every non-flourish axis is the seed's, that the same seed gives byte-identical plans, that colours and type follow the identity (and stacks stay without web fonts), that themes are kept, that all fifteen dealable openings are reachable from one writer's answer with its words and pass the page check, the fallbacks, and that the ten sameness briefs get ten different skeletons.
+
+** Sameness after the seed decides
+
+The screenshot half of [[*Measuring sameness][measuring sameness]] was misread at first: this ImageMagick reports its NCC metric as a distance (0 for the same image), so the screen numbers recorded there were dissimilarity, not likeness. =tests/sameness.sh= now uses structural similarity (SSIM) on the 64 by 256 grey grids, works out from one shape compared with itself whether the installed ImageMagick reports SSIM or its distance, and fails over 0.2 for the screens at either width. The scores below are both measured that way on 2026-10-20, before on the child 1 code and after on this change.
+
+| Measure | Before | After | Limit |
+|---------+--------+-------+-------|
+| structural mean | 0.842 | 0.447 | 0.35 |
+| structural worst pair | 0.873 | 0.751 (plumbing and cleaning) | 0.55 |
+| look | 0.70 | 0.25 | |
+| order | 1.00 | 0.82 | |
+| mix | 0.59 | 0.46 | |
+| palette | 1.00 | 0.40 | |
+| type | 1.00 | 0.31 | |
+| screens at 390 | 0.250 | 0.142 | 0.2 |
+| screens at 1440 | 0.436 | 0.249 | 0.2 |
+| overall mean | 0.767 | 0.409 | 0.35 |
+| overall worst pair | 0.801 | 0.686 | |
+| library fingerprint similarity | 0.890 | 0.389 | |
+
+What is left: the home sections after the opening still come in the model's order (order 0.82), and the trades sector has only a few palettes and type pairings, so two of the ten can still share both (the worst pair). Those are the next children's: home compositions and section order, then the type and colour range.
