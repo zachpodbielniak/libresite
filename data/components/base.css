@@ -114,7 +114,8 @@ main :is(.wrap, [class$="__list"], [class*="__list "], [class$="__grid"], [class
 .button:hover { background: var(--ink); border-color: var(--ink); color: var(--paper); }
 .button--ghost { background: transparent; color: var(--ink); border-color: var(--ink); }
 .button--ghost:hover { background: var(--ink); color: var(--paper); }
-.button--small { min-height: 40px; padding: 0.45em 0.95em; font-size: var(--step--1); }
+/* Small buttons stay a full tap target. */
+.button--small { min-height: 44px; padding: 0.45em 0.95em; font-size: var(--step--1); }
 .button[disabled] { opacity: 0.55; cursor: not-allowed; }
 
 /* Header. Navigation is visible by default; site.js only adds a menu
@@ -133,7 +134,7 @@ main :is(.wrap, [class$="__list"], [class*="__list "], [class$="__grid"], [class
 .site-nav { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2) var(--space-5); }
 .site-nav ul { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); margin: 0; padding: 0; list-style: none; }
 .site-nav a:not(.button) {
-	display: inline-flex; align-items: center; min-height: 44px;
+	display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 44px;
 	font-family: var(--font-display); font-weight: 500; text-decoration: none;
 	border-bottom: 2px solid transparent;
 }

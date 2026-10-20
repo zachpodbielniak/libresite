@@ -9,8 +9,8 @@
 .product__options div { display: grid; grid-template-columns: 8rem minmax(0, 1fr); gap: var(--space-3); }
 .product__options dt { font-weight: 600; }
 .product__options dd { margin: 0; }
-.product__note { margin-top: var(--space-4); font-size: var(--step--1); }
-.product__specs { width: 100%; margin-top: var(--space-5); border-collapse: collapse; font-size: var(--step--1); }
+.product__note { margin-top: var(--space-4); font-size: max(1rem, var(--step--1)); }
+.product__specs { width: 100%; margin-top: var(--space-5); border-collapse: collapse; font-size: max(1rem, var(--step--1)); }
 .product__specs th, .product__specs td { padding: var(--space-2) 0; border-top: var(--border) solid var(--line); text-align: left; vertical-align: top; }
 .product__specs th { width: 40%; padding-right: var(--space-4); font-weight: 600; }
 @container (min-width: 56rem) {

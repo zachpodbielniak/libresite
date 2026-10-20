@@ -756,10 +756,13 @@ accept_job(Job *job, LsComponents *components, JsonNode *plan, GError **error){
 	if (node == NULL)
 		return FALSE;
 	if (job->kind == JOB_PAGE) {
-		/* The home page opens with the dealt opening, in the writer's words,
-		 * and its sections follow the dealt composition's order. */
+		/* Sections take the site's dealt forms; the home page opens with
+		 * the dealt opening, gains its extras and follows the dealt
+		 * composition's order, all in the writer's own words. */
+		ls_components_apply_forms(components, plan, job->path, node);
 		if (is_home_route(plan, job->path)) {
 			ls_components_apply_opening(components, plan, job->path, node);
+			ls_components_apply_extras(components, plan, node);
 			ls_components_apply_composition(components, plan, node);
 		}
 		if (!ls_components_check_page(components, plan, job->path, node, error))

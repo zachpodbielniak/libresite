@@ -177,7 +177,7 @@ looks:
       steps: A stepped edge.
   lettering:
     summary: Typographic flourishes.
-    plain: 50
+    plain: 20
     values:
       plain: None.
       dropcap: A large drop cap opens the first paragraph of reading text.
@@ -194,7 +194,7 @@ looks:
       dotted: A dotted underline.
   scheme:
     summary: Light and dark.
-    plain: 70
+    plain: 50
     values:
       fixed: One scheme, as designed.
       auto: Follows the visitor's device, with a matching dark or light version built from the tokens.
@@ -1427,23 +1427,23 @@ compositions:
   layouts:
     split:
       summary: Split hero. Words beside a picture, then an even run of sections.
-      openings: [hero/split, cover/split, hero/overlap]
+      openings: [hero/split, cover/split, hero/overlap, hero/banner]
       order: [offer, process, proof, story, practical]
     full-bleed:
-      summary: Full-bleed. The opening picture runs edge to edge and sections alternate in bands across the whole width.
-      openings: [cover/full, hero/banner, poster/backdrop]
-      look: {frame: wide, rhythm: bands}
+      summary: Full-bleed. The opening picture runs edge to edge and sections run across the whole width.
+      openings: [cover/full, hero/banner, poster/backdrop, cover/framed]
+      look: {frame: wide}
       order: [story, practical, offer, proof, process]
       css: true
     editorial:
       summary: Editorial column. One narrow reading column under a typographic opening, like a magazine page.
       openings: [poster/type, hero/statement, hero/minimal, manifesto/stacked]
-      look: {frame: center, align: left, headpos: top}
+      look: {frame: center}
       order: [story, process, offer, proof, practical]
       css: true
     bento:
       summary: Bento grid. After the opening, sections sit side by side as tiles of a grid on wide screens.
-      openings: [hero/centered, hero/split, cover/framed]
+      openings: [hero/centered, hero/split, cover/framed, hero/overlap]
       look: {headpos: top}
       order: [offer, proof, practical, story, process]
       avoid: [center]
@@ -1462,13 +1462,13 @@ compositions:
       sidebar: true
     stacked-cards:
       summary: Stacked cards. Each section after the opening is its own card, stacked down the page.
-      openings: [hero/centered, cover/framed, manifesto/numbered]
+      openings: [hero/centered, cover/framed, manifesto/numbered, hero/statement]
       order: [offer, practical, process, proof, story]
       avoid: [center]
       css: true
     zigzag:
       summary: Zigzag. Sections step from one side to the other down the page.
-      openings: [hero/overlap, cover/split, hero/banner, manifesto/outlined]
+      openings: [hero/overlap, cover/split, hero/banner, manifesto/outlined, cover/full]
       look: {headpos: top}
       order: [process, story, offer, proof, practical]
       avoid: [center]
@@ -1508,8 +1508,8 @@ motion_kits:
 # wheel and an accent hue at one of the harmony offsets in degrees, built
 # in OKLCH and adjusted until every text pair reaches WCAG AA.
 palette_generator:
-  share: 70
-  modes: {light: 50, dark: 25, tinted: 25}
+  share: 80
+  modes: {light: 28, dark: 16, tinted: 24, vivid: 16, deep: 16}
   harmonies: {complementary: 180, split-warm: 150, split-cool: 210, triadic: 120, analogous: 35}
 # Extra component variants (docs/components.org, "Component variants").
 # Each joins its component's variants at load, so plans may name it and the
@@ -1545,23 +1545,23 @@ art_directions:
   directions:
     duotone:
       summary: Drawn artwork shown in two tones, the accent for its darks and white for its lights.
-      look: {art: [flat, woodcut], images: [plain]}
+      look: {art: [flat, woodcut, neon], images: [plain, rounded, shadow]}
       brief: The site shows every artwork in two tones, the accent for darks and white for lights. Draw a few large shapes with strong light and dark contrast so it reads well in two colours; avoid fine detail and gradients.
     cutout:
       summary: Drawn artwork cut into arches, slants and rounded shapes over an accent block.
-      look: {art: [cutpaper, flat], images: [plain]}
+      look: {art: [cutpaper, flat], images: [plain, shadow, blob]}
       brief: The site cuts each artwork into an arch, a slant or a rounded shape. Keep the subject centred with generous margin so the cut never crops it, and fill the whole canvas with background colour.
     framed:
       summary: Drawn artwork hung in frames with a mat, like prints on a wall.
-      look: {art: [woodcut, line, open], images: [framed]}
+      look: {art: [woodcut, line, open, blueprint], images: [framed, print]}
       brief: The site hangs each artwork in a frame with a mat. Compose it as a finished print, centred, with an even border of open space inside the edge.
     collage:
       summary: Drawn artwork pinned up like a collage, turned, taped and layered over scraps.
-      look: {art: [cutpaper, open], images: [taped]}
+      look: {art: [cutpaper, open, flat], images: [taped, print, tilt]}
       brief: The site pins each artwork up like a collage, turned and taped over a paper scrap. Draw separate layered pieces with a cut-paper feel and visible edges.
     lineart:
       summary: Drawn artwork as line drawings inside a fine offset outline with corner marks.
-      look: {art: [line, blueprint], images: [plain]}
+      look: {art: [line, blueprint], images: [plain, rounded, framed]}
       brief: The site shows each artwork as a line drawing inside a fine outline. Use single-weight lines on an open background, with at most one accent fill.
 # Content angles (docs/components.org, "Content angles"). The builder deals
 # each unthemed or themed site one headline angle for its home page and one
@@ -1586,3 +1586,75 @@ content_angles:
     pattern: A repeating pattern built from the trade's own shapes.
     setting: The setting at a time of day, such as a yard at dusk or a room in morning light.
     diagram: A clear cutaway or diagram of how the system works.
+# Section forms and extras (docs/components.org, "Section forms and
+# extras"). Each site is dealt one form per family; a section of that
+# family takes the form, its heading, intro and items carried over by the
+# field names below (title and body, in the slot named by list, items by
+# default; link where both have it). The close family is a page's last
+# section, a closing call (call: true): its heading, words and links move
+# between a call to action, a statement and a list of links. extras are
+# home sections the builder builds only from the site's own words; share
+# percent of sites get one, picked from the list.
+section_forms:
+  families:
+    offer: [services, cards, bento, entries, big-list]
+    process: [steps, features, tabs, columns]
+    practical: [faq, details, glossary]
+    close: [cta, statement, links]
+  fields:
+    services: {title: name, body: summary}
+    cards: {title: title, body: body}
+    bento: {list: tiles, title: title, body: body}
+    big-list: {title: title, body: meta}
+    features: {title: title, body: body}
+    entries: {title: title, body: summary}
+    steps: {title: title, body: body}
+    tabs: {title: label, body: body}
+    columns: {title: heading, body: body}
+    faq: {title: question, body: answer}
+    details: {title: title, body: body}
+    glossary: {title: term, body: definition}
+    cta: {call: true}
+    statement: {call: true}
+    links: {call: true}
+  extras: [marquee, statement, links, big-list]
+  share: 90
+# Extra look values (docs/components.org, "Section forms and extras"). Each
+# joins its axis at load and is dealt like the others; its styles are
+# look-AXIS-VALUE.css, added only to sites that wear it.
+extra_looks:
+  align:
+    right: Headings and intros set to the right where the column has room.
+    stagger: Every other section sets its heading and intro to the right where the column has room.
+  nav:
+    boxed: Each link in a hairline box, the current page filled.
+    dots: A small accent dot between links.
+    bold: Heavy, slightly larger links.
+    bar: An accent bar over the current page.
+  footer:
+    accent: The footer painted in the accent.
+    centered: Everything in the footer in one centred column.
+    ruled: A heavy rule over the footer and its name set large.
+  rhythm:
+    airy: Sections stand apart with extra air between them.
+  heads:
+    underline: Section headings underlined in the accent.
+    dash: A short accent dash leads each section heading.
+    boxed: Section headings set in a block of ink.
+  buttons:
+    soft: Tinted, rounded buttons with accent text.
+    block: Square, heavy, spaced capitals.
+    arrow: A trailing arrow on every button.
+  panels:
+    paper: Soft paper cards with a hairline edge and a low shadow.
+    stack: Cards with two offset layers behind them.
+    dashed: Cards drawn with a dashed edge.
+  header:
+    underlined: A thick accent rule under the header.
+    roomy: A taller header with a larger name.
+  lettering:
+    wide: The page headline in widely spaced capitals.
+    italic: The page headline set in italic.
+  images:
+    blob: Pictures in a soft organic shape.
+    tilt: Pictures turned slightly, one way then the other.

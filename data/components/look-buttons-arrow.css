@@ -1,0 +1,3 @@
+/* buttons/arrow: a trailing arrow on every button, silent to screen readers. */
+.look-buttons-arrow .button { gap: 0.6em; }
+.look-buttons-arrow .button::after { content: "\2192" / ""; }

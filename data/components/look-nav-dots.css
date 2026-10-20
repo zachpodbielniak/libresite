@@ -1,0 +1,3 @@
+/* nav/dots: a small accent dot between links. */
+.look-nav-dots .site-nav li { display: inline-flex; align-items: center; }
+.look-nav-dots .site-nav li + li::before { content: "\2022" / ""; margin-right: var(--space-3); color: var(--accent-text); }

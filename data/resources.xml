@@ -10,6 +10,31 @@
     <file>components/article.html</file>
     <file>components/base.css</file>
     <file>components/look.css</file>
+    <file>components/look-lettering-wide.css</file>
+    <file>components/look-lettering-italic.css</file>
+    <file>components/look-images-blob.css</file>
+    <file>components/look-images-tilt.css</file>
+    <file>components/look-align-right.css</file>
+    <file>components/look-align-stagger.css</file>
+    <file>components/look-buttons-arrow.css</file>
+    <file>components/look-buttons-block.css</file>
+    <file>components/look-buttons-soft.css</file>
+    <file>components/look-footer-accent.css</file>
+    <file>components/look-footer-centered.css</file>
+    <file>components/look-footer-ruled.css</file>
+    <file>components/look-header-roomy.css</file>
+    <file>components/look-header-underlined.css</file>
+    <file>components/look-heads-boxed.css</file>
+    <file>components/look-heads-dash.css</file>
+    <file>components/look-heads-underline.css</file>
+    <file>components/look-nav-bar.css</file>
+    <file>components/look-nav-bold.css</file>
+    <file>components/look-nav-boxed.css</file>
+    <file>components/look-nav-dots.css</file>
+    <file>components/look-panels-dashed.css</file>
+    <file>components/look-panels-paper.css</file>
+    <file>components/look-panels-stack.css</file>
+    <file>components/look-rhythm-airy.css</file>
     <file>components/art-duotone.css</file>
     <file>components/art-cutout.css</file>
     <file>components/art-framed.css</file>

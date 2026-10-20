@@ -1,0 +1,2 @@
+/* heads/underline: section headings underlined in the accent. */
+.look-heads-underline main h2[id$="-h"] { text-decoration: underline; text-decoration-color: var(--accent); text-decoration-thickness: 0.1em; text-underline-offset: 0.18em; text-decoration-skip-ink: auto; }

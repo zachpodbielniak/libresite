@@ -11,10 +11,13 @@
 
 #define FIXTURE "tests/fixtures/sameness/"
 
-/* The gate: the ten sites may share at most this much on average, and no
- * two may come out this alike or more. */
-#define SAMENESS_MEAN_LIMIT 0.35
-#define SAMENESS_PAIR_LIMIT 0.55
+/* The gate: the ten sites may share at most this much on average, no two
+ * may come out more alike than the pair limit, and the home section order
+ * and the component mix may each average at most their own limit. */
+#define SAMENESS_MEAN_LIMIT 0.20
+#define SAMENESS_PAIR_LIMIT 0.35
+#define SAMENESS_ORDER_LIMIT 0.35
+#define SAMENESS_MIX_LIMIT 0.35
 
 static const gchar *const routes[] = {"index.html", "services.html", "contact.html"};
 
@@ -222,7 +225,8 @@ build_site(JsonObject *brief, const gchar *output){
 	provider->brief = brief;
 	g_assert_true(run_step(LS_TYPE_PLAN_STEP, recipe, 0, prompts, context, LS_PROVIDER(provider), &error));
 	g_assert_no_error(error);
-	g_assert_true(run_step(LS_TYPE_PAGES_STEP, recipe, 1, prompts, context, LS_PROVIDER(provider), &error));
+	if (!run_step(LS_TYPE_PAGES_STEP, recipe, 1, prompts, context, LS_PROVIDER(provider), &error))
+		g_error("%s", error->message);
 	g_assert_no_error(error);
 	site->slug = g_strdup(json_object_get_string_member(brief, "slug"));
 	site->plan = ls_json_parse(text_of(context, "site/plan.json"), &error);
@@ -486,6 +490,8 @@ test_briefs(void){
 	json_object_set_double_member(report, "fingerprint_similarity", library / count);
 	json_object_set_double_member(report, "mean_limit", SAMENESS_MEAN_LIMIT);
 	json_object_set_double_member(report, "pair_limit", SAMENESS_PAIR_LIMIT);
+	json_object_set_double_member(report, "order_limit", SAMENESS_ORDER_LIMIT);
+	json_object_set_double_member(report, "mix_limit", SAMENESS_MIX_LIMIT);
 	json_object_set_object_member(report, "parts", means);
 	json_object_set_array_member(report, "pairs", pairs);
 	g_test_message("sameness %.3f (limit %.2f), worst pair %.3f %s/%s (limit %.2f); look %.2f order %.2f "
@@ -502,10 +508,12 @@ test_briefs(void){
 		g_assert_true(g_file_set_contents(path, text, -1, &error));
 		g_assert_no_error(error);
 	}
-	if (total / count <= SAMENESS_MEAN_LIMIT && worst < SAMENESS_PAIR_LIMIT)
+	if (total / count <= SAMENESS_MEAN_LIMIT && worst <= SAMENESS_PAIR_LIMIT &&
+		sums[1] / count <= SAMENESS_ORDER_LIMIT && sums[2] / count <= SAMENESS_MIX_LIMIT)
 		return;
-	g_test_fail_printf("ten different businesses are too alike: sameness %.3f (limit %.2f), "
-		"worst pair %.3f (limit %.2f)", total / count, SAMENESS_MEAN_LIMIT, worst, SAMENESS_PAIR_LIMIT);
+	g_test_fail_printf("ten different businesses are too alike: sameness %.3f (limit %.2f), worst pair %.3f "
+		"(limit %.2f), order %.3f (limit %.2f), mix %.3f (limit %.2f)", total / count, SAMENESS_MEAN_LIMIT, worst,
+		SAMENESS_PAIR_LIMIT, sums[1] / count, SAMENESS_ORDER_LIMIT, sums[2] / count, SAMENESS_MIX_LIMIT);
 }
 
 int

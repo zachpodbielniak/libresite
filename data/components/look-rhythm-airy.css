@@ -1,0 +1,2 @@
+/* rhythm/airy: sections stand apart with extra air between them. */
+.look-rhythm-airy main > .block + .block { margin-top: calc(var(--section-space) * 0.6); }

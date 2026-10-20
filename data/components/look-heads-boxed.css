@@ -1,0 +1,3 @@
+/* heads/boxed: section headings set in a block of ink. */
+.look-heads-boxed main h2[id$="-h"] { display: inline-block; max-width: 100%; padding: 0.08em 0.35em 0.12em; background: var(--ink); color: var(--paper); }
+.look-heads-boxed main h2[id$="-h"] .em { color: inherit; }

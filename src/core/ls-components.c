@@ -37,6 +37,7 @@ struct _LsComponents {
 	JsonObject *directions;	/* art direction name -> direction; NULL without */
 	JsonObject *headlines;	/* headline angle name -> description; NULL without */
 	JsonObject *subjects;	/* art subject name -> description; NULL without */
+	JsonObject *forms;	/* section_forms block; NULL without */
 	JsonNode *network_catalog;
 	JsonObject *networks;	/* social network -> {label, hosts, path}; NULL without networks.yaml */
 	GPtrArray *order;
@@ -1192,7 +1193,7 @@ motion_kit(LsComponents *self, const gchar *name){
 static gboolean
 load_generator(LsComponents *self, JsonObject *root, GError **error){
 	JsonObject *block = member_object(root, "palette_generator");
-	const gchar *known_modes = "|light|dark|tinted|";
+	const gchar *known_modes = "|light|dark|tinted|vivid|deep|";
 	JsonObject *groups[2];
 	guint g;
 	if (!json_object_has_member(root, "palette_generator"))
@@ -1204,7 +1205,7 @@ load_generator(LsComponents *self, JsonObject *root, GError **error){
 		member_object(block, "modes") == NULL || !ls_object_keys(member_object(block, "modes"), known_modes, NULL) ||
 		json_object_get_size(member_object(block, "modes")) == 0 || member_object(block, "harmonies") == NULL ||
 		json_object_get_size(member_object(block, "harmonies")) == 0)
-		return catalog_invalid(error, "palette_generator", "needs share (0 to 100), modes (light, dark, tinted) and harmonies"), FALSE;
+		return catalog_invalid(error, "palette_generator", "needs share (0 to 100), modes (light, dark, tinted, vivid, deep) and harmonies"), FALSE;
 	groups[0] = member_object(block, "modes");
 	groups[1] = member_object(block, "harmonies");
 	for (g = 0; g < 2; g++) {
@@ -1314,6 +1315,61 @@ load_angles(LsComponents *self, JsonObject *root, GError **error){
 	return TRUE;
 }
 
+static gboolean json_list_has(JsonArray *list, const gchar *name);
+
+/* ---- Section forms and extras ------------------------------------------------ */
+
+/* section_forms: {families, fields, extras, share}, optional so archived
+ * libraries load. Families are disjoint lists of components that carry
+ * items; fields name each one's title and body fields. */
+static gboolean
+load_forms(LsComponents *self, JsonObject *root, GError **error){
+	JsonObject *block = member_object(root, "section_forms");
+	g_autoptr(GHashTable) seen = g_hash_table_new(g_str_hash, g_str_equal);
+	g_autoptr(GList) names = NULL;
+	GList *name;
+	JsonArray *extras;
+	guint i;
+	if (!json_object_has_member(root, "section_forms"))
+		return TRUE;
+	if (block == NULL || !ls_object_keys(block, "|families|fields|extras|share|", NULL) ||
+		member_object(block, "families") == NULL || member_object(block, "fields") == NULL)
+		return catalog_invalid(error, "section_forms", "needs families and fields"), FALSE;
+	names = json_object_get_members(member_object(block, "families"));
+	for (name = names; name != NULL; name = name->next) {
+		JsonArray *forms = member_array(member_object(block, "families"), name->data);
+		if (forms == NULL || json_array_get_length(forms) < 2)
+			return catalog_invalid(error, name->data, "a form family lists at least two components"), FALSE;
+		for (i = 0; i < json_array_get_length(forms); i++) {
+			const gchar *form = json_array_get_string_element(forms, i);
+			JsonObject *fields = member_object(member_object(block, "fields"), form);
+			JsonObject *slots = member_object(member_object(self->components, form), "slots");
+			const gchar *list = fields != NULL && ls_string(fields, "list") != NULL ? ls_string(fields, "list") : "items";
+			JsonObject *item = member_object(member_object(slots, list), "fields");
+			/* Closing calls carry a heading, words and links, not items. */
+			if (fields != NULL && json_object_has_member(fields, "call")) {
+				if (!g_hash_table_add(seen, (gpointer)form) || (g_strcmp0(form, "cta") != 0 && g_strcmp0(form, "statement") != 0 &&
+					g_strcmp0(form, "links") != 0))
+					return catalog_invalid(error, name->data, "closing calls are cta, statement and links"), FALSE;
+				continue;
+			}
+			if (form == NULL || !g_hash_table_add(seen, (gpointer)form) || fields == NULL || item == NULL ||
+				!json_object_has_member(item, ls_string(fields, "title") != NULL ? ls_string(fields, "title") : "") ||
+				!json_object_has_member(item, ls_string(fields, "body") != NULL ? ls_string(fields, "body") : ""))
+				return catalog_invalid(error, name->data, "form families are disjoint components whose items have the named title and body fields"), FALSE;
+		}
+	}
+	extras = member_array(block, "extras");
+	for (i = 0; extras != NULL && i < json_array_get_length(extras); i++) {
+		const gchar *extra = json_array_get_string_element(extras, i);
+		if (g_strcmp0(extra, "marquee") != 0 && g_strcmp0(extra, "statement") != 0 && g_strcmp0(extra, "links") != 0 &&
+			g_strcmp0(extra, "big-list") != 0)
+			return catalog_invalid(error, "section_forms", "extras are marquee, statement, links and big-list"), FALSE;
+	}
+	self->forms = block;
+	return TRUE;
+}
+
 LsComponents *
 ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 	g_autoptr(LsComponents) self = g_object_new(LS_TYPE_COMPONENTS, NULL);
@@ -1333,7 +1389,7 @@ ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 	if (self->catalog == NULL)
 		return NULL;
 	root = JSON_NODE_HOLDS_OBJECT(self->catalog) ? json_node_get_object(self->catalog) : NULL;
-	if (root == NULL || !ls_object_keys(root, "|version|looks|kinds|components|compositions|motion_kits|palette_generator|extra_variants|art_directions|content_angles|", error) ||
+	if (root == NULL || !ls_object_keys(root, "|version|looks|kinds|components|compositions|motion_kits|palette_generator|extra_variants|art_directions|content_angles|section_forms|extra_looks|", error) ||
 		(self->components = member_object(root, "components")) == NULL ||
 		(self->kinds = member_object(root, "kinds")) == NULL ||
 		(self->looks = member_object(root, "looks")) == NULL) {
@@ -1343,6 +1399,33 @@ ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 	}
 	if (!check_look_definitions(self->looks, error))
 		return NULL;
+	/* Extra look values join their axes, each with its own styles; the block
+	 * is optional so archived libraries load as before. */
+	if (json_object_has_member(root, "extra_looks")) {
+		JsonObject *extra = member_object(root, "extra_looks");
+		g_autoptr(GList) axes = extra != NULL ? json_object_get_members(extra) : NULL;
+		GList *axis;
+		if (extra == NULL)
+			return catalog_invalid(error, "extra_looks", "must map look axes to new values"), NULL;
+		for (axis = axes; axis != NULL; axis = axis->next) {
+			JsonObject *values = member_object(member_object(self->looks, axis->data), "values");
+			JsonObject *added = member_object(extra, axis->data);
+			g_autoptr(GList) fresh = added != NULL ? json_object_get_members(added) : NULL;
+			GList *value;
+			if (values == NULL || added == NULL)
+				return catalog_invalid(error, axis->data, "extra looks extend catalog look axes"), NULL;
+			for (value = fresh; value != NULL; value = value->next) {
+				g_autofree gchar *file = g_strdup_printf("look-%s-%s.css", (const gchar *)axis->data, (const gchar *)value->data);
+				g_autofree gchar *style = NULL;
+				if (json_object_has_member(values, value->data) || ls_string(added, value->data) == NULL)
+					return catalog_invalid(error, axis->data, "an extra look value is new and has a description"), NULL;
+				style = load_resource(self, digest, file, TRUE, error);
+				if (style == NULL)
+					return NULL;
+				json_object_set_string_member(values, value->data, ls_string(added, value->data));
+			}
+		}
+	}
 	for (i = 0; i < G_N_ELEMENTS(shared); i++) {
 		g_autofree gchar *text = load_resource(self, digest, shared[i], TRUE, error);
 		if (text == NULL)
@@ -1434,7 +1517,7 @@ ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 	}
 	if (!load_compositions(self, digest, root, error) || !load_kits(self, digest, root, error) ||
 		!load_generator(self, root, error) || !load_directions(self, digest, root, error) ||
-		!load_angles(self, root, error))
+		!load_angles(self, root, error) || !load_forms(self, root, error))
 		return NULL;
 	self->plan_schema = build_plan_schema(self, error);
 	if (self->plan_schema == NULL || !load_themes(self, digest, error) ||
@@ -1698,6 +1781,29 @@ ls_components_deal_structure(LsComponents *self, const gchar *seed){
 			if (member_object(angles, "subject") != NULL)
 				json_object_set_string_member(structure, "subject", ls_string(member_object(angles, "subject"), "name"));
 		}
+		/* The form each family of sections takes, and the extra home
+		 * sections built from the site's own words. */
+		if (self->forms != NULL) {
+			JsonObject *families = member_object(self->forms, "families"), *forms = json_object_new();
+			JsonArray *extras = member_array(self->forms, "extras"), *chosen = json_array_new();
+			gint64 share = json_object_has_member(self->forms, "share") ? json_object_get_int_member(self->forms, "share") : 50;
+			g_autoptr(GList) kinds = json_object_get_members(families);
+			GList *family;
+			guint e;
+			for (family = kinds; family != NULL; family = family->next) {
+				JsonArray *list = member_array(families, family->data);
+				g_autofree gchar *salt = g_strconcat("form:", (const gchar *)family->data, NULL);
+				json_object_set_string_member(forms, family->data,
+					json_array_get_string_element(list, seed_pick(seed, salt, json_array_get_length(list))));
+			}
+			json_object_set_object_member(structure, "forms", forms);
+			/* One extra at most, so two sites seldom share one. */
+			if (extras != NULL && json_array_get_length(extras) > 0 && seed_pick(seed, "extra", 100) < (guint)share) {
+				e = seed_pick(seed, "extra:which", json_array_get_length(extras));
+				json_array_add_string_element(chosen, json_array_get_string_element(extras, e));
+			}
+			json_object_set_array_member(structure, "extras", chosen);
+		}
 		/* And its art direction. */
 		if (self->directions != NULL) {
 			g_autoptr(GList) directions = json_object_get_members(self->directions);
@@ -1841,6 +1947,27 @@ check_structure(Problems *problems, LsComponents *self, JsonObject *plan){
 		gboolean known = FALSE;
 		if (g_str_equal(key->data, "variants"))
 			continue;
+		if (g_str_equal(key->data, "forms") || g_str_equal(key->data, "extras")) {
+			JsonObject *families = member_object(self->forms, "families");
+			gboolean okay = self->forms != NULL;
+			if (okay && g_str_equal(key->data, "forms")) {
+				JsonObject *forms = member_object(structure, "forms");
+				g_autoptr(GList) dealt = forms != NULL ? json_object_get_members(forms) : NULL;
+				GList *family;
+				okay = forms != NULL;
+				for (family = dealt; okay && family != NULL; family = family->next)
+					okay = json_list_has(member_array(families, family->data), ls_string(forms, family->data));
+			} else if (okay) {
+				JsonArray *extras = member_array(structure, "extras");
+				guint e;
+				okay = extras != NULL;
+				for (e = 0; okay && e < json_array_get_length(extras); e++)
+					okay = json_list_has(member_array(self->forms, "extras"), json_array_get_string_element(extras, e));
+			}
+			if (!okay)
+				problem(problems, "structure.%s must name the catalog's section forms", (const gchar *)key->data);
+			continue;
+		}
 		if (g_str_equal(key->data, "angle") || g_str_equal(key->data, "subject")) {
 			JsonObject *group = g_str_equal(key->data, "angle") ? self->headlines : self->subjects;
 			const gchar *chosen = ls_string(structure, key->data);
@@ -2223,6 +2350,8 @@ ls_components_apply_opening(LsComponents *self, JsonNode *plan_node, const gchar
 }
 
 /* The role a component plays on a home page; anything unlisted reads as story. */
+static gboolean call_form(LsComponents *self, const gchar *component);
+
 static const gchar *
 section_role(LsComponents *self, const gchar *component){
 	g_autoptr(GList) names = json_object_get_members(self->roles);
@@ -2276,7 +2405,9 @@ ls_components_apply_composition(LsComponents *self, JsonNode *plan_node, JsonNod
 		JsonNode *node = json_array_get_element(sections, i);
 		JsonObject *section = JSON_NODE_HOLDS_OBJECT(node) ? json_node_get_object(node) : NULL;
 		const gchar *component = section != NULL ? ls_string(section, "component") : NULL;
-		const gchar *role = component != NULL ? section_role(self, component) : "story";
+		/* A page's last section in a closing-call form closes it. */
+		const gchar *role = component != NULL && i + 1 == count && self->forms != NULL && call_form(self, component)
+			? "close" : component != NULL ? section_role(self, component) : "story";
 		g_autofree gchar *seed = g_strdup_printf("%s\n%s\n%s\n%u", ls_string(plan, "name") != NULL ?
 			ls_string(plan, "name") : "", composition, component != NULL ? component : "", i);
 		Placed entry = {node, component, (guint)json_array_get_length(order), seed_pick(seed, "order", 1000), i};
@@ -2314,6 +2445,362 @@ ls_components_apply_composition(LsComponents *self, JsonNode *plan_node, JsonNod
 		json_array_add_element(rebuilt, json_node_copy(g_array_index(placed, Placed, i).node));
 	json_object_set_array_member(json_node_get_object(page), "sections", rebuilt);
 	return TRUE;
+}
+
+/* The slot holding @component's items in section_forms. */
+static const gchar *
+form_list(LsComponents *self, const gchar *component){
+	JsonObject *fields = member_object(member_object(self->forms, "fields"), component);
+	return fields != NULL && ls_string(fields, "list") != NULL ? ls_string(fields, "list") : "items";
+}
+
+/* The family @component belongs to, or NULL. */
+static const gchar *
+form_family(LsComponents *self, const gchar *component){
+	JsonObject *families = member_object(self->forms, "families");
+	g_autoptr(GList) names = families != NULL ? json_object_get_members(families) : NULL;
+	GList *name;
+	for (name = names; name != NULL; name = name->next)
+		if (json_list_has(member_array(families, name->data), component))
+			return name->data;
+	return NULL;
+}
+
+static gchar *plain_words(const gchar *rich);
+
+/* Whether @component is a closing-call form. */
+static gboolean
+call_form(LsComponents *self, const gchar *component){
+	JsonObject *fields = member_object(member_object(self->forms, "fields"), component);
+	return fields != NULL && json_object_has_member(fields, "call");
+}
+
+/* A closing call in another form: a call to action (heading, words,
+ * actions), a statement (its heading as the line, its first action as the
+ * link) or links (its actions as a list, its words beside the first). */
+static JsonNode *
+convert_call(JsonObject *source, const gchar *target){
+	const gchar *component = ls_string(source, "component");
+	JsonObject *from = member_object(source, "content");
+	JsonObject *section = json_object_new(), *content = json_object_new();
+	JsonNode *node = json_node_new(JSON_NODE_OBJECT);
+	JsonArray *actions = json_array_new();
+	const gchar *heading = NULL, *body = NULL;
+	guint i;
+	json_node_take_object(node, section);
+	json_object_set_string_member(section, "component", target);
+	if (ls_string(source, "id") != NULL)
+		json_object_set_string_member(section, "id", ls_string(source, "id"));
+	json_object_set_object_member(section, "content", content);
+	if (from != NULL && g_strcmp0(component, "cta") == 0) {
+		JsonArray *links = member_array(from, "actions");
+		heading = ls_string(from, "heading");
+		body = ls_string(from, "body");
+		for (i = 0; links != NULL && i < json_array_get_length(links); i++)
+			json_array_add_element(actions, json_node_copy(json_array_get_element(links, i)));
+	} else if (from != NULL && g_strcmp0(component, "statement") == 0) {
+		heading = ls_string(from, "text");
+		if (json_object_has_member(from, "link"))
+			json_array_add_element(actions, json_node_copy(json_object_get_member(from, "link")));
+	} else if (from != NULL) {
+		JsonArray *items = member_array(from, "items");
+		heading = ls_string(from, "heading");
+		for (i = 0; items != NULL && i < json_array_get_length(items); i++) {
+			JsonObject *item = json_array_get_object_element(items, i);
+			if (i == 0)
+				body = ls_string(item, "body");
+			if (json_object_has_member(item, "link"))
+				json_array_add_element(actions, json_node_copy(json_object_get_member(item, "link")));
+		}
+	}
+	if (g_str_equal(target, "cta")) {
+		if (heading != NULL)
+			json_object_set_string_member(content, "heading", heading);
+		if (body != NULL)
+			json_object_set_string_member(content, "body", body);
+		json_object_set_array_member(content, "actions", actions);
+		return node;
+	}
+	if (g_str_equal(target, "statement")) {
+		if (heading != NULL)
+			json_object_set_string_member(content, "text", heading);
+		if (json_array_get_length(actions) > 0)
+			json_object_set_member(content, "link", json_node_copy(json_array_get_element(actions, 0)));
+		json_array_unref(actions);
+		return node;
+	}
+	{
+		JsonArray *items = json_array_new();
+		g_autofree gchar *words = body != NULL ? plain_words(body) : NULL;
+		if (heading != NULL)
+			json_object_set_string_member(content, "heading", heading);
+		for (i = 0; i < json_array_get_length(actions); i++) {
+			JsonObject *item = json_object_new();
+			json_object_set_member(item, "link", json_node_copy(json_array_get_element(actions, i)));
+			if (i == 0 && words != NULL && g_utf8_strlen(words, -1) <= 200)
+				json_object_set_string_member(item, "body", words);
+			json_array_add_object_element(items, item);
+		}
+		json_object_set_array_member(content, "items", items);
+		json_array_unref(actions);
+		return node;
+	}
+}
+
+/* @source's words in @target: heading and intro where the target has
+ * them, and every item's title, body and link through the field names. */
+static JsonNode *
+convert_form(LsComponents *self, JsonObject *source, const gchar *target){
+	JsonObject *fields = member_object(self->forms, "fields");
+	JsonObject *from_fields = member_object(fields, ls_string(source, "component"));
+	JsonObject *to_fields = member_object(fields, target);
+	JsonObject *slots = member_object(member_object(self->components, target), "slots");
+	JsonObject *item_slots = member_object(member_object(slots, form_list(self, target)), "fields");
+	JsonObject *from = member_object(source, "content");
+	JsonObject *section = json_object_new(), *content = json_object_new();
+	JsonArray *items = member_array(from, form_list(self, ls_string(source, "component"))), *out = json_array_new();
+	JsonNode *node = json_node_new(JSON_NODE_OBJECT);
+	const gchar *keep[] = {"heading", "intro"};
+	guint i;
+	json_node_take_object(node, section);
+	json_object_set_string_member(section, "component", target);
+	if (ls_string(source, "id") != NULL)
+		json_object_set_string_member(section, "id", ls_string(source, "id"));
+	json_object_set_object_member(section, "content", content);
+	for (i = 0; from != NULL && i < G_N_ELEMENTS(keep); i++)
+		if (json_object_has_member(slots, keep[i]) && json_object_has_member(from, keep[i]))
+			json_object_set_member(content, keep[i], json_node_copy(json_object_get_member(from, keep[i])));
+	for (i = 0; items != NULL && i < json_array_get_length(items); i++) {
+		JsonObject *entry = JSON_NODE_HOLDS_OBJECT(json_array_get_element(items, i))
+			? json_array_get_object_element(items, i) : NULL;
+		JsonObject *made = json_object_new();
+		const gchar *title = entry != NULL ? ls_string(entry, ls_string(from_fields, "title")) : NULL;
+		const gchar *body = entry != NULL ? ls_string(entry, ls_string(from_fields, "body")) : NULL;
+		if (title != NULL)
+			json_object_set_string_member(made, ls_string(to_fields, "title"), title);
+		if (body != NULL)
+			json_object_set_string_member(made, ls_string(to_fields, "body"), body);
+		if (entry != NULL && json_object_has_member(entry, "link") && json_object_has_member(item_slots, "link"))
+			json_object_set_member(made, "link", json_node_copy(json_object_get_member(entry, "link")));
+		json_array_add_object_element(out, made);
+	}
+	json_object_set_array_member(content, form_list(self, target), out);
+	return node;
+}
+
+gboolean
+ls_components_apply_forms(LsComponents *self, JsonNode *plan_node, const gchar *path, JsonNode *page){
+	JsonObject *forms, *families;
+	JsonArray *sections;
+	gboolean changed = FALSE;
+	guint i;
+	g_return_val_if_fail(LS_IS_COMPONENTS(self), FALSE);
+	if (self->forms == NULL || plan_node == NULL || !JSON_NODE_HOLDS_OBJECT(plan_node) || page == NULL ||
+		!JSON_NODE_HOLDS_OBJECT(page))
+		return FALSE;
+	forms = member_object(member_object(json_node_get_object(plan_node), "structure"), "forms");
+	families = member_object(self->forms, "families");
+	sections = member_array(json_node_get_object(page), "sections");
+	if (forms == NULL || sections == NULL)
+		return FALSE;
+	/* The opening keeps its own component. */
+	for (i = 1; i < json_array_get_length(sections); i++) {
+		JsonNode *node = json_array_get_element(sections, i);
+		JsonObject *source = JSON_NODE_HOLDS_OBJECT(node) ? json_node_get_object(node) : NULL;
+		const gchar *component = source != NULL ? ls_string(source, "component") : NULL;
+		const gchar *family = component != NULL ? form_family(self, component) : NULL;
+		const gchar *dealt = family != NULL ? ls_string(forms, family) : NULL;
+		JsonArray *order = family != NULL ? member_array(families, family) : NULL;
+		guint start = 0, c;
+		/* Only a page's last section is its closing call. */
+		if (component != NULL && call_form(self, component) && i + 1 != json_array_get_length(sections))
+			continue;
+		if (dealt == NULL || g_strcmp0(dealt, component) == 0 || !json_list_has(order, dealt))
+			continue;
+		for (c = 0; c < json_array_get_length(order); c++)
+			if (g_strcmp0(json_array_get_string_element(order, c), dealt) == 0)
+				start = c;
+		/* The dealt form first, then the family in order; the writer's own
+		 * component is the last resort. */
+		for (c = 0; c < json_array_get_length(order); c++) {
+			const gchar *target = json_array_get_string_element(order, (start + c) % json_array_get_length(order));
+			g_autoptr(JsonNode) candidate = NULL;
+			g_autoptr(JsonNode) converted = NULL;
+			JsonArray *candidate_sections;
+			if (g_str_equal(target, component))
+				break;
+			converted = call_form(self, component) ? convert_call(source, target) : convert_form(self, source, target);
+			candidate = node_copy(page);
+			candidate_sections = member_array(json_node_get_object(candidate), "sections");
+			{
+				JsonArray *rebuilt = json_array_new();
+				guint j;
+				for (j = 0; j < json_array_get_length(candidate_sections); j++)
+					json_array_add_element(rebuilt, j == i ? json_node_copy(converted)
+						: json_node_copy(json_array_get_element(candidate_sections, j)));
+				json_object_set_array_member(json_node_get_object(candidate), "sections", rebuilt);
+			}
+			if (!ls_components_check_page(self, plan_node, path, candidate, NULL))
+				continue;
+			json_object_set_member(json_node_get_object(page), "sections",
+				node_copy(json_object_get_member(json_node_get_object(candidate), "sections")));
+			sections = member_array(json_node_get_object(page), "sections");
+			changed = TRUE;
+			break;
+		}
+	}
+	return changed;
+}
+
+/* Whether @sections already holds a @component section. */
+static gboolean
+has_component(JsonArray *sections, const gchar *component){
+	guint i;
+	for (i = 0; sections != NULL && i < json_array_get_length(sections); i++) {
+		JsonNode *node = json_array_get_element(sections, i);
+		if (JSON_NODE_HOLDS_OBJECT(node) && g_strcmp0(ls_string(json_node_get_object(node), "component"), component) == 0)
+			return TRUE;
+	}
+	return FALSE;
+}
+
+/* An extra built from the site's own words, or NULL when it has none. */
+static JsonNode *
+build_extra(LsComponents *self, JsonObject *plan, JsonArray *sections, const gchar *extra){
+	JsonObject *section = json_object_new(), *content = json_object_new();
+	JsonNode *node = json_node_new(JSON_NODE_OBJECT);
+	guint i;
+	json_node_take_object(node, section);
+	json_object_set_string_member(section, "component", extra);
+	json_object_set_object_member(section, "content", content);
+	if (g_str_equal(extra, "statement")) {
+		const gchar *tagline = ls_string(plan, "tagline");
+		if (tagline == NULL || g_utf8_strlen(tagline, -1) > 240)
+			return json_node_unref(node), NULL;
+		json_object_set_string_member(content, "text", tagline);
+		return node;
+	}
+	if (g_str_equal(extra, "marquee")) {
+		/* The names of the site's first list of offers. */
+		for (i = 1; sections != NULL && i < json_array_get_length(sections); i++) {
+			JsonObject *source = JSON_NODE_HOLDS_OBJECT(json_array_get_element(sections, i))
+				? json_array_get_object_element(sections, i) : NULL;
+			const gchar *component = source != NULL ? ls_string(source, "component") : NULL;
+			JsonObject *fields = member_object(member_object(self->forms, "fields"), component);
+			JsonArray *items = component != NULL ? member_array(member_object(source, "content"), form_list(self, component)) : NULL;
+			JsonArray *texts;
+			guint j;
+			if (component == NULL || g_strcmp0(form_family(self, component), "offer") != 0 || items == NULL ||
+				json_array_get_length(items) < 3)
+				continue;
+			texts = json_array_new();
+			for (j = 0; j < json_array_get_length(items) && j < 12; j++) {
+				const gchar *title = JSON_NODE_HOLDS_OBJECT(json_array_get_element(items, j))
+					? ls_string(json_array_get_object_element(items, j), ls_string(fields, "title")) : NULL;
+				if (title != NULL && g_utf8_strlen(title, -1) <= 40) {
+					JsonObject *line = json_object_new();
+					json_object_set_string_member(line, "text", title);
+					json_array_add_object_element(texts, line);
+				}
+			}
+			if (json_array_get_length(texts) < 3) {
+				json_array_unref(texts);
+				continue;
+			}
+			json_object_set_string_member(content, "label", ls_string(member_object(source, "content"), "heading") != NULL
+				? ls_string(member_object(source, "content"), "heading") : ls_string(plan, "name"));
+			json_object_set_array_member(content, "items", texts);
+			return node;
+		}
+		return json_node_unref(node), NULL;
+	}
+	{
+		/* Links to the site's own interior pages, with their descriptions:
+		 * as a list of links, or (big-list) as an oversized index. */
+		gboolean index = g_str_equal(extra, "big-list");
+		JsonArray *pages = member_array(plan, "pages"), *items = json_array_new();
+		for (i = 0; pages != NULL && i < json_array_get_length(pages) && json_array_get_length(items) < 8; i++) {
+			JsonObject *entry = json_array_get_object_element(pages, i);
+			JsonObject *item, *link;
+			if (g_strcmp0(ls_string(entry, "kind"), "home") == 0 || ls_string(entry, "path") == NULL ||
+				ls_string(entry, "title") == NULL)
+				continue;
+			item = json_object_new();
+			link = json_object_new();
+			json_object_set_string_member(link, "href", ls_string(entry, "path"));
+			json_object_set_string_member(link, "label", ls_string(entry, "title"));
+			json_object_set_object_member(item, "link", link);
+			if (index)
+				json_object_set_string_member(item, "title", ls_string(entry, "title"));
+			if (ls_string(entry, "description") != NULL && g_utf8_strlen(ls_string(entry, "description"), -1) <= (index ? 60 : 200))
+				json_object_set_string_member(item, index ? "meta" : "body", ls_string(entry, "description"));
+			json_array_add_object_element(items, item);
+		}
+		if (json_array_get_length(items) < 2) {
+			json_array_unref(items);
+			return json_node_unref(node), NULL;
+		}
+		json_object_set_array_member(content, "items", items);
+		return node;
+	}
+}
+
+/* The plan's home route. */
+static const gchar *
+home_path(JsonObject *plan){
+	JsonArray *pages = member_array(plan, "pages");
+	guint i;
+	for (i = 0; pages != NULL && i < json_array_get_length(pages); i++) {
+		JsonObject *entry = json_array_get_object_element(pages, i);
+		if (g_strcmp0(ls_string(entry, "kind"), "home") == 0)
+			return ls_string(entry, "path");
+	}
+	return "index.html";
+}
+
+gboolean
+ls_components_apply_extras(LsComponents *self, JsonNode *plan_node, JsonNode *page){
+	JsonObject *plan;
+	JsonArray *wanted, *sections;
+	gboolean changed = FALSE;
+	guint i;
+	g_return_val_if_fail(LS_IS_COMPONENTS(self), FALSE);
+	if (self->forms == NULL || plan_node == NULL || !JSON_NODE_HOLDS_OBJECT(plan_node) || page == NULL ||
+		!JSON_NODE_HOLDS_OBJECT(page))
+		return FALSE;
+	plan = json_node_get_object(plan_node);
+	wanted = member_array(member_object(plan, "structure"), "extras");
+	sections = member_array(json_node_get_object(page), "sections");
+	if (wanted == NULL || sections == NULL || json_array_get_length(sections) == 0)
+		return FALSE;
+	for (i = 0; i < json_array_get_length(wanted); i++) {
+		const gchar *extra = json_array_get_string_element(wanted, i);
+		g_autoptr(JsonNode) built = NULL;
+		if (extra == NULL || has_component(sections, extra))
+			continue;
+		built = build_extra(self, plan, sections, extra);
+		if (built == NULL)
+			continue;
+		/* After the opening; the composition orders it with the rest. An
+		 * extra the page check refuses is left out. */
+		{
+			g_autoptr(JsonNode) candidate = node_copy(page);
+			JsonArray *rebuilt = json_array_new();
+			guint j;
+			json_array_add_element(rebuilt, json_node_copy(json_array_get_element(sections, 0)));
+			json_array_add_element(rebuilt, json_node_copy(built));
+			for (j = 1; j < json_array_get_length(sections); j++)
+				json_array_add_element(rebuilt, json_node_copy(json_array_get_element(sections, j)));
+			json_object_set_array_member(json_node_get_object(candidate), "sections", rebuilt);
+			if (!ls_components_check_page(self, plan_node, home_path(plan), candidate, NULL))
+				continue;
+			json_object_set_member(json_node_get_object(page), "sections",
+				node_copy(json_object_get_member(json_node_get_object(candidate), "sections")));
+			sections = member_array(json_node_get_object(page), "sections");
+		}
+		changed = TRUE;
+	}
+	return changed;
 }
 
 const gchar *
@@ -2490,7 +2977,7 @@ typedef struct {
 } NumberToken;
 
 static const NumberToken number_tokens[] = {
-	{"base_size", 0.875, 1.375, 1.0625}, {"ratio", 1.1, 1.6, 1.25}, {"measure", 45, 90, 66},
+	{"base_size", 1.0, 1.375, 1.0625}, {"ratio", 1.1, 1.6, 1.25}, {"measure", 45, 90, 66},
 	{"radius", 0, 32, 2}, {"border", 0, 4, 1}, {"space", 0.75, 1.5, 1}, {"heading_weight", 300, 900, 700},
 	{"heading_tracking", -0.08, 0.2, -0.01}, {"heading_leading", 0.9, 1.4, 1.1}, {"max_width", 56, 100, 76}
 };
@@ -3869,19 +4356,27 @@ generate_palette(LsComponents *self, const gchar *seed){
 	gdouble base = seed_range(seed, "palette:hue", 0, 359.99);
 	gdouble turn = (gdouble)json_object_get_int_member(harmonies, harmony) * (seed_pick(seed, "palette:side", 2) ? 1 : -1);
 	gdouble accent_hue = fmod(base + turn + 720, 360);
-	gboolean dark = g_strcmp0(mode, "dark") == 0, tinted = g_strcmp0(mode, "tinted") == 0;
-	gdouble paper_l = dark ? seed_range(seed, "palette:paper", 0.17, 0.25) : tinted ? seed_range(seed, "palette:paper", 0.87, 0.92)
-		: seed_range(seed, "palette:paper", 0.965, 0.985);
-	gdouble paper_c = dark ? seed_range(seed, "palette:paper-c", 0.015, 0.04) : tinted ? seed_range(seed, "palette:paper-c", 0.035, 0.07)
-		: seed_range(seed, "palette:paper-c", 0.006, 0.022);
-	gdouble accent_l = dark ? seed_range(seed, "palette:accent", 0.72, 0.8) : seed_range(seed, "palette:accent", 0.47, 0.6);
+	gboolean vivid = g_strcmp0(mode, "vivid") == 0, deep = g_strcmp0(mode, "deep") == 0;
+	gboolean dark = g_strcmp0(mode, "dark") == 0 || deep, tinted = g_strcmp0(mode, "tinted") == 0;
+	/* Papers spread across their mode: near-black, deep saturated colour,
+	 * pale tint to strong pastel, a bold colour field, cool to warm white. */
+	gdouble paper_l = deep ? seed_range(seed, "palette:paper", 0.26, 0.36) : dark ? seed_range(seed, "palette:paper", 0.14, 0.3)
+		: vivid ? seed_range(seed, "palette:paper", 0.78, 0.88) : tinted ? seed_range(seed, "palette:paper", 0.82, 0.93)
+		: seed_range(seed, "palette:paper", 0.94, 0.99);
+	gdouble paper_c = deep ? seed_range(seed, "palette:paper-c", 0.07, 0.13) : dark ? seed_range(seed, "palette:paper-c", 0.02, 0.08)
+		: vivid ? seed_range(seed, "palette:paper-c", 0.09, 0.16) : tinted ? seed_range(seed, "palette:paper-c", 0.04, 0.11)
+		: seed_range(seed, "palette:paper-c", 0.004, 0.035);
+	/* A bright paper takes a darker accent; dark papers a light one. */
+	gdouble accent_l = dark ? seed_range(seed, "palette:accent", 0.72, 0.84) : vivid ? seed_range(seed, "palette:accent", 0.36, 0.48)
+		: seed_range(seed, "palette:accent", 0.47, 0.6);
 	gdouble accent_c = seed_range(seed, "palette:accent-c", 0.12, 0.2);
 	gdouble toward = dark ? 0.01 : -0.01;
 	g_autofree gchar *paper = oklch_hex(paper_l, paper_c, base);
 	g_autofree gchar *surface = oklch_hex(paper_l + (dark ? 0.05 : -0.04), paper_c + 0.005, base);
 	g_autofree gchar *line = oklch_hex(paper_l + (dark ? 0.14 : -0.14), paper_c, base);
-	g_autofree gchar *ink = guarded_text(paper, surface, dark ? 0.95 : 0.2, 0.02, base, toward * 2);
-	g_autofree gchar *muted = guarded_text(paper, surface, dark ? 0.74 : 0.46, 0.035, base, toward);
+	/* Ink and muted text carry a little of the base hue, more on some sites. */
+	g_autofree gchar *ink = guarded_text(paper, surface, dark ? 0.95 : 0.2, seed_range(seed, "palette:ink-c", 0.01, 0.06), base, toward * 2);
+	g_autofree gchar *muted = guarded_text(paper, surface, dark ? 0.74 : 0.46, seed_range(seed, "palette:muted-c", 0.02, 0.07), base, toward);
 	g_autofree gchar *accent = NULL, *accent_ink = NULL, *hash = g_compute_checksum_for_string(G_CHECKSUM_SHA256, seed, -1);
 	JsonObject *palette = json_object_new(), *tokens = json_object_new();
 	guint round;
@@ -3922,7 +4417,8 @@ generate_palette(LsComponents *self, const gchar *seed){
 	{
 		g_autofree gchar *name = g_strconcat("generated-", hash, NULL);
 		g_autofree gchar *summary = g_strdup_printf("A generated %s palette: %s %s paper with a %s accent (%s harmony).",
-			mode, dark ? "deep" : tinted ? "soft" : "pale", hue_name(base), hue_name(accent_hue), harmony);
+			mode, deep ? "saturated deep" : dark ? "deep" : vivid ? "bold" : tinted ? "soft" : "pale", hue_name(base),
+			hue_name(accent_hue), harmony);
 		json_object_set_string_member(palette, "name", name);
 		json_object_set_string_member(palette, "summary", summary);
 	}
@@ -6455,6 +6951,18 @@ ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages
 			g_string_append_printf(css, "\n/* home composition */\n@layer ls-components {\n%s}\n", file_text(self, file));
 	}
 	g_string_append_printf(css, "\n/* look */\n@layer ls-look {\n%s}\n", file_text(self, "look.css"));
+	/* Extra look values the site wears bring their own styles. */
+	{
+		JsonObject *look = member_object(plan, "look");
+		g_autoptr(GList) axes = look != NULL ? json_object_get_members(look) : NULL;
+		GList *axis;
+		for (axis = axes; axis != NULL; axis = axis->next) {
+			g_autofree gchar *file = ls_string(look, axis->data) != NULL
+				? g_strdup_printf("look-%s-%s.css", (const gchar *)axis->data, ls_string(look, axis->data)) : NULL;
+			if (file != NULL && file_text(self, file) != NULL)
+				g_string_append_printf(css, "\n/* look %s */\n@layer ls-look {\n%s}\n", file, file_text(self, file));
+		}
+	}
 	/* The art direction's treatment of drawn artwork leads the stock images look. */
 	if (art_direction(self, structure_string(plan, "direction")) != NULL) {
 		g_autofree gchar *file = g_strdup_printf("art-%s.css", structure_string(plan, "direction"));

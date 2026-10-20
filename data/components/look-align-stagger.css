@@ -1,0 +1,6 @@
+/* align/stagger: where the column has room, every other section sets its
+ * heading and intro to the right; phones keep them left. */
+@container (min-width: 48rem) {
+	.look-align-stagger main > .block:nth-of-type(even) :is(.section-head, h2[id$="-h"]) { margin-left: auto; text-align: right; }
+	.look-align-stagger main > .block:nth-of-type(even) .section-head .prose { margin-left: auto; }
+}

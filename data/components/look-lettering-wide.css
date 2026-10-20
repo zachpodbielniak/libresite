@@ -1,0 +1,2 @@
+/* lettering/wide: the page headline in widely spaced capitals. */
+.look-lettering-wide main h1 { text-transform: uppercase; letter-spacing: 0.06em; }
