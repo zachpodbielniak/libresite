@@ -187,6 +187,29 @@ gboolean ls_components_apply_composition(LsComponents *self, JsonNode *plan, Jso
  */
 const gchar *ls_components_get_direction_brief(LsComponents *self, const gchar *name);
 /**
+ * ls_components_suggest_angles:
+ * @self: a component library
+ * @seed: stable text identifying the site
+ *
+ * Deals the site's headline angle for its home page and the subject of its
+ * artwork from the catalog's content_angles, the same ones
+ * ls_components_deal_structure() records as structure.angle and
+ * structure.subject.
+ * Returns: (transfer full): {headline: {name, description}, subject: {name,
+ *   description}}, empty when the library has no content angles
+ */
+JsonObject *ls_components_suggest_angles(LsComponents *self, const gchar *seed);
+/**
+ * ls_components_get_angle_description:
+ * @self: a component library
+ * @group: "headline" or "subject"
+ * @name: a name from that group of content_angles
+ *
+ * Returns: (transfer none) (nullable): what the writer is told, or %NULL
+ *   for an unknown group or name
+ */
+const gchar *ls_components_get_angle_description(LsComponents *self, const gchar *group, const gchar *name);
+/**
  * ls_components_suggest_opening:
  * @self: a component library
  * @seed: stable text identifying the site

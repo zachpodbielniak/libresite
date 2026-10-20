@@ -388,8 +388,14 @@ plan_prompt(LsPrompts *prompts, LsRecipe *recipe, JsonObject *config, LsComponen
 	{
 		g_autofree gchar *seed = plan_seed(components, recipe, config, NULL);
 		g_autofree gchar *opening = ls_components_suggest_opening(components, seed);
+		g_autoptr(JsonObject) angles = ls_components_suggest_angles(components, seed);
 		if (opening != NULL)
 			json_object_set_string_member(task, "suggested_opening", opening);
+		/* The home headline's angle and the artwork's subject are dealt too. */
+		if (json_object_has_member(angles, "headline"))
+			json_object_set_member(task, "headline_angle", json_node_copy(json_object_get_member(angles, "headline")));
+		if (json_object_has_member(angles, "subject"))
+			json_object_set_member(task, "art_subject", json_node_copy(json_object_get_member(angles, "subject")));
 	}
 	if (plan_theme(config) != NULL) {
 		JsonObject *theme = json_object_new();
@@ -905,7 +911,7 @@ route_slug(const gchar *path){
 static gchar *
 page_prompt(LsPrompts *prompts, LsRecipe *recipe, JsonObject *config, const gchar *stage,
 	const gchar *reference, JsonObject *plan, JsonObject *entry, JsonArray *required,
-	JsonNode *current, GError **error){
+	JsonNode *current, JsonObject *headline, GError **error){
 	g_autoptr(JsonObject) task = json_object_new();
 	g_autoptr(JsonNode) node = json_node_new(JSON_NODE_OBJECT);
 	g_autoptr(JsonNode) plan_copy = NULL;
@@ -935,6 +941,9 @@ page_prompt(LsPrompts *prompts, LsRecipe *recipe, JsonObject *config, const gcha
 	}
 	json_object_set_string_member(task, "route", ls_string(entry, "path"));
 	json_object_set_string_member(task, "slug", slug);
+	/* The home page's writer opens on the dealt headline angle. */
+	if (g_strcmp0(ls_string(entry, "kind"), "home") == 0 && headline != NULL)
+		json_object_set_object_member(task, "headline_angle", json_object_ref(headline));
 	json_object_set_object_member(task, "page", json_object_ref(entry));
 	json_object_set_array_member(task, "required", required != NULL ? json_array_ref(required) : json_array_new());
 	if (current != NULL)
@@ -965,6 +974,15 @@ art_prompt(LsPrompts *prompts, LsRecipe *recipe, JsonObject *config, LsComponent
 		const gchar *how = style != NULL ? ls_components_get_look_description(components, "art", style) : NULL;
 		if (how != NULL && g_strcmp0(style, "open") != 0)
 			json_object_set_string_member(task, "style", how);
+	}
+	/* What it shows: every artwork but the mark takes the dealt subject. */
+	{
+		JsonObject *brand = member_object_of(plan, "brand"), *structure = member_object_of(plan, "structure");
+		const gchar *mark = brand != NULL ? ls_string(brand, "mark") : NULL;
+		const gchar *subject = structure != NULL ? ls_components_get_angle_description(components, "subject",
+			ls_string(structure, "subject")) : NULL;
+		if (subject != NULL && g_strcmp0(ls_string(entry, "path"), mark) != 0)
+			json_object_set_string_member(task, "subject", subject);
 	}
 	/* And how the site will show it: the dealt art direction. */
 	{
@@ -1151,6 +1169,7 @@ pages_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *pro
 	const gchar *system = ls_prompts_get_spec_system(prompts);
 	JsonArray *pages, *art;
 	JsonObject *plan_object;
+	g_autoptr(JsonObject) angles = NULL;	/* the home headline's dealt angle */
 	gint64 retries;
 	guint i, art_jobs = 0;
 	if (!ls_pages_step_check_options(options, error) || !ls_spec_step_check(prompts, recipe, config, error))
@@ -1167,6 +1186,17 @@ pages_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *pro
 	if (plan == NULL || !ls_components_check_plan(components, plan, error))
 		return FALSE;
 	plan_object = json_node_get_object(plan);
+	/* The home headline's angle, as the plan recorded it. */
+	{
+		JsonObject *structure = member_object_of(plan_object, "structure");
+		const gchar *angle = structure != NULL ? ls_string(structure, "angle") : NULL;
+		const gchar *description = ls_components_get_angle_description(components, "headline", angle);
+		if (description != NULL) {
+			angles = json_object_new();
+			json_object_set_string_member(angles, "name", angle);
+			json_object_set_string_member(angles, "description", description);
+		}
+	}
 	literals = acceptance_literals(recipe);
 	reference = ls_components_describe(components);
 	page_schema = ls_components_dup_page_schema(components);
@@ -1195,7 +1225,7 @@ pages_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *pro
 			}
 		}
 		job->prompt = page_prompt(prompts, recipe, config, review ? "page-review" : "page", reference,
-			plan_object, entry, required, current, error);
+			plan_object, entry, required, current, angles, error);
 		if (job->prompt == NULL)
 			return FALSE;
 	}

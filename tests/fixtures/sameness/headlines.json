@@ -1,0 +1,10 @@
+{
+  "promise": "{{s1}} done once, and done for good",
+  "problem": "Trouble with {{s1}}? It ends here",
+  "place": "Looking after older homes and their {{trade}}",
+  "craft": "We do {{s1}} the slow, careful way",
+  "time": "{{s1}} sorted before the season turns",
+  "question": "Who do you call about {{s1}}?",
+  "plain": "{{s1}}, {{s2}} and {{s3}}",
+  "character": "We like the jobs other crews put off"
+}
