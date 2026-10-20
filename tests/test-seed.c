@@ -36,6 +36,26 @@ is_flourish(const gchar *axis){
 
 static JsonObject *composition_look(const gchar *composition);
 
+/* The values the dealt art direction chooses @axis from (docs/components.org,
+ * "Art direction"), or NULL when it leaves the axis to the seed. */
+static JsonArray *
+direction_choices(JsonNode *plan, const gchar *axis){
+	static JsonNode *catalog = NULL;
+	JsonObject *structure = json_object_get_object_member(json_node_get_object(plan), "structure");
+	JsonObject *directions, *direction, *look;
+	if (catalog == NULL) {
+		g_autofree gchar *text = NULL;
+		g_assert_true(g_file_get_contents("data/components/catalog.yaml", &text, NULL, NULL));
+		catalog = ls_yaml_parse(text, NULL);
+	}
+	directions = json_object_get_object_member(json_object_get_object_member(json_node_get_object(catalog), "art_directions"),
+		"directions");
+	direction = json_object_has_member(structure, "direction")
+		? json_object_get_object_member(directions, json_object_get_string_member(structure, "direction")) : NULL;
+	look = direction != NULL ? json_object_get_object_member(direction, "look") : NULL;
+	return look != NULL && json_object_has_member(look, axis) ? json_object_get_array_member(look, axis) : NULL;
+}
+
 /* The value the builder sets for @axis over the seed's: the motion kit's
  * (docs/components.org, "Motion"), else the home composition's. */
 static const gchar *
@@ -93,8 +113,19 @@ test_look(void){
 		g_assert_true(ls_components_apply_seed(components, plan, seeds[s], "trades", FALSE));
 		for (axis = axes; axis != NULL; axis = axis->next) {
 			const gchar *set = override(plan, axis->data);
+			JsonArray *choices = direction_choices(plan, axis->data);
 			if (is_flourish(axis->data))
 				continue;
+			/* The art direction picks these from its own lists. */
+			if (choices != NULL) {
+				const gchar *value = json_object_get_string_member(member(plan, "look"), axis->data);
+				guint c;
+				gboolean found = FALSE;
+				for (c = 0; c < json_array_get_length(choices); c++)
+					found |= g_strcmp0(json_array_get_string_element(choices, c), value) == 0;
+				g_assert_true(found);
+				continue;
+			}
 			g_assert_cmpstr(json_object_get_string_member(member(plan, "look"), axis->data), ==,
 				set != NULL ? set : json_object_get_string_member(dealt, axis->data));
 		}

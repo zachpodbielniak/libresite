@@ -10,6 +10,11 @@
     <file>components/article.html</file>
     <file>components/base.css</file>
     <file>components/look.css</file>
+    <file>components/art-duotone.css</file>
+    <file>components/art-cutout.css</file>
+    <file>components/art-framed.css</file>
+    <file>components/art-collage.css</file>
+    <file>components/art-lineart.css</file>
     <file>components/services--ledger.css</file>
     <file>components/services--tiles.css</file>
     <file>components/voices--stack.css</file>

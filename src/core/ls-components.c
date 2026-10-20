@@ -34,6 +34,7 @@ struct _LsComponents {
 	JsonObject *compositions;	/* home composition name -> layout; NULL without */
 	JsonObject *roles;	/* section role -> component names */
 	JsonObject *kits;	/* motion kit name -> kit; NULL without */
+	JsonObject *directions;	/* art direction name -> direction; NULL without */
 	JsonNode *network_catalog;
 	JsonObject *networks;	/* social network -> {label, hosts, path}; NULL without networks.yaml */
 	GPtrArray *order;
@@ -1220,6 +1221,71 @@ load_generator(LsComponents *self, JsonObject *root, GError **error){
 
 static gboolean variant_is_fixed(const gchar *component);
 
+/* art_directions: {directions}, optional so archived libraries load. Each
+ * has a summary, an artist brief, art-NAME.css and lists of values for
+ * non-builder look axes (never photos, which stay the customer's). */
+static gboolean
+load_directions(LsComponents *self, GChecksum *digest, JsonObject *root, GError **error){
+	JsonObject *block = member_object(root, "art_directions");
+	g_autoptr(GList) names = NULL;
+	GList *name;
+	if (!json_object_has_member(root, "art_directions"))
+		return TRUE;
+	self->directions = member_object(block, "directions");
+	if (block == NULL || !ls_object_keys(block, "|directions|", NULL) || self->directions == NULL ||
+		json_object_get_size(self->directions) == 0)
+		return catalog_invalid(error, "art_directions", "needs directions"), FALSE;
+	names = json_object_get_members(self->directions);
+	for (name = names; name != NULL; name = name->next) {
+		JsonObject *direction = member_object(self->directions, name->data);
+		JsonObject *look = member_object(direction, "look");
+		g_autofree gchar *css = g_strdup_printf("art-%s.css", (const gchar *)name->data);
+		g_autofree gchar *style = NULL;
+		g_autoptr(GList) axes = NULL;
+		GList *axis;
+		if (direction == NULL || !ls_object_keys(direction, "|summary|look|brief|", NULL) ||
+			ls_string(direction, "summary") == NULL || ls_string(direction, "brief") == NULL || look == NULL)
+			return catalog_invalid(error, name->data, "art directions need a summary, a brief and a look"), FALSE;
+		axes = json_object_get_members(look);
+		for (axis = axes; axis != NULL; axis = axis->next) {
+			JsonObject *definition = member_object(self->looks, axis->data);
+			JsonArray *values = member_array(look, axis->data);
+			guint i;
+			if (definition == NULL || g_str_equal(axis->data, "photos") || values == NULL || json_array_get_length(values) == 0 ||
+				(json_object_has_member(definition, "builder") && json_object_get_boolean_member(definition, "builder")))
+				return catalog_invalid(error, name->data, "an art direction lists values for style axes other than photos"), FALSE;
+			for (i = 0; i < json_array_get_length(values); i++)
+				if (!json_object_has_member(member_object(definition, "values"), json_array_get_string_element(values, i)))
+					return catalog_invalid(error, name->data, "an art direction lists values of its axes"), FALSE;
+		}
+		style = load_resource(self, digest, css, TRUE, error);
+		if (style == NULL)
+			return FALSE;
+	}
+	return TRUE;
+}
+
+/* A string member of the plan's builder structure; NULL without one. */
+static const gchar *
+structure_string(JsonObject *plan, const gchar *key){
+	JsonObject *structure = member_object(plan, "structure");
+	return structure != NULL ? ls_string(structure, key) : NULL;
+}
+
+/* An art direction by name; NULL for no name or an unknown one. */
+static JsonObject *
+art_direction(LsComponents *self, const gchar *name){
+	return name != NULL ? member_object(self->directions, name) : NULL;
+}
+
+const gchar *
+ls_components_get_direction_brief(LsComponents *self, const gchar *name){
+	JsonObject *direction;
+	g_return_val_if_fail(LS_IS_COMPONENTS(self), NULL);
+	direction = art_direction(self, name);
+	return direction != NULL ? ls_string(direction, "brief") : NULL;
+}
+
 LsComponents *
 ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 	g_autoptr(LsComponents) self = g_object_new(LS_TYPE_COMPONENTS, NULL);
@@ -1239,7 +1305,7 @@ ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 	if (self->catalog == NULL)
 		return NULL;
 	root = JSON_NODE_HOLDS_OBJECT(self->catalog) ? json_node_get_object(self->catalog) : NULL;
-	if (root == NULL || !ls_object_keys(root, "|version|looks|kinds|components|compositions|motion_kits|palette_generator|extra_variants|", error) ||
+	if (root == NULL || !ls_object_keys(root, "|version|looks|kinds|components|compositions|motion_kits|palette_generator|extra_variants|art_directions|", error) ||
 		(self->components = member_object(root, "components")) == NULL ||
 		(self->kinds = member_object(root, "kinds")) == NULL ||
 		(self->looks = member_object(root, "looks")) == NULL) {
@@ -1339,7 +1405,7 @@ ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 			return NULL;
 	}
 	if (!load_compositions(self, digest, root, error) || !load_kits(self, digest, root, error) ||
-		!load_generator(self, root, error))
+		!load_generator(self, root, error) || !load_directions(self, digest, root, error))
 		return NULL;
 	self->plan_schema = build_plan_schema(self, error);
 	if (self->plan_schema == NULL || !load_themes(self, digest, error) ||
@@ -1556,6 +1622,12 @@ ls_components_deal_structure(LsComponents *self, const gchar *seed){
 			json_object_set_string_member(structure, "opening", opening);
 		if (composition != NULL)
 			json_object_set_string_member(structure, "composition", composition);
+		/* And its art direction. */
+		if (self->directions != NULL) {
+			g_autoptr(GList) directions = json_object_get_members(self->directions);
+			json_object_set_string_member(structure, "direction",
+				g_list_nth_data(directions, seed_pick(seed, "direction", g_list_length(directions))));
+		}
 		/* So is its motion: one kit for the whole site. */
 		if (self->kits != NULL && json_object_get_size(self->kits) > 0) {
 			g_autoptr(GList) kits = json_object_get_members(self->kits);
@@ -1624,6 +1696,8 @@ ls_components_apply_structure(LsComponents *self, JsonNode *plan_node, const gch
 		}
 		/* A theme brings its own motion; otherwise the kit sets the builder
 		 * axes it replaces, such as the stock motion. */
+		if (themed && json_object_has_member(structure, "direction"))
+			json_object_remove_member(structure, "direction");
 		if (themed && json_object_has_member(structure, "kit"))
 			json_object_remove_member(structure, "kit");
 		else if (member_object(motion_kit(self, ls_string(structure, "kit")), "look") != NULL) {
@@ -1691,6 +1765,11 @@ check_structure(Problems *problems, LsComponents *self, JsonObject *plan){
 		gboolean known = FALSE;
 		if (g_str_equal(key->data, "variants"))
 			continue;
+		if (g_str_equal(key->data, "direction")) {
+			if (art_direction(self, ls_string(structure, "direction")) == NULL)
+				problem(problems, "structure.direction must be an art direction from the catalog");
+			continue;
+		}
 		if (g_str_equal(key->data, "kit")) {
 			if (motion_kit(self, ls_string(structure, "kit")) == NULL)
 				problem(problems, "structure.kit must be a motion kit from the catalog");
@@ -1778,6 +1857,19 @@ ls_components_apply_seed(LsComponents *self, JsonNode *plan_node, const gchar *s
 			(json_object_has_member(definition, "builder") && json_object_get_boolean_member(definition, "builder")))
 			continue;
 		json_object_set_string_member(look, axis->data, ls_string(dealt, axis->data));
+	}
+	/* The art direction picks the drawing style and image treatment. */
+	{
+		JsonObject *direction = art_direction(self, structure_string(plan, "direction"));
+		JsonObject *wanted = member_object(direction, "look");
+		g_autoptr(GList) names = wanted != NULL ? json_object_get_members(wanted) : NULL;
+		GList *name;
+		for (name = names; name != NULL; name = name->next) {
+			JsonArray *values = member_array(wanted, name->data);
+			g_autofree gchar *salt = g_strconcat("direction:", (const gchar *)name->data, NULL);
+			json_object_set_string_member(look, name->data,
+				json_array_get_string_element(values, seed_pick(seed, salt, json_array_get_length(values))));
+		}
 	}
 	identity = ls_components_suggest_identity(self, seed, sector);
 	tokens = member_object(plan, "tokens");
@@ -3866,6 +3958,9 @@ fingerprint_new(JsonObject *look, JsonObject *structure, JsonObject *colors, Jso
 		/* The home composition counts as one more look axis. */
 		if (structure != NULL && ls_string(structure, "composition") != NULL)
 			json_object_set_string_member(copy, "composition", ls_string(structure, "composition"));
+		/* And the art direction. */
+		if (structure != NULL && ls_string(structure, "direction") != NULL)
+			json_object_set_string_member(copy, "direction", ls_string(structure, "direction"));
 		/* And so does the motion kit. */
 		if (structure != NULL && ls_string(structure, "kit") != NULL)
 			json_object_set_string_member(copy, "kit", ls_string(structure, "kit"));
@@ -5630,6 +5725,11 @@ render_page(Render *render, const gchar *path, const gchar *title, const gchar *
 			g_free(classes);
 			classes = more;
 		}
+		if (art_direction(render->self, structure_string(plan, "direction")) != NULL) {
+			gchar *more = g_strconcat(classes, " art-", structure_string(plan, "direction"), NULL);
+			g_free(classes);
+			classes = more;
+		}
 		if (kit != NULL) {
 			gchar *more = g_strconcat(classes, " kit-", kit, NULL);
 			g_free(classes);
@@ -6234,6 +6334,11 @@ ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages
 			g_string_append_printf(css, "\n/* home composition */\n@layer ls-components {\n%s}\n", file_text(self, file));
 	}
 	g_string_append_printf(css, "\n/* look */\n@layer ls-look {\n%s}\n", file_text(self, "look.css"));
+	/* The art direction's treatment of drawn artwork leads the stock images look. */
+	if (art_direction(self, structure_string(plan, "direction")) != NULL) {
+		g_autofree gchar *file = g_strdup_printf("art-%s.css", structure_string(plan, "direction"));
+		g_string_append_printf(css, "\n/* art direction */\n@layer ls-look {\n%s}\n", file_text(self, file));
+	}
 	/* The motion kit leads the stock motion; reduced motion still stops it. */
 	if (site_kit(self, plan) != NULL) {
 		JsonObject *kit = motion_kit(self, site_kit(self, plan));

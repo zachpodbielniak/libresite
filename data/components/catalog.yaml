@@ -1537,3 +1537,29 @@ extra_variants:
   gallery:
     polaroid: Prints in thick paper frames, each turned a little.
     filmstrip: Pictures in one dark band that scrolls sideways, edged with sprocket holes.
+# Art directions (docs/components.org, "Art direction"). The builder deals
+# one per unthemed site: look picks the drawing style and image treatment
+# from its lists, brief goes to the artist with every artwork, and
+# art-NAME.css styles the drawn artwork (never photographs or the mark).
+art_directions:
+  directions:
+    duotone:
+      summary: Drawn artwork shown in two tones, the accent for its darks and white for its lights.
+      look: {art: [flat, woodcut], images: [plain]}
+      brief: The site shows every artwork in two tones, the accent for darks and white for lights. Draw a few large shapes with strong light and dark contrast so it reads well in two colours; avoid fine detail and gradients.
+    cutout:
+      summary: Drawn artwork cut into arches, slants and rounded shapes over an accent block.
+      look: {art: [cutpaper, flat], images: [plain]}
+      brief: The site cuts each artwork into an arch, a slant or a rounded shape. Keep the subject centred with generous margin so the cut never crops it, and fill the whole canvas with background colour.
+    framed:
+      summary: Drawn artwork hung in frames with a mat, like prints on a wall.
+      look: {art: [woodcut, line, open], images: [framed]}
+      brief: The site hangs each artwork in a frame with a mat. Compose it as a finished print, centred, with an even border of open space inside the edge.
+    collage:
+      summary: Drawn artwork pinned up like a collage, turned, taped and layered over scraps.
+      look: {art: [cutpaper, open], images: [taped]}
+      brief: The site pins each artwork up like a collage, turned and taped over a paper scrap. Draw separate layered pieces with a cut-paper feel and visible edges.
+    lineart:
+      summary: Drawn artwork as line drawings inside a fine offset outline with corner marks.
+      look: {art: [line, blueprint], images: [plain]}
+      brief: The site shows each artwork as a line drawing inside a fine outline. Use single-weight lines on an open background, with at most one accent fill.

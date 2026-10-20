@@ -178,6 +178,15 @@ gboolean ls_components_apply_opening(LsComponents *self, JsonNode *plan, const g
  */
 gboolean ls_components_apply_composition(LsComponents *self, JsonNode *plan, JsonNode *page);
 /**
+ * ls_components_get_direction_brief:
+ * @self: a component library
+ * @name: an art direction from the catalog's art_directions
+ *
+ * Returns: (transfer none) (nullable): what the artist is told about how
+ *   the site shows its artwork, or %NULL for an unknown direction
+ */
+const gchar *ls_components_get_direction_brief(LsComponents *self, const gchar *name);
+/**
  * ls_components_suggest_opening:
  * @self: a component library
  * @seed: stable text identifying the site

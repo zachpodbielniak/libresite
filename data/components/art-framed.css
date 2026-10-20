@@ -1,0 +1,4 @@
+/* Art direction: framed. Drawn artwork hangs in a double frame with a
+ * mat, like prints on a wall; captions sit under it in small capitals. */
+.art-framed main img[src$=".svg"]:not(.brand img, .cover img) { box-shadow: 0 0 0 0.45rem var(--paper), 0 0 0 calc(0.45rem + var(--border)) var(--line-strong), 0 0.9rem 1.6rem -1rem color-mix(in srgb, var(--ink) 50%, transparent); margin: 0.6rem; width: calc(100% - 1.2rem); }
+.art-framed main figcaption { font-variant-caps: all-small-caps; letter-spacing: 0.06em; text-align: center; }

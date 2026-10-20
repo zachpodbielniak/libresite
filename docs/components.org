@@ -766,3 +766,23 @@ bash tests/compositions.sh "$WEBDRIVER_URL" build/variants
 On 2026-10-20 all fourteen passed at 390 and 1440 px with and without scripts (56 loads): no page scrolled sideways and no heading split a word. Looking at the screenshots caught one fault the measurements could not: the stripe call to action painted its stripes over its own box, because the box is the section's wrap; the stacking context now sits on the section.
 
 The sameness score moves a little (structural 0.359 to 0.356, overall 0.343 to 0.340, worst pair 0.479; screens 0.179 and 0.320): the fixture home uses services, steps, questions and a call to action, so only the share of variants the ten sites have in common can change, and the mix part went from 0.47 to 0.46.
+
+* Art direction
+
+The drawing style (=art=) and the image treatment (=images=) were dealt independently, so a site could pair cut-paper drawings with a woodcut frame, and most sites' artwork still read as one house style: a flat drawing in a plain box. Art directions make the artwork's look one dealt decision. The block is =art_directions= at the end of =catalog.yaml=, optional so archived libraries load as before.
+
+| Direction | Drawing style | Images | How the site shows drawn artwork |
+|-----------+---------------+--------+-----------------------------------|
+| duotone | flat or woodcut | plain | drained to grey with the accent screened over it: the accent for darks, white for lights |
+| cutout | cut paper or flat | plain | cut into an arch, a slant or a rounded shape in turn down the page, over an offset accent block |
+| framed | woodcut, line or open | framed | a double frame with a mat and a soft shadow, captions in small capitals |
+| collage | cut paper or open | taped | pinned over a turned paper scrap, turned the other way on alternate sections |
+| lineart | line or blueprint | plain | inside a fine ink outline with accent corner marks |
+
+- Dealing: =ls_components_deal_structure()= adds =structure.direction= from the seed; plan checks accept only a catalog direction; the fingerprint counts it as a look axis. Without a theme, =ls_components_apply_seed()= then picks the drawing style and image treatment from the direction's lists, by seed; a themed site gets no direction and keeps its theme's look.
+- The artist is told: each artwork job's TASK carries =direction=, the direction's =brief= (for example, keep the subject centred with margin so a cut never crops it), beside the existing =style=, so artwork is drawn for the way it will be shown. =ls_components_get_direction_brief()= returns it.
+- Styles: every page's body carries =art-NAME=, and =art-NAME.css= is emitted in the look layer after =look.css=. It styles only drawn artwork (=img[src$=".svg"]=), never the brand mark, so supplied photographs keep their own treatment (the =photos= axis, natural by default for the customer's own people, animals, food and place). It colours only with tokens and moves nothing; turned and offset pieces are clipped at the page column.
+
+=tests/test-art-direction.c= checks the five directions the issue names exist and that 300 seeds deal all of them deterministically, each choosing style and treatment from its lists and none setting photos, with valid plans; that themes get none and an unknown name fails the plan check; that each stylesheet is at most 3 KB, targets only SVG artwork, colours only with tokens and moves nothing; that the direction's class is on every page and only its own styles ship; and, through the real plan and pages steps with a recording model, that every artwork prompt carries the direction's brief. With =ART_OUTPUT= it writes one site per direction for =tests/compositions.sh=, which on 2026-10-20 passed all five at 390 and 1440 px with and without scripts (20 loads).
+
+The sameness score stays where it was (structural 0.357, overall 0.341, worst pair 0.475; screens 0.178 and 0.320): the direction adds an axis that differs between sites but narrows two others it now chooses together, and the squashed grey screenshots barely see a frame or a cut. The ten briefs drew all five directions.
