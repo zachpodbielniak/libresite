@@ -54,6 +54,8 @@ for width in 390 1440; do
 		slug=$(basename "$site")
 		call POST "/session/$session/url" "$(jq -nc --arg url "file://$site/index.html" '{url:$url}')" >/dev/null
 		call POST "/session/$session/execute/sync" "$(jq -nc --arg script "$settle" '{script:$script,args:[]}')" >/dev/null
+		# site.js fits large headings once fonts are in; let it finish.
+		sleep 0.3
 		call GET "/session/$session/moz/screenshot/full" '{}' | jq -er .value | base64 -d > "$shots/$slug-$width.png"
 		# The page's shape: grey levels squashed to a fixed 64 by 256 grid, so
 		# pages of different lengths compare section by section.
