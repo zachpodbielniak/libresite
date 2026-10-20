@@ -1433,7 +1433,7 @@ compositions:
       summary: Full-bleed. The opening picture runs edge to edge and sections alternate in bands across the whole width.
       openings: [cover/full, hero/banner, poster/backdrop]
       look: {frame: wide, rhythm: bands}
-      order: [story, offer, proof, process, practical]
+      order: [story, practical, offer, proof, process]
       css: true
     editorial:
       summary: Editorial column. One narrow reading column under a typographic opening, like a magazine page.
@@ -1445,19 +1445,19 @@ compositions:
       summary: Bento grid. After the opening, sections sit side by side as tiles of a grid on wide screens.
       openings: [hero/centered, hero/split, cover/framed]
       look: {headpos: top}
-      order: [offer, proof, story, process, practical]
+      order: [offer, proof, practical, story, process]
       avoid: [center]
       css: true
     oversized-type:
       summary: Oversized type. A poster or manifesto opening and section headings set very large.
       openings: [poster/type, poster/stamped, manifesto/stacked, manifesto/outlined]
-      order: [proof, offer, story, process, practical]
+      order: [proof, process, practical, offer, story]
       css: true
     side-rail:
       summary: Sticky side rail. A contents column of the home sections stays beside them on wide screens.
       openings: [hero/statement, hero/split, poster/stamped, hero/minimal]
       look: {headpos: top}
-      order: [process, practical, offer, proof, story]
+      order: [practical, process, offer, proof, story]
       avoid: [rail, split, center]
       sidebar: true
     stacked-cards:

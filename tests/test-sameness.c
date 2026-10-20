@@ -441,8 +441,7 @@ add_part_means(JsonObject *object, const gdouble sums[G_N_ELEMENTS(parts)], guin
 }
 
 /* Builds the ten briefs and scores every pair. The score is reported every
- * run; the gate fails the test only with SAMENESS_GATE=1 (make sameness),
- * otherwise a site set over the limits is reported as incomplete work. */
+ * run, and ten sites over either limit fail the test: the variety gate. */
 static void
 test_briefs(void){
 	const gchar *output = g_getenv("SAMENESS_OUTPUT");
@@ -505,11 +504,8 @@ test_briefs(void){
 	}
 	if (total / count <= SAMENESS_MEAN_LIMIT && worst < SAMENESS_PAIR_LIMIT)
 		return;
-	if (g_strcmp0(g_getenv("SAMENESS_GATE"), "1") == 0)
-		g_test_fail_printf("ten different businesses are too alike: sameness %.3f (limit %.2f), "
-			"worst pair %.3f (limit %.2f)", total / count, SAMENESS_MEAN_LIMIT, worst, SAMENESS_PAIR_LIMIT);
-	else
-		g_test_incomplete_printf("sameness %.3f is over the gate; make sameness enforces it", total / count);
+	g_test_fail_printf("ten different businesses are too alike: sameness %.3f (limit %.2f), "
+		"worst pair %.3f (limit %.2f)", total / count, SAMENESS_MEAN_LIMIT, worst, SAMENESS_PAIR_LIMIT);
 }
 
 int
