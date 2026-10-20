@@ -1502,3 +1502,12 @@ motion_kits:
     still:
       summary: Almost still. Only the opening's heading settles on arrival; links, buttons and focus rings answer with small, crisp movements.
       look: {motion: none}
+# Generated palettes (docs/components.org, "Type and colour range"). share
+# percent of sites get a palette generated from their seed instead of a
+# curated one: a mode (weights in percent), a base hue anywhere on the
+# wheel and an accent hue at one of the harmony offsets in degrees, built
+# in OKLCH and adjusted until every text pair reaches WCAG AA.
+palette_generator:
+  share: 70
+  modes: {light: 50, dark: 25, tinted: 25}
+  harmonies: {complementary: 180, split-warm: 150, split-cool: 210, triadic: 120, analogous: 35}

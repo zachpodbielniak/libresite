@@ -25,6 +25,8 @@ struct _LsComponents {
 	JsonNode *theme_catalog;
 	JsonObject *themes;
 	JsonNode *identity_catalog;
+	JsonNode *pairing_catalog;	/* pairings.yaml, merged into typefaces */
+	JsonObject *generator;	/* palette_generator; NULL without */
 	JsonObject *sectors;	/* sector name -> description */
 	JsonObject *palettes;
 	JsonObject *typefaces;
@@ -59,6 +61,7 @@ ls_components_finalize(GObject *object){
 	g_free(self->themed_plan_schema);
 	g_clear_pointer(&self->theme_catalog, json_node_unref);
 	g_clear_pointer(&self->identity_catalog, json_node_unref);
+	g_clear_pointer(&self->pairing_catalog, json_node_unref);
 	g_free(self->digest);
 	G_OBJECT_CLASS(ls_components_parent_class)->finalize(object);
 }
@@ -1179,6 +1182,40 @@ motion_kit(LsComponents *self, const gchar *name){
 	return name != NULL ? member_object(self->kits, name) : NULL;
 }
 
+/* palette_generator: {share, modes, harmonies}, optional so archived
+ * libraries load and deal only curated palettes. */
+static gboolean
+load_generator(LsComponents *self, JsonObject *root, GError **error){
+	JsonObject *block = member_object(root, "palette_generator");
+	const gchar *known_modes = "|light|dark|tinted|";
+	JsonObject *groups[2];
+	guint g;
+	if (!json_object_has_member(root, "palette_generator"))
+		return TRUE;
+	if (block == NULL || !ls_object_keys(block, "|share|modes|harmonies|", NULL) ||
+		!JSON_NODE_HOLDS_VALUE(json_object_get_member(block, "share")) ||
+		json_node_get_value_type(json_object_get_member(block, "share")) != G_TYPE_INT64 ||
+		json_object_get_int_member(block, "share") < 0 || json_object_get_int_member(block, "share") > 100 ||
+		member_object(block, "modes") == NULL || !ls_object_keys(member_object(block, "modes"), known_modes, NULL) ||
+		json_object_get_size(member_object(block, "modes")) == 0 || member_object(block, "harmonies") == NULL ||
+		json_object_get_size(member_object(block, "harmonies")) == 0)
+		return catalog_invalid(error, "palette_generator", "needs share (0 to 100), modes (light, dark, tinted) and harmonies"), FALSE;
+	groups[0] = member_object(block, "modes");
+	groups[1] = member_object(block, "harmonies");
+	for (g = 0; g < 2; g++) {
+		g_autoptr(GList) names = json_object_get_members(groups[g]);
+		GList *name;
+		for (name = names; name != NULL; name = name->next) {
+			JsonNode *value = json_object_get_member(groups[g], name->data);
+			if (!JSON_NODE_HOLDS_VALUE(value) || json_node_get_value_type(value) != G_TYPE_INT64 ||
+				json_node_get_int(value) < (g == 0 ? 0 : -360) || json_node_get_int(value) > 360)
+				return catalog_invalid(error, name->data, "modes are weights and harmonies are offsets in degrees"), FALSE;
+		}
+	}
+	self->generator = block;
+	return TRUE;
+}
+
 LsComponents *
 ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 	g_autoptr(LsComponents) self = g_object_new(LS_TYPE_COMPONENTS, NULL);
@@ -1198,7 +1235,7 @@ ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 	if (self->catalog == NULL)
 		return NULL;
 	root = JSON_NODE_HOLDS_OBJECT(self->catalog) ? json_node_get_object(self->catalog) : NULL;
-	if (root == NULL || !ls_object_keys(root, "|version|looks|kinds|components|compositions|motion_kits|", error) ||
+	if (root == NULL || !ls_object_keys(root, "|version|looks|kinds|components|compositions|motion_kits|palette_generator|", error) ||
 		(self->components = member_object(root, "components")) == NULL ||
 		(self->kinds = member_object(root, "kinds")) == NULL ||
 		(self->looks = member_object(root, "looks")) == NULL) {
@@ -1268,7 +1305,8 @@ ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 		if (json == NULL || (self->utility[i] = ls_json_parse(json, error)) == NULL)
 			return NULL;
 	}
-	if (!load_compositions(self, digest, root, error) || !load_kits(self, digest, root, error))
+	if (!load_compositions(self, digest, root, error) || !load_kits(self, digest, root, error) ||
+		!load_generator(self, root, error))
 		return NULL;
 	self->plan_schema = build_plan_schema(self, error);
 	if (self->plan_schema == NULL || !load_themes(self, digest, error) ||
@@ -3390,6 +3428,28 @@ load_identities(LsComponents *self, GChecksum *digest, GError **error){
 		(self->typefaces = member_object(root, "typefaces")) == NULL || json_object_get_size(self->typefaces) == 0 ||
 		(self->homes = member_object(root, "homes")) == NULL || json_object_get_size(self->homes) == 0)
 		return catalog_invalid(error, "identities.yaml", "needs version, sectors, palettes, typefaces and homes");
+	/* The curated pairing library joins the typefaces and is checked with
+	 * them; an archived library without it keeps its own. */
+	{
+		g_autofree gchar *pairings = load_resource(self, digest, "pairings.yaml", FALSE, NULL);
+		JsonObject *list;
+		if (pairings != NULL) {
+			g_autoptr(GList) added = NULL;
+			GList *item;
+			if ((self->pairing_catalog = ls_yaml_parse(pairings, error)) == NULL)
+				return FALSE;
+			list = JSON_NODE_HOLDS_OBJECT(self->pairing_catalog)
+				? member_object(json_node_get_object(self->pairing_catalog), "pairings") : NULL;
+			if (list == NULL || !ls_object_keys(json_node_get_object(self->pairing_catalog), "|version|pairings|", NULL))
+				return catalog_invalid(error, "pairings.yaml", "needs version and pairings");
+			added = json_object_get_members(list);
+			for (item = added; item != NULL; item = item->next) {
+				if (json_object_has_member(self->typefaces, item->data))
+					return catalog_invalid(error, item->data, "a pairing repeats a typeface name");
+				json_object_set_member(self->typefaces, item->data, json_node_copy(json_object_get_member(list, item->data)));
+			}
+		}
+	}
 	names = json_object_get_members(self->palettes);
 	for (name = names; name != NULL; name = name->next) {
 		JsonObject *palette = member_object(self->palettes, name->data);
@@ -3498,6 +3558,164 @@ named_copy(JsonObject *group, const gchar *name){
 	return out;
 }
 
+/* ---- Generated palettes ------------------------------------------------------ */
+
+static gdouble
+hex_luminance(const gchar *text){
+	gdouble rgb[3];
+	return parse_color(text, rgb) ? luminance(rgb) : 0;
+}
+
+/* OKLCH to gamma-encoded sRGB; FALSE when the colour lies outside sRGB. */
+static gboolean
+oklch_rgb(gdouble lightness, gdouble chroma, gdouble hue, gdouble rgb[3]){
+	gdouble a = chroma * cos(hue * G_PI / 180), b = chroma * sin(hue * G_PI / 180);
+	gdouble l = lightness + 0.3963377774 * a + 0.2158037573 * b;
+	gdouble m = lightness - 0.1055613458 * a - 0.0638541728 * b;
+	gdouble s = lightness - 0.0894841775 * a - 1.2914855480 * b;
+	gdouble linear[3];
+	gboolean inside = TRUE;
+	guint i;
+	l = l * l * l;
+	m = m * m * m;
+	s = s * s * s;
+	linear[0] = 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s;
+	linear[1] = -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s;
+	linear[2] = -0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s;
+	for (i = 0; i < 3; i++) {
+		if (linear[i] < -0.0001 || linear[i] > 1.0001)
+			inside = FALSE;
+		linear[i] = CLAMP(linear[i], 0, 1);
+		rgb[i] = linear[i] <= 0.0031308 ? 12.92 * linear[i] : 1.055 * pow(linear[i], 1 / 2.4) - 0.055;
+	}
+	return inside;
+}
+
+/* The nearest sRGB colour to an OKLCH one: chroma falls until it fits. */
+static gchar *
+oklch_hex(gdouble lightness, gdouble chroma, gdouble hue){
+	gdouble rgb[3];
+	lightness = CLAMP(lightness, 0, 1);
+	while (!oklch_rgb(lightness, chroma, hue, rgb) && chroma > 0.001)
+		chroma *= 0.92;
+	return g_strdup_printf("#%02x%02x%02x", (guint)lround(CLAMP(rgb[0], 0, 1) * 255),
+		(guint)lround(CLAMP(rgb[1], 0, 1) * 255), (guint)lround(CLAMP(rgb[2], 0, 1) * 255));
+}
+
+/* A text colour of @hue that reads at 4.6:1 on both backgrounds, stepping
+ * its lightness away from them (toward black or white) from @lightness. */
+static gchar *
+guarded_text(const gchar *one, const gchar *two, gdouble lightness, gdouble chroma, gdouble hue, gdouble step){
+	gchar *color = oklch_hex(lightness, chroma, hue);
+	while ((contrast(color, one) < 4.6 || contrast(color, two) < 4.6) && lightness > 0 && lightness < 1) {
+		g_free(color);
+		lightness += step;
+		color = oklch_hex(lightness, chroma, hue);
+	}
+	return color;
+}
+
+static const gchar *
+hue_name(gdouble hue){
+	const gchar *names[] = {"rose", "red", "orange", "amber", "yellow", "green", "teal", "sky", "blue", "indigo",
+		"violet", "rose"};
+	const gdouble limits[] = {15, 40, 70, 100, 125, 160, 200, 240, 275, 300, 335, 361};
+	guint i;
+	for (i = 0; i < G_N_ELEMENTS(limits); i++)
+		if (hue < limits[i])
+			return names[i];
+	return "rose";
+}
+
+/* Picks a key of @weights (name -> integer weight) from @seed. */
+static const gchar *
+weighted_pick(JsonObject *weights, const gchar *seed, const gchar *salt){
+	g_autoptr(GList) names = json_object_get_members(weights);
+	GList *name;
+	gint64 total = 0, pick;
+	for (name = names; name != NULL; name = name->next)
+		total += json_object_get_int_member(weights, name->data);
+	pick = total > 0 ? seed_pick(seed, salt, (guint)total) : 0;
+	for (name = names; name != NULL; name = name->next) {
+		pick -= json_object_get_int_member(weights, name->data);
+		if (pick < 0)
+			return name->data;
+	}
+	return names != NULL ? names->data : NULL;
+}
+
+/* A palette built for @seed: a mode, a base hue and an accent at a harmony
+ * offset, in OKLCH, every text pair stepped until it reaches AA. */
+static JsonObject *
+generate_palette(LsComponents *self, const gchar *seed){
+	JsonObject *modes = member_object(self->generator, "modes"), *harmonies = member_object(self->generator, "harmonies");
+	const gchar *mode = weighted_pick(modes, seed, "palette:mode");
+	g_autoptr(GList) offsets = json_object_get_members(harmonies);
+	const gchar *harmony = g_list_nth_data(offsets, seed_pick(seed, "palette:harmony", g_list_length(offsets)));
+	gdouble base = seed_range(seed, "palette:hue", 0, 359.99);
+	gdouble turn = (gdouble)json_object_get_int_member(harmonies, harmony) * (seed_pick(seed, "palette:side", 2) ? 1 : -1);
+	gdouble accent_hue = fmod(base + turn + 720, 360);
+	gboolean dark = g_strcmp0(mode, "dark") == 0, tinted = g_strcmp0(mode, "tinted") == 0;
+	gdouble paper_l = dark ? seed_range(seed, "palette:paper", 0.17, 0.25) : tinted ? seed_range(seed, "palette:paper", 0.87, 0.92)
+		: seed_range(seed, "palette:paper", 0.965, 0.985);
+	gdouble paper_c = dark ? seed_range(seed, "palette:paper-c", 0.015, 0.04) : tinted ? seed_range(seed, "palette:paper-c", 0.035, 0.07)
+		: seed_range(seed, "palette:paper-c", 0.006, 0.022);
+	gdouble accent_l = dark ? seed_range(seed, "palette:accent", 0.72, 0.8) : seed_range(seed, "palette:accent", 0.47, 0.6);
+	gdouble accent_c = seed_range(seed, "palette:accent-c", 0.12, 0.2);
+	gdouble toward = dark ? 0.01 : -0.01;
+	g_autofree gchar *paper = oklch_hex(paper_l, paper_c, base);
+	g_autofree gchar *surface = oklch_hex(paper_l + (dark ? 0.05 : -0.04), paper_c + 0.005, base);
+	g_autofree gchar *line = oklch_hex(paper_l + (dark ? 0.14 : -0.14), paper_c, base);
+	g_autofree gchar *ink = guarded_text(paper, surface, dark ? 0.95 : 0.2, 0.02, base, toward * 2);
+	g_autofree gchar *muted = guarded_text(paper, surface, dark ? 0.74 : 0.46, 0.035, base, toward);
+	g_autofree gchar *accent = NULL, *accent_ink = NULL, *hash = g_compute_checksum_for_string(G_CHECKSUM_SHA256, seed, -1);
+	JsonObject *palette = json_object_new(), *tokens = json_object_new();
+	guint round;
+	/* The accent carries white, the ink or the paper, whichever reads best;
+	 * when none reaches AA the accent steps away from it. The house default
+	 * (cream and rust) turns the accent a third of the wheel. */
+	for (round = 0; round < 3; round++) {
+		guint step;
+		for (step = 0; step < 80; step++) {
+			const gchar *candidates[] = {"#ffffff", ink, paper};
+			gdouble best = 0;
+			guint c;
+			g_free(accent);
+			accent = oklch_hex(accent_l, accent_c, accent_hue);
+			g_clear_pointer(&accent_ink, g_free);
+			for (c = 0; c < G_N_ELEMENTS(candidates); c++)
+				if (contrast(candidates[c], accent) > best) {
+					best = contrast(candidates[c], accent);
+					g_free(accent_ink);
+					accent_ink = g_strdup(candidates[c]);
+				}
+			if (best >= 4.6)
+				break;
+			accent_l += hex_luminance(accent_ink) > 0.2 ? -0.01 : 0.01;
+		}
+		json_object_set_string_member(tokens, "paper", paper);
+		json_object_set_string_member(tokens, "accent", accent);
+		if (!house_default_colors(tokens))
+			break;
+		accent_hue = fmod(accent_hue + 120, 360);
+	}
+	json_object_set_string_member(tokens, "ink", ink);
+	json_object_set_string_member(tokens, "muted", muted);
+	json_object_set_string_member(tokens, "surface", surface);
+	json_object_set_string_member(tokens, "line", line);
+	json_object_set_string_member(tokens, "accent_ink", accent_ink);
+	hash[8] = '\0';
+	{
+		g_autofree gchar *name = g_strconcat("generated-", hash, NULL);
+		g_autofree gchar *summary = g_strdup_printf("A generated %s palette: %s %s paper with a %s accent (%s harmony).",
+			mode, dark ? "deep" : tinted ? "soft" : "pale", hue_name(base), hue_name(accent_hue), harmony);
+		json_object_set_string_member(palette, "name", name);
+		json_object_set_string_member(palette, "summary", summary);
+	}
+	json_object_set_object_member(palette, "tokens", tokens);
+	return palette;
+}
+
 JsonObject *
 ls_components_suggest_identity(LsComponents *self, const gchar *seed, const gchar *sector){
 	JsonObject *identity;
@@ -3510,7 +3728,12 @@ ls_components_suggest_identity(LsComponents *self, const gchar *seed, const gcha
 	typeface = deal(self->typefaces, seed, "typeface", sector);
 	home = deal(self->homes, seed, "home", sector);
 	identity = json_object_new();
-	if (palette != NULL)
+	/* Most sites get a palette generated from their seed; the rest one of
+	 * the curated palettes that fit the sector. */
+	if (self->generator != NULL &&
+		seed_pick(seed, "palette:source", 100) < (guint)json_object_get_int_member(self->generator, "share"))
+		json_object_set_object_member(identity, "palette", generate_palette(self, seed));
+	else if (palette != NULL)
 		json_object_set_object_member(identity, "palette", named_copy(self->palettes, palette));
 	if (typeface != NULL)
 		json_object_set_object_member(identity, "type", named_copy(self->typefaces, typeface));

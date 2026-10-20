@@ -25,6 +25,7 @@
     <file>components/home-zigzag.css</file>
     <file>components/themes.yaml</file>
     <file>components/identities.yaml</file>
+    <file>components/pairings.yaml</file>
     <file>components/networks.yaml</file>
     <file>components/call.css</file>
     <file>components/call.html</file>
