@@ -3,20 +3,21 @@
 set -euo pipefail
 case ${1:-} in
 -h|--help)
-	printf '%s\n' 'Usage: sameness.sh WEBDRIVER_URL OUTPUT_DIR' 'Render the ten sites first with SAMENESS_OUTPUT=OUTPUT_DIR build/release/test-sameness.' 'Screenshots every home page at 390 and 1440, scores how alike each pair looks and combines that' 'with score.json; writes screens.json and exits nonzero when the sites are over the limits.'
+	printf '%s\n' 'Usage: sameness.sh WEBDRIVER_URL OUTPUT_DIR [CALIBRATION_DIR]' 'Render the ten sites first with SAMENESS_OUTPUT=OUTPUT_DIR build/release/test-sameness.' 'Screenshots every home page at 390 and 1440, scores how alike each pair looks and combines that' 'with score.json; writes screens.json and exits nonzero when the sites are over the limits.' 'CALIBRATION_DIR holds NAME-390.png and NAME-1440.png screenshots of one site in different home' 'compositions (tests/compositions.sh writes them); their mean likeness at each width is then the' 'screen limit there. Without it the screen limit is a fixed 0.2.'
 	exit 0 ;;
 --license) printf '%s\n' 'AGPL-3.0-or-later'; exit 0 ;;
 esac
-[[ $# == 2 ]] || { echo 'Expected WebDriver URL and rendered site directory.' >&2; exit 2; }
+[[ $# == 2 || $# == 3 ]] || { echo 'Expected WebDriver URL, rendered site directory and an optional calibration directory.' >&2; exit 2; }
 command -v magick >/dev/null || { echo 'ImageMagick (magick) is required.' >&2; exit 2; }
 webdriver=${1%/}
 output=$(realpath "$2")
 [[ -f $output/score.json ]] || { echo "No score.json in $output; render the sites first." >&2; exit 2; }
 # Same limits as the structural gate in tests/test-sameness.c, plus one for
-# the screenshots alone: ten home pages whose shapes are this alike or more
-# on average share one layout in other words.
+# the screenshots alone at each width (see the calibration below).
 mean_limit=$(jq -r .mean_limit "$output/score.json")
-screen_limit=0.2
+screen_limit_390=0.2
+screen_limit_1440=0.2
+calibration=${3:+$(realpath "$3")}
 session=
 profile=
 call () {
@@ -71,6 +72,29 @@ ssim () {
 }
 first=$(basename "${sites[0]}")
 distance=$(awk -v self="$(ssim "$shots/$first-390-shape.png" "$shots/$first-390-shape.png")" 'BEGIN {print (self < 0.5) ? 1 : 0}')
+# With a calibration set, the screen limit at each width is how alike one
+# site looks in its different home compositions: ten businesses must look
+# less alike than one business laid out eight ways.
+if [[ -n $calibration ]]; then
+	for width in 390 1440; do
+		mapfile -t frames < <(find "$calibration" -maxdepth 1 -name "*-$width.png" | sort)
+		(( ${#frames[@]} >= 2 )) || { echo "Calibration needs at least two $width screenshots." >&2; exit 2; }
+		total=0
+		count=0
+		for (( i = 0; i < ${#frames[@]}; i++ )); do
+			magick "${frames[i]}" -colorspace Gray -resize '64x256!' "$shots/calibration-$i-$width.png"
+		done
+		for (( i = 0; i < ${#frames[@]}; i++ )); do
+			for (( j = i + 1; j < ${#frames[@]}; j++ )); do
+				total=$(awk -v t="$total" -v v="$(ssim "$shots/calibration-$i-$width.png" "$shots/calibration-$j-$width.png")" -v d="$distance" \
+					'BEGIN {printf "%.6f", t + (d ? 1 - v : v)}')
+				count=$(( count + 1 ))
+			done
+		done
+		limit=$(awk -v t="$total" -v n="$count" 'BEGIN {printf "%.3f", t / n}')
+		if [[ $width == 390 ]]; then screen_limit_390=$limit; else screen_limit_1440=$limit; fi
+	done
+fi
 pairs=$(
 	for width in 390 1440; do
 		for (( i = 0; i < ${#sites[@]}; i++ )); do
@@ -88,7 +112,7 @@ pairs=$(
 # Each pair's overall sameness: the structural score from the test, 85
 # percent, and how alike the two home pages look at both widths, 15 percent.
 jq -n --argjson pairs "$pairs" --slurpfile score "$output/score.json" --argjson limit "$mean_limit" \
-	--argjson screen_limit "$screen_limit" '
+	--argjson screen_limit_390 "$screen_limit_390" --argjson screen_limit_1440 "$screen_limit_1440" '
 	($score[0].pairs) as $structural
 	| [ $structural[] | . as $p
 		| ([ $pairs[] | select((.a == $p.a and .b == $p.b) or (.a == $p.b and .b == $p.a)) | .screen ] | add / length) as $screen
@@ -99,8 +123,8 @@ jq -n --argjson pairs "$pairs" --slurpfile score "$output/score.json" --argjson 
 		screen_1440: ([ $pairs[] | select(.width == 1440) | .screen ] | add / length),
 		score: ([ $combined[] | .score ] | add / length),
 		worst: ([ $combined[] | .score ] | max),
-		mean_limit: $limit, screen_limit: $screen_limit,
+		mean_limit: $limit, screen_limit_390: $screen_limit_390, screen_limit_1440: $screen_limit_1440,
 		pairs: $combined
 	}' > "$output/screens.json"
-jq -r '"sameness \(.score*1000|round/1000) (limit \(.mean_limit*100|round/100)), worst pair \(.worst*1000|round/1000); structural \(.structural*1000|round/1000); screens 390 \(.screen_390*1000|round/1000) 1440 \(.screen_1440*1000|round/1000) (limit \(.screen_limit))"' "$output/screens.json"
-jq -e '.score <= .mean_limit and .screen_390 <= .screen_limit and .screen_1440 <= .screen_limit' "$output/screens.json" >/dev/null
+jq -r '"sameness \(.score*1000|round/1000) (limit \(.mean_limit*100|round/100)), worst pair \(.worst*1000|round/1000); structural \(.structural*1000|round/1000); screens 390 \(.screen_390*1000|round/1000) (limit \(.screen_limit_390)) 1440 \(.screen_1440*1000|round/1000) (limit \(.screen_limit_1440))"' "$output/screens.json"
+jq -e '.score <= .mean_limit and .screen_390 <= .screen_limit_390 and .screen_1440 <= .screen_limit_1440' "$output/screens.json" >/dev/null
