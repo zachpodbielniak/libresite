@@ -1,0 +1,7 @@
+/* buttons/wide: long square bars with the label at the start and an arrow in its own cell at the far end; full width on phones. */
+.look-buttons-wide main .button:not(.action-bar .button) { justify-content: space-between; gap: 1.2em; min-width: min(100%, 17rem); padding-inline: 1.15em 0; border-radius: 0; text-align: start; }
+.look-buttons-wide main .button:not(.action-bar .button)::after { content: "\2192" / ""; align-self: stretch; display: grid; place-items: center; min-width: 2.8em; margin-block: -0.7em; border-left: var(--border-strong) solid currentColor; }
+@media (max-width: 47.99rem) { .look-buttons-wide main .actions > .button { flex: 1 1 100%; } }
+/* A reset button clears the form; it does not lead anywhere. */
+.look-buttons-wide main .button[type="reset"] { padding-right: 1.15em; }
+.look-buttons-wide main .button[type="reset"]::after { content: none; }

@@ -1,0 +1,10 @@
+/* heads/bracket: each section heading held between square accent brackets. */
+/* The inset is a transparent border, not padding, so a word too long for
+ * the brackets still counts as too wide and shrinks to fit. */
+.look-heads-bracket main h2[id$="-h"] {
+	--ls-bk-w: max(2px, 0.07em); --ls-bk-t: 0.34em; --ls-bk: linear-gradient(var(--accent), var(--accent));
+	width: fit-content; max-width: 100%; padding-block: 0.14em 0.18em; border-inline: 0.6em solid transparent;
+	background: var(--ls-bk) left top / var(--ls-bk-w) 100%, var(--ls-bk) left top / var(--ls-bk-t) var(--ls-bk-w), var(--ls-bk) left bottom / var(--ls-bk-t) var(--ls-bk-w),
+		var(--ls-bk) right top / var(--ls-bk-w) 100%, var(--ls-bk) right top / var(--ls-bk-t) var(--ls-bk-w), var(--ls-bk) right bottom / var(--ls-bk-t) var(--ls-bk-w);
+	background-repeat: no-repeat; background-origin: border-box;
+}

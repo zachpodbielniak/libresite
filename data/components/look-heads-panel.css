@@ -1,0 +1,4 @@
+/* heads/panel: section headings set on a tinted band with an accent foot. */
+/* The inset is a transparent border, not padding, so a word too long for
+ * the band still counts as too wide and shrinks to fit. */
+.look-heads-panel main h2[id$="-h"] { padding-bottom: 0.45em; border: solid; border-color: transparent transparent var(--accent); border-width: 0.4em 0.6em max(3px, 0.08em); border-radius: var(--radius) var(--radius) 0 0; background: var(--surface); }

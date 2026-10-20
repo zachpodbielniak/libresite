@@ -1,0 +1,12 @@
+/* buttons/knob: rounded buttons ending in a round disc that holds an arrow, silent to screen readers. */
+.look-buttons-knob .button { gap: 0.8em; padding: 0.3em 0.3em 0.3em 1.35em; border-radius: 999px; }
+.look-buttons-knob .button::after { content: "\2192" / ""; display: inline-grid; place-items: center; flex: none; width: 2.1em; height: 2.1em; border-radius: 50%; background: var(--accent-ink); color: var(--accent); }
+.look-buttons-knob .button--ghost::after { background: var(--ink); color: var(--paper); }
+.look-buttons-knob .button:hover::after { background: var(--paper); color: var(--ink); }
+@media (prefers-reduced-motion: no-preference) {
+	.look-buttons-knob .button::after { transition: transform 160ms ease, background-color 150ms ease, color 150ms ease; }
+	.look-buttons-knob .button:hover::after { transform: rotate(-45deg); }
+}
+/* A reset button clears the form; it does not lead anywhere. */
+.look-buttons-knob .button[type="reset"] { padding-right: 1.35em; }
+.look-buttons-knob .button[type="reset"]::after { content: none; }

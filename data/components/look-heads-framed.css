@@ -1,0 +1,4 @@
+/* heads/framed: each section heading inside a closed double-ruled frame. */
+/* The inset is a transparent border and the frame an inset outline, so a
+ * word too long for the frame still counts as too wide and shrinks to fit. */
+.look-heads-framed main h2[id$="-h"] { --ls-fr: max(5px, 0.15em); width: fit-content; max-width: 100%; padding-block: 0.3em 0.36em; border: solid transparent; border-width: var(--ls-fr) calc(0.65em + var(--ls-fr)); outline: var(--ls-fr) double var(--ink); outline-offset: calc(-1 * var(--ls-fr)); }

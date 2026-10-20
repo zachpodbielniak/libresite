@@ -1,0 +1,8 @@
+/* buttons/ticket: buttons cut like a ticket, notched at both ends with a perforation by the stub. The full box returns for the focus ring. */
+.look-buttons-ticket .button {
+	--ls-notch: 0.5em; padding-inline: 2.1em 1.5em; border-radius: 0.25rem;
+	background-image: linear-gradient(currentColor 55%, transparent 0); background-size: 1px 0.45em; background-position: 1.15em 0; background-repeat: repeat-y;
+	-webkit-mask: radial-gradient(circle at left, transparent var(--ls-notch), #000 calc(var(--ls-notch) + 1px)) left / 51% 100% no-repeat, radial-gradient(circle at right, transparent var(--ls-notch), #000 calc(var(--ls-notch) + 1px)) right / 51% 100% no-repeat;
+	mask: radial-gradient(circle at left, transparent var(--ls-notch), #000 calc(var(--ls-notch) + 1px)) left / 51% 100% no-repeat, radial-gradient(circle at right, transparent var(--ls-notch), #000 calc(var(--ls-notch) + 1px)) right / 51% 100% no-repeat;
+}
+.look-buttons-ticket .button:focus-visible { -webkit-mask: none; mask: none; }

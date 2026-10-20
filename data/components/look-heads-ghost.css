@@ -1,0 +1,5 @@
+/* heads/ghost: the section's number set huge and faint, tucked behind the top of its heading. */
+/* The number is a line of the heading itself, so it follows the heading's
+ * alignment wherever the heading is set. */
+.look-heads-ghost main section[style*="--ls-n"] h2[id$="-h"] { isolation: isolate; }
+.look-heads-ghost main section[style*="--ls-n"] h2[id$="-h"]::before { content: var(--ls-n) / ""; display: block; position: relative; z-index: -1; margin: 0 0 -0.4em; font: 800 2.1em / 1 var(--font-display); letter-spacing: -0.04em; text-transform: none; color: color-mix(in srgb, var(--accent) 20%, transparent); pointer-events: none; }

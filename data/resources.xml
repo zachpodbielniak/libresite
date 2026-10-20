@@ -311,5 +311,26 @@
     <file>components/look-lettering-leadin.css</file>
     <file>components/look-lettering-initial.css</file>
     <file>components/look-lettering-twotone.css</file>
+    <file>components/look-buttons-outline.css</file>
+    <file>components/look-buttons-key.css</file>
+    <file>components/look-buttons-slant.css</file>
+    <file>components/look-buttons-knob.css</file>
+    <file>components/look-buttons-ticket.css</file>
+    <file>components/look-buttons-ring.css</file>
+    <file>components/look-buttons-ink.css</file>
+    <file>components/look-buttons-large.css</file>
+    <file>components/look-buttons-chevron.css</file>
+    <file>components/look-buttons-wide.css</file>
+    <file>components/look-heads-highlight.css</file>
+    <file>components/look-heads-caps.css</file>
+    <file>components/look-heads-trail.css</file>
+    <file>components/look-heads-ghost.css</file>
+    <file>components/look-heads-bracket.css</file>
+    <file>components/look-heads-framed.css</file>
+    <file>components/look-heads-newsprint.css</file>
+    <file>components/look-heads-shadow.css</file>
+    <file>components/look-heads-disc.css</file>
+    <file>components/look-heads-initial.css</file>
+    <file>components/look-heads-panel.css</file>
   </gresource>
 </gresources>

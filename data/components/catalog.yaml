@@ -1744,6 +1744,29 @@ wider:
       leadin: The first line of reading text opens in spaced small capitals.
       initial: The page headline opens on an oversized initial in the accent.
       twotone: The first line of the page headline in the accent, the rest in ink.
+    heads:
+      highlight: A broad accent marker stroke behind each line of the heading.
+      caps: Compact, widely spaced heavy capitals.
+      trail: An accent line runs on from the heading to the edge of its column.
+      ghost: The section's number set huge and faint behind the heading.
+      bracket: The heading held between square accent brackets.
+      framed: The heading inside a closed double-ruled frame.
+      newsprint: A heavy rule above and a hairline below, across the column, like a newspaper section.
+      shadow: Heavy headings with a hard offset shadow in the accent, like a painted sign.
+      disc: The section's number in a solid accent disc before the heading.
+      initial: The first letter set larger and heavier in the accent.
+      panel: The heading set on a tinted band with an accent foot.
+    buttons:
+      outline: Heavy ink outlines that fill with the accent on hover; secondary buttons are underlined labels.
+      key: Chunky keycaps on a solid base edge that press down on hover.
+      slant: Parallelograms with sloped ends.
+      knob: Rounded buttons ending in a round disc that holds an arrow.
+      ticket: Cut like a ticket, notched at both ends with a perforation by the stub.
+      ring: Heavy-edged labels with a fine ring just inside the edge, like a seal.
+      ink: Solid ink buttons with an accent strip at the leading edge.
+      large: Oversized, softly rounded buttons with a bold label, made for a thumb.
+      chevron: Buttons that point forward like a road sign.
+      wide: Long square bars with the label at the start and an arrow in its own cell at the far end.
   kits:
     curtain:
       summary: The opening's words and picture are uncovered by wipes, section headings wipe in as they scroll into view, and cards draw an accent edge under the pointer.
