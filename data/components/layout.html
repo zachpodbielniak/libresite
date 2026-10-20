@@ -68,7 +68,8 @@
 {{/quote}}</div>
 </nav>
 {{/actions}}</main>
-<footer class="site-footer">
+{{#kit_marquee}}<div class="kit-marquee" aria-hidden="true"><div class="kit-marquee__track"><span>{{site}}</span><span>{{site}}</span><span>{{site}}</span><span>{{site}}</span><span>{{site}}</span><span>{{site}}</span></div></div>
+{{/kit_marquee}}<footer class="site-footer">
 {{#has_sitemap}}<div class="wrap"><ul class="site-footer__map" role="list">
 {{#sitemap}}<li><a href="{{href}}"{{#current}} aria-current="page"{{/current}}>{{label}}</a></li>
 {{/sitemap}}</ul></div>

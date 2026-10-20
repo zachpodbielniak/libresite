@@ -31,6 +31,7 @@ struct _LsComponents {
 	JsonObject *homes;
 	JsonObject *compositions;	/* home composition name -> layout; NULL without */
 	JsonObject *roles;	/* section role -> component names */
+	JsonObject *kits;	/* motion kit name -> kit; NULL without */
 	JsonNode *network_catalog;
 	JsonObject *networks;	/* social network -> {label, hosts, path}; NULL without networks.yaml */
 	GPtrArray *order;
@@ -1125,6 +1126,59 @@ load_compositions(LsComponents *self, GChecksum *digest, JsonObject *root, GErro
 	return TRUE;
 }
 
+/* motion_kits: {kits}, optional so archived libraries load. Each kit has a
+ * summary and kit-NAME.css, and may set builder axes, name a shared
+ * motion-SCRIPT.js and ask for the decorative marquee band. */
+static gboolean
+load_kits(LsComponents *self, GChecksum *digest, JsonObject *root, GError **error){
+	JsonObject *block = member_object(root, "motion_kits");
+	g_autoptr(GList) names = NULL;
+	GList *name;
+	if (!json_object_has_member(root, "motion_kits"))
+		return TRUE;
+	self->kits = member_object(block, "kits");
+	if (block == NULL || !ls_object_keys(block, "|kits|", NULL) || self->kits == NULL || json_object_get_size(self->kits) == 0)
+		return catalog_invalid(error, "motion_kits", "needs kits"), FALSE;
+	names = json_object_get_members(self->kits);
+	for (name = names; name != NULL; name = name->next) {
+		JsonObject *kit = member_object(self->kits, name->data);
+		JsonObject *look = member_object(kit, "look");
+		g_autofree gchar *css = g_strdup_printf("kit-%s.css", (const gchar *)name->data);
+		g_autofree gchar *style = NULL;
+		if (kit == NULL || !ls_object_keys(kit, "|summary|look|script|marquee|", NULL) || ls_string(kit, "summary") == NULL ||
+			(json_object_has_member(kit, "script") && ls_string(kit, "script") == NULL) ||
+			(json_object_has_member(kit, "look") && look == NULL))
+			return catalog_invalid(error, name->data, "motion kits need a summary; look, script and marquee are optional"), FALSE;
+		if (look != NULL) {
+			g_autoptr(GList) axes = json_object_get_members(look);
+			GList *axis;
+			for (axis = axes; axis != NULL; axis = axis->next) {
+				JsonObject *definition = member_object(self->looks, axis->data);
+				if (definition == NULL || !json_object_has_member(definition, "builder") ||
+					!json_object_get_boolean_member(definition, "builder") || ls_string(look, axis->data) == NULL ||
+					!json_object_has_member(member_object(definition, "values"), ls_string(look, axis->data)))
+					return catalog_invalid(error, name->data, "a motion kit's look sets builder axes to their values"), FALSE;
+			}
+		}
+		style = load_resource(self, digest, css, TRUE, error);
+		if (style == NULL)
+			return FALSE;
+		if (ls_string(kit, "script") != NULL) {
+			g_autofree gchar *file = g_strdup_printf("motion-%s.js", ls_string(kit, "script"));
+			g_autofree gchar *script = load_resource(self, digest, file, TRUE, error);
+			if (script == NULL)
+				return FALSE;
+		}
+	}
+	return TRUE;
+}
+
+/* A motion kit by name; NULL for no name or an unknown one. */
+static JsonObject *
+motion_kit(LsComponents *self, const gchar *name){
+	return name != NULL ? member_object(self->kits, name) : NULL;
+}
+
 LsComponents *
 ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 	g_autoptr(LsComponents) self = g_object_new(LS_TYPE_COMPONENTS, NULL);
@@ -1144,7 +1198,7 @@ ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 	if (self->catalog == NULL)
 		return NULL;
 	root = JSON_NODE_HOLDS_OBJECT(self->catalog) ? json_node_get_object(self->catalog) : NULL;
-	if (root == NULL || !ls_object_keys(root, "|version|looks|kinds|components|compositions|", error) ||
+	if (root == NULL || !ls_object_keys(root, "|version|looks|kinds|components|compositions|motion_kits|", error) ||
 		(self->components = member_object(root, "components")) == NULL ||
 		(self->kinds = member_object(root, "kinds")) == NULL ||
 		(self->looks = member_object(root, "looks")) == NULL) {
@@ -1214,7 +1268,7 @@ ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 		if (json == NULL || (self->utility[i] = ls_json_parse(json, error)) == NULL)
 			return NULL;
 	}
-	if (!load_compositions(self, digest, root, error))
+	if (!load_compositions(self, digest, root, error) || !load_kits(self, digest, root, error))
 		return NULL;
 	self->plan_schema = build_plan_schema(self, error);
 	if (self->plan_schema == NULL || !load_themes(self, digest, error) ||
@@ -1425,6 +1479,12 @@ ls_components_deal_structure(LsComponents *self, const gchar *seed){
 			json_object_set_string_member(structure, "opening", opening);
 		if (composition != NULL)
 			json_object_set_string_member(structure, "composition", composition);
+		/* So is its motion: one kit for the whole site. */
+		if (self->kits != NULL && json_object_get_size(self->kits) > 0) {
+			g_autoptr(GList) kits = json_object_get_members(self->kits);
+			json_object_set_string_member(structure, "kit",
+				g_list_nth_data(kits, seed_pick(seed, "kit", g_list_length(kits))));
+		}
 	}
 	return structure;
 }
@@ -1485,6 +1545,17 @@ ls_components_apply_structure(LsComponents *self, JsonNode *plan_node, const gch
 			for (name = names; name != NULL; name = name->next)
 				json_object_set_string_member(look, name->data, ls_string(member_object(layout, "look"), name->data));
 		}
+		/* A theme brings its own motion; otherwise the kit sets the builder
+		 * axes it replaces, such as the stock motion. */
+		if (themed && json_object_has_member(structure, "kit"))
+			json_object_remove_member(structure, "kit");
+		else if (member_object(motion_kit(self, ls_string(structure, "kit")), "look") != NULL) {
+			JsonObject *wanted = member_object(motion_kit(self, ls_string(structure, "kit")), "look");
+			g_autoptr(GList) names = json_object_get_members(wanted);
+			GList *name;
+			for (name = names; name != NULL; name = name->next)
+				json_object_set_string_member(look, name->data, ls_string(wanted, name->data));
+		}
 	}
 	/* Stock flourishes become fingerprints once a visitor has seen them on
 	 * another site. Without a theme, the signature layer written for this
@@ -1543,6 +1614,11 @@ check_structure(Problems *problems, LsComponents *self, JsonObject *plan){
 		gboolean known = FALSE;
 		if (g_str_equal(key->data, "variants"))
 			continue;
+		if (g_str_equal(key->data, "kit")) {
+			if (motion_kit(self, ls_string(structure, "kit")) == NULL)
+				problem(problems, "structure.kit must be a motion kit from the catalog");
+			continue;
+		}
 		if (g_str_equal(key->data, "composition")) {
 			if (composition_layout(self, ls_string(structure, "composition")) == NULL)
 				problem(problems, "structure.composition must be a home composition from the catalog");
@@ -3521,11 +3597,16 @@ fingerprint_new(JsonObject *look, JsonObject *structure, JsonObject *colors, Jso
 		const gchar *const flourishes[] = {"ornament", "emphasis", "kicker", "backdrop", "edges", "texture",
 			"links", NULL};
 		for (axis = axes; axis != NULL; axis = axis->next)
-			if (ls_string(look, axis->data) != NULL && !in_list(flourishes, axis->data))
+			if (ls_string(look, axis->data) != NULL && !in_list(flourishes, axis->data) &&
+				/* A motion kit replaces the stock motion, so it counts instead. */
+				!(g_str_equal(axis->data, "motion") && structure != NULL && ls_string(structure, "kit") != NULL))
 				json_object_set_string_member(copy, axis->data, ls_string(look, axis->data));
 		/* The home composition counts as one more look axis. */
 		if (structure != NULL && ls_string(structure, "composition") != NULL)
 			json_object_set_string_member(copy, "composition", ls_string(structure, "composition"));
+		/* And so does the motion kit. */
+		if (structure != NULL && ls_string(structure, "kit") != NULL)
+			json_object_set_string_member(copy, "kit", ls_string(structure, "kit"));
 		json_object_set_object_member(fp, "look", copy);
 	}
 	for (i = 0; structure != NULL && i < 6; i++)
@@ -5216,6 +5297,14 @@ home_composition(LsComponents *self, JsonObject *plan){
 	return composition_layout(self, name) != NULL ? name : NULL;
 }
 
+/* The plan's motion kit, when the library knows it. */
+static const gchar *
+site_kit(LsComponents *self, JsonObject *plan){
+	const gchar *name = member_object(plan, "structure") != NULL
+		? ls_string(member_object(plan, "structure"), "kit") : NULL;
+	return motion_kit(self, name) != NULL ? name : NULL;
+}
+
 /* One body class per look axis, falling back to the catalog default. */
 static gchar *
 look_classes(LsComponents *self, JsonObject *look){
@@ -5272,10 +5361,20 @@ render_page(Render *render, const gchar *path, const gchar *title, const gchar *
 	{
 		g_autofree gchar *classes = look_classes(render->self, member_object(plan, "look"));
 		const gchar *composition = home_composition(render->self, plan);
+		const gchar *kit = site_kit(render->self, plan);
 		if (g_strcmp0(kind_name, "home") == 0 && composition != NULL) {
 			gchar *more = g_strconcat(classes, " home-", composition, NULL);
 			g_free(classes);
 			classes = more;
+		}
+		if (kit != NULL) {
+			gchar *more = g_strconcat(classes, " kit-", kit, NULL);
+			g_free(classes);
+			classes = more;
+			/* A decorative band of the name, hidden from assistive technology. */
+			if (json_object_has_member(motion_kit(render->self, kit), "marquee") &&
+				json_object_get_boolean_member(motion_kit(render->self, kit), "marquee"))
+				json_object_set_boolean_member(view, "kit_marquee", TRUE);
 		}
 		json_object_set_string_member(view, "look_classes", classes);
 	}
@@ -5865,6 +5964,16 @@ ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages
 			g_string_append_printf(css, "\n/* home composition */\n@layer ls-components {\n%s}\n", file_text(self, file));
 	}
 	g_string_append_printf(css, "\n/* look */\n@layer ls-look {\n%s}\n", file_text(self, "look.css"));
+	/* The motion kit leads the stock motion; reduced motion still stops it. */
+	if (site_kit(self, plan) != NULL) {
+		JsonObject *kit = motion_kit(self, site_kit(self, plan));
+		g_autofree gchar *file = g_strdup_printf("kit-%s.css", site_kit(self, plan));
+		g_string_append_printf(css, "\n/* motion kit */\n@layer ls-look {\n%s}\n", file_text(self, file));
+		if (ls_string(kit, "script") != NULL) {
+			g_autofree gchar *script = g_strdup_printf("motion-%s.js", ls_string(kit, "script"));
+			g_string_append_printf(js, "\n%s", file_text(self, script));
+		}
+	}
 	for (i = 0; member_object(plan, "restyle") != NULL && i < self->order->len; i++) {
 		const gchar *name = g_ptr_array_index(self->order, i);
 		const gchar *restyle = ls_string(member_object(plan, "restyle"), name);

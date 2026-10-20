@@ -1,0 +1,20 @@
+/* Motion kit: aurora. Soft drawn shapes drift slowly behind the opening,
+ * faint enough that its words keep their contrast; the opening fades up
+ * on arrival and cards float under the pointer. Without motion there is
+ * no backdrop at all. */
+.kit-aurora main > .block:first-child { position: relative; isolation: isolate; }
+@media (prefers-reduced-motion: no-preference) {
+	.kit-aurora main > .block:first-child::before {
+		content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+		background: var(--accent); opacity: 0.09;
+		-webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Ccircle cx='70' cy='80' r='60'/%3E%3Ccircle cx='310' cy='60' r='40'/%3E%3Ccircle cx='250' cy='230' r='75'/%3E%3Cpath d='M0 250 Q100 200 200 260 T400 240 V300 H0Z'/%3E%3C/svg%3E") 0 0 / 60% auto repeat;
+		mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Ccircle cx='70' cy='80' r='60'/%3E%3Ccircle cx='310' cy='60' r='40'/%3E%3Ccircle cx='250' cy='230' r='75'/%3E%3Cpath d='M0 250 Q100 200 200 260 T400 240 V300 H0Z'/%3E%3C/svg%3E") 0 0 / 60% auto repeat;
+		animation: kit-aurora-drift 26s ease-in-out infinite alternate;
+	}
+	.kit-aurora main > .block:first-child > * { animation: kit-aurora-up 800ms ease-out both; }
+	.kit-aurora main :is(.card, .bento__tile, .features__item, .services__item, .gallery__item, .strip__item) { transition: transform 240ms ease, box-shadow 240ms ease; }
+	.kit-aurora main :is(.card, .bento__tile, .features__item, .services__item, .gallery__item, .strip__item):hover { transform: translateY(-5px); box-shadow: 0 1rem 2rem -1rem color-mix(in srgb, var(--ink) 40%, transparent); }
+	.kit-aurora :focus-visible { transition: outline-offset 200ms ease; outline-offset: 5px; }
+}
+@keyframes kit-aurora-drift { to { -webkit-mask-position: 40% 30%; mask-position: 40% 30%; } }
+@keyframes kit-aurora-up { from { opacity: 0; transform: translateY(0.9rem); } }
