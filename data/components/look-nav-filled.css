@@ -1,0 +1,5 @@
+/* nav/filled: square links; the current page on a solid accent block. */
+.look-nav-filled .site-nav ul { column-gap: var(--space-1); }
+.look-nav-filled .site-nav a:not(.button) { padding-inline: 0.85em; border-bottom: 0; border-radius: 0; }
+.look-nav-filled .site-nav a:not(.button, [aria-current="page"]):hover { background: var(--surface); }
+.look-nav-filled .site-nav a[aria-current="page"], .look-nav-filled .site-nav__group.is-section > a { background: var(--accent); color: var(--accent-ink); }

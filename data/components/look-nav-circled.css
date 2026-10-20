@@ -1,0 +1,4 @@
+/* nav/circled: the current page ringed in an accent oval, as if circled by hand. */
+.look-nav-circled .site-nav a:not(.button) { padding-inline: 0.9em; border: 2px solid transparent; border-radius: 50%; }
+.look-nav-circled .site-nav a:not(.button):hover { border-color: var(--line-strong); }
+.look-nav-circled .site-nav a[aria-current="page"], .look-nav-circled .site-nav__group.is-section > a { border-color: var(--accent); transform: rotate(-3deg); }

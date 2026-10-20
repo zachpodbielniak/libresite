@@ -256,5 +256,29 @@
     <file>components/look-panels-marker.css</file>
     <file>components/look-panels-halo.css</file>
     <file>components/look-panels-graph.css</file>
+    <file>components/look-header-reversed.css</file>
+    <file>components/look-header-accent.css</file>
+    <file>components/look-header-spread.css</file>
+    <file>components/look-header-bilevel.css</file>
+    <file>components/look-header-offset.css</file>
+    <file>components/look-header-divided.css</file>
+    <file>components/look-header-slab.css</file>
+    <file>components/look-header-ledger.css</file>
+    <file>components/look-header-slim.css</file>
+    <file>components/look-header-wash.css</file>
+    <file>components/look-header-angled.css</file>
+    <file>components/look-header-nameplate.css</file>
+    <file>components/look-nav-highlight.css</file>
+    <file>components/look-nav-tabs.css</file>
+    <file>components/look-nav-numbered.css</file>
+    <file>components/look-nav-filled.css</file>
+    <file>components/look-nav-brackets.css</file>
+    <file>components/look-nav-muted.css</file>
+    <file>components/look-nav-point.css</file>
+    <file>components/look-nav-circled.css</file>
+    <file>components/look-nav-keys.css</file>
+    <file>components/look-nav-segmented.css</file>
+    <file>components/look-nav-wavy.css</file>
+    <file>components/look-nav-arrow.css</file>
   </gresource>
 </gresources>

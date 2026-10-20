@@ -1,0 +1,10 @@
+/* header/spread: the links centred in the bar, between the wordmark and the action button. */
+@media (min-width: 48rem) {
+	.look-header-spread .site-nav { flex: 1; }
+	.look-header-spread .site-nav ul { margin-inline: auto; }
+}
+/* Side panels own the header: their menu stays a column. */
+@media (min-width: 64rem) {
+	.look-header-spread:is(.look-frame-rail, .look-frame-split) .site-nav { flex: none; }
+	.look-header-spread:is(.look-frame-rail, .look-frame-split) .site-nav ul { margin-inline: 0; }
+}

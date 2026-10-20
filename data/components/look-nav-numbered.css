@@ -1,0 +1,5 @@
+/* nav/numbered: each main link led by a small running number, 01, 02, 03. */
+.look-nav-numbered .site-nav > ul { counter-reset: ls-nav; }
+.look-nav-numbered .site-nav > ul > li { counter-increment: ls-nav; }
+.look-nav-numbered .site-nav > ul > li > a:not(.button) { gap: 0.35em; }
+.look-nav-numbered .site-nav > ul > li > a:not(.button)::before { content: counter(ls-nav, decimal-leading-zero) / ""; font-family: var(--font-mono); font-size: 0.72em; font-weight: 600; letter-spacing: 0.04em; color: var(--accent-text); position: relative; top: -0.45em; }

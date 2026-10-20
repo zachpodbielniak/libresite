@@ -1697,3 +1697,29 @@ wider:
       legend: The footer drawn as an outlined box, the name set into its top edge.
       letterhead: The name centred across the footer between double rules, in spaced small capitals.
       reversed: The links first in a ruled bar, then the name set large with its note.
+    header:
+      reversed: Navigation on the left and the wordmark on the right.
+      accent: The whole bar painted in the accent, with accent-ink text.
+      spread: The links centred in the bar, between the wordmark and the action button.
+      bilevel: The wordmark and action on top, the links on a full-width tinted strip beneath.
+      offset: The bar as a square ink-outlined card with a hard offset shadow.
+      divided: Strong rules above and below, and full-height rules between the wordmark, the links and the action.
+      slab: The wordmark reversed out of a solid ink slab running in from the page edge.
+      ledger: Double ink rules above and below, the wordmark in small spaced capitals.
+      slim: A compact bar under a heavy ink rule along the top of the page, with a small name.
+      wash: A soft accent wash across the bar, fading into the paper.
+      angled: The bar on the surface tint, its lower edge cut on a slant.
+      nameplate: An oversized heavy wordmark, the links level with its foot, over a thick ink rule.
+    nav:
+      highlight: The current page underscored by a broad highlighter stroke in the accent.
+      tabs: Links as tabs; the current page on a tinted tab with an accent base.
+      numbered: Each main link led by a small running number.
+      filled: Square links; the current page on a solid accent block.
+      brackets: Monospace links; the current page held in accent square brackets.
+      muted: Quiet links in the muted colour; the current page in ink and heavy.
+      point: A small accent dot under the current page instead of a line.
+      circled: The current page ringed in an accent oval, as if circled by hand.
+      keys: Links as raised keys; the current page pressed in.
+      segmented: The main links on one rounded tinted track; the current page a raised segment.
+      wavy: Italic links; the current page under a wavy accent line.
+      arrow: An accent arrow leads the current page.
