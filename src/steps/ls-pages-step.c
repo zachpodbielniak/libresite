@@ -966,6 +966,13 @@ art_prompt(LsPrompts *prompts, LsRecipe *recipe, JsonObject *config, LsComponent
 		if (how != NULL && g_strcmp0(style, "open") != 0)
 			json_object_set_string_member(task, "style", how);
 	}
+	/* And how the site will show it: the dealt art direction. */
+	{
+		const gchar *direction = ls_string(member_object_of(plan, "structure"), "direction");
+		const gchar *brief = direction != NULL ? ls_components_get_direction_brief(components, direction) : NULL;
+		if (brief != NULL)
+			json_object_set_string_member(task, "direction", brief);
+	}
 	json_node_set_object(node, task);
 	task_json = ls_json_encode(node);
 	return ls_prompts_render_spec(prompts, recipe, config, "art", NULL, task_json, error);
