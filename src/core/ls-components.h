@@ -178,6 +178,35 @@ gboolean ls_components_apply_opening(LsComponents *self, JsonNode *plan, const g
  */
 gboolean ls_components_apply_composition(LsComponents *self, JsonNode *plan, JsonNode *page);
 /**
+ * ls_components_apply_forms:
+ * @self: a component library
+ * @plan: (transfer none): a plan whose structure names section forms
+ * @path: the page's route
+ * @page: (transfer none): a page specification, changed in place
+ *
+ * Rewrites every section after the opening whose component belongs to a
+ * family of the catalog's section_forms (offers, process, questions) as the
+ * form the plan dealt that family, carrying its heading, intro and items'
+ * title, body and link. A form whose result fails the page check is skipped
+ * for the next in the family; the writer's component is the last resort.
+ * Returns: whether @page changed
+ */
+gboolean ls_components_apply_forms(LsComponents *self, JsonNode *plan, const gchar *path, JsonNode *page);
+/**
+ * ls_components_apply_extras:
+ * @self: a component library
+ * @plan: (transfer none): a plan whose structure lists extras
+ * @page: (transfer none): the home page specification, changed in place
+ *
+ * Adds the dealt extra home sections, each built only from the site's own
+ * words: a marquee of its first list of offers' names, a statement of its
+ * tagline, links to its interior pages with their descriptions, or the same
+ * pages as an oversized index (big-list). An extra
+ * the site has no words for, or one the page already has, is left out.
+ * Returns: whether @page changed
+ */
+gboolean ls_components_apply_extras(LsComponents *self, JsonNode *plan, JsonNode *page);
+/**
  * ls_components_get_direction_brief:
  * @self: a component library
  * @name: an art direction from the catalog's art_directions

@@ -1,0 +1,2 @@
+/* images/blob: pictures in a soft organic shape. */
+.look-images-blob main img:not(.cover img, .brand img, .poster__art) { border-radius: 42% 58% 55% 45% / 48% 42% 58% 52%; }

@@ -1,0 +1,4 @@
+/* buttons/soft: tinted buttons in the surface with accent text, rounded. */
+.look-buttons-soft .button { background: var(--surface); color: var(--accent-text); border-color: var(--surface); border-radius: 0.6rem; }
+.look-buttons-soft .button--ghost { background: transparent; color: var(--ink); border-color: var(--line-strong); }
+.look-buttons-soft .button:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }

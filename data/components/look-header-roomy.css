@@ -1,0 +1,3 @@
+/* header/roomy: a taller header with a larger name. */
+.look-header-roomy .site-header__inner { padding-block: var(--space-5); }
+.look-header-roomy .brand { font-size: var(--step-2); }

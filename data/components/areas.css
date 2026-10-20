@@ -3,7 +3,7 @@
 .areas--chips .areas__list li { padding: 0.3em 0.9em; border: var(--border) solid var(--line-strong); border-radius: 999px; }
 .areas--columns .areas__list { columns: 12rem; column-gap: var(--space-6); }
 .areas--columns .areas__list li { padding-block: var(--space-1); break-inside: avoid; }
-.areas__note { margin-top: var(--space-4); font-size: var(--step--1); }
+.areas__note { margin-top: var(--space-4); font-size: max(1rem, var(--step--1)); }
 .areas__map { margin: var(--space-5) 0 0; }
 .areas__map img { width: 100%; border-radius: var(--radius); background: var(--surface); }
 @container (min-width: 56rem) { .areas__inner:has(.areas__map) { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-7); align-items: start; } .areas__map { margin: 0; } }
@@ -11,4 +11,4 @@
 .areas--map .areas__list { position: relative; display: flex; flex-wrap: wrap; justify-content: center; align-content: center; gap: var(--space-3) var(--space-4); min-height: 20rem; padding: var(--space-7) var(--space-5);
 	border-radius: 50%; aspect-ratio: 1; max-width: 34rem; margin-inline: auto;
 	background: radial-gradient(circle, var(--accent) 0 0.55rem, transparent 0.6rem), repeating-radial-gradient(circle, transparent 0 3.2rem, color-mix(in srgb, var(--ink) 16%, transparent) 3.2rem calc(3.2rem + 1px)), var(--surface); }
-.areas--map .areas__list li { padding: 0.15em 0.7em; background: var(--paper); border: var(--border) solid var(--line-strong); border-radius: 999px; font-size: var(--step--1); }
+.areas--map .areas__list li { padding: 0.15em 0.7em; background: var(--paper); border: var(--border) solid var(--line-strong); border-radius: 999px; font-size: max(1rem, var(--step--1)); }

@@ -1,0 +1,8 @@
+/* footer/accent: the footer painted in the accent, its text in the accent ink. */
+.look-footer-accent .site-footer {
+	--paper: var(--ls-accent); --ink: var(--ls-accent-ink); --surface: color-mix(in srgb, var(--ls-accent-ink) 12%, var(--ls-accent));
+	--muted: var(--ls-accent-ink); --accent: var(--ls-accent-ink); --accent-ink: var(--ls-accent); --accent-text: var(--ls-accent-ink);
+	--line: color-mix(in srgb, var(--ls-accent-ink) 35%, var(--ls-accent)); --line-strong: var(--ls-accent-ink); --focus: var(--ls-accent-ink);
+	background: var(--ls-accent); color: var(--ls-accent-ink); border-top: 0;
+}
+.look-footer-accent .site-footer a { color: inherit; }

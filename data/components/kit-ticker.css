@@ -13,4 +13,4 @@
 	.kit-ticker main > .block:first-child h1 { animation: kit-ticker-in 520ms ease-out both; }
 }
 @keyframes kit-ticker-run { to { transform: translateX(-50%); } }
-@keyframes kit-ticker-in { from { opacity: 0; letter-spacing: 0.04em; } }
+@keyframes kit-ticker-in { from { opacity: 0; transform: scale(0.98); } }

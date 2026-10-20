@@ -126,5 +126,5 @@ jq -n --argjson pairs "$pairs" --slurpfile score "$output/score.json" --argjson 
 		mean_limit: $limit, screen_limit_390: $screen_limit_390, screen_limit_1440: $screen_limit_1440,
 		pairs: $combined
 	}' > "$output/screens.json"
-jq -r '"sameness \(.score*1000|round/1000) (limit \(.mean_limit*100|round/100)), worst pair \(.worst*1000|round/1000); structural \(.structural*1000|round/1000); screens 390 \(.screen_390*1000|round/1000) (limit \(.screen_limit_390)) 1440 \(.screen_1440*1000|round/1000) (limit \(.screen_limit_1440))"' "$output/screens.json"
-jq -e '.score <= .mean_limit and .screen_390 <= .screen_limit_390 and .screen_1440 <= .screen_limit_1440' "$output/screens.json" >/dev/null
+jq -r --argjson pair "$(jq -r .pair_limit "$output/score.json")" '"sameness \(.score*1000|round/1000) (limit \(.mean_limit*100|round/100)), worst pair \(.worst*1000|round/1000) (limit \($pair)); structural \(.structural*1000|round/1000); screens 390 \(.screen_390*1000|round/1000) (limit \(.screen_limit_390)) 1440 \(.screen_1440*1000|round/1000) (limit \(.screen_limit_1440))"' "$output/screens.json"
+jq -e --argjson pair "$(jq -r .pair_limit "$output/score.json")" '.score <= .mean_limit and .worst <= $pair and .screen_390 <= .screen_limit_390 and .screen_1440 <= .screen_limit_1440' "$output/screens.json" >/dev/null

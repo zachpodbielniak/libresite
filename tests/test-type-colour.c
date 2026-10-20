@@ -176,11 +176,11 @@ test_generated(void){
 		hues[(guint)(hue(json_object_get_string_member(tokens, "accent")) / 30) % 12]++;
 		g_hash_table_add(seen, g_strdup(first));
 	}
-	/* About 70 percent generated, as the catalog asks. */
-	g_assert_cmpuint(generated * 100, >=, total * 60);
-	g_assert_cmpuint(generated * 100, <=, total * 80);
+	/* About 80 percent generated, as the catalog asks. */
+	g_assert_cmpuint(generated * 100, >=, total * 70);
+	g_assert_cmpuint(generated * 100, <=, total * 90);
 	g_assert_cmpuint(g_hash_table_size(seen), ==, generated);
-	g_assert_cmpuint(dark * 100, >=, generated * 15);
+	g_assert_cmpuint(dark * 100, >=, generated * 20);
 	g_assert_cmpuint(light * 100, >=, generated * 50);
 	for (i = 0; i < 12; i++)
 		covered += hues[i] > generated / 40;

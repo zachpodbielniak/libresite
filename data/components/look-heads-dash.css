@@ -1,0 +1,2 @@
+/* heads/dash: a short accent dash leads each section heading. */
+.look-heads-dash main h2[id$="-h"]::before { content: ""; display: inline-block; width: 0.75em; height: 0.12em; margin-right: 0.35em; vertical-align: 0.3em; background: var(--accent); }

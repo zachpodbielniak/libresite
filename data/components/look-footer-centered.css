@@ -1,0 +1,3 @@
+/* footer/centered: everything in one centred column. */
+.look-footer-centered .site-footer__inner { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; text-align: center; }
+.look-footer-centered .site-footer :is(ul, nav ul) { justify-content: center; }

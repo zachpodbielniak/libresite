@@ -894,13 +894,28 @@ test_every_look(void){
 	for (axis = axes; axis != NULL; axis = axis->next) {
 		JsonObject *values = json_object_get_object_member(json_object_get_object_member(looks, axis->data), "values");
 		JsonArray *listed = json_object_get_array_member(json_object_get_object_member(schema_look, axis->data), "enum");
+		JsonObject *extra = json_object_get_object_member(json_node_get_object(catalog), "extra_looks");
+		JsonObject *added = extra != NULL && json_object_has_member(extra, axis->data)
+			? json_object_get_object_member(extra, axis->data) : NULL;
 		g_autoptr(GList) names = json_object_get_members(values);
+		g_autoptr(GList) fresh = added != NULL ? json_object_get_members(added) : NULL;
 		GList *name;
-		g_assert_cmpuint(json_array_get_length(listed), ==, g_list_length(names));
+		/* Extra values (catalog extra_looks) join the schema, each styled in
+		 * its own look-AXIS-VALUE.css. */
+		g_assert_cmpuint(json_array_get_length(listed), ==, g_list_length(names) + g_list_length(fresh));
 		for (name = names; name != NULL; name = name->next) {
 			g_autofree gchar *selector = g_strdup_printf(".look-%s-%s", (const gchar *)axis->data,
 				(const gchar *)name->data);
 			if (name != names && strstr(css, selector) == NULL)
+				g_string_append_printf(unstyled, " %s", selector);
+		}
+		for (name = fresh; name != NULL; name = name->next) {
+			g_autofree gchar *path = g_strdup_printf("data/components/look-%s-%s.css", (const gchar *)axis->data,
+				(const gchar *)name->data);
+			g_autofree gchar *selector = g_strdup_printf(".look-%s-%s", (const gchar *)axis->data,
+				(const gchar *)name->data);
+			g_autofree gchar *own = NULL;
+			if (!g_file_get_contents(path, &own, NULL, NULL) || strstr(own, selector) == NULL)
 				g_string_append_printf(unstyled, " %s", selector);
 		}
 	}

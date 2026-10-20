@@ -376,7 +376,12 @@ test_parallel(void){
 		g_autofree gchar *style = g_strdup_printf("\"style\":\"%.20s",
 			ls_components_get_look_description(components, "art", art));
 		g_assert_no_error(local);
-		g_assert_nonnull(strstr(g_ptr_array_index(prompts_for(fixture.provider, "assets/bench.svg"), 0), style));
+		/* "open" leaves the style to the artist, so no style is sent. */
+		if (g_strcmp0(art, "open") == 0)
+			g_assert_null(strstr(strstr(g_ptr_array_index(prompts_for(fixture.provider, "assets/bench.svg"), 0), "TASK (JSON)"),
+				"\"style\":\""));
+		else
+			g_assert_nonnull(strstr(g_ptr_array_index(prompts_for(fixture.provider, "assets/bench.svg"), 0), style));
 	}
 	g_assert_null(strstr(g_ptr_array_index(prompts_for(fixture.provider, "work.html"), 0), "Local form"));
 	fixture_teardown(&fixture);
