@@ -1,0 +1,6 @@
+/* footer/typed: everything in small monospaced type between dotted rules, like a spec sheet. */
+.look-footer-typed .site-footer { border-top: 3px dotted var(--line-strong); font-family: var(--font-mono); }
+.look-footer-typed .site-footer .brand { font-family: var(--font-mono); font-size: var(--step-0); letter-spacing: 0.08em; text-transform: uppercase; }
+.look-footer-typed .site-footer nav ul { gap: 0 var(--space-5); text-transform: uppercase; letter-spacing: 0.06em; }
+.look-footer-typed .site-footer__note { padding-left: var(--space-3); border-left: 3px dotted var(--line); }
+.look-footer-typed .site-footer__credit { padding-top: var(--space-3); border-top: 3px dotted var(--line); }

@@ -81,6 +81,18 @@ override(JsonNode *plan, const gchar *axis){
 
 /* The layout axes the dealt home composition sets (docs/components.org,
  * "Home compositions"), read from the catalog. */
+static JsonArray *
+composition_openings(const gchar *composition){
+	static JsonNode *catalog = NULL;
+	if (catalog == NULL) {
+		g_autoptr(LsComponents) library = ls_components_new(NULL);
+		g_assert_nonnull(library);
+		catalog = json_node_ref(ls_components_get_catalog(library));
+	}
+	return json_object_get_array_member(json_object_get_object_member(json_object_get_object_member(json_object_get_object_member(
+		json_node_get_object(catalog), "compositions"), "layouts"), composition), "openings");
+}
+
 static JsonObject *
 composition_look(const gchar *composition){
 	static JsonNode *catalog = NULL;
@@ -306,23 +318,48 @@ test_opening_fallback(void){
 	/* The sections were replaced; read the new opening. */
 	first = json_array_get_object_element(json_object_get_array_member(json_node_get_object(page), "sections"), 0);
 	g_assert_cmpstr(json_object_get_string_member(first, "component"), !=, "poster");
-	/* Poster is last in the catalog's openings, so the order wraps to the first hero. */
-	g_assert_cmpstr(json_object_get_string_member(first, "component"), ==, "hero");
-	g_assert_cmpstr(json_object_get_string_member(first, "variant"), ==, "statement");
 	g_assert_true(ls_components_check_page(components, plan, "index.html", page, &error));
 	g_assert_no_error(error);
 	/* A picture in the opening is never hidden: a manifesto dealt to a hero
-	 * with art becomes the next opening that shows it. */
+	 * with art becomes an opening that shows it, one of the site's own
+	 * composition when one fits, and sites do not all land on the same one. */
 	{
-		g_autoptr(JsonNode) pictured = load("tests/fixtures/composed/index.json");
-		JsonObject *opening;
-		json_object_set_string_member(member(plan, "structure"), "opening", "manifesto/stacked");
-		g_assert_true(ls_components_apply_opening(components, plan, "index.html", pictured));
-		opening = json_array_get_object_element(json_object_get_array_member(json_node_get_object(pictured), "sections"), 0);
-		g_assert_cmpstr(json_object_get_string_member(opening, "component"), ==, "poster");
-		g_assert_cmpstr(json_object_get_string_member(opening, "variant"), ==, "backdrop");
-		g_assert_cmpstr(json_object_get_string_member(json_object_get_object_member(
-			json_object_get_object_member(opening, "content"), "art"), "src"), ==, "assets/bench.svg");
+		g_autoptr(GHashTable) landed = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+		guint s;
+		for (s = 0; s < 24; s++) {
+			g_autoptr(JsonNode) pictured = load("tests/fixtures/composed/index.json");
+			g_autoptr(JsonNode) dealt = load("tests/fixtures/composed/plan.json");
+			g_autofree gchar *seed = g_strdup_printf("harbor %u\nfurniture", s);
+			JsonObject *opening, *structure;
+			const gchar *component, *variant;
+			g_autofree gchar *pair = NULL;
+			g_assert_true(ls_components_apply_seed(components, dealt, seed, NULL, FALSE));
+			structure = member(dealt, "structure");
+			json_object_set_string_member(structure, "opening", "manifesto/stacked");
+			g_assert_true(ls_components_apply_opening(components, dealt, "index.html", pictured));
+			opening = json_array_get_object_element(json_object_get_array_member(json_node_get_object(pictured), "sections"), 0);
+			component = json_object_get_string_member(opening, "component");
+			variant = json_object_get_string_member(opening, "variant");
+			pair = g_strdup_printf("%s/%s", component, variant);
+			g_assert_cmpstr(json_object_get_string_member(json_object_get_object_member(
+				json_object_get_object_member(opening, "content"), "art"), "src"), ==, "assets/bench.svg");
+			g_assert_true(ls_components_check_page(components, dealt, "index.html", pictured, NULL));
+			{
+				JsonArray *fitting = composition_openings(json_object_get_string_member(structure, "composition"));
+				gboolean any = FALSE, listed = FALSE;
+				guint f;
+				for (f = 0; f < json_array_get_length(fitting); f++) {
+					const gchar *choice = json_array_get_string_element(fitting, f);
+					any |= !g_str_has_prefix(choice, "manifesto/") && !g_str_equal(choice, "hero/minimal") &&
+						!g_str_has_prefix(choice, "poster/type") && !g_str_has_prefix(choice, "poster/stamped");
+					listed |= g_str_equal(choice, pair);
+				}
+				if (any)
+					g_assert_true(listed);
+			}
+			g_hash_table_add(landed, g_steal_pointer(&pair));
+		}
+		g_assert_cmpuint(g_hash_table_size(landed), >=, 5);
 	}
 	/* No structure.opening: the model's opening stays. */
 	g_assert_false(ls_components_apply_opening(components, bare, "index.html", kept));

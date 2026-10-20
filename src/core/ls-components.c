@@ -1193,7 +1193,7 @@ motion_kit(LsComponents *self, const gchar *name){
 static gboolean
 load_generator(LsComponents *self, JsonObject *root, GError **error){
 	JsonObject *block = member_object(root, "palette_generator");
-	const gchar *known_modes = "|light|dark|tinted|vivid|deep|";
+	const gchar *known_modes = "|light|dark|tinted|vivid|deep|earth|";
 	JsonObject *groups[2];
 	guint g;
 	if (!json_object_has_member(root, "palette_generator"))
@@ -1205,7 +1205,7 @@ load_generator(LsComponents *self, JsonObject *root, GError **error){
 		member_object(block, "modes") == NULL || !ls_object_keys(member_object(block, "modes"), known_modes, NULL) ||
 		json_object_get_size(member_object(block, "modes")) == 0 || member_object(block, "harmonies") == NULL ||
 		json_object_get_size(member_object(block, "harmonies")) == 0)
-		return catalog_invalid(error, "palette_generator", "needs share (0 to 100), modes (light, dark, tinted, vivid, deep) and harmonies"), FALSE;
+		return catalog_invalid(error, "palette_generator", "needs share (0 to 100), modes (light, dark, tinted, vivid, deep, earth) and harmonies"), FALSE;
 	groups[0] = member_object(block, "modes");
 	groups[1] = member_object(block, "harmonies");
 	for (g = 0; g < 2; g++) {
@@ -1403,21 +1403,22 @@ join_looks(LsComponents *self, GChecksum *digest, JsonObject *owner, const gchar
 	return TRUE;
 }
 
-/* The wider block's home compositions, motion kits, art directions and
- * section forms join their own blocks, which then check them as their
- * own: each name is new, and each form joins one family. */
+/* The wider block's home compositions, motion kits, art directions,
+ * section forms and palette modes join their own blocks, which then check
+ * them as their own: each name is new, and each form joins one family. */
 static gboolean
 widen_blocks(JsonObject *root, GError **error){
 	JsonObject *wider = member_object(root, "wider");
 	const gchar *joins[][3] = {{"layouts", "compositions", "layouts"}, {"kits", "motion_kits", "kits"},
-		{"directions", "art_directions", "directions"}, {"fields", "section_forms", "fields"}};
+		{"directions", "art_directions", "directions"}, {"fields", "section_forms", "fields"},
+		{"modes", "palette_generator", "modes"}};
 	g_autoptr(GList) names = NULL;
 	GList *name;
 	guint j, i;
 	if (!json_object_has_member(root, "wider"))
 		return TRUE;
-	if (wider == NULL || !ls_object_keys(wider, "|looks|openings|layouts|kits|directions|forms|fields|", NULL))
-		return catalog_invalid(error, "wider", "holds looks, openings, layouts, kits, directions, forms and fields"), FALSE;
+	if (wider == NULL || !ls_object_keys(wider, "|looks|openings|layouts|kits|directions|forms|fields|modes|", NULL))
+		return catalog_invalid(error, "wider", "holds looks, openings, layouts, kits, directions, forms, fields and modes"), FALSE;
 	for (j = 0; j < G_N_ELEMENTS(joins); j++) {
 		JsonObject *added = member_object(wider, joins[j][0]);
 		JsonObject *into = member_object(member_object(root, joins[j][1]), joins[j][2]);
@@ -2409,24 +2410,50 @@ ls_components_apply_opening(LsComponents *self, JsonNode *plan_node, const gchar
 		if (g_str_equal(current, opening))
 			return FALSE;
 	}
-	/* The dealt opening first, then every other one in catalog order. */
-	openings = member_array(member_object(self->kinds, "home"), "openings");
-	for (i = 0; openings != NULL && i < json_array_get_length(openings); i++) {
-		const gchar *name = json_array_get_string_element(openings, i);
-		g_autoptr(GList) variants = NULL;
-		GList *variant;
-		if (g_str_equal(name, "custom"))
-			continue;
-		variants = json_object_get_members(member_object(member_object(self->components, name), "variants"));
-		for (variant = variants; variant != NULL; variant = variant->next) {
-			gchar *pair = g_strdup_printf("%s/%s", name, (const gchar *)variant->data);
-			if (g_str_equal(pair, opening))
-				start = choices->len;
-			g_ptr_array_add(choices, pair);
+	/* The dealt opening first, then the composition's other openings and
+	 * then every other one, each list entered at a point the site's
+	 * structure picks, so sites whose dealt opening cannot take the
+	 * writer's words or picture do not all land on the same one. */
+	{
+		JsonNode *node = json_node_new(JSON_NODE_OBJECT);
+		JsonArray *fitting = member_array(composition_layout(self, ls_string(member_object(plan, "structure"),
+			"composition")), "openings");
+		g_autofree gchar *seed = NULL;
+		g_autoptr(GPtrArray) rest = g_ptr_array_new_with_free_func(g_free);
+		guint n;
+		json_node_set_object(node, member_object(plan, "structure"));
+		seed = ls_json_encode(node);
+		json_node_unref(node);
+		g_ptr_array_add(choices, g_strdup(opening));
+		openings = member_array(member_object(self->kinds, "home"), "openings");
+		for (i = 0; openings != NULL && i < json_array_get_length(openings); i++) {
+			const gchar *name = json_array_get_string_element(openings, i);
+			g_autoptr(GList) variants = NULL;
+			GList *variant;
+			if (g_str_equal(name, "custom"))
+				continue;
+			variants = json_object_get_members(member_object(member_object(self->components, name), "variants"));
+			for (variant = variants; variant != NULL; variant = variant->next) {
+				gchar *pair = g_strdup_printf("%s/%s", name, (const gchar *)variant->data);
+				if (g_str_equal(pair, opening) || json_list_has(fitting, pair))
+					g_free(pair);
+				else
+					g_ptr_array_add(rest, pair);
+			}
 		}
+		n = fitting != NULL ? json_array_get_length(fitting) : 0;
+		start = seed_pick(seed, "opening:fallback", MAX(n, 1));
+		for (i = 0; i < n; i++) {
+			const gchar *pair = json_array_get_string_element(fitting, (start + i) % n);
+			if (g_strcmp0(pair, opening) != 0)
+				g_ptr_array_add(choices, g_strdup(pair));
+		}
+		start = seed_pick(seed, "opening:rest", MAX(rest->len, 1));
+		for (i = 0; i < rest->len; i++)
+			g_ptr_array_add(choices, g_strdup(g_ptr_array_index(rest, (start + i) % rest->len)));
 	}
 	for (i = 0; i < choices->len; i++) {
-		const gchar *choice = g_ptr_array_index(choices, (start + i) % choices->len);
+		const gchar *choice = g_ptr_array_index(choices, i);
 		g_autofree gchar *name = g_strndup(choice, (gsize)(strchr(choice, '/') - choice));
 		g_autoptr(JsonNode) converted = convert_opening(self, plan, first, name, strchr(choice, '/') + 1);
 		g_autoptr(JsonNode) candidate = NULL;
@@ -4463,24 +4490,34 @@ generate_palette(LsComponents *self, const gchar *seed){
 	gdouble accent_hue = fmod(base + turn + 720, 360);
 	gboolean vivid = g_strcmp0(mode, "vivid") == 0, deep = g_strcmp0(mode, "deep") == 0;
 	gboolean dark = g_strcmp0(mode, "dark") == 0 || deep, tinted = g_strcmp0(mode, "tinted") == 0;
+	gboolean earth = g_strcmp0(mode, "earth") == 0;
 	/* Papers spread across their mode: near-black, deep saturated colour,
-	 * pale tint to strong pastel, a bold colour field, cool to warm white. */
+	 * pale tint to strong pastel, a bold colour field, a muted mid-tone
+	 * such as clay, sage or stone, cool to warm white. */
 	gdouble paper_l = deep ? seed_range(seed, "palette:paper", 0.26, 0.36) : dark ? seed_range(seed, "palette:paper", 0.14, 0.3)
 		: vivid ? seed_range(seed, "palette:paper", 0.78, 0.88) : tinted ? seed_range(seed, "palette:paper", 0.82, 0.93)
-		: seed_range(seed, "palette:paper", 0.94, 0.99);
+		: earth ? seed_range(seed, "palette:paper", 0.66, 0.76) : seed_range(seed, "palette:paper", 0.94, 0.99);
 	gdouble paper_c = deep ? seed_range(seed, "palette:paper-c", 0.07, 0.13) : dark ? seed_range(seed, "palette:paper-c", 0.02, 0.08)
 		: vivid ? seed_range(seed, "palette:paper-c", 0.09, 0.16) : tinted ? seed_range(seed, "palette:paper-c", 0.04, 0.11)
-		: seed_range(seed, "palette:paper-c", 0.004, 0.035);
-	/* A bright paper takes a darker accent; dark papers a light one. */
+		: earth ? seed_range(seed, "palette:paper-c", 0.03, 0.08) : seed_range(seed, "palette:paper-c", 0.004, 0.035);
+	/* A bright paper takes a darker accent, a mid-tone a deep one; dark
+	 * papers a light one. */
 	gdouble accent_l = dark ? seed_range(seed, "palette:accent", 0.72, 0.84) : vivid ? seed_range(seed, "palette:accent", 0.36, 0.48)
-		: seed_range(seed, "palette:accent", 0.47, 0.6);
+		: earth ? seed_range(seed, "palette:accent", 0.3, 0.42) : seed_range(seed, "palette:accent", 0.47, 0.6);
 	gdouble accent_c = seed_range(seed, "palette:accent-c", 0.12, 0.2);
 	gdouble toward = dark ? 0.01 : -0.01;
 	g_autofree gchar *paper = oklch_hex(paper_l, paper_c, base);
 	g_autofree gchar *surface = oklch_hex(paper_l + (dark ? 0.05 : -0.04), paper_c + 0.005, base);
 	g_autofree gchar *line = oklch_hex(paper_l + (dark ? 0.14 : -0.14), paper_c, base);
-	/* Ink and muted text carry a little of the base hue, more on some sites. */
-	g_autofree gchar *ink = guarded_text(paper, surface, dark ? 0.95 : 0.2, seed_range(seed, "palette:ink-c", 0.01, 0.06), base, toward * 2);
+	/* Ink and muted text carry a little of the base hue, more on some sites;
+	 * on two sites in three the ink is instead a shade of the accent's hue:
+	 * navy, forest, oxblood or umber on light papers, a pale tint on dark
+	 * ones, still stepped to AA. */
+	gboolean shade = seed_pick(seed, "palette:ink-hue", 3) > 0;
+	g_autofree gchar *ink = guarded_text(paper, surface,
+		dark ? (shade ? seed_range(seed, "palette:ink-l", 0.88, 0.95) : 0.95) : shade ? seed_range(seed, "palette:ink-l", 0.22, 0.36) : 0.2,
+		!shade ? seed_range(seed, "palette:ink-c", 0.01, 0.06) : dark ? seed_range(seed, "palette:ink-c", 0.03, 0.06)
+		: seed_range(seed, "palette:ink-c", 0.06, 0.13), shade ? accent_hue : base, toward * 2);
 	g_autofree gchar *muted = guarded_text(paper, surface, dark ? 0.74 : 0.46, seed_range(seed, "palette:muted-c", 0.02, 0.07), base, toward);
 	g_autofree gchar *accent = NULL, *accent_ink = NULL, *hash = g_compute_checksum_for_string(G_CHECKSUM_SHA256, seed, -1);
 	JsonObject *palette = json_object_new(), *tokens = json_object_new();
@@ -4522,7 +4559,7 @@ generate_palette(LsComponents *self, const gchar *seed){
 	{
 		g_autofree gchar *name = g_strconcat("generated-", hash, NULL);
 		g_autofree gchar *summary = g_strdup_printf("A generated %s palette: %s %s paper with a %s accent (%s harmony).",
-			mode, deep ? "saturated deep" : dark ? "deep" : vivid ? "bold" : tinted ? "soft" : "pale", hue_name(base),
+			mode, deep ? "saturated deep" : dark ? "deep" : vivid ? "bold" : tinted ? "soft" : earth ? "muted mid-tone" : "pale", hue_name(base),
 			hue_name(accent_hue), harmony);
 		json_object_set_string_member(palette, "name", name);
 		json_object_set_string_member(palette, "summary", summary);

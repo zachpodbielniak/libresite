@@ -897,11 +897,17 @@ test_every_look(void){
 		JsonObject *extra = json_object_get_object_member(json_node_get_object(catalog), "extra_looks");
 		JsonObject *added = extra != NULL && json_object_has_member(extra, axis->data)
 			? json_object_get_object_member(extra, axis->data) : NULL;
+		JsonObject *wider = json_object_has_member(json_node_get_object(catalog), "wider")
+			? json_object_get_object_member(json_node_get_object(catalog), "wider") : NULL;
+		JsonObject *wider_looks = wider != NULL && json_object_has_member(wider, "looks")
+			? json_object_get_object_member(wider, "looks") : NULL;
 		g_autoptr(GList) names = json_object_get_members(values);
 		g_autoptr(GList) fresh = added != NULL ? json_object_get_members(added) : NULL;
 		GList *name;
-		/* Extra values (catalog extra_looks) join the schema, each styled in
-		 * its own look-AXIS-VALUE.css. */
+		/* Extra values (catalog extra_looks and the wider block's looks) join
+		 * the schema, each styled in its own look-AXIS-VALUE.css. */
+		if (wider_looks != NULL && json_object_has_member(wider_looks, axis->data))
+			fresh = g_list_concat(fresh, json_object_get_members(json_object_get_object_member(wider_looks, axis->data)));
 		g_assert_cmpuint(json_array_get_length(listed), ==, g_list_length(names) + g_list_length(fresh));
 		for (name = names; name != NULL; name = name->next) {
 			g_autofree gchar *selector = g_strdup_printf(".look-%s-%s", (const gchar *)axis->data,
@@ -2129,9 +2135,10 @@ test_sameness(void){
 	moved = ls_components_choose_seed(components, "harbor\nA repair workshop", NULL, avoid, &closest);
 	g_assert_cmpstr(moved, !=, "harbor\nA repair workshop");
 	g_assert_cmpfloat(closest, <, LS_COMPONENTS_TOO_CLOSE);
-	/* Two dozen plumbers: without the check about one pair in ten is dealt
-	 * too alike. With each earlier site passed as avoid, a dozen in one town
-	 * all come out clear, and the reported closeness is the true one. */
+	/* Two dozen plumbers: without the check at most one pair in ten is
+	 * dealt too alike (none since the palettes widened). With each earlier
+	 * site passed as avoid, a dozen in one town all come out clear, and the
+	 * reported closeness is the true one. */
 	{
 		guint i, j, close = 0, pairs = 0;
 		g_autoptr(GPtrArray) deals = g_ptr_array_new_with_free_func((GDestroyNotify)json_object_unref);
@@ -2171,7 +2178,7 @@ test_sameness(void){
 					LS_COMPONENTS_TOO_CLOSE;
 		if (g_getenv("LS_SAMENESS_DEBUG") != NULL)
 			g_printerr("%u of %u dealt pairs too close without avoid\n", close, pairs);
-		g_assert_cmpuint(close, >, 0);
+		g_assert_cmpuint(close * 10, <=, pairs);
 	}
 	/* plan.missing holds short questions only. */
 	json_object_set_member(root, "missing", json("['What are your opening hours?']"));

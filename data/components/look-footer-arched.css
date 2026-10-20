@@ -1,0 +1,2 @@
+/* footer/arched: the footer band rises in one wide curve at its top edge. */
+.look-footer-arched .site-footer { border-top: 0; border-radius: 50% 50% 0 0 / clamp(1.5rem, 5cqi, 4.5rem) clamp(1.5rem, 5cqi, 4.5rem) 0 0; padding-top: calc(var(--space-7) + clamp(1rem, 3cqi, 2.5rem)); }

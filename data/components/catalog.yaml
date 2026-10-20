@@ -1663,14 +1663,37 @@ extra_looks:
 # the rest: looks join their axes (look-AXIS-VALUE.css), openings join a
 # home opening component (COMPONENT--VARIANT.css, dealt through the
 # compositions that list it), layouts the home compositions, kits the
-# motion kits, directions the art directions, and forms the section form
-# families, with their fields.
+# motion kits, directions the art directions, forms the section form
+# families, with their fields, and modes the generated palette modes.
 wider:
-  forms:
-    offer: [directory]
-    process: [split]
-    practical: [facts]
+  forms: {offer: [directory], process: [split], practical: [facts]}
+  modes: {earth: 18}
   fields:
     directory: {title: title, body: note}
     split: {list: panels, title: heading, body: body}
     facts: {title: label, body: value}
+  looks:
+    panels:
+      capped: Surface cards under a thick accent cap along the top edge.
+      brutal: Paper cards in a heavy ink frame over a hard accent block shadow.
+      accent: Solid accent panels with accent-ink text.
+      ticket: Surface cards with a round bite out of each corner, like a ticket.
+      well: Panels pressed into the page, a surface fill under an inner shadow.
+      folded: Surface cards with the top corner turned down, like a dog-eared page.
+      marker: No box; each item sits on a hairline led by a short thick accent mark.
+      halo: Rounded paper cards ringed by an accent line set just off their edge.
+      graph: Surface cards printed with a faint drafting grid inside a hairline edge.
+    footer:
+      card: The footer's contents in a raised paper card on the surface band.
+      slim: One compact row on the page colour, the name, note and links side by side.
+      ribbon: The name on an accent label hanging from an accent rule along the top edge.
+      directory: The links in a ruled grid under the name, each with a trailing arrow.
+      arched: The footer band rises in one wide curve at its top edge.
+      striped: A band of diagonal accent and ink stripes along the top edge, like safety tape.
+      typed: Everything in small monospaced type between dotted rules, like a spec sheet.
+      chips: On the page colour, every link set in an outlined pill.
+      split: The name and note on one half, the links in a column of large type on the other, an accent rule between.
+      block: The name, note and social links in a solid ink block beside the links.
+      legend: The footer drawn as an outlined box, the name set into its top edge.
+      letterhead: The name centred across the footer between double rules, in spaced small capitals.
+      reversed: The links first in a ruled bar, then the name set large with its note.

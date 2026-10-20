@@ -234,5 +234,27 @@
     <file>components/showcase.html</file>
     <file>components/story.css</file>
     <file>components/story.html</file>
+    <file>components/look-footer-card.css</file>
+    <file>components/look-footer-slim.css</file>
+    <file>components/look-footer-ribbon.css</file>
+    <file>components/look-footer-directory.css</file>
+    <file>components/look-footer-arched.css</file>
+    <file>components/look-footer-striped.css</file>
+    <file>components/look-footer-typed.css</file>
+    <file>components/look-footer-chips.css</file>
+    <file>components/look-footer-split.css</file>
+    <file>components/look-footer-block.css</file>
+    <file>components/look-footer-legend.css</file>
+    <file>components/look-footer-letterhead.css</file>
+    <file>components/look-footer-reversed.css</file>
+    <file>components/look-panels-capped.css</file>
+    <file>components/look-panels-brutal.css</file>
+    <file>components/look-panels-accent.css</file>
+    <file>components/look-panels-ticket.css</file>
+    <file>components/look-panels-well.css</file>
+    <file>components/look-panels-folded.css</file>
+    <file>components/look-panels-marker.css</file>
+    <file>components/look-panels-halo.css</file>
+    <file>components/look-panels-graph.css</file>
   </gresource>
 </gresources>

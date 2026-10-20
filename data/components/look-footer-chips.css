@@ -1,0 +1,6 @@
+/* footer/chips: on the page colour, every link set in an outlined pill. */
+.look-footer-chips .site-footer { background: var(--paper); border-top: var(--border) solid var(--line-strong); }
+.look-footer-chips .site-footer nav ul { gap: var(--space-2); }
+.look-footer-chips .site-footer nav a { padding-inline: var(--space-4); border: var(--border) solid var(--line-strong); border-radius: 999px; text-decoration: none; }
+.look-footer-chips .site-footer nav a:is(:hover, [aria-current="page"]) { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.look-footer-chips .site-footer__social a { border: var(--border) solid var(--line-strong); }

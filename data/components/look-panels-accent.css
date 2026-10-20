@@ -1,0 +1,10 @@
+/* panels/accent: solid accent panels whose text and controls take the accent ink. */
+.look-panels-accent :is(.features--boxed .features__item, .cards--bordered .card, .pricing__tier, .bento__tile, .split__panel, .voices__item, .services--grid .services__item, .locations--cards .locations__item, .contact-card--card .contact-card__box, .facts--grid .facts__item, .team--cards .team__person, .entries--cards .entries__item, .steps--grid .steps__item, .links--cards .links__item a, .quote--boxed .quote__figure, .menu--board .menu__section, .cta--card .cta__inner, .form--card .form__inner, .location--card .location__inner, .hours--grid .hours__row, .faq--boxed .faq__item, .details--bordered .details__item) {
+	--paper: var(--ls-accent); --ink: var(--ls-accent-ink); --surface: color-mix(in srgb, var(--ls-accent-ink) 12%, var(--ls-accent));
+	--muted: var(--ls-accent-ink); --accent: var(--ls-accent-ink); --accent-ink: var(--ls-accent); --accent-text: var(--ls-accent-ink);
+	--line: color-mix(in srgb, var(--ls-accent-ink) 35%, var(--ls-accent)); --line-strong: var(--ls-accent-ink); --focus: var(--ls-accent-ink); --field: var(--ls-accent);
+	background: var(--ls-accent); color: var(--ls-accent-ink); border: 0; border-radius: max(var(--radius), 0.5rem); box-shadow: none;
+}
+.look-panels-accent .pricing__tier--highlight { box-shadow: inset 0 0 0 0.3rem var(--ls-accent-ink); }
+/* On a section already painted in the accent, the panels keep an accent-ink edge. */
+.look-panels-accent .sec-tone-accent :is(.features--boxed .features__item, .cards--bordered .card, .pricing__tier, .bento__tile, .split__panel, .voices__item, .services--grid .services__item, .locations--cards .locations__item, .contact-card--card .contact-card__box, .facts--grid .facts__item, .team--cards .team__person, .entries--cards .entries__item, .steps--grid .steps__item, .links--cards .links__item a, .quote--boxed .quote__figure, .menu--board .menu__section, .cta--card .cta__inner, .form--card .form__inner, .location--card .location__inner, .hours--grid .hours__row, .faq--boxed .faq__item, .details--bordered .details__item) { border: var(--border-strong) solid var(--ls-accent-ink); }
