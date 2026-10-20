@@ -1,0 +1,65 @@
+{
+  "name": "{{name}}",
+  "character": "A tidy service van, a clipboard estimate and work boots by the door: dependable {{trade}} for homeowners.",
+  "tagline": "Honest {{trade}} work, done right the first time",
+  "lang": "en",
+  "tokens": {
+    "paper": "#f8fafc",
+    "ink": "#0f172a",
+    "muted": "#475569",
+    "surface": "#e2e8f0",
+    "line": "#cbd5e1",
+    "accent": "#1d4ed8",
+    "accent_ink": "#ffffff",
+    "font_display": "\"Inter\", system-ui, sans-serif",
+    "font_body": "\"Inter\", system-ui, sans-serif",
+    "font_mono": "ui-monospace, Menlo, monospace",
+    "base_size": 1.0625,
+    "ratio": 1.25,
+    "measure": 66,
+    "radius": 8,
+    "border": 1,
+    "space": 1,
+    "density": "regular",
+    "heading_weight": 700,
+    "heading_tracking": -0.01,
+    "heading_leading": 1.15,
+    "heading_case": "none"
+  },
+  "fonts": [{"family": "Inter", "weights": [400, 700]}],
+  "look": {
+    "header": "bar",
+    "nav": "underline",
+    "heads": "plain",
+    "buttons": "square",
+    "panels": "raised",
+    "rhythm": "even",
+    "align": "left",
+    "images": "rounded",
+    "footer": "simple",
+    "motion": "none",
+    "art": "flat",
+    "photos": "natural",
+    "lettering": "plain",
+    "scheme": "fixed",
+    "frame": "top",
+    "headpos": "top"
+  },
+  "brand": {"wordmark": "{{name}}", "mark": "assets/mark.svg"},
+  "nav": [
+    {"href": "services.html", "label": "Services"},
+    {"href": "contact.html", "label": "Contact"}
+  ],
+  "action": {"href": "contact.html", "label": "Get a free estimate"},
+  "footer": {"note": "An illustrative business. No real customers are shown."},
+  "voice": "Friendly, plain and reassuring.",
+  "art": [
+    {"path": "assets/mark.svg", "brief": "A simple badge for {{name}}", "ratio": "1:1"},
+    {"path": "assets/hero.svg", "brief": "A friendly illustration of {{trade}} work at a house", "ratio": "4:3"}
+  ],
+  "pages": [
+    {"path": "index.html", "kind": "home", "title": "{{name}}", "description": "{{name}} offers dependable {{trade}} for homeowners, with clear estimates and tidy work.", "brief": "Home"},
+    {"path": "services.html", "kind": "services", "title": "Services", "description": "{{s1}}, {{s2}} and {{s3}} from {{name}}, explained plainly.", "brief": "Services"},
+    {"path": "contact.html", "kind": "contact", "title": "Contact", "description": "How to ask {{name}} for an estimate.", "brief": "Contact"}
+  ]
+}

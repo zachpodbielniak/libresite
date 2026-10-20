@@ -1,0 +1,21 @@
+{
+  "path": "services.html",
+  "sections": [
+    {"component": "page-header", "variant": "plain", "content": {
+      "heading": "Services",
+      "lede": "Everything {{name}} does, explained plainly."
+    }},
+    {"component": "services", "variant": "rows", "id": "list", "content": {
+      "heading": "Our {{trade}} services",
+      "items": [
+        {"name": "{{s1}}", "summary": "What a visit for {{s1}} covers and how we prepare."},
+        {"name": "{{s2}}", "summary": "How we approach {{s2}} and what to expect."},
+        {"name": "{{s3}}", "summary": "When {{s3}} makes sense and how long it takes."}
+      ]
+    }},
+    {"component": "cta", "variant": "band", "content": {
+      "heading": "Not sure what you need?",
+      "actions": [{"href": "contact.html", "label": "Ask us"}]
+    }}
+  ]
+}
