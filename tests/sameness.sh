@@ -13,10 +13,10 @@ webdriver=${1%/}
 output=$(realpath "$2")
 [[ -f $output/score.json ]] || { echo "No score.json in $output; render the sites first." >&2; exit 2; }
 # Same limits as the structural gate in tests/test-sameness.c, plus one for
-# the screenshots alone: two home pages whose shapes correlate this much or
-# more are the same layout in other words.
+# the screenshots alone: ten home pages whose shapes are this alike or more
+# on average share one layout in other words.
 mean_limit=$(jq -r .mean_limit "$output/score.json")
-screen_limit=0.6
+screen_limit=0.2
 session=
 profile=
 call () {
@@ -55,22 +55,30 @@ for width in 390 1440; do
 		call POST "/session/$session/url" "$(jq -nc --arg url "file://$site/index.html" '{url:$url}')" >/dev/null
 		call POST "/session/$session/execute/sync" "$(jq -nc --arg script "$settle" '{script:$script,args:[]}')" >/dev/null
 		call GET "/session/$session/moz/screenshot/full" '{}' | jq -er .value | base64 -d > "$shots/$slug-$width.png"
-		# The page's shape: grey levels squashed to a fixed grid, so pages of
-		# different lengths compare section by section.
-		magick "$shots/$slug-$width.png" -colorspace Gray -resize '48x192!' "$shots/$slug-$width.pgm"
+		# The page's shape: grey levels squashed to a fixed 64 by 256 grid, so
+		# pages of different lengths compare section by section.
+		magick "$shots/$slug-$width.png" -colorspace Gray -resize '64x256!' "$shots/$slug-$width-shape.png"
 	done
 done
-# Normalised cross-correlation of every pair's shapes, clamped to 0..1.
-# ImageMagick 7 prints the normalised value in parentheses.
+# Structural similarity (SSIM) of every pair's shapes, clamped to 0..1: 1
+# for the same layout. ImageMagick reports SSIM in some versions and the
+# distance 1 - SSIM in others, so a shape compared with itself tells which.
+ssim () {
+	magick compare -metric SSIM "$1" "$2" null: 2>&1 >/dev/null |
+		awk '{v = $1; if (match($0, /\([^)]*\)/)) v = substr($0, RSTART + 1, RLENGTH - 2); print v}' || true
+}
+first=$(basename "${sites[0]}")
+distance=$(awk -v self="$(ssim "$shots/$first-390-shape.png" "$shots/$first-390-shape.png")" 'BEGIN {print (self < 0.5) ? 1 : 0}')
 pairs=$(
 	for width in 390 1440; do
 		for (( i = 0; i < ${#sites[@]}; i++ )); do
 			for (( j = i + 1; j < ${#sites[@]}; j++ )); do
 				a=$(basename "${sites[i]}")
 				b=$(basename "${sites[j]}")
-				ncc=$(magick compare -metric NCC "$shots/$a-$width.pgm" "$shots/$b-$width.pgm" null: 2>&1 >/dev/null | awk '{v = $1; if (match($0, /\([^)]*\)/)) v = substr($0, RSTART + 1, RLENGTH - 2); print v}' || true)
-				jq -nc --arg a "$a" --arg b "$b" --argjson width "$width" --argjson ncc "${ncc:-0}" \
-					'{a:$a, b:$b, width:$width, screen:([0, ([1, $ncc] | min)] | max)}'
+				r=$(awk -v v="$(ssim "$shots/$a-$width-shape.png" "$shots/$b-$width-shape.png")" -v distance="$distance" \
+					'BEGIN {printf "%.6f\n", distance ? 1 - v : v}')
+				jq -nc --arg a "$a" --arg b "$b" --argjson width "$width" --argjson r "$r" \
+					'{a:$a, b:$b, width:$width, screen:([0, ([1, $r] | min)] | max)}'
 			done
 		done
 	done | jq -sc .
