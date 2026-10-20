@@ -1,0 +1,11 @@
+/* contact-card/postcard: a postcard, words on the left and the details on
+ * ruled lines on the right, with a stamp box in the corner. */
+.contact-card--postcard .contact-card__box { position: relative; max-width: 56rem; padding: var(--space-6); background: var(--surface); border: var(--border) solid var(--line-strong); }
+.contact-card--postcard .contact-card__box::after { content: ""; position: absolute; top: var(--space-4); right: var(--space-4); width: 3rem; height: 3.6rem; border: calc(var(--border) * 2) dashed var(--accent); }
+.contact-card--postcard .contact-card__title { padding-right: 4rem; }
+.contact-card--postcard .contact-card__items { grid-template-columns: minmax(0, 1fr); gap: 0; }
+.contact-card--postcard .contact-card__items > div { padding-block: var(--space-3); border-bottom: var(--border) solid var(--line-strong); }
+@container (min-width: 52rem) {
+	.contact-card--postcard .contact-card__box { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 var(--space-7); }
+	.contact-card--postcard .contact-card__box > .contact-card__items { grid-column: 2; grid-row: 1 / span 3; margin-top: var(--space-8); }
+}

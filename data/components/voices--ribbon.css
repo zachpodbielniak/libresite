@@ -1,0 +1,5 @@
+/* voices/ribbon: quotes as cards in one row that scrolls sideways and
+ * snaps, each card a fixed share of the section. */
+.voices--ribbon .voices__list { display: flex; align-items: stretch; gap: var(--space-4); overflow-x: auto; scroll-snap-type: x mandatory; padding-bottom: var(--space-3); scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+.voices--ribbon .voices__list > li { flex: 0 0 min(85cqi, 22rem); scroll-snap-align: start; }
+.voices--ribbon .voices__item { border: var(--border) solid var(--line-strong); border-top: calc(var(--border) * 4) solid var(--accent); }

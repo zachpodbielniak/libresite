@@ -1511,3 +1511,29 @@ palette_generator:
   share: 70
   modes: {light: 50, dark: 25, tinted: 25}
   harmonies: {complementary: 180, split-warm: 150, split-cool: 210, triadic: 120, analogous: 35}
+# Extra component variants (docs/components.org, "Component variants").
+# Each joins its component's variants at load, so plans may name it and the
+# builder deals it like any other; its styles are NAME--VARIANT.css, added
+# only to sites that render it. They restyle the component's own markup.
+extra_variants:
+  services:
+    ledger: Each service under a heavy rule with a large running number, two to a row.
+    tiles: Solid tiles alternating between the surface and the ink, names set large.
+  voices:
+    stack: The first quote set large under an oversized quotation mark, the rest beside a rule.
+    ribbon: Quote cards in one row that scrolls sideways and snaps.
+  steps:
+    path: Numbered stops on a dashed route down the left.
+    chapters: Each step a chapter, its number huge in outline between rules.
+  faq:
+    chat: Questions as speech bubbles, answers replying from the other side.
+    index: Questions as a grid of short cards opened by an accent bar.
+  cta:
+    stripe: The call in a box framed by diagonal accent stripes.
+    note: The call on a pinned, slightly turned note with tape.
+  contact-card:
+    ticket: The details on a ticket with notched sides and a dashed tear line.
+    postcard: A postcard, words on the left and the details on ruled lines on the right.
+  gallery:
+    polaroid: Prints in thick paper frames, each turned a little.
+    filmstrip: Pictures in one dark band that scrolls sideways, edged with sprocket holes.

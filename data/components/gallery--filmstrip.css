@@ -1,0 +1,9 @@
+/* gallery/filmstrip: pictures in one dark band that scrolls sideways,
+ * edged with sprocket holes. */
+.gallery--filmstrip .gallery__list { display: flex; align-items: start; gap: var(--space-3); overflow-x: auto; scroll-snap-type: x mandatory; padding: 1.4rem var(--space-3); background:
+	repeating-linear-gradient(90deg, var(--paper) 0 0.7rem, transparent 0.7rem 1.6rem) top 0.35rem left 0 / 100% 0.6rem no-repeat,
+	repeating-linear-gradient(90deg, var(--paper) 0 0.7rem, transparent 0.7rem 1.6rem) bottom 0.35rem left 0 / 100% 0.6rem no-repeat,
+	var(--ink); scrollbar-width: thin; scrollbar-color: var(--line-strong) transparent; }
+.gallery--filmstrip .gallery__list > li { flex: 0 0 min(70cqi, 20rem); scroll-snap-align: start; }
+.gallery--filmstrip .gallery__item img { border-radius: 0; }
+.gallery--filmstrip .gallery__item figcaption { color: var(--paper); }

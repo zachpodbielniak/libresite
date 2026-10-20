@@ -37,6 +37,7 @@ struct _LsComponents {
 	JsonNode *network_catalog;
 	JsonObject *networks;	/* social network -> {label, hosts, path}; NULL without networks.yaml */
 	GPtrArray *order;
+	GPtrArray *extras;	/* NAME--VARIANT of each extra variant, with its own styles */
 	GHashTable *files;	/* resource-relative name -> contents */
 	GHashTable *snapshot;	/* archived name -> contents; NULL reads the GResource */
 	JsonNode *utility[G_N_ELEMENTS(utility_routes)];
@@ -61,6 +62,7 @@ ls_components_finalize(GObject *object){
 	g_free(self->themed_plan_schema);
 	g_clear_pointer(&self->theme_catalog, json_node_unref);
 	g_clear_pointer(&self->identity_catalog, json_node_unref);
+	g_clear_pointer(&self->extras, g_ptr_array_unref);
 	g_clear_pointer(&self->pairing_catalog, json_node_unref);
 	g_free(self->digest);
 	G_OBJECT_CLASS(ls_components_parent_class)->finalize(object);
@@ -1216,6 +1218,8 @@ load_generator(LsComponents *self, JsonObject *root, GError **error){
 	return TRUE;
 }
 
+static gboolean variant_is_fixed(const gchar *component);
+
 LsComponents *
 ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 	g_autoptr(LsComponents) self = g_object_new(LS_TYPE_COMPONENTS, NULL);
@@ -1235,7 +1239,7 @@ ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 	if (self->catalog == NULL)
 		return NULL;
 	root = JSON_NODE_HOLDS_OBJECT(self->catalog) ? json_node_get_object(self->catalog) : NULL;
-	if (root == NULL || !ls_object_keys(root, "|version|looks|kinds|components|compositions|motion_kits|palette_generator|", error) ||
+	if (root == NULL || !ls_object_keys(root, "|version|looks|kinds|components|compositions|motion_kits|palette_generator|extra_variants|", error) ||
 		(self->components = member_object(root, "components")) == NULL ||
 		(self->kinds = member_object(root, "kinds")) == NULL ||
 		(self->looks = member_object(root, "looks")) == NULL) {
@@ -1272,6 +1276,35 @@ ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 		style = load_resource(self, digest, css, FALSE, NULL);
 		script = load_resource(self, digest, js, FALSE, NULL);
 		g_ptr_array_add(self->order, g_strdup(name));
+	}
+	/* Extra variants join their components, each with its own styles;
+	 * the block is optional so archived libraries load as before. */
+	self->extras = g_ptr_array_new_with_free_func(g_free);
+	if (json_object_has_member(root, "extra_variants")) {
+		JsonObject *extra = member_object(root, "extra_variants");
+		g_autoptr(GList) owners = extra != NULL ? json_object_get_members(extra) : NULL;
+		GList *owner;
+		if (extra == NULL)
+			return catalog_invalid(error, "extra_variants", "must map components to new variants"), NULL;
+		for (owner = owners; owner != NULL; owner = owner->next) {
+			JsonObject *variants = member_object(member_object(self->components, owner->data), "variants");
+			JsonObject *added = member_object(extra, owner->data);
+			g_autoptr(GList) values = added != NULL ? json_object_get_members(added) : NULL;
+			GList *value;
+			if (variants == NULL || added == NULL || variant_is_fixed(owner->data))
+				return catalog_invalid(error, owner->data, "extra variants extend dealable catalog components"), NULL;
+			for (value = values; value != NULL; value = value->next) {
+				g_autofree gchar *file = g_strdup_printf("%s--%s.css", (const gchar *)owner->data, (const gchar *)value->data);
+				g_autofree gchar *style = NULL;
+				if (json_object_has_member(variants, value->data) || ls_string(added, value->data) == NULL)
+					return catalog_invalid(error, owner->data, "an extra variant is new and has a description"), NULL;
+				style = load_resource(self, digest, file, TRUE, error);
+				if (style == NULL)
+					return NULL;
+				json_object_set_string_member(variants, value->data, ls_string(added, value->data));
+				g_ptr_array_add(self->extras, g_strdup_printf("%s--%s", (const gchar *)owner->data, (const gchar *)value->data));
+			}
+		}
 	}
 	/* Page kinds name only real components; home is the one hero kind. */
 	{
@@ -1453,6 +1486,12 @@ static const Gene structure_genes[] = {
  * these others render different markup per variant. */
 static const gchar *const fixed_variant_components[] = {"hero", "cover", "poster", "manifesto", "custom",
 	"article", "compare", "form", "features", "callout", "checklist", "columns", "profile", "areas", NULL};
+/* Whether @component keeps the model's variant (see above). */
+static gboolean
+variant_is_fixed(const gchar *component){
+	return in_list(fixed_variant_components, component);
+}
+
 /* Variants that say something (an order, hidden artwork) rather than only
  * restyle: never dealt, though the model may still choose them. */
 static const gchar *const meaningful_variants[] = {"cards/numbered", "cards/minimal", NULL};
@@ -5268,6 +5307,7 @@ render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArra
 		GList *key;
 		guint k;
 		g_hash_table_add(render->used, g_strdup(name));
+		g_hash_table_add(render->used, g_strdup_printf("%s--%s", name, variant));
 		for (key = keys; key != NULL; key = key->next) {
 			JsonNode *value = json_object_get_member(content, key->data);
 			if (value == NULL || JSON_NODE_HOLDS_NULL(value))
@@ -6178,6 +6218,13 @@ ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages
 			g_string_append_printf(css, "\n/* %s */\n@layer ls-components {\n%s}\n", name, file_text(self, style));
 		if (file_text(self, script) != NULL)
 			g_string_append_printf(js, "\n%s", file_text(self, script));
+	}
+	/* Extra variants a page rendered bring their own styles. */
+	for (i = 0; i < self->extras->len; i++) {
+		const gchar *extra = g_ptr_array_index(self->extras, i);
+		g_autofree gchar *file = g_strconcat(extra, ".css", NULL);
+		if (g_hash_table_contains(used, extra))
+			g_string_append_printf(css, "\n/* %s */\n@layer ls-components {\n%s}\n", extra, file_text(self, file));
 	}
 	/* The home composition's own styles, after the components they arrange. */
 	{

@@ -1,0 +1,6 @@
+/* services/ledger: each service opens under a heavy rule with a large
+ * running number, two to a row where the section has room. */
+.services--ledger .services__list { counter-reset: ls-ledger; gap: var(--space-6) var(--space-7); }
+.services--ledger .services__item { counter-increment: ls-ledger; padding-top: var(--space-4); border-top: calc(var(--border) * 3) solid var(--ink); }
+.services--ledger .services__item::before { content: counter(ls-ledger, decimal-leading-zero); display: block; margin-bottom: var(--space-2); font-family: var(--font-display); font-weight: var(--heading-weight); font-size: var(--step-4); line-height: 1; color: var(--accent-text); }
+@container (min-width: 48rem) { .services--ledger .services__list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }

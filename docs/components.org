@@ -737,3 +737,32 @@ Measured as before on 2026-10-20:
 | overall worst pair | 0.616 | 0.488 | |
 
 The structural pair limit now holds, and the overall mean is under its limit; the structural mean is just over. The screen likeness rose, most at 1440: with dark and tinted pages in the set, more pages share large dark or tinted areas in the same places, which the squashed grey grid scores as alike even though the colours differ (a light and a dark page are both "flat field with a dark band"). The ten home pages are visibly different in colour and type now; what still repeats is the fixture's own section run and artwork, which the remaining children (component variants and art direction) address.
+
+* Component variants
+
+The components a home-services site leans on most (services, reviews, the process, questions, the call to action, contact and the gallery) were where sites looked most alike. Reviews (=voices=) had only two looks. =extra_variants= at the end of =catalog.yaml= adds two new looks to each of the seven, so each now has at least four:
+
+| Component | New variants | All variants |
+|-----------+--------------+--------------|
+| services | ledger (heavy rules, large running numbers, two to a row), tiles (solid tiles alternating surface and ink) | 7 |
+| voices (reviews) | stack (the first quote large under an oversized quotation mark, the rest beside a rule), ribbon (quote cards in a sideways-scrolling, snapping row) | 4 |
+| steps (process) | path (numbered stops on a dashed route), chapters (huge outlined numbers between rules) | 8 |
+| faq | chat (questions as speech bubbles, answers replying from the other side), index (a grid of short cards opened by an accent bar) | 9 |
+| cta | stripe (a box framed by diagonal accent stripes), note (a pinned, slightly turned note with tape) | 12 |
+| contact-card | ticket (notched sides and a dashed tear line), postcard (words left, details on ruled lines right, a stamp box) | 7 |
+| gallery | polaroid (thick paper frames, each turned a little), filmstrip (a dark sideways-scrolling band edged with sprocket holes) | 10 |
+
+- Each extra variant restyles its component's existing markup and has its own file, =NAME--VARIANT.css=, so no component's files change. At load the variants join their components (=ls_components_new_from_snapshot()= refuses a repeated name, a missing description or file, and components that keep the model's variant). From then on they are ordinary variants: the model-facing reference lists them, page checks accept them, and =ls_components_deal_structure()= deals them per seed with the rest, including in the per-site family of three that sections draw from.
+- Their styles are emitted in the components layer only when a page renders that variant, so a site carries only the looks it shows. They colour only with the site's tokens, so every contrast pair the plan checks still holds, and move nothing.
+- Layout follows the library's rules: zero-floor grid tracks, container queries on the section, and turned pieces (note, polaroid) clipped at the section so they never widen the page.
+
+=tests/test-variants.c= checks that each of the seven has at least three variants with the extras, every extra is new, described, under 2 KB, coloured only by tokens and still; that a page naming each one passes the page check and renders its class with its styles and without the other extras' styles; and that across 400 seeds the builder deals every extra variant, which the reference also describes. With =VARIANTS_OUTPUT= it writes one site per variant, which =tests/compositions.sh= checks like the home compositions:
+
+#+begin_src sh
+VARIANTS_OUTPUT="$PWD/build/variants" build/release/test-variants
+bash tests/compositions.sh "$WEBDRIVER_URL" build/variants
+#+end_src
+
+On 2026-10-20 all fourteen passed at 390 and 1440 px with and without scripts (56 loads): no page scrolled sideways and no heading split a word. Looking at the screenshots caught one fault the measurements could not: the stripe call to action painted its stripes over its own box, because the box is the section's wrap; the stacking context now sits on the section.
+
+The sameness score moves a little (structural 0.359 to 0.356, overall 0.343 to 0.340, worst pair 0.479; screens 0.179 and 0.320): the fixture home uses services, steps, questions and a call to action, so only the share of variants the ten sites have in common can change, and the mix part went from 0.47 to 0.46.
