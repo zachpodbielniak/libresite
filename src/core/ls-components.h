@@ -123,6 +123,45 @@ JsonObject *ls_components_deal_structure(LsComponents *self, const gchar *seed);
  */
 gboolean ls_components_apply_structure(LsComponents *self, JsonNode *plan, const gchar *seed, gboolean themed);
 /**
+ * ls_components_apply_seed:
+ * @self: a component library
+ * @plan: (transfer none): plan to change in place
+ * @seed: stable text identifying the site
+ * @sector: (nullable): the business sector identities are dealt by
+ * @themed: whether a theme already set the plan's design
+ *
+ * Makes the seed, not the model, decide the site's design: applies
+ * ls_components_apply_structure() (which also deals the home opening as
+ * structure.opening), then, without a theme, sets every remaining look axis
+ * to ls_components_suggest_look() except the stock flourishes, and the
+ * colour tokens, font tokens and web fonts to the identity
+ * ls_components_suggest_identity() deals. A plan without web fonts keeps
+ * its own font tokens, so an order that forbids remote fonts still gets
+ * none. The same seed always gives the same design.
+ * Returns: whether @plan was an object and changed
+ */
+gboolean ls_components_apply_seed(LsComponents *self, JsonNode *plan, const gchar *seed, const gchar *sector,
+	gboolean themed);
+/**
+ * ls_components_apply_opening:
+ * @self: a component library
+ * @plan: (transfer none): a plan whose structure names an opening
+ * @path: the home page's route
+ * @page: (transfer none): the home page specification, changed in place
+ *
+ * Rewrites the page's opening section (a hero, cover, poster or manifesto)
+ * as the component and variant in the plan's structure.opening, carrying
+ * over its kicker, heading, lede, actions and art; a cover or a split hero
+ * without art borrows the plan's first artwork other than the mark. When
+ * the dealt opening cannot hold the words (a heading too long for a
+ * poster, too few lines for a manifesto, no art at all), the next opening
+ * in a fixed order from the dealt one that can is used. Custom openings,
+ * pages that do not open with an opening component and plans without
+ * structure.opening are left alone.
+ * Returns: whether @page changed
+ */
+gboolean ls_components_apply_opening(LsComponents *self, JsonNode *plan, const gchar *path, JsonNode *page);
+/**
  * ls_components_suggest_opening:
  * @self: a component library
  * @seed: stable text identifying the site
