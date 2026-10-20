@@ -1,0 +1,24 @@
+/* Motion kit: parallax. The opening's picture drifts slower than the page
+ * and section headings slide in from the side where the browser supports
+ * scroll-driven animation; the heading settles on arrival everywhere, and
+ * link underlines grow under the pointer. */
+@media (prefers-reduced-motion: no-preference) {
+	.kit-parallax main > .block:first-child h1 { animation: kit-parallax-settle 760ms cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+	@supports (animation-timeline: scroll()) {
+		.kit-parallax main > .block:first-child :is(figure, picture, .cover__art, .poster__art) { overflow: clip; }
+		.kit-parallax main > .block:first-child :is(figure, picture, .cover__art) img, .kit-parallax main > .block:first-child .poster__art {
+			animation: kit-parallax-drift linear both; animation-timeline: scroll(root); animation-range: 0 80vh;
+		}
+	}
+	@supports (animation-timeline: view()) {
+		.kit-parallax main > .block:not(:first-child) .section-head { animation: kit-parallax-slide linear both; animation-timeline: view(); animation-range: entry 0% entry 55%; }
+		.kit-parallax main > .block:not(:first-child) :is(.media, .figure, .showcase) img { animation: kit-parallax-float linear both; animation-timeline: view(); }
+	}
+	.kit-parallax main .prose a { text-decoration: none; background-image: linear-gradient(currentColor, currentColor); background-size: 100% 0.08em; background-position: 0 100%; background-repeat: no-repeat; transition: background-size 220ms ease; }
+	.kit-parallax main .prose a:hover { background-size: 100% 0.45em; }
+	.kit-parallax :focus-visible { transition: outline-offset 180ms ease; outline-offset: 6px; }
+}
+@keyframes kit-parallax-settle { from { opacity: 0; transform: translateX(-1.5rem); } }
+@keyframes kit-parallax-drift { to { transform: translateY(12%) scale(1.06); } }
+@keyframes kit-parallax-slide { from { opacity: 0; transform: translateX(-2.5rem); } }
+@keyframes kit-parallax-float { from { transform: translateY(1.5rem); } to { transform: translateY(-1.5rem); } }

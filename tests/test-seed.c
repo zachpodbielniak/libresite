@@ -34,6 +34,29 @@ is_flourish(const gchar *axis){
 	return g_strv_contains(flourishes, axis);
 }
 
+static JsonObject *composition_look(const gchar *composition);
+
+/* The value the builder sets for @axis over the seed's: the motion kit's
+ * (docs/components.org, "Motion"), else the home composition's. */
+static const gchar *
+override(JsonNode *plan, const gchar *axis){
+	static JsonNode *catalog = NULL;
+	JsonObject *structure = json_object_get_object_member(json_node_get_object(plan), "structure");
+	JsonObject *kits, *kit, *own;
+	if (catalog == NULL) {
+		g_autofree gchar *text = NULL;
+		g_assert_true(g_file_get_contents("data/components/catalog.yaml", &text, NULL, NULL));
+		catalog = ls_yaml_parse(text, NULL);
+	}
+	kits = json_object_get_object_member(json_object_get_object_member(json_node_get_object(catalog), "motion_kits"), "kits");
+	kit = json_object_has_member(structure, "kit") ? json_object_get_object_member(kits, json_object_get_string_member(structure, "kit")) : NULL;
+	if (kit != NULL && json_object_has_member(kit, "look") &&
+		json_object_has_member(json_object_get_object_member(kit, "look"), axis))
+		return json_object_get_string_member(json_object_get_object_member(kit, "look"), axis);
+	own = composition_look(json_object_get_string_member(structure, "composition"));
+	return own != NULL && json_object_has_member(own, axis) ? json_object_get_string_member(own, axis) : NULL;
+}
+
 /* The layout axes the dealt home composition sets (docs/components.org,
  * "Home compositions"), read from the catalog. */
 static JsonObject *
@@ -51,8 +74,8 @@ composition_look(const gchar *composition){
 }
 
 /* Every look axis but the retired flourishes is the seed's, whatever the
- * model chose, except those the dealt home composition sets; the same seed
- * gives the same look. */
+ * model chose, except those the dealt home composition or motion kit sets;
+ * the same seed gives the same look. */
 static void
 test_look(void){
 	g_autoptr(LsComponents) components = library();
@@ -69,12 +92,11 @@ test_look(void){
 		json_object_set_string_member(member(plan, "look"), "art", "woodcut");
 		g_assert_true(ls_components_apply_seed(components, plan, seeds[s], "trades", FALSE));
 		for (axis = axes; axis != NULL; axis = axis->next) {
-			JsonObject *own = composition_look(json_object_get_string_member(member(plan, "structure"), "composition"));
+			const gchar *set = override(plan, axis->data);
 			if (is_flourish(axis->data))
 				continue;
 			g_assert_cmpstr(json_object_get_string_member(member(plan, "look"), axis->data), ==,
-				own != NULL && json_object_has_member(own, axis->data) ? json_object_get_string_member(own, axis->data)
-				: json_object_get_string_member(dealt, axis->data));
+				set != NULL ? set : json_object_get_string_member(dealt, axis->data));
 		}
 		g_assert_true(ls_components_apply_seed(components, again, seeds[s], "trades", FALSE));
 		first = ls_json_encode(plan);

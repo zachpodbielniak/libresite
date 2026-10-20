@@ -275,8 +275,10 @@ test_render(void){
 		index = bundle_file(bundle, "index.html");
 		work = bundle_file(bundle, "work.html");
 		css = bundle_file(bundle, "styles.css");
-		wanted = g_strdup_printf(" home-%s\"", (const gchar *)name->data);
+		/* The class may be followed by others, such as the motion kit's. */
+		wanted = g_strdup_printf(" home-%s", (const gchar *)name->data);
 		g_assert_nonnull(strstr(index, wanted));
+		g_assert_true(strchr(" \"", strstr(index, wanted)[strlen(wanted)]) != NULL);
 		g_assert_null(strstr(work, " home-"));
 		css_marker = g_strdup_printf(".home-%s", (const gchar *)name->data);
 		if (json_object_has_member(layout, "css") && json_object_get_boolean_member(layout, "css"))

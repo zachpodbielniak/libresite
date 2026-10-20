@@ -1473,3 +1473,32 @@ compositions:
       order: [process, story, offer, proof, practical]
       avoid: [center]
       css: true
+# Motion kits (docs/components.org, "Motion"). The builder deals one per
+# unthemed site from its seed: kit-NAME.css (and motion-SCRIPT.js when it
+# names a script) is added to every page, the body carries kit-NAME, look sets builder
+# axes the kit replaces, and marquee: true adds a decorative band of the
+# site's name above the footer. Everything moves only for visitors who have
+# not asked for reduced motion.
+motion_kits:
+  kits:
+    cascade:
+      summary: The opening's lines arrive one after another, list items cascade in as they scroll into view, and buttons fill with a sweep.
+      look: {motion: none}
+    parallax:
+      summary: The opening's picture drifts slower than the page, section headings slide in from the side, and link underlines grow under the pointer.
+      look: {motion: none}
+    aurora:
+      summary: Soft shapes drift slowly behind the opening, which fades up on arrival, and cards float under the pointer.
+      look: {motion: none}
+    ticker:
+      summary: A band of the business's name runs above the footer, figures count up as they come into view, and buttons press in.
+      look: {motion: none}
+      script: counters
+      marquee: true
+    spotlight:
+      summary: Sections settle into place as they scroll in, figures count up, and cards tilt toward the pointer.
+      look: {motion: none}
+      script: counters
+    still:
+      summary: Almost still. Only the opening's heading settles on arrival; links, buttons and focus rings answer with small, crisp movements.
+      look: {motion: none}
