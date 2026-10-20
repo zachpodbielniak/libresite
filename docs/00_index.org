@@ -13,6 +13,7 @@
 - [[file:editing.org][Editing a built site in place, one committed version per change]]
 - [[file:recipe-format.org][Recipe reference]]
 - [[file:components.org][Composed sites: plan, parallel pages, the component library, call and quote actions, the confirmation after sending, and supplied podbay modules]]
+- [[file:inspiration.org][Inspiration: ideas harvested from 631 surveyed designs, with source and licence]]
 - [[file:images.org][Photographs sized for phones: caps, WebP variants, srcset and how to change them]]
 - [[file:scaffold.org][Native static scaffolding and contact contract]]
 - [[file:structured-recipes.org][Structured recipes, platform forms and YAML export]]
