@@ -5453,6 +5453,8 @@ share_views(Render *render){
 	return out;
 }
 
+static gboolean few_words(const gchar *text);
+
 static void
 render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArray *toc, gboolean reading){
 	const gchar *last_tone = NULL;
@@ -5491,6 +5493,17 @@ render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArra
 			if (value == NULL || JSON_NODE_HOLDS_NULL(value))
 				continue;
 			json_object_set_member(view, key->data, convert_value(render, member_object(slots, key->data), value, i == 0));
+			/* Lines of three words or fewer may be set in outline. */
+			if (JSON_NODE_HOLDS_ARRAY(json_object_get_member(view, key->data))) {
+				JsonArray *converted = json_object_get_array_member(view, key->data);
+				guint e;
+				for (e = 0; e < json_array_get_length(converted); e++) {
+					JsonNode *entry = json_array_get_element(converted, e);
+					if (JSON_NODE_HOLDS_OBJECT(entry) && ls_string(json_node_get_object(entry), "text") != NULL)
+						json_object_set_boolean_member(json_node_get_object(entry), "short_text",
+							few_words(ls_string(json_node_get_object(entry), "text")));
+				}
+			}
 			if (JSON_NODE_HOLDS_ARRAY(value)) {
 				g_autofree gchar *has = g_strconcat("has_", (const gchar *)key->data, NULL);
 				json_object_set_boolean_member(view, has, json_array_get_length(json_node_get_array(value)) > 0);
@@ -5730,6 +5743,19 @@ append_link_views(JsonArray *out, JsonArray *links, const gchar *path, GHashTabl
 	}
 }
 
+/* At most three words: short enough to set in outline at display size. */
+static gboolean
+few_words(const gchar *text){
+	g_auto(GStrv) words = NULL;
+	guint i, count = 0;
+	if (text == NULL)
+		return FALSE;
+	words = g_strsplit_set(text, " \t\n", -1);
+	for (i = 0; words[i] != NULL; i++)
+		count += words[i][0] != '\0';
+	return count > 0 && count <= 3;
+}
+
 /* The plan's home composition, when the library knows it. */
 static const gchar *
 home_composition(LsComponents *self, JsonObject *plan){
@@ -5812,6 +5838,18 @@ render_page(Render *render, const gchar *path, const gchar *title, const gchar *
 			gchar *more = g_strconcat(classes, " art-", structure_string(plan, "direction"), NULL);
 			g_free(classes);
 			classes = more;
+		}
+		/* A main heading of three words or fewer may be set in outline. */
+		{
+			JsonArray *sections = member_array(page, "sections");
+			JsonObject *first = sections != NULL && json_array_get_length(sections) > 0 &&
+				JSON_NODE_HOLDS_OBJECT(json_array_get_element(sections, 0)) ? json_array_get_object_element(sections, 0) : NULL;
+			JsonObject *content = member_object(first, "content");
+			if (content != NULL && few_words(ls_string(content, "heading"))) {
+				gchar *more = g_strconcat(classes, " h1-short", NULL);
+				g_free(classes);
+				classes = more;
+			}
 		}
 		if (kit != NULL) {
 			gchar *more = g_strconcat(classes, " kit-", kit, NULL);
