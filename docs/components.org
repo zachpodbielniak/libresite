@@ -545,3 +545,53 @@ plans. They test layout, not a model's choice of content or design.
 Set =BRAND_LAYOUT_URL= to the served fixture directory when running against
 HTTP instead of local files. Serve the fixture artwork at the site's root
 asset path as on a normal site; the layout measurements are the same.
+
+* Measuring sameness
+
+Two different businesses should never get sibling sites. =tests/test-sameness.c= measures how far the builder guarantees that, so every change to variety has a number to move.
+
+It builds ten invented home-services briefs (=tests/fixtures/sameness/briefs.json=: plumber, roofer, heating and cooling, electrician, landscaper, cleaner, pest control, painter, garage doors, pool service) through the real =plan= and =pages= steps, all in the trades sector. The model is a fixture that answers every business the same way: one plan, one opening, one section order and the same words with only the name, trade and three services swapped in. That is the convergence live runs showed (see [[*Identities][identities]]), and it means whatever still differs between the ten sites is what the builder decides; anything left to the model counts as the same. No model is called.
+
+Each pair of sites is scored from 0 (nothing shared) to 1 (the same design) on what was actually built and rendered:
+
+| Part | Weight | Measure |
+|------+--------+---------|
+| look | 25% | share of the fingerprint's look axes with the same value |
+| order | 20% | the home page's rendered sections in order (opening as component/variant): twice the longest common run over both lengths |
+| mix | 20% | rendered components across all pages (Jaccard), averaged with rendered component variants (Jaccard) |
+| palette | 20% | paper, ink, surface and accent: 1 for the same colour, 0 from 0.35 apart in unit RGB |
+| type | 15% | the same display family (0.6) and body family (0.4) |
+
+The gate: the mean over all 45 pairs must be at most 0.35, and no pair may reach 0.55, a little under =LS_COMPONENTS_TOO_CLOSE=. =/sameness/rebuild= checks that one brief built twice renders byte for byte the same, so the score is the builder's and not chance.
+
+=make tests= reports the score every run and marks =/sameness/briefs= as incomplete (TAP =TODO=) while the sites are over the gate; =make sameness= enforces it and fails. The epic's last child turns the gate on in =make tests=.
+
+The screenshot half needs a browser. =tests/sameness.sh= opens each home page in headless Firefox with reduced motion (so entrances are at rest), takes a full-page screenshot at 390 and 1440 px, squashes it to a 48 by 192 grey grid so pages of different lengths compare section by section, and scores every pair by normalised cross-correlation, clamped to 0 to 1. A pair's overall score is 85% structural and 15% screens. It fails when the overall mean is over 0.35 or the screens alone average over 0.6 at either width, and writes =screens.json= and the screenshots next to the sites. It needs Firefox, geckodriver, =jq=, =curl=, =zip= and ImageMagick (Fedora: =firefox=, =jq=, =curl=, =zip=, =ImageMagick=; geckodriver from Mozilla's releases).
+
+#+begin_src sh
+make sameness                       # structural gate only
+geckodriver --port 4444 &
+make sameness WEBDRIVER_URL=http://localhost:4444
+# or, without the gate stopping the browser half:
+SAMENESS_OUTPUT="$PWD/build/sameness" build/release/test-sameness
+bash tests/sameness.sh http://localhost:4444 build/sameness
+#+end_src
+
+Score on 2026-10-20, before the variety work:
+
+| Measure | Score | Limit |
+|---------+-------+-------|
+| structural mean | 0.842 | 0.35 |
+| structural worst pair | 0.873 (pest control and pool service) | 0.55 |
+| look | 0.70 | |
+| order | 1.00 | |
+| mix | 0.59 | |
+| palette | 1.00 | |
+| type | 1.00 | |
+| screens at 390 | 0.829 | 0.6 |
+| screens at 1440 | 0.898 | 0.6 |
+| overall mean | 0.845 | 0.35 |
+| overall worst pair | 0.885 | |
+| library fingerprint similarity, for comparison | 0.890 | |
+
+What the builder already deals (frame, header, rhythm, footer, motion, the structure genes and component variants) moves the look and the mix; nothing else differs, because the opening, the home section order, the palette and the type all come from the model. Side by side the ten home pages are one page with the names changed: the same split hero and house drawing, the same services, steps, questions and closing band. The fixture site is evidence for what the builder guarantees, not for what a live model would choose.
