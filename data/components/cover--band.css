@@ -1,0 +1,20 @@
+/* cover/band: a full-width picture with the words on a solid band of ink
+ * that runs in from the left edge over its foot; without a picture the
+ * band stands alone. */
+.cover--band .cover__art img { width: 100%; height: clamp(16rem, 56cqi, min(72vh, 46rem)); max-height: none; object-fit: cover; }
+.cover--band .cover__text {
+	--paper: var(--ls-ink); --ink: var(--ls-paper); --surface: color-mix(in srgb, var(--ls-paper) 10%, var(--ls-ink));
+	--muted: var(--ls-paper); --accent: var(--ls-paper); --accent-ink: var(--ls-ink); --accent-text: var(--ls-paper);
+	--line: color-mix(in srgb, var(--ls-paper) 30%, var(--ls-ink)); --line-strong: var(--ls-paper); --focus: var(--ls-paper);
+	position: relative; padding-block: clamp(var(--space-5), 5cqi, var(--space-7));
+	background: var(--ls-ink); color: var(--ls-paper);
+	border-block-start: calc(var(--border) * 6) solid var(--ls-accent);
+}
+.cover--band .cover__art + .cover__text { margin-top: calc(-1 * clamp(2.5rem, 12cqi, 9rem)); width: min(100%, max(38rem, 74%)); }
+.cover--band .cover__art + .cover__text > .wrap { width: auto; margin-inline: max(var(--gutter), (100cqi - var(--max-width)) / 2) clamp(var(--gutter), 5cqi, var(--space-7)); }
+.cover--band .cover__title { font-size: var(--step-6); max-width: 18ch; }
+.cover--band .cover__title--long { font-size: var(--step-5); max-width: 24ch; }
+.cover--band .cover__text a:not(.button):hover { color: inherit; }
+.cover--band .cover__text .wrap > :last-child { margin-bottom: 0; }
+/* Marks an art direction draws round the picture stop at the screen edge. */
+.block.cover--band { overflow-x: clip; }

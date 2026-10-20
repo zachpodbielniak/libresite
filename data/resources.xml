@@ -332,5 +332,17 @@
     <file>components/look-heads-disc.css</file>
     <file>components/look-heads-initial.css</file>
     <file>components/look-heads-panel.css</file>
+    <file>components/hero--slab.css</file>
+    <file>components/cover--band.css</file>
+    <file>components/cover--letterbox.css</file>
+    <file>components/poster--front.css</file>
+    <file>components/manifesto--run.css</file>
+    <file>components/manifesto--tiles.css</file>
+    <file>components/home-banded.css</file>
+    <file>components/home-chapters.css</file>
+    <file>components/home-gazette.css</file>
+    <file>components/home-halves.css</file>
+    <file>components/home-lead.css</file>
+    <file>components/home-mosaic.css</file>
   </gresource>
 </gresources>

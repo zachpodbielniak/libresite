@@ -1,0 +1,11 @@
+/* manifesto/run: the lines run on as one large paragraph, the first in the
+ * heading weight and the rest lighter, each ended by an accent dot. */
+.manifesto--run .manifesto__lines { max-width: 30ch; font-family: var(--font-display); font-size: var(--step-5); line-height: 1.18; text-wrap: pretty; }
+.manifesto--run .manifesto__line { display: inline; font-size: inherit; line-height: inherit; font-weight: 400; }
+.manifesto--run .manifesto__line:first-child { font-weight: var(--heading-weight); }
+.manifesto--run .manifesto__line + .manifesto__line { margin: 0; }
+/* Non-breaking spaces keep the dot on the line it ends. */
+.manifesto--run .manifesto__line::after {
+	content: "\00a0\00a0\00a0"; margin-inline-end: 0.15em;
+	background: radial-gradient(circle, var(--accent) 0.13em, transparent 0.145em) 55% 62% / 100% 100% no-repeat;
+}

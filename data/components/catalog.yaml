@@ -1816,3 +1816,56 @@ wider:
       summary: Drawn artwork backlit like a lightbox sign, a rounded panel with a bright edge and a soft accent halo.
       look: {art: [neon, line, flat], images: [plain, rounded]}
       brief: The site backlights each artwork like a lightbox sign with a halo in the accent. Draw on a solid dark or deep-toned field that fills the whole canvas, with bright strokes and shapes that glow against it, and keep a margin inside the rounded corners.
+  openings:
+    hero:
+      slab: The opening on a rounded block of the accent, the picture beside the words and hanging below its edge.
+    cover:
+      band: A wide picture with the words on a solid band of ink that runs in from the left over its foot.
+      letterbox: The headline large across the column, the picture as a wide strip from edge to edge, then the lede and buttons side by side.
+    poster:
+      front: A newspaper front page, a dateline between double rules, the headline centred over a framed picture and the lede in ruled columns.
+    manifesto:
+      run: The lines run on as one large paragraph, the first set heavy and the rest light, each ended by an accent dot.
+      tiles: The first line large on an accent tile, the rest numbered on tiles sharing the rows below it.
+  layouts:
+    banded:
+      summary: Banded. Sections alternate between a full-width tinted band and a narrow reading column with its heading centred.
+      openings: [cover/band, hero/slab, poster/backdrop, cover/full]
+      order: [proof, offer, process, practical, story]
+      avoid: [center]
+      css: true
+    chapters:
+      summary: Chapters. Each section opens under a heavy rule with its number set very large in a margin column beside it.
+      openings: [poster/front, manifesto/run, hero/statement, cover/letterbox]
+      look: {headpos: top}
+      order: [practical, story, process, offer, proof]
+      avoid: [center, offset]
+      css: true
+    gazette:
+      summary: Gazette. On wide screens the home is set like a newspaper page, the sections running down two ruled columns between the opening and the close.
+      openings: [poster/front, manifesto/tiles, poster/type, manifesto/run]
+      look: {headpos: top}
+      order: [proof, story, offer, process, practical]
+      avoid: [center, rail, split, offset]
+      css: true
+    halves:
+      summary: Halves. Each section is split in two, its heading on a tinted half that runs to the screen edge and changes side from one section to the next.
+      openings: [hero/slab, cover/split, manifesto/tiles, hero/split]
+      look: {headpos: top}
+      order: [practical, offer, proof, process, story]
+      avoid: [center]
+      css: true
+    lead:
+      summary: Lead story. The first section after the opening leads in a wide column with the next three stacked beside it as briefs.
+      openings: [cover/letterbox, hero/slab, cover/band, hero/overlap]
+      look: {headpos: top}
+      order: [proof, practical, story, offer, process]
+      avoid: [center, rail, split, offset]
+      css: true
+    mosaic:
+      summary: Mosaic. Sections fill a grid of wide and narrow cells, alternately tinted, two to a row in turning proportions.
+      openings: [manifesto/run, cover/band, poster/front, manifesto/tiles]
+      look: {headpos: top}
+      order: [practical, proof, offer, story, process]
+      avoid: [center, rail, split, offset]
+      css: true

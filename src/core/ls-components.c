@@ -2279,7 +2279,7 @@ static gboolean
 opening_shows_art(const gchar *component, const gchar *variant){
 	return g_strcmp0(component, "cover") == 0 ||
 		(g_strcmp0(component, "hero") == 0 && g_strcmp0(variant, "minimal") != 0) ||
-		(g_strcmp0(component, "poster") == 0 && g_strcmp0(variant, "backdrop") == 0);
+		(g_strcmp0(component, "poster") == 0 && (g_strcmp0(variant, "backdrop") == 0 || g_strcmp0(variant, "front") == 0));
 }
 
 /* The plan's first artwork other than the mark, as an image slot. */

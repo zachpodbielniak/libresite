@@ -1,0 +1,11 @@
+/* manifesto/tiles: the first line large across an accent tile, the rest
+ * numbered on surface tiles that share the rows below it. */
+.manifesto--tiles .manifesto__lines { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+.manifesto--tiles .manifesto__line { flex: 1 1 15rem; display: flex; flex-direction: column; gap: var(--space-4); min-width: 0; margin: 0; padding: clamp(var(--space-4), 3cqi, var(--space-6)); font-size: var(--step-3); line-height: 1.15; background: var(--surface); border: var(--border) solid var(--line); border-radius: max(var(--radius), 0.75rem); }
+.manifesto--tiles .manifesto__line + .manifesto__line { margin-top: 0; }
+.manifesto--tiles .manifesto__n { display: block; font-family: var(--font-mono); font-size: var(--step--1); font-weight: 400; letter-spacing: 0.08em; color: var(--accent-text); }
+.manifesto--tiles .manifesto__line:first-child {
+	--ink: var(--ls-accent-ink); --muted: var(--ls-accent-ink); --accent-text: var(--ls-accent-ink);
+	flex-basis: 100%; justify-content: end; min-height: clamp(12rem, 28cqi, 20rem);
+	font-size: var(--step-5); background: var(--ls-accent); color: var(--ls-accent-ink); border-color: var(--ls-accent);
+}

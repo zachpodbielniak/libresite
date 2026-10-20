@@ -1,0 +1,21 @@
+/* Home composition: chapters. Each section after the opening opens under a
+ * heavy rule with its running number; where the page column has room the
+ * number is set very large in a margin column beside the heading and the
+ * content. */
+.page--kind-home.home-chapters main { counter-reset: ls-chapter; }
+.page--kind-home.home-chapters main > .block:not(:first-child):has(> .wrap > .section-head) { counter-increment: ls-chapter; }
+.page--kind-home.home-chapters main > .block:not(:first-child) > .wrap:has(> .section-head) {
+	position: relative; padding-top: var(--space-4); border-top: calc(var(--border) * 3) solid var(--ink);
+}
+.page--kind-home.home-chapters main > .block:not(:first-child) > .wrap > .section-head::before {
+	content: counter(ls-chapter, decimal-leading-zero); display: block; margin-bottom: var(--space-3);
+	font-family: var(--font-display); font-weight: var(--heading-weight); font-size: var(--step-5); line-height: 0.9;
+	letter-spacing: -0.04em; color: var(--accent-text);
+}
+@container (min-width: 60rem) {
+	.page--kind-home.home-chapters main > .block:not(:first-child) > .wrap:has(> .section-head) { padding-inline-start: clamp(8rem, 17cqi, 15rem); }
+	.page--kind-home.home-chapters main > .block:not(:first-child) > .wrap > .section-head::before {
+		position: absolute; inset-inline-start: 0; top: var(--space-4); margin: 0;
+		font-size: clamp(5rem, 9cqi, 9rem);
+	}
+}

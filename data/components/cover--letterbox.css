@@ -1,0 +1,22 @@
+/* cover/letterbox: the headline set large across the column, then the
+ * picture as a wide strip from edge to edge, then the lede and buttons
+ * side by side under a rule where the column has room. */
+.cover--letterbox .cover__frame {
+	display: grid; padding-block: var(--space-7);
+	grid-template-columns: [full-start] minmax(var(--gutter), 1fr) [content-start] minmax(0, calc(var(--max-width) * 0.62)) [half] minmax(0, calc(var(--max-width) * 0.38)) [content-end] minmax(var(--gutter), 1fr) [full-end];
+}
+.cover--letterbox :is(.cover__text, .cover__text > .wrap) { display: contents; }
+.cover--letterbox .cover__frame > * , .cover--letterbox .cover__text > .wrap > * { grid-column: content-start / content-end; min-width: 0; }
+.cover--letterbox .kicker { grid-row: 1; }
+.cover--letterbox .cover__title { grid-row: 2; max-width: 20ch; margin-bottom: var(--space-6); font-size: var(--step-7); line-height: 0.98; }
+.cover--letterbox .cover__title--long { font-size: var(--step-6); max-width: 22ch; }
+.cover--letterbox .cover__art { grid-row: 3; grid-column: full-start / full-end; margin-bottom: var(--space-6); }
+.cover--letterbox .cover__art img { width: 100%; height: clamp(10rem, 30cqi, 26rem); max-height: none; object-fit: cover; }
+.cover--letterbox .cover__lede { grid-row: 4; padding-top: var(--space-4); border-top: calc(var(--border) * 3) solid var(--ink); }
+.cover--letterbox .actions { grid-row: 5; margin-top: var(--space-5); }
+@container (min-width: 56rem) {
+	.cover--letterbox .cover__text > .wrap > .cover__lede { grid-column: content-start / half; padding-inline-end: var(--space-6); }
+	.cover--letterbox .cover__text > .wrap > .actions { grid-row: 4; grid-column: half / content-end; align-self: start; justify-content: flex-end; margin: 0; padding-top: var(--space-4); border-top: calc(var(--border) * 3) solid var(--ink); }
+}
+/* Marks an art direction draws round the picture stop at the screen edge. */
+.block.cover--letterbox { overflow-x: clip; }
