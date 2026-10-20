@@ -508,11 +508,12 @@ plan_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *prom
 		if (response != NULL && (plan = parse_object(response, &local_error)) != NULL &&
 			theme != NULL && !ls_components_apply_theme(components, plan, theme, &local_error))
 			g_clear_pointer(&plan, json_node_unref);
-		/* Structure is the builder's too: the frame, rhythm and genes are
-		 * dealt, so sites cannot converge on the model's favourite layout. */
+		/* The design is the builder's: the look, colours, type, opening and
+		 * structure are dealt from the seed, so sites cannot converge on the
+		 * model's favourite design; the model writes the words and art. */
 		if (plan != NULL && JSON_NODE_HOLDS_OBJECT(plan)) {
 			g_autofree gchar *seed = plan_seed(components, recipe, config, NULL);
-			ls_components_apply_structure(components, plan, seed, theme != NULL);
+			ls_components_apply_seed(components, plan, seed, plan_sector(config), theme != NULL);
 		}
 		/* Supplied photographs are the builder's facts, never the model's. */
 		if (plan != NULL && JSON_NODE_HOLDS_OBJECT(plan)) {
@@ -723,6 +724,20 @@ job_label(Job *job){
 	return job->kind == JOB_PAGE ? "page" : job->kind == JOB_ART ? "art" : "signature";
 }
 
+/* Whether @path is the plan's home page. */
+static gboolean
+is_home_route(JsonNode *plan, const gchar *path){
+	JsonArray *pages = member_array_of(json_node_get_object(plan), "pages");
+	guint i;
+	for (i = 0; pages != NULL && i < json_array_get_length(pages); i++) {
+		JsonNode *entry = json_array_get_element(pages, i);
+		JsonObject *page = JSON_NODE_HOLDS_OBJECT(entry) ? json_node_get_object(entry) : NULL;
+		if (page != NULL && g_strcmp0(ls_string(page, "path"), path) == 0)
+			return g_strcmp0(ls_string(page, "kind"), "home") == 0;
+	}
+	return FALSE;
+}
+
 /* Runs on the step thread: parse and check one answer. */
 static gboolean
 accept_job(Job *job, LsComponents *components, JsonNode *plan, GError **error){
@@ -735,6 +750,9 @@ accept_job(Job *job, LsComponents *components, JsonNode *plan, GError **error){
 	if (node == NULL)
 		return FALSE;
 	if (job->kind == JOB_PAGE) {
+		/* The home page opens with the dealt opening, in the writer's words. */
+		if (is_home_route(plan, job->path))
+			ls_components_apply_opening(components, plan, job->path, node);
 		if (!ls_components_check_page(components, plan, job->path, node, error))
 			return FALSE;
 		g_clear_pointer(&job->spec, json_node_unref);

@@ -1283,6 +1283,12 @@ ls_components_deal_structure(LsComponents *self, const gchar *seed){
 			g_ptr_array_index(choices, seed_pick(seed, salt, choices->len)));
 	}
 	json_object_set_object_member(structure, "variants", variants);
+	/* The home page's opening is dealt with the rest of the skeleton. */
+	{
+		g_autofree gchar *opening = ls_components_suggest_opening(self, seed);
+		if (opening != NULL)
+			json_object_set_string_member(structure, "opening", opening);
+	}
 	return structure;
 }
 
@@ -1341,6 +1347,22 @@ ls_components_apply_structure(LsComponents *self, JsonNode *plan_node, const gch
 }
 
 
+/* Whether @opening is one ls_components_suggest_opening() can deal. */
+static gboolean
+is_dealt_opening(LsComponents *self, const gchar *opening){
+	JsonArray *openings = member_array(member_object(self->kinds, "home"), "openings");
+	const gchar *slash = opening != NULL ? strchr(opening, '/') : NULL;
+	g_autofree gchar *component = slash != NULL ? g_strndup(opening, (gsize)(slash - opening)) : NULL;
+	guint i;
+	if (component == NULL || g_str_equal(component, "custom"))
+		return FALSE;
+	for (i = 0; openings != NULL && i < json_array_get_length(openings); i++)
+		if (g_strcmp0(json_array_get_string_element(openings, i), component) == 0)
+			return json_object_has_member(member_object(member_object(self->components, component), "variants"),
+				slash + 1);
+	return FALSE;
+}
+
 /* The builder's structure: known genes in range and dealable variants. */
 static void
 check_structure(Problems *problems, LsComponents *self, JsonObject *plan){
@@ -1360,6 +1382,11 @@ check_structure(Problems *problems, LsComponents *self, JsonObject *plan){
 		gboolean known = FALSE;
 		if (g_str_equal(key->data, "variants"))
 			continue;
+		if (g_str_equal(key->data, "opening")) {
+			if (!is_dealt_opening(self, ls_string(structure, "opening")))
+				problem(problems, "structure.opening must be a home opening as component/variant, such as hero/split");
+			continue;
+		}
 		for (i = 0; i < G_N_ELEMENTS(structure_genes); i++) {
 			if (!g_str_equal(key->data, structure_genes[i].name))
 				continue;
@@ -1391,6 +1418,309 @@ check_structure(Problems *problems, LsComponents *self, JsonObject *plan){
 					(const gchar *)name->data);
 		}
 	}
+}
+
+/* ---- The seed decides ------------------------------------------------------ */
+
+/* Stock flourishes stay plain on unthemed sites; the signature layer draws them. */
+static const gchar *const retired_flourishes[] = {"ornament", "emphasis", "kicker", "backdrop", "edges",
+	"texture", "links", NULL};
+
+/* A private deep copy of @node. */
+static JsonNode *
+node_copy(JsonNode *node){
+	g_autofree gchar *text = ls_json_encode(node);
+	return ls_json_parse(text, NULL);
+}
+
+gboolean
+ls_components_apply_seed(LsComponents *self, JsonNode *plan_node, const gchar *seed, const gchar *sector,
+	gboolean themed){
+	JsonObject *plan, *look, *tokens;
+	g_autoptr(JsonObject) dealt = NULL, identity = NULL;
+	g_autoptr(GList) axes = NULL;
+	JsonObject *palette, *type;
+	GList *axis;
+	g_return_val_if_fail(LS_IS_COMPONENTS(self), FALSE);
+	g_return_val_if_fail(seed != NULL, FALSE);
+	if (!ls_components_apply_structure(self, plan_node, seed, themed))
+		return FALSE;
+	/* A theme is a whole design: its look, colours and type stay. */
+	if (themed)
+		return TRUE;
+	plan = json_node_get_object(plan_node);
+	look = member_object(plan, "look");
+	dealt = ls_components_suggest_look(self, seed);
+	axes = json_object_get_members(dealt);
+	for (axis = axes; axis != NULL; axis = axis->next)
+		if (!in_list(retired_flourishes, axis->data))
+			json_object_set_string_member(look, axis->data, ls_string(dealt, axis->data));
+	identity = ls_components_suggest_identity(self, seed, sector);
+	tokens = member_object(plan, "tokens");
+	if (tokens == NULL) {
+		tokens = json_object_new();
+		json_object_set_object_member(plan, "tokens", tokens);
+	}
+	palette = member_object(member_object(identity, "palette"), "tokens");
+	type = member_object(identity, "type");
+	if (palette != NULL) {
+		g_autoptr(GList) keys = json_object_get_members(palette);
+		GList *key;
+		for (key = keys; key != NULL; key = key->next)
+			json_object_set_string_member(tokens, key->data, ls_string(palette, key->data));
+	}
+	/* Type needs its web fonts. A plan that asked for none (an order that
+	 * forbids remote fonts) keeps its own installed stacks. */
+	if (type != NULL && member_array(plan, "fonts") != NULL && json_array_get_length(member_array(plan, "fonts")) > 0) {
+		JsonObject *type_tokens = member_object(type, "tokens");
+		g_autoptr(GList) keys = type_tokens != NULL ? json_object_get_members(type_tokens) : NULL;
+		GList *key;
+		for (key = keys; key != NULL; key = key->next)
+			json_object_set_member(tokens, key->data, json_node_copy(json_object_get_member(type_tokens, key->data)));
+		if (json_object_has_member(type, "fonts"))
+			json_object_set_member(plan, "fonts", node_copy(json_object_get_member(type, "fonts")));
+	}
+	return TRUE;
+}
+
+/* Rich text as plain words: markers dropped, links reduced to their labels. */
+static gchar *
+plain_words(const gchar *rich){
+	GString *out = g_string_new(NULL);
+	const gchar *p;
+	for (p = rich != NULL ? rich : ""; *p != '\0'; p++) {
+		if (*p == '*' || *p == '`' || *p == '_')
+			continue;
+		if (*p == ']' && p[1] == '(') {
+			const gchar *close = strchr(p, ')');
+			if (close != NULL) {
+				p = close;
+				continue;
+			}
+		}
+		if (*p == '[')
+			continue;
+		if (g_ascii_isspace(*p)) {
+			if (out->len > 0 && out->str[out->len - 1] != ' ')
+				g_string_append_c(out, ' ');
+			continue;
+		}
+		g_string_append_c(out, *p);
+	}
+	return g_strstrip(g_string_free(out, FALSE));
+}
+
+/* Sentences of plain text, each kept with its closing mark. */
+static GPtrArray *
+sentences(const gchar *text){
+	GPtrArray *out = g_ptr_array_new_with_free_func(g_free);
+	const gchar *start = text, *p;
+	for (p = text; *p != '\0'; p++)
+		if ((*p == '.' || *p == '!' || *p == '?') && (p[1] == ' ' || p[1] == '\0')) {
+			gchar *sentence = g_strstrip(g_strndup(start, (gsize)(p + 1 - start)));
+			if (*sentence != '\0')
+				g_ptr_array_add(out, sentence);
+			else
+				g_free(sentence);
+			start = p + 1;
+		}
+	if (*start != '\0') {
+		gchar *rest = g_strstrip(g_strdup(start));
+		if (*rest != '\0')
+			g_ptr_array_add(out, rest);
+		else
+			g_free(rest);
+	}
+	return out;
+}
+
+/* Openings that cannot draw without a picture. */
+static gboolean
+opening_needs_art(const gchar *component, const gchar *variant){
+	return g_strcmp0(component, "cover") == 0 ||
+		(g_strcmp0(component, "hero") == 0 && (g_strcmp0(variant, "split") == 0 || g_strcmp0(variant, "banner") == 0)) ||
+		(g_strcmp0(component, "poster") == 0 && g_strcmp0(variant, "backdrop") == 0);
+}
+
+/* Openings that show their picture; the others hide it or have none. */
+static gboolean
+opening_shows_art(const gchar *component, const gchar *variant){
+	return g_strcmp0(component, "cover") == 0 ||
+		(g_strcmp0(component, "hero") == 0 && g_strcmp0(variant, "minimal") != 0) ||
+		(g_strcmp0(component, "poster") == 0 && g_strcmp0(variant, "backdrop") == 0);
+}
+
+/* The plan's first artwork other than the mark, as an image slot. */
+static JsonNode *
+borrowed_art(JsonObject *plan){
+	JsonArray *art = member_array(plan, "art");
+	JsonObject *brand = member_object(plan, "brand");
+	const gchar *mark = brand != NULL ? ls_string(brand, "mark") : NULL;
+	guint i;
+	for (i = 0; art != NULL && i < json_array_get_length(art); i++) {
+		JsonObject *entry = JSON_NODE_HOLDS_OBJECT(json_array_get_element(art, i))
+			? json_array_get_object_element(art, i) : NULL;
+		const gchar *path = ls_string(entry, "path");
+		if (path != NULL && g_strcmp0(path, mark) != 0) {
+			JsonNode *node = json_node_new(JSON_NODE_OBJECT);
+			JsonObject *image = json_object_new();
+			json_object_set_string_member(image, "src", path);
+			json_object_set_string_member(image, "alt", ls_string(entry, "brief") != NULL ? ls_string(entry, "brief") : "");
+			json_node_take_object(node, image);
+			return node;
+		}
+	}
+	return NULL;
+}
+
+/* @source's words in @component/@variant, or NULL when they do not fit its
+ * shape. Only slots the target declares are carried. */
+static JsonNode *
+convert_opening(LsComponents *self, JsonObject *plan, JsonObject *source, const gchar *component,
+	const gchar *variant){
+	JsonObject *from = member_object(source, "content");
+	JsonObject *slots = member_object(member_object(self->components, component), "slots");
+	JsonObject *content = json_object_new(), *section = json_object_new();
+	JsonNode *out = json_node_new(JSON_NODE_OBJECT);
+	g_autofree gchar *heading = NULL, *lede = NULL;
+	JsonArray *lines = member_array(from, "lines");
+	const gchar *keep[] = {"kicker", "actions", "art"};
+	guint i;
+	json_node_take_object(out, section);
+	json_object_set_object_member(section, "content", content);
+	if (from == NULL || slots == NULL) {
+		json_node_unref(out);
+		return NULL;
+	}
+	json_object_set_string_member(section, "component", component);
+	json_object_set_string_member(section, "variant", variant);
+	if (ls_string(source, "id") != NULL)
+		json_object_set_string_member(section, "id", ls_string(source, "id"));
+	/* A manifesto's lines are its heading and lede in other openings. */
+	heading = g_strdup(ls_string(from, "heading"));
+	if (lines != NULL && json_array_get_length(lines) > 0) {
+		GString *rest = g_string_new(NULL);
+		for (i = 0; i < json_array_get_length(lines); i++) {
+			JsonNode *entry = json_array_get_element(lines, i);
+			const gchar *text = JSON_NODE_HOLDS_OBJECT(entry) ? ls_string(json_node_get_object(entry), "text") : NULL;
+			if (text == NULL)
+				continue;
+			if (heading == NULL)
+				heading = g_strdup(text);
+			else
+				g_string_append_printf(rest, "%s%s", rest->len > 0 ? " " : "", text);
+		}
+		lede = g_string_free(rest, rest->len == 0);
+	} else
+		lede = g_strdup(ls_string(from, "lede"));
+	if (heading != NULL)
+		json_object_set_string_member(content, "heading", heading);
+	for (i = 0; i < G_N_ELEMENTS(keep); i++)
+		if (json_object_has_member(slots, keep[i]) && json_object_has_member(from, keep[i]))
+			json_object_set_member(content, keep[i], json_node_copy(json_object_get_member(from, keep[i])));
+	if (json_object_has_member(slots, "lede") && lede != NULL)
+		json_object_set_string_member(content, "lede", lede);
+	if (json_object_has_member(slots, "lines")) {
+		g_autofree gchar *words = plain_words(lede);
+		g_autoptr(GPtrArray) parts = sentences(words);
+		JsonArray *target = json_array_new();
+		for (i = 0; i < parts->len; i++) {
+			JsonObject *line = json_object_new();
+			json_object_set_string_member(line, "text", g_ptr_array_index(parts, i));
+			json_array_add_object_element(target, line);
+		}
+		json_object_set_array_member(content, "lines", target);
+	}
+	/* A picture the writer put in the opening (often a supplied photo) is
+	 * never dropped for an opening that would hide it. */
+	if (json_object_has_member(from, "art") && !opening_shows_art(component, variant)) {
+		json_node_unref(out);
+		return NULL;
+	}
+	if (opening_needs_art(component, variant) && !json_object_has_member(content, "art")) {
+		JsonNode *art = borrowed_art(plan);
+		if (art == NULL) {
+			json_node_unref(out);
+			return NULL;
+		}
+		json_object_set_member(content, "art", art);
+	}
+	return out;
+}
+
+gboolean
+ls_components_apply_opening(LsComponents *self, JsonNode *plan_node, const gchar *path, JsonNode *page){
+	JsonObject *plan, *first;
+	JsonArray *sections, *openings;
+	g_autoptr(GPtrArray) choices = g_ptr_array_new_with_free_func(g_free);
+	const gchar *opening, *component;
+	guint i, start = 0;
+	g_return_val_if_fail(LS_IS_COMPONENTS(self), FALSE);
+	if (plan_node == NULL || !JSON_NODE_HOLDS_OBJECT(plan_node) || page == NULL || !JSON_NODE_HOLDS_OBJECT(page))
+		return FALSE;
+	plan = json_node_get_object(plan_node);
+	if (member_object(plan, "structure") == NULL)
+		return FALSE;
+	opening = ls_string(member_object(plan, "structure"), "opening");
+	sections = member_array(json_node_get_object(page), "sections");
+	if (!is_dealt_opening(self, opening) || sections == NULL || json_array_get_length(sections) == 0 ||
+		!JSON_NODE_HOLDS_OBJECT(json_array_get_element(sections, 0)))
+		return FALSE;
+	first = json_array_get_object_element(sections, 0);
+	component = ls_string(first, "component");
+	/* Only the stock openings are rewritten; a custom moment stays. */
+	if (component == NULL || (!g_str_equal(component, "hero") && !g_str_equal(component, "cover") &&
+		!g_str_equal(component, "poster") && !g_str_equal(component, "manifesto")))
+		return FALSE;
+	{
+		g_autofree gchar *current = g_strdup_printf("%s/%s", component, ls_string(first, "variant") != NULL
+			? ls_string(first, "variant") : "");
+		if (g_str_equal(current, opening))
+			return FALSE;
+	}
+	/* The dealt opening first, then every other one in catalog order. */
+	openings = member_array(member_object(self->kinds, "home"), "openings");
+	for (i = 0; openings != NULL && i < json_array_get_length(openings); i++) {
+		const gchar *name = json_array_get_string_element(openings, i);
+		g_autoptr(GList) variants = NULL;
+		GList *variant;
+		if (g_str_equal(name, "custom"))
+			continue;
+		variants = json_object_get_members(member_object(member_object(self->components, name), "variants"));
+		for (variant = variants; variant != NULL; variant = variant->next) {
+			gchar *pair = g_strdup_printf("%s/%s", name, (const gchar *)variant->data);
+			if (g_str_equal(pair, opening))
+				start = choices->len;
+			g_ptr_array_add(choices, pair);
+		}
+	}
+	for (i = 0; i < choices->len; i++) {
+		const gchar *choice = g_ptr_array_index(choices, (start + i) % choices->len);
+		g_autofree gchar *name = g_strndup(choice, (gsize)(strchr(choice, '/') - choice));
+		g_autoptr(JsonNode) converted = convert_opening(self, plan, first, name, strchr(choice, '/') + 1);
+		g_autoptr(JsonNode) candidate = NULL;
+		JsonArray *candidate_sections;
+		if (converted == NULL)
+			continue;
+		candidate = node_copy(page);
+		candidate_sections = member_array(json_node_get_object(candidate), "sections");
+		json_array_remove_element(candidate_sections, 0);
+		/* json-glib has no insert: rebuild the list with the opening first. */
+		{
+			JsonArray *rebuilt = json_array_new();
+			guint j;
+			json_array_add_element(rebuilt, json_node_copy(converted));
+			for (j = 0; j < json_array_get_length(candidate_sections); j++)
+				json_array_add_element(rebuilt, json_node_copy(json_array_get_element(candidate_sections, j)));
+			json_object_set_array_member(json_node_get_object(candidate), "sections", rebuilt);
+		}
+		if (!ls_components_check_page(self, plan_node, path, candidate, NULL))
+			continue;
+		json_object_set_member(json_node_get_object(page), "sections",
+			node_copy(json_object_get_member(json_node_get_object(candidate), "sections")));
+		return TRUE;
+	}
+	return FALSE;
 }
 
 const gchar *
@@ -4751,9 +5081,14 @@ render_page(Render *render, const gchar *path, const gchar *title, const gchar *
 	json_object_set_string_member(view, "main", main->str);
 	/* Link previews use the page's first picture, when the site has an address to make it absolute. */
 	if (render->base != NULL && !noindex) {
-		const gchar *img = strstr(main->str, "<img src=\"");
+		/* The first image, whatever its attribute order: a poster's
+		 * picture carries its class before src. */
+		const gchar *tag = strstr(main->str, "<img ");
+		const gchar *end = tag != NULL ? strchr(tag, '>') : NULL;
+		g_autofree gchar *head = tag != NULL && end != NULL ? g_strndup(tag, (gsize)(end - tag)) : NULL;
+		const gchar *img = head != NULL ? strstr(head, " src=\"") : NULL;
 		if (img != NULL) {
-			g_autofree gchar *src = g_strndup(img + 10, strcspn(img + 10, "\""));
+			g_autofree gchar *src = g_strndup(img + 6, strcspn(img + 6, "\""));
 			g_autofree gchar *lower = g_ascii_strdown(src, -1);
 			/* Link previews need a raster picture; drawings stay out. */
 			if (strstr(src, "://") == NULL && src[0] != '/' && src[0] != '\0' && (g_str_has_suffix(lower, ".jpg") ||
