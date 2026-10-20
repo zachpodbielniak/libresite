@@ -4,6 +4,7 @@
  * inside them. See docs/components.org, "The seed decides". */
 #include "libresite.h"
 #include "core/ls-components.h"
+#include "core/ls-util.h"
 #include <string.h>
 
 static JsonNode *
@@ -33,8 +34,25 @@ is_flourish(const gchar *axis){
 	return g_strv_contains(flourishes, axis);
 }
 
+/* The layout axes the dealt home composition sets (docs/components.org,
+ * "Home compositions"), read from the catalog. */
+static JsonObject *
+composition_look(const gchar *composition){
+	static JsonNode *catalog = NULL;
+	JsonObject *layout;
+	if (catalog == NULL) {
+		g_autofree gchar *text = NULL;
+		g_assert_true(g_file_get_contents("data/components/catalog.yaml", &text, NULL, NULL));
+		catalog = ls_yaml_parse(text, NULL);
+	}
+	layout = json_object_get_object_member(json_object_get_object_member(json_object_get_object_member(
+		json_node_get_object(catalog), "compositions"), "layouts"), composition);
+	return layout != NULL && json_object_has_member(layout, "look") ? json_object_get_object_member(layout, "look") : NULL;
+}
+
 /* Every look axis but the retired flourishes is the seed's, whatever the
- * model chose; the same seed gives the same look. */
+ * model chose, except those the dealt home composition sets; the same seed
+ * gives the same look. */
 static void
 test_look(void){
 	g_autoptr(LsComponents) components = library();
@@ -50,10 +68,14 @@ test_look(void){
 		GList *axis;
 		json_object_set_string_member(member(plan, "look"), "art", "woodcut");
 		g_assert_true(ls_components_apply_seed(components, plan, seeds[s], "trades", FALSE));
-		for (axis = axes; axis != NULL; axis = axis->next)
-			if (!is_flourish(axis->data))
-				g_assert_cmpstr(json_object_get_string_member(member(plan, "look"), axis->data), ==,
-					json_object_get_string_member(dealt, axis->data));
+		for (axis = axes; axis != NULL; axis = axis->next) {
+			JsonObject *own = composition_look(json_object_get_string_member(member(plan, "structure"), "composition"));
+			if (is_flourish(axis->data))
+				continue;
+			g_assert_cmpstr(json_object_get_string_member(member(plan, "look"), axis->data), ==,
+				own != NULL && json_object_has_member(own, axis->data) ? json_object_get_string_member(own, axis->data)
+				: json_object_get_string_member(dealt, axis->data));
+		}
 		g_assert_true(ls_components_apply_seed(components, again, seeds[s], "trades", FALSE));
 		first = ls_json_encode(plan);
 		second = ls_json_encode(again);

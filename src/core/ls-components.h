@@ -162,6 +162,22 @@ gboolean ls_components_apply_seed(LsComponents *self, JsonNode *plan, const gcha
  */
 gboolean ls_components_apply_opening(LsComponents *self, JsonNode *plan, const gchar *path, JsonNode *page);
 /**
+ * ls_components_apply_composition:
+ * @self: a component library
+ * @plan: (transfer none): a plan whose structure names a home composition
+ * @page: (transfer none): the home page specification, changed in place
+ *
+ * Orders the home page's sections after its opening by the dealt home
+ * composition: each section takes its role's place in the composition's
+ * order (offer, process, proof, story and practical, in a composition's own
+ * sequence), sections that close the page or give ways to get in touch
+ * come last, sections of one role keep an order picked from the site's
+ * name, and two sections of one component are kept apart where another of
+ * their role can sit between. The same plan always gives the same order.
+ * Returns: whether @page changed
+ */
+gboolean ls_components_apply_composition(LsComponents *self, JsonNode *plan, JsonNode *page);
+/**
  * ls_components_suggest_opening:
  * @self: a component library
  * @seed: stable text identifying the site

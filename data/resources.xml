@@ -10,6 +10,12 @@
     <file>components/article.html</file>
     <file>components/base.css</file>
     <file>components/look.css</file>
+    <file>components/home-full-bleed.css</file>
+    <file>components/home-editorial.css</file>
+    <file>components/home-bento.css</file>
+    <file>components/home-oversized-type.css</file>
+    <file>components/home-stacked-cards.css</file>
+    <file>components/home-zigzag.css</file>
     <file>components/themes.yaml</file>
     <file>components/identities.yaml</file>
     <file>components/networks.yaml</file>

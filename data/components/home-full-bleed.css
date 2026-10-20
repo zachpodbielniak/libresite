@@ -1,0 +1,8 @@
+/* Home composition: full-bleed. The wide frame and alternating bands come
+ * from the composition's look; sections get more air and centre their
+ * headings over the full width, like the chapters of a picture book. */
+.page--kind-home.home-full-bleed main > .block:not(:first-child) { padding-block: calc(var(--section-space) * 1.15); }
+.page--kind-home.home-full-bleed main > .block:not(:first-child) .section-head {
+	max-width: min(100%, 48rem); margin-inline: auto; text-align: center;
+}
+.page--kind-home.home-full-bleed main > .block:not(:first-child) .section-head .prose { margin-inline: auto; }
