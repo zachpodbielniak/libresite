@@ -836,3 +836,32 @@ Measured on 2026-10-20 with the same ten briefs and the convergent fixture model
 | largest home page | 97 KB, 21 KB gzipped | 105 KB, 23 KB gzipped | 150 KB, 40 KB |
 
 The before sites fail the gate; the after sites pass every check above: 1418 text elements at AA in both schemes, no motion with reduced motion and no page scrolling sideways at either width. The margins are narrow: the structural mean is 0.011 under its limit and the worst pair 0.011 under its. All of this measures what the builder guarantees with a model that answers every business alike. It is not evidence of live generation quality; a person still looks at every delivered site.
+
+* Content angles
+
+The sameness fixture answers every business with "Dependable X for your home" over one house drawing, so it cannot show whether real headlines and artwork vary. On 2026-10-20 four of its briefs (plumbing, roofing, cleaning and pool service) were built once with the real model (Claude Code, default model) on the epic before this change, with home, services and contact pages, and their home pages screenshotted at 1440 and 390 px.
+
+What the real run showed:
+
+- Headlines differed and were specific to each business: "Plumbing that respects an older home", "A roof that holds when the weather turns", "A clear home by the end of the day", "Pool care that stays clear all season". Two of the four used the same "X that Y" shape.
+- Artwork subjects differed: an old pipe joint before and after repair with a cutaway of an older house, an exploded roof cross-section and a roofline, a tidy room at dusk and a kit of cleaning tools, a pool seen from above and a pump-and-filter diagram. Only the roofer drew a house, which suits the trade.
+- Where it converged: the plan wrote the drawing style into its art briefs ("Blueprint-style", "blueprint drawing") on two sites that were dealt cut-paper artwork, so the artist got two styles at once. And nothing tied the headline angle or the artwork's subject to the site, so their variety was the model's luck.
+
+So the seed now steers them too. =content_angles= at the end of =catalog.yaml= lists eight headline angles (promise, problem, place, craft, time, question, plain, character) and eight art subjects (tool, material, detail, process, result, pattern, setting, diagram), each a sentence for the writer.
+
+- =ls_components_deal_structure()= records =structure.angle= and =structure.subject= from the seed, the same picks =ls_components_suggest_angles()= returns; the plan check accepts only catalog values. =ls_components_get_angle_description()= gives the writer's sentence for a name.
+- The plan prompt's TASK carries =headline_angle= and =art_subject=; the home page writer's TASK carries =headline_angle= from the plan's structure; every artwork job but the mark carries =subject=.
+- The prompts say so, and close the convergence the run showed: art briefs describe subject, composition and colours but never a drawing style, because the builder sets it as =look.art= and the artist's style wins over any style a brief names; the home heading follows its angle and never a stock line such as "Dependable X for your home"; and no artwork is the stock outline of a house with a pitched roof and a door.
+
+=tests/test-content-angles.c= builds the ten fixture briefs through the real plan and pages steps with a writer that takes its home heading from whatever angle it is told (=tests/fixtures/sameness/headlines.json=), and fails unless the ten get at least six headline patterns and at least six art subjects. The same build with a writer that ignores the angle gives one pattern, the case the test exists to catch. On 2026-10-20: seven patterns, six subjects. It also checks the deal is stable and that the plan check refuses an unknown angle.
+
+The prompt changes were made after the one live run the budget allowed, so their effect on a live model is not yet measured. The before screenshots are the fixture sites, the after ones the live run:
+
+| Site | Fixture (before) | Live model |
+|------+------------------+------------|
+| plumbing | [[file:images/variety/before-fernhill-plumbing-1440.jpg][1440]], [[file:images/variety/before-fernhill-plumbing-390.jpg][390]] | [[file:images/variety/real-fernhill-plumbing-1440.jpg][1440]], [[file:images/variety/real-fernhill-plumbing-390.jpg][390]] |
+| roofing | [[file:images/variety/before-ridgeback-roofing-1440.jpg][1440]], [[file:images/variety/before-ridgeback-roofing-390.jpg][390]] | [[file:images/variety/real-ridgeback-roofing-1440.jpg][1440]], [[file:images/variety/real-ridgeback-roofing-390.jpg][390]] |
+| cleaning | [[file:images/variety/before-clearday-cleaning-1440.jpg][1440]], [[file:images/variety/before-clearday-cleaning-390.jpg][390]] | [[file:images/variety/real-clearday-cleaning-1440.jpg][1440]], [[file:images/variety/real-clearday-cleaning-390.jpg][390]] |
+| pool service | [[file:images/variety/before-bluewell-pools-1440.jpg][1440]], [[file:images/variety/before-bluewell-pools-390.jpg][390]] | [[file:images/variety/real-bluewell-pools-1440.jpg][1440]], [[file:images/variety/real-bluewell-pools-390.jpg][390]] |
+
+Three of the four live sites drew the zigzag composition (about a one-in-eighteen chance for four sites and eight compositions); two opened with an outlined manifesto, whose stroke-only lines are hard to read at that size.
