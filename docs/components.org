@@ -865,3 +865,13 @@ The prompt changes were made after the one live run the budget allowed, so their
 | pool service | [[file:images/variety/before-bluewell-pools-1440.jpg][1440]], [[file:images/variety/before-bluewell-pools-390.jpg][390]] | [[file:images/variety/real-bluewell-pools-1440.jpg][1440]], [[file:images/variety/real-bluewell-pools-390.jpg][390]] |
 
 Three of the four live sites drew the zigzag composition (about a one-in-eighteen chance for four sites and eight compositions); two opened with an outlined manifesto, whose stroke-only lines are hard to read at that size.
+
+* Outline lettering
+
+Stroke-only text (colour transparent, an ink stroke) is striking on a two- or three-word headline across a wide screen and hard to read anywhere else: the live run in [[*Content angles][content angles]] opened two sites with outlined manifesto lines of six to eight words, and the fixture roofing site set "Dependable roofing for your home" in outline lettering. Outline now applies only where it reads.
+
+- The builder marks short text: a page's body carries =h1-short= when its first section's heading has at most three words, and every item with a =text= field gets =short_text= on the same rule (the manifesto renders it as =manifesto__line--short=).
+- =look-lettering-outline= outlines the main heading only on =h1-short= pages, and =manifesto/outlined= outlines only short lines after the first; both only inside =@container (min-width: 40rem)= and where the browser supports text strokes. Everything else is filled: outlined manifesto lines that are long, or on a phone, are set light in the ink, the first line stays in the accent. Outlined emphasis (=look-emphasis-outline=, themes only) is filled on phones the same way.
+- =tests/test-outline.c= checks the marks for short and long headings and lines, that the stylesheets outline only through them, and that every stroke-only rule in =look.css= and =manifesto.css= sits inside the wide-column query. =tests/gate.sh= now fails on any stroke-only text of more than three words, or any on a screen narrower than 640 px, whatever is behind it; it used to skip such text as having no colour to measure.
+
+On 2026-10-20 the gate found 24 such elements on the pre-fix pages (the fixture roofing heading and the two live manifesto openings at both widths and schemes) and none after recomposing the four live sites from their archived plans and pages with this library. The step-number outline in =steps/chapters= is decorative and hidden from assistive technology, and stays.
