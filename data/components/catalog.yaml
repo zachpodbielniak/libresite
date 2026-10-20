@@ -1869,3 +1869,43 @@ wider:
       order: [practical, proof, offer, story, process]
       avoid: [center, rail, split, offset]
       css: true
+    pinned:
+      summary: Pinned intro. On wide screens the opening stays pinned in a tinted column on the left while the sections scroll past beside it.
+      openings: [hero/statement, hero/minimal, poster/stamped, manifesto/outlined]
+      look: {headpos: top}
+      order: [process, offer, proof, story, practical]
+      avoid: [rail, split, center, offset]
+      css: true
+    register:
+      summary: Register. Sections read as the entries of an index, each under a hairline rule with its number set large in outline in a margin column.
+      openings: [hero/minimal, manifesto/numbered, hero/centered, poster/type]
+      look: {headpos: top}
+      order: [story, practical, process, proof, offer]
+      avoid: [offset]
+      css: true
+    slant:
+      summary: Slant. Every other section runs across the page as a tinted band with slanted edges, so the page reads as angled ribbons.
+      openings: [cover/full, hero/banner, poster/backdrop, manifesto/stacked]
+      order: [story, proof, offer, process, practical]
+      css: true
+    spine:
+      summary: Spine. A timeline rule runs down the leading edge of the sections on wide screens, a ring marking where each one starts.
+      openings: [hero/split, cover/split, manifesto/outlined, hero/overlap]
+      look: {headpos: top}
+      order: [process, proof, practical, offer, story]
+      avoid: [center]
+      css: true
+    spread:
+      summary: Magazine spread. On wide screens each section opens across two pages, its number and heading on a tinted facing page, the sides alternating.
+      openings: [cover/split, poster/type, manifesto/numbered, hero/statement]
+      look: {headpos: top}
+      order: [story, offer, proof, practical, process]
+      avoid: [center, offset]
+      css: true
+    wall:
+      summary: Gallery wall. Sections hang as framed pieces of uneven widths, two to a row and staggered on wide screens.
+      openings: [cover/framed, hero/centered, poster/backdrop, hero/banner]
+      look: {headpos: top}
+      order: [process, practical, story, offer, proof]
+      avoid: [center]
+      css: true

@@ -344,5 +344,11 @@
     <file>components/home-halves.css</file>
     <file>components/home-lead.css</file>
     <file>components/home-mosaic.css</file>
+    <file>components/home-pinned.css</file>
+    <file>components/home-register.css</file>
+    <file>components/home-slant.css</file>
+    <file>components/home-spine.css</file>
+    <file>components/home-spread.css</file>
+    <file>components/home-wall.css</file>
   </gresource>
 </gresources>
