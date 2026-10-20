@@ -786,3 +786,53 @@ The drawing style (=art=) and the image treatment (=images=) were dealt independ
 =tests/test-art-direction.c= checks the five directions the issue names exist and that 300 seeds deal all of them deterministically, each choosing style and treatment from its lists and none setting photos, with valid plans; that themes get none and an unknown name fails the plan check; that each stylesheet is at most 3 KB, targets only SVG artwork, colours only with tokens and moves nothing; that the direction's class is on every page and only its own styles ship; and, through the real plan and pages steps with a recording model, that every artwork prompt carries the direction's brief. With =ART_OUTPUT= it writes one site per direction for =tests/compositions.sh=, which on 2026-10-20 passed all five at 390 and 1440 px with and without scripts (20 loads).
 
 The sameness score stays where it was (structural 0.357, overall 0.341, worst pair 0.475; screens 0.178 and 0.320): the direction adds an axis that differs between sites but narrows two others it now chooses together, and the squashed grey screenshots barely see a frame or a cut. The ten briefs drew all five directions.
+
+* Variety gate
+
+The sameness gate from [[*Measuring sameness][measuring sameness]] is now part of =make tests=: =/sameness/briefs= fails when the ten sites average more than 0.35 alike or any two reach 0.55, instead of being marked incomplete. =make sameness= still runs it alone. =make gate WEBDRIVER_URL=...= runs the whole gate in a browser (headless Firefox through geckodriver): it renders the ten sameness sites and the composition, variant, art direction and motion fixtures, runs =tests/compositions.sh= on the compositions, variants and art directions, =tests/motion.sh= on the motion kits, =tests/sameness.sh= with the compositions as its calibration, and =tests/gate.sh= on the ten sites. It took about four and a half minutes on 2026-10-20.
+
+#+begin_src sh
+geckodriver --port 4444 &
+make gate WEBDRIVER_URL=http://localhost:4444
+#+end_src
+
+Written thresholds:
+
+| Check | Where | Limit |
+|-------+-------+-------|
+| structural sameness, mean of 45 pairs | =make tests= | at most 0.35 |
+| structural sameness, worst pair | =make tests= | under 0.55 |
+| overall sameness (85% structural, 15% screens) | =tests/sameness.sh= | at most 0.35 |
+| screen likeness at 390 and 1440 | =tests/sameness.sh= | at most the likeness of one site's eight home compositions at that width |
+| text contrast, light and dark scheme, 390 and 1440 | =tests/gate.sh= | every text element at WCAG AA against the first opaque background behind it (3:1 for large text) |
+| motion with reduced motion, 390 and 1440 | =tests/gate.sh= | no CSS animation and nothing lasting 1 ms or more, after scrolling the page |
+| page weight of a home page (HTML, styles, script, local pictures; remote fonts excluded) | =tests/gate.sh=, =/gate/sites= | 150 KB raw, 40 KB gzipped |
+| what the variety work adds to styles and script | =/gate/sites= | 16 KB |
+| plan colour pairs, 60 dealt sites | =/gate/sites= | AA on all five pairs |
+
+- The screen limit was a fixed 0.2. It is now calibrated each run: =tests/sameness.sh= takes a third argument, a directory of screenshots of one site in its eight home compositions (=tests/compositions.sh= writes them), and the limit at each width is how alike those eight look to the same measure. The fixed limit sat below what the squashed grey grid can tell apart for light pages: eight plainly different layouts of one site scored 0.349 at 390 and 0.373 at 1440. The rule is now that ten different businesses must look less alike than one business laid out eight ways. Without the third argument the old fixed limit applies.
+- The base reduced-motion rule shortens transitions to 0.01 ms rather than removing them, so a layout change at phone width can start one that nobody can see; =tests/gate.sh= counts any CSS animation and anything lasting 1 ms or more. An animation injected into a page as a test was stopped by that rule as well.
+- =tests/gate.sh= skips text over a picture or gradient (24 elements of 1418 on 2026-10-20) and requires more than 20 checked elements per page. A page with grey text injected at 1.67:1 failed it as it should.
+- To bring the structural score under its limit, four home compositions now order their roles differently (full-bleed, bento, oversized type and side rail), so all six orders of offers, process and questions occur across the eight compositions instead of questions coming third on almost every site; =/compositions/order= still requires eight different orders.
+
+** Before and after
+
+Measured on 2026-10-20 with the same ten briefs and the convergent fixture model: before is the epic's base, after is this branch.
+
+| Measure | Before | After | Limit |
+|---------+--------+-------+-------|
+| structural mean | 0.842 | 0.339 | 0.35 |
+| structural worst pair | 0.873 | 0.539 | 0.55 |
+| look | 0.70 | 0.25 | |
+| home section order | 1.00 | 0.62 | |
+| component mix | 0.59 | 0.46 | |
+| palette | 1.00 | 0.25 | |
+| type | 1.00 | 0.07 | |
+| screens at 390 | 0.250 | 0.173 | 0.349 |
+| screens at 1440 | 0.434 | 0.324 | 0.373 |
+| overall mean | 0.767 | 0.325 | 0.35 |
+| overall worst pair | 0.801 | 0.475 | |
+| library fingerprint similarity | 0.890 | 0.322 | |
+| largest home page | 97 KB, 21 KB gzipped | 105 KB, 23 KB gzipped | 150 KB, 40 KB |
+
+The before sites fail the gate; the after sites pass every check above: 1418 text elements at AA in both schemes, no motion with reduced motion and no page scrolling sideways at either width. The margins are narrow: the structural mean is 0.011 under its limit and the worst pair 0.011 under its. All of this measures what the builder guarantees with a model that answers every business alike. It is not evidence of live generation quality; a person still looks at every delivered site.
