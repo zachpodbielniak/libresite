@@ -1,0 +1,14 @@
+/* Home composition: editorial column. The narrow journal frame comes from
+ * the composition's look; every section opens under a heavy rule with a
+ * running number, like the sections of a magazine page. */
+.page--kind-home.home-editorial main { counter-reset: ls-editorial; }
+.page--kind-home.home-editorial main > .block:not(:first-child) .section-head {
+	counter-increment: ls-editorial;
+	border-top: calc(var(--border) * 3) solid var(--ink); padding-top: var(--space-3);
+}
+.page--kind-home.home-editorial main > .block:not(:first-child) .section-head::before {
+	content: counter(ls-editorial, decimal-leading-zero); display: block; margin-bottom: var(--space-2);
+	font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: 0.08em; color: var(--muted);
+}
+.page--kind-home.home-editorial main > .block:not(:first-child) .lede,
+.page--kind-home.home-editorial main > .block:not(:first-child) .section-head .prose { font-size: var(--step-1); }

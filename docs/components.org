@@ -628,3 +628,53 @@ The screenshot half of [[*Measuring sameness][measuring sameness]] was misread a
 | library fingerprint similarity | 0.890 | 0.389 | |
 
 What is left: the home sections after the opening still come in the model's order (order 0.82), and the trades sector has only a few palettes and type pairings, so two of the ten can still share both (the worst pair). Those are the next children's: home compositions and section order, then the type and colour range.
+
+* Home compositions
+
+A dealt opening and look still left every home page one run of sections in the order the model wrote them. The catalog now has home compositions: whole home layouts the builder deals, so two home pages differ in their arrangement and not only in their colours. The block is =compositions= at the end of =catalog.yaml=; it is optional, so an archived library without it loads and renders as before.
+
+| Composition | Openings | What it does |
+|-------------+----------+--------------|
+| split | split hero, split cover, overlapping hero | words beside a picture, then an even run of sections |
+| full-bleed | full cover, banner hero, backdrop poster | wide frame and alternating bands; more air; headings centred over the full width |
+| editorial | type poster, statement or minimal hero, stacked manifesto | the narrow journal frame; each section opens under a heavy rule with a running number |
+| bento | centred or split hero, framed cover | after the opening, sections are tiles, two to a row where the column has room; a tile alone grows across |
+| oversized-type | type or stamped poster, stacked or outlined manifesto | section headings set very large against the column |
+| side-rail | statement, split or minimal hero, stamped poster | a sticky contents column of the home sections beside them on wide screens |
+| stacked-cards | centred hero, framed cover, numbered manifesto | each section after the opening is its own raised card |
+| zigzag | overlapping or banner hero, split cover, outlined manifesto | where the column has room, sections step from side to side, each with an accent rule on its leading edge |
+
+- Dealing: =ls_components_deal_structure()= adds =structure.composition=, picked from the seed among the compositions that do not =avoid= the frame the same seed deals (bento, stacked cards and zigzag avoid the journal frame; the side rail also avoids the rail and split frames, which already put a column beside the content). The dealt opening, and the plan prompt's =suggested_opening=, is then one of the composition's =openings=, so the two always agree. A theme whose own frame the composition avoids gets another composition. Plan checks accept only a catalog composition. The fingerprint counts the composition as one more look axis.
+- Look: without a theme, =ls_components_apply_structure()= sets the builder axes a composition names (for example the editorial frame and alignment); =ls_components_apply_seed()= no longer redeals builder axes, so those stay. The existing rule that keeps side and hanging headings out of narrow columns still runs after.
+- Section order: when the home page's answer arrives, after its opening, =ls_components_apply_composition()= orders the sections after the opening. Each component has a role in =compositions.roles= (offer, process, proof, story, practical or close; anything unlisted reads as story), each composition orders the first five its own way, and the close role (calls to action, contact cards, call buttons, forms, links, social and sharing) always ends the page. Sections of one role keep an order picked from the site name and the composition, and two sections of one component are kept apart where another of their role can sit between them. Content is never added or removed; the plan prompt now tells the model the builder orders the home sections, so each must read well in any order.
+- Styles: a composition with =css: true= has =home-NAME.css=, emitted in the components layer only for the site it was dealt to, scoped to =.page--kind-home.home-NAME=; the home page's body carries =home-NAME=. Tiles and cards are inline-size containers, so the components inside lay out for the tile, not the page. A side-rail home renders through the reading pages' contents column (=page-grid=), and like reading pages takes no per-section bands.
+- A poster's title was sized only by the page column, so in a narrow content column (the journal frame, a narrow dealt width) a long word broke across lines where no script shrank it. Its size is now also capped by the dealt content width.
+
+=tests/test-compositions.c= checks that there are at least eight, that 400 seeds deal all of them, each with one of its own openings (the same one the prompt suggests), never with a frame it avoids and with its look set, and that plans still pass their checks; that a theme's frame re-deals the composition; that one six-role home comes out in eight different orders with the opening first and the call to action last; that repeated components are kept apart; and that each composition renders its body class, its styles only where dealt, the side rail's contents column, and eight different home pages. Set =COMPOSITIONS_OUTPUT= and run =tests/compositions.sh= to open each at 390 and 1440 px, with and without =site.js=, and fail on any page that scrolls sideways or any heading that splits a word across lines:
+
+#+begin_src sh
+COMPOSITIONS_OUTPUT="$PWD/build/compositions" build/release/test-compositions
+bash tests/compositions.sh "$WEBDRIVER_URL" build/compositions
+#+end_src
+
+On 2026-10-20 all eight passed at both widths with and without scripts (32 page loads), and so did the ten sameness sites; before the poster fix, the editorial cleaning site failed it at 1440 with its heading split. The fixture sites test layout, not a model's choices.
+
+** Sameness with home compositions
+
+Measured as in [[*Sameness after the seed decides][the previous section]] (=tests/sameness.sh= now also waits a moment after fonts load, so =site.js= has fitted large headings before the screenshot):
+
+| Measure | Seed decides | Compositions | Limit |
+|---------+--------------+--------------+-------|
+| structural mean | 0.447 | 0.427 | 0.35 |
+| structural worst pair | 0.751 | 0.712 | 0.55 |
+| look | 0.25 | 0.25 | |
+| order | 0.82 | 0.71 | |
+| mix | 0.46 | 0.47 | |
+| palette | 0.40 | 0.40 | |
+| type | 0.31 | 0.31 | |
+| screens at 390 | 0.142 | 0.142 | 0.2 |
+| screens at 1440 | 0.249 | 0.259 | 0.2 |
+| overall mean | 0.409 | 0.393 | 0.35 |
+| overall worst pair | 0.686 | 0.616 | |
+
+The fixture home has only three sections between its opening and its call to action, all of different roles, so the order part can only move so far: a composition can swap them but has nothing else to arrange. Ten sites drew six of the eight compositions (three full-bleed). The squashed screenshot grid does not tell a tiled or carded home much from a plain one, so the screens barely moved; the rendered pages do differ (see the browser check above). Colour and type range are the next child's.

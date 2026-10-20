@@ -1,0 +1,24 @@
+/* Home composition: bento grid. After the opening, sections flow as tiles,
+ * two to a row where the page column has room; a tile alone on its row
+ * grows across it. Closing sections, scrolling bands and edge-to-edge runs
+ * keep the full width. Each tile is a container, so its component lays out
+ * for the tile, not the page. */
+.page--kind-home.home-bento main {
+	display: flex; flex-wrap: wrap; align-content: flex-start; gap: var(--space-5);
+	padding-inline: max(var(--gutter), (100% - var(--max-width)) / 2);
+	padding-block-end: var(--section-space);
+}
+.page--kind-home.home-bento main > * { flex: 1 1 100%; min-width: 0; }
+.page--kind-home.home-bento main > .block:first-child { margin-inline: calc(-1 * max(var(--gutter), (100% - var(--max-width)) / 2)); }
+.page--kind-home.home-bento main > .block:not(:first-child, .cta, .contact-card, .call, .form, .marquee, .sec-w-bleed) {
+	container-type: inline-size;
+	padding-block: var(--space-6);
+	background: var(--surface); border: var(--border) solid var(--line); border-radius: max(var(--radius), 0.75rem);
+}
+.page--kind-home.home-bento main > .block:not(:first-child) { padding-top: var(--space-6); }
+.page--kind-home.home-bento main > .block:not(:first-child) > .wrap { width: min(100% - 2 * var(--space-5), var(--max-width)); }
+@container (min-width: 60rem) {
+	.page--kind-home.home-bento main > .block:not(:first-child, .cta, .contact-card, .call, .form, .marquee, .sec-w-bleed) {
+		flex: 1 1 calc(50% - var(--space-5));
+	}
+}

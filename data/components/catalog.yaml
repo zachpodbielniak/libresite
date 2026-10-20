@@ -1411,3 +1411,65 @@ components:
       body: {type: rich, max: 600}
       includes: {type: items, max_items: 10, fields: {text: {type: text, required: true, max: 120}}}
       actions: {type: links, max_items: 2}
+# Home compositions (docs/components.org, "Home compositions"). The builder
+# deals one per site from its seed: it narrows the home opening to the
+# composition's openings, sets the builder look axes it names, orders the
+# home sections after the opening by role, and with css: true adds
+# home-NAME.css for the home page. avoid lists frames it is never dealt with.
+compositions:
+  roles:
+    offer: [services, cards, bento, features, products, product, pricing, offer, showcase, strip, gallery, carousel, media, big-list, menu, specials, entries, filter, news, jobs, directory, timetable, schedule, recipe]
+    process: [steps, timeline, story, checklist, compare, tabs, split]
+    proof: [voices, quote, press, partners, badges, numbers, facts, team, profile]
+    story: [text, lead, statement, manifesto, figure, columns, callout, marquee, article, glossary, custom, module]
+    practical: [faq, hours, location, locations, areas, notice, details, table, specs, jumpnav]
+    close: [cta, contact-card, call, form, links, social, share, pager]
+  layouts:
+    split:
+      summary: Split hero. Words beside a picture, then an even run of sections.
+      openings: [hero/split, cover/split, hero/overlap]
+      order: [offer, process, proof, story, practical]
+    full-bleed:
+      summary: Full-bleed. The opening picture runs edge to edge and sections alternate in bands across the whole width.
+      openings: [cover/full, hero/banner, poster/backdrop]
+      look: {frame: wide, rhythm: bands}
+      order: [story, offer, proof, process, practical]
+      css: true
+    editorial:
+      summary: Editorial column. One narrow reading column under a typographic opening, like a magazine page.
+      openings: [poster/type, hero/statement, hero/minimal, manifesto/stacked]
+      look: {frame: center, align: left, headpos: top}
+      order: [story, process, offer, proof, practical]
+      css: true
+    bento:
+      summary: Bento grid. After the opening, sections sit side by side as tiles of a grid on wide screens.
+      openings: [hero/centered, hero/split, cover/framed]
+      look: {headpos: top}
+      order: [offer, proof, story, process, practical]
+      avoid: [center]
+      css: true
+    oversized-type:
+      summary: Oversized type. A poster or manifesto opening and section headings set very large.
+      openings: [poster/type, poster/stamped, manifesto/stacked, manifesto/outlined]
+      order: [proof, offer, story, process, practical]
+      css: true
+    side-rail:
+      summary: Sticky side rail. A contents column of the home sections stays beside them on wide screens.
+      openings: [hero/statement, hero/split, poster/stamped, hero/minimal]
+      look: {headpos: top}
+      order: [process, practical, offer, proof, story]
+      avoid: [rail, split, center]
+      sidebar: true
+    stacked-cards:
+      summary: Stacked cards. Each section after the opening is its own card, stacked down the page.
+      openings: [hero/centered, cover/framed, manifesto/numbered]
+      order: [offer, practical, process, proof, story]
+      avoid: [center]
+      css: true
+    zigzag:
+      summary: Zigzag. Sections step from one side to the other down the page.
+      openings: [hero/overlap, cover/split, hero/banner, manifesto/outlined]
+      look: {headpos: top}
+      order: [process, story, offer, proof, practical]
+      avoid: [center]
+      css: true

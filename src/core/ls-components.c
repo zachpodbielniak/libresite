@@ -29,6 +29,8 @@ struct _LsComponents {
 	JsonObject *palettes;
 	JsonObject *typefaces;
 	JsonObject *homes;
+	JsonObject *compositions;	/* home composition name -> layout; NULL without */
+	JsonObject *roles;	/* section role -> component names */
 	JsonNode *network_catalog;
 	JsonObject *networks;	/* social network -> {label, hosts, path}; NULL without networks.yaml */
 	GPtrArray *order;
@@ -1030,6 +1032,99 @@ ls_components_get_snapshot(LsComponents *self){
 	return ls_json_encode(node);
 }
 
+/* ---- Home compositions ------------------------------------------------------ */
+
+static gboolean is_dealt_opening(LsComponents *self, const gchar *opening);
+static gboolean in_list(const gchar *const *list, const gchar *name);
+
+/* The roles every composition orders; close always ends the page. */
+static const gchar *const composition_roles[] = {"offer", "process", "proof", "story", "practical", NULL};
+
+static gboolean
+json_list_has(JsonArray *list, const gchar *name){
+	guint i;
+	for (i = 0; list != NULL && i < json_array_get_length(list); i++)
+		if (JSON_NODE_HOLDS_VALUE(json_array_get_element(list, i)) &&
+			g_strcmp0(json_array_get_string_element(list, i), name) == 0)
+			return TRUE;
+	return FALSE;
+}
+
+/* A composition's layout by name; NULL for no name or an unknown one. */
+static JsonObject *
+composition_layout(LsComponents *self, const gchar *name){
+	return name != NULL ? member_object(self->compositions, name) : NULL;
+}
+
+/* compositions: {roles, layouts}, optional so archived libraries load. */
+static gboolean
+load_compositions(LsComponents *self, GChecksum *digest, JsonObject *root, GError **error){
+	JsonObject *block = member_object(root, "compositions");
+	g_autoptr(GList) names = NULL;
+	GList *name;
+	guint i, j;
+	if (!json_object_has_member(root, "compositions"))
+		return TRUE;
+	self->roles = member_object(block, "roles");
+	self->compositions = member_object(block, "layouts");
+	if (block == NULL || !ls_object_keys(block, "|roles|layouts|", NULL) || self->roles == NULL ||
+		self->compositions == NULL || json_object_get_size(self->compositions) == 0)
+		return catalog_invalid(error, "compositions", "needs roles and layouts"), FALSE;
+	names = json_object_get_members(self->roles);
+	for (name = names; name != NULL; name = name->next) {
+		JsonArray *members = member_array(self->roles, name->data);
+		if ((!in_list(composition_roles, name->data) && !g_str_equal(name->data, "close")) || members == NULL)
+			return catalog_invalid(error, name->data, "roles are offer, process, proof, story, practical and close, each a list"), FALSE;
+		for (i = 0; i < json_array_get_length(members); i++)
+			if (member_object(self->components, json_array_get_string_element(members, i)) == NULL)
+				return catalog_invalid(error, name->data, "roles may only name catalog components"), FALSE;
+	}
+	g_list_free(g_steal_pointer(&names));
+	names = json_object_get_members(self->compositions);
+	for (name = names; name != NULL; name = name->next) {
+		JsonObject *layout = member_object(self->compositions, name->data);
+		JsonArray *openings = member_array(layout, "openings"), *order = member_array(layout, "order");
+		JsonArray *avoid = member_array(layout, "avoid");
+		JsonObject *look = member_object(layout, "look");
+		JsonObject *frames = member_object(member_object(self->looks, "frame"), "values");
+		if (layout == NULL || !ls_object_keys(layout, "|summary|openings|look|order|avoid|css|sidebar|", NULL) ||
+			ls_string(layout, "summary") == NULL || openings == NULL || json_array_get_length(openings) == 0 ||
+			order == NULL)
+			return catalog_invalid(error, name->data, "compositions need a summary, openings and an order"), FALSE;
+		for (i = 0; i < json_array_get_length(openings); i++)
+			if (!is_dealt_opening(self, json_array_get_string_element(openings, i)))
+				return catalog_invalid(error, name->data, "composition openings must be home openings as component/variant"), FALSE;
+		/* Every role but close exactly once, so any section has a place. */
+		if (json_array_get_length(order) != g_strv_length((gchar **)composition_roles))
+			return catalog_invalid(error, name->data, "order lists offer, process, proof, story and practical once each"), FALSE;
+		for (j = 0; composition_roles[j] != NULL; j++)
+			if (!json_list_has(order, composition_roles[j]))
+				return catalog_invalid(error, name->data, "order lists offer, process, proof, story and practical once each"), FALSE;
+		if (look != NULL) {
+			g_autoptr(GList) axes = json_object_get_members(look);
+			GList *axis;
+			for (axis = axes; axis != NULL; axis = axis->next) {
+				JsonObject *definition = member_object(self->looks, axis->data);
+				if (definition == NULL || !json_object_has_member(definition, "builder") ||
+					!json_object_get_boolean_member(definition, "builder") || ls_string(look, axis->data) == NULL ||
+					!json_object_has_member(member_object(definition, "values"), ls_string(look, axis->data)))
+					return catalog_invalid(error, name->data, "a composition's look sets builder axes to their values"), FALSE;
+			}
+		} else if (json_object_has_member(layout, "look"))
+			return catalog_invalid(error, name->data, "look must be a map of builder axes"), FALSE;
+		for (i = 0; avoid != NULL && i < json_array_get_length(avoid); i++)
+			if (frames == NULL || !json_object_has_member(frames, json_array_get_string_element(avoid, i)))
+				return catalog_invalid(error, name->data, "avoid lists frames"), FALSE;
+		if (json_object_has_member(layout, "css") && json_object_get_boolean_member(layout, "css")) {
+			g_autofree gchar *file = g_strdup_printf("home-%s.css", (const gchar *)name->data);
+			g_autofree gchar *text = load_resource(self, digest, file, TRUE, error);
+			if (text == NULL)
+				return FALSE;
+		}
+	}
+	return TRUE;
+}
+
 LsComponents *
 ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 	g_autoptr(LsComponents) self = g_object_new(LS_TYPE_COMPONENTS, NULL);
@@ -1049,7 +1144,7 @@ ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 	if (self->catalog == NULL)
 		return NULL;
 	root = JSON_NODE_HOLDS_OBJECT(self->catalog) ? json_node_get_object(self->catalog) : NULL;
-	if (root == NULL || !ls_object_keys(root, "|version|looks|kinds|components|", error) ||
+	if (root == NULL || !ls_object_keys(root, "|version|looks|kinds|components|compositions|", error) ||
 		(self->components = member_object(root, "components")) == NULL ||
 		(self->kinds = member_object(root, "kinds")) == NULL ||
 		(self->looks = member_object(root, "looks")) == NULL) {
@@ -1119,6 +1214,8 @@ ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 		if (json == NULL || (self->utility[i] = ls_json_parse(json, error)) == NULL)
 			return NULL;
 	}
+	if (!load_compositions(self, digest, root, error))
+		return NULL;
 	self->plan_schema = build_plan_schema(self, error);
 	if (self->plan_schema == NULL || !load_themes(self, digest, error) ||
 		!load_identities(self, digest, error) || !load_networks(self, digest, error))
@@ -1147,6 +1244,34 @@ seed_pick(const gchar *seed, const gchar *salt, guint n){
 	return n == 0 ? 0 : ((guint32)bytes[0] << 24 | (guint32)bytes[1] << 16 | (guint32)bytes[2] << 8 | bytes[3]) % n;
 }
 
+/* The composition dealt to @seed among those that suit @frame (any frame
+ * when NULL); NULL when the library has none. */
+static const gchar *
+deal_composition(LsComponents *self, const gchar *seed, const gchar *frame, const gchar *salt){
+	g_autoptr(GList) names = NULL;
+	g_autoptr(GPtrArray) fitting = g_ptr_array_new();
+	GList *name;
+	if (self->compositions == NULL)
+		return NULL;
+	names = json_object_get_members(self->compositions);
+	for (name = names; name != NULL; name = name->next)
+		if (frame == NULL || !json_list_has(member_array(member_object(self->compositions, name->data), "avoid"), frame))
+			g_ptr_array_add(fitting, name->data);
+	if (fitting->len == 0)
+		return NULL;
+	return g_ptr_array_index(fitting, seed_pick(seed, salt, fitting->len));
+}
+
+/* The composition a fresh deal of @seed gets: it follows the dealt frame. */
+static const gchar *
+seed_composition(LsComponents *self, const gchar *seed){
+	g_autoptr(JsonObject) look = NULL;
+	if (self->compositions == NULL)
+		return NULL;
+	look = ls_components_suggest_look(self, seed);
+	return deal_composition(self, seed, ls_string(look, "frame"), "composition");
+}
+
 gchar *
 ls_components_suggest_opening(LsComponents *self, const gchar *seed){
 	JsonArray *openings;
@@ -1154,6 +1279,14 @@ ls_components_suggest_opening(LsComponents *self, const gchar *seed){
 	guint i;
 	g_return_val_if_fail(LS_IS_COMPONENTS(self), NULL);
 	g_return_val_if_fail(seed != NULL, NULL);
+	/* With home compositions, the opening is one of the dealt composition's. */
+	{
+		const gchar *composition = seed_composition(self, seed);
+		JsonArray *fitting = member_array(composition_layout(self, composition), "openings");
+		if (fitting != NULL && json_array_get_length(fitting) > 0)
+			return g_strdup(json_array_get_string_element(fitting,
+				seed_pick(seed, "opening", json_array_get_length(fitting))));
+	}
 	openings = member_array(member_object(self->kinds, "home"), "openings");
 	for (i = 0; openings != NULL && i < json_array_get_length(openings); i++) {
 		const gchar *name = json_array_get_string_element(openings, i);
@@ -1283,11 +1416,15 @@ ls_components_deal_structure(LsComponents *self, const gchar *seed){
 			g_ptr_array_index(choices, seed_pick(seed, salt, choices->len)));
 	}
 	json_object_set_object_member(structure, "variants", variants);
-	/* The home page's opening is dealt with the rest of the skeleton. */
+	/* The home page's composition and opening are dealt with the rest of
+	 * the skeleton. */
 	{
 		g_autofree gchar *opening = ls_components_suggest_opening(self, seed);
+		const gchar *composition = seed_composition(self, seed);
 		if (opening != NULL)
 			json_object_set_string_member(structure, "opening", opening);
+		if (composition != NULL)
+			json_object_set_string_member(structure, "composition", composition);
 	}
 	return structure;
 }
@@ -1325,6 +1462,30 @@ ls_components_apply_structure(LsComponents *self, JsonNode *plan_node, const gch
 	if (json_object_has_member(plan, "structure"))
 		json_object_remove_member(plan, "structure");
 	json_object_set_object_member(plan, "structure", ls_components_deal_structure(self, seed));
+	/* The home composition suits the frame: a theme's own frame may need
+	 * another one. Without a theme, the composition sets the builder axes
+	 * it names, such as the narrow column of an editorial home. */
+	{
+		JsonObject *structure = member_object(plan, "structure");
+		const gchar *composition = ls_string(structure, "composition");
+		const gchar *frame = ls_string(look, "frame");
+		JsonObject *layout;
+		if (composition != NULL && frame != NULL &&
+			json_list_has(member_array(composition_layout(self, composition), "avoid"), frame)) {
+			const gchar *fitting = deal_composition(self, seed, frame, "composition:frame");
+			if (fitting != NULL)
+				json_object_set_string_member(structure, "composition", fitting);
+			else
+				json_object_remove_member(structure, "composition");
+		}
+		layout = composition_layout(self, ls_string(structure, "composition"));
+		if (!themed && member_object(layout, "look") != NULL) {
+			g_autoptr(GList) names = json_object_get_members(member_object(layout, "look"));
+			GList *name;
+			for (name = names; name != NULL; name = name->next)
+				json_object_set_string_member(look, name->data, ls_string(member_object(layout, "look"), name->data));
+		}
+	}
 	/* Stock flourishes become fingerprints once a visitor has seen them on
 	 * another site. Without a theme, the signature layer written for this
 	 * site supplies dividers, emphasis, labels and backdrops instead. */
@@ -1382,6 +1543,11 @@ check_structure(Problems *problems, LsComponents *self, JsonObject *plan){
 		gboolean known = FALSE;
 		if (g_str_equal(key->data, "variants"))
 			continue;
+		if (g_str_equal(key->data, "composition")) {
+			if (composition_layout(self, ls_string(structure, "composition")) == NULL)
+				problem(problems, "structure.composition must be a home composition from the catalog");
+			continue;
+		}
 		if (g_str_equal(key->data, "opening")) {
 			if (!is_dealt_opening(self, ls_string(structure, "opening")))
 				problem(problems, "structure.opening must be a home opening as component/variant, such as hero/split");
@@ -1452,9 +1618,14 @@ ls_components_apply_seed(LsComponents *self, JsonNode *plan_node, const gchar *s
 	look = member_object(plan, "look");
 	dealt = ls_components_suggest_look(self, seed);
 	axes = json_object_get_members(dealt);
-	for (axis = axes; axis != NULL; axis = axis->next)
-		if (!in_list(retired_flourishes, axis->data))
-			json_object_set_string_member(look, axis->data, ls_string(dealt, axis->data));
+	/* Builder axes were set by the structure, with the composition's own. */
+	for (axis = axes; axis != NULL; axis = axis->next) {
+		JsonObject *definition = member_object(self->looks, axis->data);
+		if (in_list(retired_flourishes, axis->data) ||
+			(json_object_has_member(definition, "builder") && json_object_get_boolean_member(definition, "builder")))
+			continue;
+		json_object_set_string_member(look, axis->data, ls_string(dealt, axis->data));
+	}
 	identity = ls_components_suggest_identity(self, seed, sector);
 	tokens = member_object(plan, "tokens");
 	if (tokens == NULL) {
@@ -1721,6 +1892,100 @@ ls_components_apply_opening(LsComponents *self, JsonNode *plan_node, const gchar
 		return TRUE;
 	}
 	return FALSE;
+}
+
+/* The role a component plays on a home page; anything unlisted reads as story. */
+static const gchar *
+section_role(LsComponents *self, const gchar *component){
+	g_autoptr(GList) names = json_object_get_members(self->roles);
+	GList *name;
+	for (name = names; name != NULL; name = name->next)
+		if (json_list_has(member_array(self->roles, name->data), component))
+			return name->data;
+	return "story";
+}
+
+typedef struct {
+	JsonNode *node;
+	const gchar *component;
+	guint rank;
+	guint tie;
+	guint index;
+} Placed;
+
+static gint
+placed_compare(gconstpointer a, gconstpointer b){
+	const Placed *x = a, *y = b;
+	if (x->rank != y->rank)
+		return x->rank < y->rank ? -1 : 1;
+	if (x->tie != y->tie)
+		return x->tie < y->tie ? -1 : 1;
+	return x->index < y->index ? -1 : x->index > y->index;
+}
+
+gboolean
+ls_components_apply_composition(LsComponents *self, JsonNode *plan_node, JsonNode *page){
+	JsonObject *plan, *layout;
+	JsonArray *sections, *order, *rebuilt;
+	g_autoptr(GArray) placed = g_array_new(FALSE, FALSE, sizeof(Placed));
+	const gchar *composition;
+	gboolean changed = FALSE;
+	guint i, j, count;
+	g_return_val_if_fail(LS_IS_COMPONENTS(self), FALSE);
+	if (self->compositions == NULL || plan_node == NULL || !JSON_NODE_HOLDS_OBJECT(plan_node) ||
+		page == NULL || !JSON_NODE_HOLDS_OBJECT(page))
+		return FALSE;
+	plan = json_node_get_object(plan_node);
+	composition = member_object(plan, "structure") != NULL
+		? ls_string(member_object(plan, "structure"), "composition") : NULL;
+	layout = composition_layout(self, composition);
+	order = member_array(layout, "order");
+	sections = member_array(json_node_get_object(page), "sections");
+	if (order == NULL || sections == NULL || json_array_get_length(sections) < 3)
+		return FALSE;
+	count = json_array_get_length(sections);
+	for (i = 1; i < count; i++) {
+		JsonNode *node = json_array_get_element(sections, i);
+		JsonObject *section = JSON_NODE_HOLDS_OBJECT(node) ? json_node_get_object(node) : NULL;
+		const gchar *component = section != NULL ? ls_string(section, "component") : NULL;
+		const gchar *role = component != NULL ? section_role(self, component) : "story";
+		g_autofree gchar *seed = g_strdup_printf("%s\n%s\n%s\n%u", ls_string(plan, "name") != NULL ?
+			ls_string(plan, "name") : "", composition, component != NULL ? component : "", i);
+		Placed entry = {node, component, (guint)json_array_get_length(order), seed_pick(seed, "order", 1000), i};
+		/* Ways to get in touch and closing calls end the page; every other
+		 * role takes its place in the composition's order. */
+		if (!g_str_equal(role, "close"))
+			for (j = 0; j < json_array_get_length(order); j++)
+				if (g_strcmp0(json_array_get_string_element(order, j), role) == 0)
+					entry.rank = j;
+		g_array_append_val(placed, entry);
+	}
+	g_array_sort(placed, placed_compare);
+	/* Two sections of one component never meet when another can sit between. */
+	for (i = 0; i + 1 < placed->len; i++) {
+		Placed *here = &g_array_index(placed, Placed, i), *next = &g_array_index(placed, Placed, i + 1);
+		if (g_strcmp0(here->component, next->component) != 0)
+			continue;
+		for (j = i + 2; j < placed->len; j++) {
+			Placed *other = &g_array_index(placed, Placed, j);
+			if (g_strcmp0(other->component, here->component) != 0 && other->rank == next->rank) {
+				Placed swap = *next;
+				*next = *other;
+				*other = swap;
+				break;
+			}
+		}
+	}
+	for (i = 0; i < placed->len; i++)
+		changed |= g_array_index(placed, Placed, i).index != i + 1;
+	if (!changed)
+		return FALSE;
+	rebuilt = json_array_new();
+	json_array_add_element(rebuilt, json_node_copy(json_array_get_element(sections, 0)));
+	for (i = 0; i < placed->len; i++)
+		json_array_add_element(rebuilt, json_node_copy(g_array_index(placed, Placed, i).node));
+	json_object_set_array_member(json_node_get_object(page), "sections", rebuilt);
+	return TRUE;
 }
 
 const gchar *
@@ -3258,6 +3523,9 @@ fingerprint_new(JsonObject *look, JsonObject *structure, JsonObject *colors, Jso
 		for (axis = axes; axis != NULL; axis = axis->next)
 			if (ls_string(look, axis->data) != NULL && !in_list(flourishes, axis->data))
 				json_object_set_string_member(copy, axis->data, ls_string(look, axis->data));
+		/* The home composition counts as one more look axis. */
+		if (structure != NULL && ls_string(structure, "composition") != NULL)
+			json_object_set_string_member(copy, "composition", ls_string(structure, "composition"));
 		json_object_set_object_member(fp, "look", copy);
 	}
 	for (i = 0; structure != NULL && i < 6; i++)
@@ -4940,6 +5208,14 @@ append_link_views(JsonArray *out, JsonArray *links, const gchar *path, GHashTabl
 	}
 }
 
+/* The plan's home composition, when the library knows it. */
+static const gchar *
+home_composition(LsComponents *self, JsonObject *plan){
+	const gchar *name = member_object(plan, "structure") != NULL
+		? ls_string(member_object(plan, "structure"), "composition") : NULL;
+	return composition_layout(self, name) != NULL ? name : NULL;
+}
+
 /* One body class per look axis, falling back to the catalog default. */
 static gchar *
 look_classes(LsComponents *self, JsonObject *look){
@@ -4973,7 +5249,7 @@ render_page(Render *render, const gchar *path, const gchar *title, const gchar *
 	const gchar *kind_name = page_kind(plan, path, noindex ? page : NULL);
 	JsonObject *kind = member_object(render->self->kinds, kind_name);
 	GString *main = g_string_new(NULL);
-	gboolean sidebar;
+	gboolean sidebar, reading;
 	const gchar *name = ls_string(plan, "name");
 	g_autofree gchar *full = g_strcmp0(title, name) == 0 ? g_strdup(name) : g_strdup_printf("%s | %s", title, name);
 	gdouble paper[3];
@@ -4995,6 +5271,12 @@ render_page(Render *render, const gchar *path, const gchar *title, const gchar *
 	json_object_set_string_member(view, "slug", slug);
 	{
 		g_autofree gchar *classes = look_classes(render->self, member_object(plan, "look"));
+		const gchar *composition = home_composition(render->self, plan);
+		if (g_strcmp0(kind_name, "home") == 0 && composition != NULL) {
+			gchar *more = g_strconcat(classes, " home-", composition, NULL);
+			g_free(classes);
+			classes = more;
+		}
 		json_object_set_string_member(view, "look_classes", classes);
 	}
 	json_object_set_boolean_member(view, "home", g_str_equal(path, "index.html"));
@@ -5061,12 +5343,17 @@ render_page(Render *render, const gchar *path, const gchar *title, const gchar *
 	render->page_path = path;
 	render->page_title = title;
 	render->wordmark = ls_string(view, "wordmark");
-	/* Reading kinds keep their contents column steady: no per-section breaks. */
-	render_sections(render, member_array(page, "sections"), pieces, toc,
-		kind != NULL && json_object_has_member(kind, "sidebar") && json_object_get_boolean_member(kind, "sidebar"));
-	/* Reading kinds get an in-page contents column once there is enough to navigate. */
-	sidebar = kind != NULL && json_object_has_member(kind, "sidebar") &&
-		json_object_get_boolean_member(kind, "sidebar") && json_array_get_length(toc) >= 2 && pieces->len > 1;
+	/* Reading kinds, and a home page composed with a side rail, keep their
+	 * contents column steady: no per-section breaks. */
+	{
+		JsonObject *layout = composition_layout(render->self, home_composition(render->self, plan));
+		reading = (kind != NULL && json_object_has_member(kind, "sidebar") && json_object_get_boolean_member(kind, "sidebar")) ||
+			(g_strcmp0(kind_name, "home") == 0 && layout != NULL && json_object_has_member(layout, "sidebar") &&
+			json_object_get_boolean_member(layout, "sidebar"));
+	}
+	render_sections(render, member_array(page, "sections"), pieces, toc, reading);
+	/* They get an in-page contents column once there is enough to navigate. */
+	sidebar = reading && json_array_get_length(toc) >= 2 && pieces->len > 1;
 	for (i = sidebar ? 1 : 0; i < pieces->len; i++)
 		g_string_append(main, g_ptr_array_index(pieces, i));
 	json_object_set_string_member(view, "kind", kind_name);
@@ -5569,6 +5856,13 @@ ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages
 			g_string_append_printf(css, "\n/* %s */\n@layer ls-components {\n%s}\n", name, file_text(self, style));
 		if (file_text(self, script) != NULL)
 			g_string_append_printf(js, "\n%s", file_text(self, script));
+	}
+	/* The home composition's own styles, after the components they arrange. */
+	{
+		g_autofree gchar *file = home_composition(self, plan) != NULL
+			? g_strdup_printf("home-%s.css", home_composition(self, plan)) : NULL;
+		if (file != NULL && file_text(self, file) != NULL)
+			g_string_append_printf(css, "\n/* home composition */\n@layer ls-components {\n%s}\n", file_text(self, file));
 	}
 	g_string_append_printf(css, "\n/* look */\n@layer ls-look {\n%s}\n", file_text(self, "look.css"));
 	for (i = 0; member_object(plan, "restyle") != NULL && i < self->order->len; i++) {
