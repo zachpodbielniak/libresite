@@ -678,3 +678,33 @@ Measured as in [[*Sameness after the seed decides][the previous section]] (=test
 | overall worst pair | 0.686 | 0.616 | |
 
 The fixture home has only three sections between its opening and its call to action, all of different roles, so the order part can only move so far: a composition can swap them but has nothing else to arrange. Ten sites drew six of the eight compositions (three full-bleed). The squashed screenshot grid does not tell a tiled or carded home much from a plain one, so the screens barely moved; the rendered pages do differ (see the browser check above). Colour and type range are the next child's.
+
+* Motion
+
+The stock =motion= look (rise, reveal, lift) gave every moving site the same three gestures. Motion kits widen that: each unthemed site is dealt one kit, a small set of CSS-first movements with its own character, applied to every page. The block is =motion_kits= at the end of =catalog.yaml=, optional so archived libraries load as before.
+
+| Kit | What moves | Weight |
+|-----+------------+--------|
+| cascade | the opening's lines arrive one after another; list items cascade in as they scroll into view (staggered by position); buttons fill with a sweep | 2.3 KB |
+| parallax | the opening heading settles in from the side; the opening picture drifts slower than the page; section headings slide in; pictures float; link underlines grow | 2.0 KB |
+| aurora | soft drawn shapes (an SVG mask over the accent, 9 percent) drift behind the opening; the opening fades up; cards float under the pointer | 2.0 KB |
+| ticker | a decorative band of the business's name runs above the footer; figures count up; buttons press in | 1.4 KB + 1.7 KB script |
+| spotlight | the opening and then each section settle into place; figures count up; cards tilt toward the pointer | 1.1 KB + the same script |
+| still | only the opening heading settles; links, buttons and focus rings answer with small movements | 0.7 KB |
+
+- Dealing: =ls_components_deal_structure()= adds =structure.kit= from the seed, the plan check accepts only a catalog kit, and the fingerprint counts it as one more look axis. Without a theme, =ls_components_apply_structure()= sets the builder axes a kit names: every kit has its own entrance and hover, so each sets the stock =motion= to =none= and two entrances never stack; on unthemed sites the kits replace the stock motion. A themed site gets no kit; its theme's motion stands.
+- Rendering: every page's body carries =kit-NAME=, and =kit-NAME.css= is emitted in the look layer after =look.css=. A kit naming a =script= adds the shared =motion-SCRIPT.js= to =site.js= (only =counters= so far). =marquee: true= adds =<div class="kit-marquee" aria-hidden="true">= with the site name above the footer.
+- Reduced motion means none. Every animation, transition and transform a kit adds sits inside =@media (prefers-reduced-motion: no-preference)=; the marquee band is hidden outside it, and the aurora backdrop is drawn only inside it. The counter script returns at once for reduced motion, without =IntersectionObserver=, or without scripts, and the page keeps the supplied text; while it counts, the figure's exact text is its accessible name, and at the end the text is put back exactly. Small counts and years are never counted. Scroll-driven parts sit under =@supports (animation-timeline: ...)=; every kit also has a load-time movement, so each moves in browsers without scroll timelines.
+- Characterful hover and focus: each kit has its own hover and widens or eases the focus ring's offset. Focus rings keep the library's colour and width.
+- Weight: each kit's styles are at most 4 KB and its script at most 2 KB, checked by =/motion/files=; =/motion/render= checks that a kit adds at most 6 KB to the styles and script of a site, its class is on every page, its files come only with the dealt kit, and the marquee band appears only for marquee kits.
+
+=tests/test-motion.c= also checks that 300 seeds deal all six kits deterministically with their look set, that themes get none, and that a bad kit name fails the plan check. =/motion/files= is the reduced-motion lint: with comments, =@keyframes= and no-preference blocks removed, a kit's CSS may not mention =animation=, =transition=, =transform= or =scroll-behavior=. With =MOTION_OUTPUT= set, the fixture site is written once per kit for the browser check:
+
+#+begin_src sh
+MOTION_OUTPUT="$PWD/build/motion" build/release/test-motion
+bash tests/motion.sh "$WEBDRIVER_URL" build/motion
+#+end_src
+
+=tests/motion.sh= opens each kit at 390 and 1440 px in two passes. With reduced motion, after scrolling through the page, =document.getAnimations()= must be empty, the marquee band hidden and the figures their supplied text; without it, something must animate, the figures must end on their supplied text and no page may scroll sideways. On 2026-10-20 all 24 loads passed in headless Firefox (1 to 6 animations per kit with motion, none with reduced motion), and a figure sampled mid-count read 821 on its way to 1,240 with 1,240 as its accessible name. Firefox ran no scroll-driven parts, which are behind a preference there; they were not checked in another browser.
+
+The sameness score barely moves (structural 0.427 to 0.426, overall 0.393 to 0.392, screens 0.142 and 0.262): the plans, home pages and still screenshots it compares do not show motion. The fingerprint counts the kit in place of the stock motion it replaces, since every kit sets that to none. The ten briefs drew five of the six kits. The home composition browser check still passes with the kits in place.
