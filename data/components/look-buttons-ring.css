@@ -1,0 +1,3 @@
+/* buttons/ring: heavy-edged labels with a fine ring drawn just inside the edge, like a seal. */
+.look-buttons-ring .button { padding-inline: 1.5em; border-width: 3px; border-radius: 0.45rem; outline: 1.5px solid currentColor; outline-offset: -6px; letter-spacing: 0.03em; }
+.look-buttons-ring .button:focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }

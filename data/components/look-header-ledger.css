@@ -1,0 +1,3 @@
+/* header/ledger: double ink rules above and below, the wordmark in small spaced capitals. */
+:where(.look-header-ledger) .site-header { border-block: calc(var(--border-strong) * 2) double var(--ink); }
+:where(.look-header-ledger .site-header) .brand { font-size: var(--step-0); font-weight: 700; letter-spacing: 0.18em; text-transform: uppercase; }

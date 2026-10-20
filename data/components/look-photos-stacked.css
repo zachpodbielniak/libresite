@@ -1,0 +1,2 @@
+/* photos/stacked: each photo sits on two offset sheets drawn in a hairline, like a small pile of prints. */
+.look-photos-stacked main img:is([src$=".jpg"], [src$=".jpeg"], [src$=".png"], [src$=".webp"]):not(.cover img, .brand img) { margin-bottom: 0.9rem; box-shadow: 0.45rem 0.45rem 0 -1px var(--paper), 0.45rem 0.45rem 0 0 var(--line-strong), 0.9rem 0.9rem 0 -1px var(--paper), 0.9rem 0.9rem 0 0 var(--line-strong); }

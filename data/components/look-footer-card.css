@@ -1,0 +1,3 @@
+/* footer/card: the footer's contents in a raised paper card on the surface band. */
+.look-footer-card .site-footer { border-top: 0; background: var(--surface); }
+.look-footer-card .site-footer__inner { padding: clamp(1.25rem, 4cqi, 3rem); background: var(--paper); border: var(--border) solid var(--line); border-radius: max(var(--radius), 1rem); box-shadow: 0 1.25rem 2.5rem -1.5rem color-mix(in srgb, var(--ink) 40%, transparent); }

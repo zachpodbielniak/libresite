@@ -1,0 +1,6 @@
+/* header/nameplate: an oversized heavy wordmark, the links set level with its foot, over a thick ink rule. */
+:where(.look-header-nameplate) .site-header { border-bottom: calc(var(--border-strong) * 2) solid var(--ink); }
+:where(.look-header-nameplate:not(.look-frame-center, .look-frame-masthead)) .site-header__inner { align-items: flex-end; padding-block: var(--space-5) var(--space-2); }
+:where(.look-header-nameplate .site-header) .brand { font-size: var(--step-2); font-weight: 800; line-height: 1; letter-spacing: -0.035em; }
+@media (min-width: 48rem) { :where(.look-header-nameplate .site-header) .brand { font-size: var(--step-3); } }
+@media (min-width: 80rem) { :where(.look-header-nameplate .site-header) .brand { font-size: var(--step-4); } }

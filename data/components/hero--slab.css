@@ -1,0 +1,22 @@
+/* hero/slab: the opening on a rounded block of the accent, words in its
+ * paired ink; where the column has room the picture sits beside them and
+ * hangs below the block's lower edge. */
+.hero--slab .hero__inner {
+	--paper: var(--ls-accent); --ink: var(--ls-accent-ink); --surface: color-mix(in srgb, var(--ls-accent-ink) 12%, var(--ls-accent));
+	--muted: var(--ls-accent-ink); --accent: var(--ls-accent-ink); --accent-ink: var(--ls-accent); --accent-text: var(--ls-accent-ink);
+	--line: color-mix(in srgb, var(--ls-accent-ink) 35%, var(--ls-accent)); --line-strong: var(--ls-accent-ink); --focus: var(--ls-accent-ink);
+	padding: clamp(var(--space-5), 6cqi, var(--space-8));
+	background: var(--ls-accent); color: var(--ls-accent-ink);
+	border-radius: max(var(--radius), 1.25rem);
+}
+.hero--slab .hero__title { font-size: var(--step-6); max-width: 15ch; }
+.hero--slab .hero__title--long { font-size: var(--step-5); max-width: 22ch; }
+.hero--slab .hero__lede a:hover { color: inherit; }
+.hero--slab .hero__art { margin: var(--space-6) 0 0; }
+.hero--slab .hero__art img { border-radius: max(var(--radius), 0.75rem); }
+@container (min-width: 56rem) {
+	.block.hero--slab:has(.hero__art) { padding-bottom: calc(var(--section-space) + var(--space-7)); }
+	.hero--slab .hero__inner:has(> .hero__art) { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr); gap: var(--space-7); align-items: end; }
+	.hero--slab .hero__art { margin: 0 0 calc(-1 * clamp(var(--space-5), 6cqi, var(--space-8)) - var(--space-7)); }
+	.hero--slab .hero__inner:not(:has(> .hero__art)) .hero__title:not(.hero__title--long) { font-size: var(--step-7); max-width: 16ch; }
+}

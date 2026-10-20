@@ -1,0 +1,5 @@
+/* nav/segmented: the main links on one rounded tinted track; the current page a raised paper segment. */
+.look-nav-segmented .site-nav > ul { gap: 0.25rem; padding: 0.25rem; background: var(--surface); border: var(--border) solid var(--line); border-radius: calc(22px + 0.3rem); }
+.look-nav-segmented .site-nav > ul > li > a:not(.button) { padding-inline: 1em; border-bottom: 0; border-radius: 22px; }
+.look-nav-segmented .site-nav > ul > li > a:not(.button, [aria-current="page"]):hover { background: color-mix(in srgb, var(--paper) 55%, transparent); }
+.look-nav-segmented .site-nav > ul > li > a[aria-current="page"], .look-nav-segmented .site-nav__group.is-section > a { background: var(--paper); color: var(--ink); box-shadow: 0 0 0 var(--border) var(--line), 0 0.2rem 0.5rem color-mix(in srgb, var(--ink) 14%, transparent); }

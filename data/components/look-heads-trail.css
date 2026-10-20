@@ -1,0 +1,9 @@
+/* heads/trail: an accent line runs on from each section heading to the edge
+ * of its column, on both sides when the heading is centred. The lines are
+ * positioned from the main column, so they never widen the heading or the
+ * page; the heading's own box trims them. */
+.look-heads-trail main { position: relative; overflow-x: clip; }
+.look-heads-trail main h2[id$="-h"] { clip-path: inset(-1em 0); }
+.look-heads-trail main h2[id$="-h"]::before, .look-heads-trail main h2[id$="-h"]::after { content: ""; position: absolute; width: 300rem; height: max(2px, 0.06em); margin-top: 0.56lh; background: var(--accent); pointer-events: none; }
+.look-heads-trail main h2[id$="-h"]::before { margin-left: calc(-300rem - 0.45em); }
+.look-heads-trail main h2[id$="-h"]::after { margin-left: 0.45em; }

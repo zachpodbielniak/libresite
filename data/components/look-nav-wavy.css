@@ -1,0 +1,4 @@
+/* nav/wavy: italic links; the current page under a wavy accent line. */
+.look-nav-wavy .site-nav a:not(.button) { border-bottom-color: transparent; font-style: italic; text-decoration: underline wavy transparent; text-decoration-thickness: 2px; text-underline-offset: 0.4em; }
+.look-nav-wavy .site-nav a:not(.button):hover { border-bottom-color: transparent; text-decoration-color: var(--muted); }
+.look-nav-wavy .site-nav a[aria-current="page"], .look-nav-wavy .site-nav__group.is-section > a { border-bottom-color: transparent; text-decoration-color: var(--accent); }

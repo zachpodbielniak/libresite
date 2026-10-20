@@ -1,0 +1,7 @@
+/* nav/point: a small accent dot under the current page instead of a line. */
+.look-nav-point .site-nav a:not(.button) { position: relative; border-bottom-color: transparent; }
+.look-nav-point .site-nav a:not(.button)::after { content: ""; position: absolute; left: 50%; bottom: 0.2rem; width: 0.45rem; height: 0.45rem; margin-left: -0.225rem; border-radius: 50%; background: transparent; }
+.look-nav-point .site-nav a:not(.button):hover { border-bottom-color: transparent; }
+.look-nav-point .site-nav a:not(.button):hover::after { background: var(--line-strong); }
+.look-nav-point .site-nav a[aria-current="page"], .look-nav-point .site-nav__group.is-section > a { border-bottom-color: transparent; }
+.look-nav-point .site-nav a[aria-current="page"]::after, .look-nav-point .site-nav__group.is-section > a::after { background: var(--accent); }

@@ -1,0 +1,30 @@
+/* Home composition: mosaic. Where the page column has room, the sections
+ * between the opening and the close fill a grid of wide and narrow cells,
+ * two to a row in turning proportions, alternately tinted under heavy
+ * rules. Each cell is a container, so its component lays out for the
+ * cell. */
+.page--kind-home.home-mosaic main {
+	display: grid;
+	grid-template-columns: [full-start] minmax(var(--gutter), 1fr) [content-start] repeat(3, minmax(0, calc(var(--max-width) / 3))) [content-end] minmax(var(--gutter), 1fr) [full-end];
+}
+.page--kind-home.home-mosaic main > * { grid-column: full-start / full-end; min-width: 0; }
+@container (min-width: 60rem) {
+	.page--kind-home.home-mosaic main > .block:not(:first-child, .cta, .contact-card, .call, .form, .links, .social, .share, .pager, .marquee, .sec-w-bleed) {
+		container-type: inline-size; padding-block: var(--space-6); border-top: calc(var(--border) * 3) solid var(--ink);
+	}
+	.page--kind-home.home-mosaic main > .block:not(:first-child, .cta, .contact-card, .call, .form, .links, .social, .share, .pager, .marquee, .sec-w-bleed, .sec-tone):nth-child(odd) {
+		--paper: var(--ls-surface); --surface: var(--ls-paper); background: var(--ls-surface);
+	}
+	.page--kind-home.home-mosaic main > .block:not(:first-child, .cta, .contact-card, .call, .form, .links, .social, .share, .pager, .marquee, .sec-w-bleed) > .wrap { width: calc(100% - 2 * var(--space-5)); }
+	.page--kind-home.home-mosaic main > .block:not(:first-child, .cta, .contact-card, .call, .form, .links, .social, .share, .pager, .marquee, .sec-w-bleed):nth-child(4n+2) { grid-column: 2 / span 2; }
+	.page--kind-home.home-mosaic main > .block:not(:first-child, .cta, .contact-card, .call, .form, .links, .social, .share, .pager, .marquee, .sec-w-bleed):nth-child(4n+3) { grid-column: 4 / span 1; }
+	.page--kind-home.home-mosaic main > .block:not(:first-child, .cta, .contact-card, .call, .form, .links, .social, .share, .pager, .marquee, .sec-w-bleed):nth-child(4n) { grid-column: 2 / span 1; }
+	.page--kind-home.home-mosaic main > .block:not(:first-child, .cta, .contact-card, .call, .form, .links, .social, .share, .pager, .marquee, .sec-w-bleed):nth-child(4n+1) { grid-column: 3 / span 2; }
+	.page--kind-home.home-mosaic main > .block:is(.cta, .contact-card, .call, .form, .links, .social, .share, .pager) { padding-top: var(--section-space); }
+}
+/* A sideways ribbon of cards would run under the next column: stack it.
+ * The cell is its own container, so this asks the screen. */
+@media (min-width: 60rem) {
+	.page--kind-home.home-mosaic main > .block:not(:first-child, .cta, .contact-card, .call, .form, .links, .social, .share, .pager, .marquee, .sec-w-bleed).voices--ribbon .voices__list { flex-wrap: wrap; overflow-x: visible; }
+	.page--kind-home.home-mosaic main > .block:not(:first-child, .cta, .contact-card, .call, .form, .links, .social, .share, .pager, .marquee, .sec-w-bleed).voices--ribbon .voices__list > li { flex: 1 1 100%; }
+}

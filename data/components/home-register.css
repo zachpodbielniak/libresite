@@ -1,0 +1,23 @@
+/* Home composition: register. The sections after the opening read as the
+ * entries of an index: each starts under a hairline rule across the column
+ * with its number set large in outline, in a margin column beside the
+ * entry where the page column has room. */
+.page--kind-home.home-register main > .block:not(:first-child, .marquee, .cta, .contact-card, .call, .form) > .wrap {
+	border-top: var(--border) solid var(--line-strong); padding-top: var(--space-5);
+}
+.page--kind-home.home-register main > .block:not(:first-child, .marquee, .cta, .contact-card, .call, .form) > .wrap::before {
+	content: var(--ls-n, ""); display: block; margin-bottom: var(--space-4);
+	font-family: var(--font-display); font-weight: 800; font-size: var(--step-5); line-height: 0.9; letter-spacing: -0.02em;
+	color: var(--accent-text);
+}
+@supports (-webkit-text-stroke: 1px) {
+	.page--kind-home.home-register main > .block:not(:first-child, .marquee, .cta, .contact-card, .call, .form) > .wrap::before { color: transparent; -webkit-text-stroke: 1.5px var(--ink); }
+}
+@container (min-width: 56rem) {
+	.page--kind-home.home-register:not(.look-headpos-hang, .look-frame-offset) main > .block:not(:first-child, .marquee, .cta, .contact-card, .call, .form) > .wrap {
+		position: relative; padding-inline-start: clamp(8rem, 14cqi, 12rem);
+	}
+	.page--kind-home.home-register:not(.look-headpos-hang, .look-frame-offset) main > .block:not(:first-child, .marquee, .cta, .contact-card, .call, .form) > .wrap::before {
+		position: absolute; inset-inline-start: 0; top: var(--space-5); margin: 0; font-size: clamp(var(--step-5), 6cqi, var(--step-7));
+	}
+}

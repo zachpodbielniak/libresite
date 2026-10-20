@@ -23,14 +23,15 @@ library(void){
 	return components;
 }
 
-/* The catalog's compositions block, read straight from the source. */
+/* The catalog's compositions block. */
 static JsonObject *
 layouts(void){
 	static JsonNode *catalog = NULL;
 	if (catalog == NULL) {
-		g_autofree gchar *text = NULL;
-		g_assert_true(g_file_get_contents("data/components/catalog.yaml", &text, NULL, NULL));
-		catalog = ls_yaml_parse(text, NULL);
+		/* As loaded, so entries from the wider block are there too. */
+		g_autoptr(LsComponents) library = ls_components_new(NULL);
+		g_assert_nonnull(library);
+		catalog = json_node_ref(ls_components_get_catalog(library));
 		g_assert_nonnull(catalog);
 	}
 	return json_object_get_object_member(json_object_get_object_member(json_node_get_object(catalog),

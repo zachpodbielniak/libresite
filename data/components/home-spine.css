@@ -1,0 +1,24 @@
+/* Home composition: spine. Where the page column has room, one rule runs
+ * down the leading edge of the sections after the opening like a timeline,
+ * a ring on it beside the start of each section, and the rule ends in a
+ * solid dot before the closing sections. */
+@container (min-width: 52rem) {
+	.page--kind-home.home-spine main > .block:not(:first-child, .marquee, .sec-w-bleed, .cta, .contact-card, .call, .form) { position: relative; }
+	.page--kind-home.home-spine main > .block:not(:first-child, .marquee, .sec-w-bleed, .cta, .contact-card, .call, .form)::after {
+		content: ""; position: absolute; inset-block: 0; width: 1rem;
+		inset-inline-start: calc(max(var(--gutter), (100% - var(--max-width)) / 2) + 0.25rem);
+		background: linear-gradient(var(--line-strong), var(--line-strong)) 50% 0 / calc(var(--border) * 2) 100% no-repeat;
+	}
+	/* The last section of the run ends the rule in a dot. */
+	.page--kind-home.home-spine main > .block:not(:first-child, .marquee, .sec-w-bleed, .cta, .contact-card, .call, .form):is(:last-child, :has(+ :is(.cta, .contact-card, .call, .form, .marquee, .sec-w-bleed)))::after {
+		bottom: calc(var(--section-space) * 0.5);
+		background: radial-gradient(circle closest-side, var(--accent) 92%, transparent) 50% 100% / 1rem 1rem no-repeat,
+			linear-gradient(var(--line-strong), var(--line-strong)) 50% 0 / calc(var(--border) * 2) calc(100% - 0.5rem) no-repeat;
+	}
+	.page--kind-home.home-spine main > .block:not(:first-child, .marquee, .sec-w-bleed, .cta, .contact-card, .call, .form) > .wrap { position: relative; padding-inline-start: clamp(3.5rem, 7cqi, 6.5rem); }
+	.page--kind-home.home-spine main > .block:not(:first-child, .marquee, .sec-w-bleed, .cta, .contact-card, .call, .form) > .wrap::before {
+		content: ""; position: absolute; z-index: 1; top: 0.3rem; inset-inline-start: 0;
+		width: 1.5rem; height: 1.5rem; border-radius: 50%;
+		background: var(--paper); border: calc(var(--border) * 3) solid var(--accent);
+	}
+}

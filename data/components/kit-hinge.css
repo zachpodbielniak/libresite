@@ -1,0 +1,22 @@
+/* Motion kit: hinge. The opening's lines swing down from their top edge
+ * and its picture swings open like a door, cards flip up from their foot
+ * as they scroll into view where the browser supports scroll-driven
+ * animation, and cards turn on their hinge under the pointer. */
+@media (prefers-reduced-motion: no-preference) {
+	.kit-hinge main > .block:first-child :is(.kicker, h1, .lede, .prose, .actions) { transform-origin: 50% 0; animation: kit-hinge-down 900ms cubic-bezier(0.2, 0.8, 0.25, 1) both; }
+	.kit-hinge main > .block:first-child h1 { animation-delay: 80ms; }
+	.kit-hinge main > .block:first-child :is(.lede, .prose) { animation-delay: 200ms; }
+	.kit-hinge main > .block:first-child .actions { animation-delay: 320ms; }
+	.kit-hinge main > .block:first-child :is(figure, picture) { transform-origin: 0 50%; animation: kit-hinge-open 1100ms cubic-bezier(0.2, 0.8, 0.25, 1) 150ms both; }
+	@supports (animation-timeline: view()) {
+		.kit-hinge main > .block:not(:first-child) :is(.card, .bento__tile, .features__item, .services__item, .gallery__item, .strip__item, .steps__item, .facts__item, .links__item) { transform-origin: 0 100%; animation: kit-hinge-up linear both; animation-timeline: view(); animation-range: entry 5% entry 65%; }
+	}
+	.kit-hinge main :is(.card, .bento__tile, .features__item, .services__item, .gallery__item, .strip__item) { transform-origin: 0 100%; transition: transform 320ms cubic-bezier(0.2, 0.8, 0.25, 1); }
+	.kit-hinge main :is(.card, .bento__tile, .features__item, .services__item, .gallery__item, .strip__item):hover { transform: perspective(60rem) rotateY(-7deg); }
+	.kit-hinge .button { transform-origin: 50% 100%; transition: transform 220ms ease; }
+	.kit-hinge .button:hover { transform: perspective(20rem) rotateX(14deg); }
+	.kit-hinge :focus-visible { transition: outline-offset 200ms ease; outline-offset: 5px; }
+}
+@keyframes kit-hinge-down { from { opacity: 0; transform: perspective(50rem) rotateX(-80deg); } }
+@keyframes kit-hinge-open { from { opacity: 0; transform: perspective(60rem) rotateY(40deg); } }
+@keyframes kit-hinge-up { from { opacity: 0; transform: perspective(50rem) rotateX(70deg); } }

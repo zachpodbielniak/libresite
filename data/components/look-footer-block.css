@@ -1,0 +1,6 @@
+/* footer/block: the name, note and social links in a solid ink block beside the links. */
+.look-footer-block .site-footer__inner > div:first-child {
+	--ink: var(--ls-paper); --paper: var(--ls-ink); --surface: var(--ls-ink); --muted: var(--ls-paper); --accent: var(--ls-paper); --accent-text: var(--ls-paper);
+	--line: color-mix(in srgb, var(--ls-paper) 35%, var(--ls-ink)); --line-strong: var(--ls-paper); --focus: var(--ls-paper);
+	padding: clamp(1.25rem, 4cqi, 2.5rem); background: var(--ls-ink); color: var(--ls-paper); border-radius: var(--radius);
+}

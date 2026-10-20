@@ -1,0 +1,7 @@
+/* footer/directory: the links in a ruled grid under the name, each with a trailing arrow. */
+.look-footer-directory .site-footer__inner { grid-template-columns: minmax(0, 1fr); }
+.look-footer-directory .site-footer nav ul { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr)); gap: 0 var(--space-5); font-size: var(--step-0); }
+.look-footer-directory .site-footer nav li { border-top: var(--border) solid var(--line-strong); }
+.look-footer-directory .site-footer nav a { display: flex; gap: var(--space-3); width: 100%; text-decoration: none; }
+.look-footer-directory .site-footer nav a::after { content: "\2192"; content: "\2192" / ""; margin-left: auto; color: var(--accent-text); }
+.look-footer-directory .site-footer nav a:hover { text-decoration: underline; }

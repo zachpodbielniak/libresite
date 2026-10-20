@@ -1,0 +1,2 @@
+/* footer/striped: a band of diagonal accent and ink stripes along the top edge, like safety tape. */
+.look-footer-striped .site-footer { border-top: 0; padding-top: calc(var(--space-7) + 1rem); background: repeating-linear-gradient(-45deg, var(--accent) 0 1rem, var(--ink) 1rem 2rem) 0 0 / 100% 1rem no-repeat, var(--surface); }

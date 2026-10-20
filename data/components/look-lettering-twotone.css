@@ -1,0 +1,2 @@
+/* lettering/twotone: the first line of the page headline in the accent, the rest in ink. */
+.look-lettering-twotone main h1::first-line { color: var(--accent-text); }

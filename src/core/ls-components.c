@@ -1193,7 +1193,7 @@ motion_kit(LsComponents *self, const gchar *name){
 static gboolean
 load_generator(LsComponents *self, JsonObject *root, GError **error){
 	JsonObject *block = member_object(root, "palette_generator");
-	const gchar *known_modes = "|light|dark|tinted|vivid|deep|";
+	const gchar *known_modes = "|light|dark|tinted|vivid|deep|earth|";
 	JsonObject *groups[2];
 	guint g;
 	if (!json_object_has_member(root, "palette_generator"))
@@ -1205,7 +1205,7 @@ load_generator(LsComponents *self, JsonObject *root, GError **error){
 		member_object(block, "modes") == NULL || !ls_object_keys(member_object(block, "modes"), known_modes, NULL) ||
 		json_object_get_size(member_object(block, "modes")) == 0 || member_object(block, "harmonies") == NULL ||
 		json_object_get_size(member_object(block, "harmonies")) == 0)
-		return catalog_invalid(error, "palette_generator", "needs share (0 to 100), modes (light, dark, tinted, vivid, deep) and harmonies"), FALSE;
+		return catalog_invalid(error, "palette_generator", "needs share (0 to 100), modes (light, dark, tinted, vivid, deep, earth) and harmonies"), FALSE;
 	groups[0] = member_object(block, "modes");
 	groups[1] = member_object(block, "harmonies");
 	for (g = 0; g < 2; g++) {
@@ -1370,6 +1370,124 @@ load_forms(LsComponents *self, JsonObject *root, GError **error){
 	return TRUE;
 }
 
+/* Joins @extra, a map of look axes to new values with descriptions, to the
+ * catalog's axes, each value with its look-AXIS-VALUE.css. @owner holds
+ * @name; without the member nothing joins. */
+static gboolean
+join_looks(LsComponents *self, GChecksum *digest, JsonObject *owner, const gchar *name, JsonObject *extra, GError **error){
+	g_autoptr(GList) axes = NULL;
+	GList *axis;
+	if (owner == NULL || !json_object_has_member(owner, name))
+		return TRUE;
+	if (extra == NULL)
+		return catalog_invalid(error, name, "must map look axes to new values"), FALSE;
+	axes = json_object_get_members(extra);
+	for (axis = axes; axis != NULL; axis = axis->next) {
+		JsonObject *values = member_object(member_object(self->looks, axis->data), "values");
+		JsonObject *added = member_object(extra, axis->data);
+		g_autoptr(GList) fresh = added != NULL ? json_object_get_members(added) : NULL;
+		GList *value;
+		if (values == NULL || added == NULL)
+			return catalog_invalid(error, axis->data, "extra looks extend catalog look axes"), FALSE;
+		for (value = fresh; value != NULL; value = value->next) {
+			g_autofree gchar *file = g_strdup_printf("look-%s-%s.css", (const gchar *)axis->data, (const gchar *)value->data);
+			g_autofree gchar *style = NULL;
+			if (json_object_has_member(values, value->data) || ls_string(added, value->data) == NULL)
+				return catalog_invalid(error, axis->data, "an extra look value is new and has a description"), FALSE;
+			style = load_resource(self, digest, file, TRUE, error);
+			if (style == NULL)
+				return FALSE;
+			json_object_set_string_member(values, value->data, ls_string(added, value->data));
+		}
+	}
+	return TRUE;
+}
+
+/* The wider block's home compositions, motion kits, art directions,
+ * section forms and palette modes join their own blocks, which then check
+ * them as their own: each name is new, and each form joins one family. */
+static gboolean
+widen_blocks(JsonObject *root, GError **error){
+	JsonObject *wider = member_object(root, "wider");
+	const gchar *joins[][3] = {{"layouts", "compositions", "layouts"}, {"kits", "motion_kits", "kits"},
+		{"directions", "art_directions", "directions"}, {"fields", "section_forms", "fields"},
+		{"modes", "palette_generator", "modes"}};
+	g_autoptr(GList) names = NULL;
+	GList *name;
+	guint j, i;
+	if (!json_object_has_member(root, "wider"))
+		return TRUE;
+	if (wider == NULL || !ls_object_keys(wider, "|looks|openings|layouts|kits|directions|forms|fields|modes|", NULL))
+		return catalog_invalid(error, "wider", "holds looks, openings, layouts, kits, directions, forms, fields and modes"), FALSE;
+	for (j = 0; j < G_N_ELEMENTS(joins); j++) {
+		JsonObject *added = member_object(wider, joins[j][0]);
+		JsonObject *into = member_object(member_object(root, joins[j][1]), joins[j][2]);
+		if (!json_object_has_member(wider, joins[j][0]))
+			continue;
+		if (added == NULL || into == NULL)
+			return catalog_invalid(error, joins[j][0], "wider entries join an existing block"), FALSE;
+		names = json_object_get_members(added);
+		for (name = names; name != NULL; name = name->next) {
+			if (json_object_has_member(into, name->data))
+				return catalog_invalid(error, name->data, "a wider entry has a new name"), FALSE;
+			json_object_set_member(into, name->data, json_node_copy(json_object_get_member(added, name->data)));
+		}
+		g_list_free(g_steal_pointer(&names));
+	}
+	if (json_object_has_member(wider, "forms")) {
+		JsonObject *added = member_object(wider, "forms");
+		JsonObject *families = member_object(member_object(root, "section_forms"), "families");
+		if (added == NULL || families == NULL)
+			return catalog_invalid(error, "forms", "wider forms join existing section form families"), FALSE;
+		names = json_object_get_members(added);
+		for (name = names; name != NULL; name = name->next) {
+			JsonArray *more = member_array(added, name->data), *family = member_array(families, name->data);
+			if (more == NULL || family == NULL)
+				return catalog_invalid(error, name->data, "wider forms join existing section form families"), FALSE;
+			for (i = 0; i < json_array_get_length(more); i++)
+				json_array_add_element(family, json_node_copy(json_array_get_element(more, i)));
+		}
+	}
+	return TRUE;
+}
+
+/* The wider block's openings: new variants of the home opening components,
+ * each restyling the component's own markup in COMPONENT--VARIANT.css and
+ * dealt through the compositions that list it. */
+static gboolean
+join_openings(LsComponents *self, GChecksum *digest, JsonObject *root, GError **error){
+	JsonObject *wider = member_object(root, "wider");
+	JsonObject *openings = member_object(wider, "openings");
+	JsonArray *home = member_array(member_object(self->kinds, "home"), "openings");
+	g_autoptr(GList) owners = NULL;
+	GList *owner;
+	if (wider == NULL || !json_object_has_member(wider, "openings"))
+		return TRUE;
+	if (openings == NULL)
+		return catalog_invalid(error, "openings", "must map home openings to new variants"), FALSE;
+	owners = json_object_get_members(openings);
+	for (owner = owners; owner != NULL; owner = owner->next) {
+		JsonObject *variants = member_object(member_object(self->components, owner->data), "variants");
+		JsonObject *added = member_object(openings, owner->data);
+		g_autoptr(GList) values = added != NULL ? json_object_get_members(added) : NULL;
+		GList *value;
+		if (variants == NULL || added == NULL || !json_list_has(home, owner->data) || g_str_equal(owner->data, "custom"))
+			return catalog_invalid(error, owner->data, "wider openings extend the home opening components"), FALSE;
+		for (value = values; value != NULL; value = value->next) {
+			g_autofree gchar *file = g_strdup_printf("%s--%s.css", (const gchar *)owner->data, (const gchar *)value->data);
+			g_autofree gchar *style = NULL;
+			if (json_object_has_member(variants, value->data) || ls_string(added, value->data) == NULL)
+				return catalog_invalid(error, owner->data, "a wider opening is new and has a description"), FALSE;
+			style = load_resource(self, digest, file, TRUE, error);
+			if (style == NULL)
+				return FALSE;
+			json_object_set_string_member(variants, value->data, ls_string(added, value->data));
+			g_ptr_array_add(self->extras, g_strdup_printf("%s--%s", (const gchar *)owner->data, (const gchar *)value->data));
+		}
+	}
+	return TRUE;
+}
+
 LsComponents *
 ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 	g_autoptr(LsComponents) self = g_object_new(LS_TYPE_COMPONENTS, NULL);
@@ -1389,7 +1507,7 @@ ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 	if (self->catalog == NULL)
 		return NULL;
 	root = JSON_NODE_HOLDS_OBJECT(self->catalog) ? json_node_get_object(self->catalog) : NULL;
-	if (root == NULL || !ls_object_keys(root, "|version|looks|kinds|components|compositions|motion_kits|palette_generator|extra_variants|art_directions|content_angles|section_forms|extra_looks|", error) ||
+	if (root == NULL || !ls_object_keys(root, "|version|looks|kinds|components|compositions|motion_kits|palette_generator|extra_variants|art_directions|content_angles|section_forms|extra_looks|wider|", error) ||
 		(self->components = member_object(root, "components")) == NULL ||
 		(self->kinds = member_object(root, "kinds")) == NULL ||
 		(self->looks = member_object(root, "looks")) == NULL) {
@@ -1399,33 +1517,13 @@ ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 	}
 	if (!check_look_definitions(self->looks, error))
 		return NULL;
-	/* Extra look values join their axes, each with its own styles; the block
-	 * is optional so archived libraries load as before. */
-	if (json_object_has_member(root, "extra_looks")) {
-		JsonObject *extra = member_object(root, "extra_looks");
-		g_autoptr(GList) axes = extra != NULL ? json_object_get_members(extra) : NULL;
-		GList *axis;
-		if (extra == NULL)
-			return catalog_invalid(error, "extra_looks", "must map look axes to new values"), NULL;
-		for (axis = axes; axis != NULL; axis = axis->next) {
-			JsonObject *values = member_object(member_object(self->looks, axis->data), "values");
-			JsonObject *added = member_object(extra, axis->data);
-			g_autoptr(GList) fresh = added != NULL ? json_object_get_members(added) : NULL;
-			GList *value;
-			if (values == NULL || added == NULL)
-				return catalog_invalid(error, axis->data, "extra looks extend catalog look axes"), NULL;
-			for (value = fresh; value != NULL; value = value->next) {
-				g_autofree gchar *file = g_strdup_printf("look-%s-%s.css", (const gchar *)axis->data, (const gchar *)value->data);
-				g_autofree gchar *style = NULL;
-				if (json_object_has_member(values, value->data) || ls_string(added, value->data) == NULL)
-					return catalog_invalid(error, axis->data, "an extra look value is new and has a description"), NULL;
-				style = load_resource(self, digest, file, TRUE, error);
-				if (style == NULL)
-					return NULL;
-				json_object_set_string_member(values, value->data, ls_string(added, value->data));
-			}
-		}
-	}
+	/* Extra look values join their axes, each with its own styles; the
+	 * blocks are optional so archived libraries load as before. */
+	if (!join_looks(self, digest, root, "extra_looks", member_object(root, "extra_looks"), error) ||
+		!join_looks(self, digest, member_object(root, "wider"), "looks",
+			member_object(member_object(root, "wider"), "looks"), error) ||
+		!widen_blocks(root, error))
+		return NULL;
 	for (i = 0; i < G_N_ELEMENTS(shared); i++) {
 		g_autofree gchar *text = load_resource(self, digest, shared[i], TRUE, error);
 		if (text == NULL)
@@ -1483,6 +1581,8 @@ ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 			}
 		}
 	}
+	if (!join_openings(self, digest, root, error))
+		return NULL;
 	/* Page kinds name only real components; home is the one hero kind. */
 	{
 		g_autoptr(GList) kind_names = json_object_get_members(self->kinds);
@@ -1525,6 +1625,12 @@ ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 		return NULL;
 	self->digest = g_strdup(g_checksum_get_string(digest));
 	return (LsComponents *)g_steal_pointer(&self);
+}
+
+JsonNode *
+ls_components_get_catalog(LsComponents *self){
+	g_return_val_if_fail(LS_IS_COMPONENTS(self), NULL);
+	return self->catalog;
 }
 
 const gchar *
@@ -2173,7 +2279,7 @@ static gboolean
 opening_shows_art(const gchar *component, const gchar *variant){
 	return g_strcmp0(component, "cover") == 0 ||
 		(g_strcmp0(component, "hero") == 0 && g_strcmp0(variant, "minimal") != 0) ||
-		(g_strcmp0(component, "poster") == 0 && g_strcmp0(variant, "backdrop") == 0);
+		(g_strcmp0(component, "poster") == 0 && (g_strcmp0(variant, "backdrop") == 0 || g_strcmp0(variant, "front") == 0));
 }
 
 /* The plan's first artwork other than the mark, as an image slot. */
@@ -2304,24 +2410,50 @@ ls_components_apply_opening(LsComponents *self, JsonNode *plan_node, const gchar
 		if (g_str_equal(current, opening))
 			return FALSE;
 	}
-	/* The dealt opening first, then every other one in catalog order. */
-	openings = member_array(member_object(self->kinds, "home"), "openings");
-	for (i = 0; openings != NULL && i < json_array_get_length(openings); i++) {
-		const gchar *name = json_array_get_string_element(openings, i);
-		g_autoptr(GList) variants = NULL;
-		GList *variant;
-		if (g_str_equal(name, "custom"))
-			continue;
-		variants = json_object_get_members(member_object(member_object(self->components, name), "variants"));
-		for (variant = variants; variant != NULL; variant = variant->next) {
-			gchar *pair = g_strdup_printf("%s/%s", name, (const gchar *)variant->data);
-			if (g_str_equal(pair, opening))
-				start = choices->len;
-			g_ptr_array_add(choices, pair);
+	/* The dealt opening first, then the composition's other openings and
+	 * then every other one, each list entered at a point the site's
+	 * structure picks, so sites whose dealt opening cannot take the
+	 * writer's words or picture do not all land on the same one. */
+	{
+		JsonNode *node = json_node_new(JSON_NODE_OBJECT);
+		JsonArray *fitting = member_array(composition_layout(self, ls_string(member_object(plan, "structure"),
+			"composition")), "openings");
+		g_autofree gchar *seed = NULL;
+		g_autoptr(GPtrArray) rest = g_ptr_array_new_with_free_func(g_free);
+		guint n;
+		json_node_set_object(node, member_object(plan, "structure"));
+		seed = ls_json_encode(node);
+		json_node_unref(node);
+		g_ptr_array_add(choices, g_strdup(opening));
+		openings = member_array(member_object(self->kinds, "home"), "openings");
+		for (i = 0; openings != NULL && i < json_array_get_length(openings); i++) {
+			const gchar *name = json_array_get_string_element(openings, i);
+			g_autoptr(GList) variants = NULL;
+			GList *variant;
+			if (g_str_equal(name, "custom"))
+				continue;
+			variants = json_object_get_members(member_object(member_object(self->components, name), "variants"));
+			for (variant = variants; variant != NULL; variant = variant->next) {
+				gchar *pair = g_strdup_printf("%s/%s", name, (const gchar *)variant->data);
+				if (g_str_equal(pair, opening) || json_list_has(fitting, pair))
+					g_free(pair);
+				else
+					g_ptr_array_add(rest, pair);
+			}
 		}
+		n = fitting != NULL ? json_array_get_length(fitting) : 0;
+		start = seed_pick(seed, "opening:fallback", MAX(n, 1));
+		for (i = 0; i < n; i++) {
+			const gchar *pair = json_array_get_string_element(fitting, (start + i) % n);
+			if (g_strcmp0(pair, opening) != 0)
+				g_ptr_array_add(choices, g_strdup(pair));
+		}
+		start = seed_pick(seed, "opening:rest", MAX(rest->len, 1));
+		for (i = 0; i < rest->len; i++)
+			g_ptr_array_add(choices, g_strdup(g_ptr_array_index(rest, (start + i) % rest->len)));
 	}
 	for (i = 0; i < choices->len; i++) {
-		const gchar *choice = g_ptr_array_index(choices, (start + i) % choices->len);
+		const gchar *choice = g_ptr_array_index(choices, i);
 		g_autofree gchar *name = g_strndup(choice, (gsize)(strchr(choice, '/') - choice));
 		g_autoptr(JsonNode) converted = convert_opening(self, plan, first, name, strchr(choice, '/') + 1);
 		g_autoptr(JsonNode) candidate = NULL;
@@ -4358,24 +4490,34 @@ generate_palette(LsComponents *self, const gchar *seed){
 	gdouble accent_hue = fmod(base + turn + 720, 360);
 	gboolean vivid = g_strcmp0(mode, "vivid") == 0, deep = g_strcmp0(mode, "deep") == 0;
 	gboolean dark = g_strcmp0(mode, "dark") == 0 || deep, tinted = g_strcmp0(mode, "tinted") == 0;
+	gboolean earth = g_strcmp0(mode, "earth") == 0;
 	/* Papers spread across their mode: near-black, deep saturated colour,
-	 * pale tint to strong pastel, a bold colour field, cool to warm white. */
+	 * pale tint to strong pastel, a bold colour field, a muted mid-tone
+	 * such as clay, sage or stone, cool to warm white. */
 	gdouble paper_l = deep ? seed_range(seed, "palette:paper", 0.26, 0.36) : dark ? seed_range(seed, "palette:paper", 0.14, 0.3)
 		: vivid ? seed_range(seed, "palette:paper", 0.78, 0.88) : tinted ? seed_range(seed, "palette:paper", 0.82, 0.93)
-		: seed_range(seed, "palette:paper", 0.94, 0.99);
+		: earth ? seed_range(seed, "palette:paper", 0.66, 0.76) : seed_range(seed, "palette:paper", 0.94, 0.99);
 	gdouble paper_c = deep ? seed_range(seed, "palette:paper-c", 0.07, 0.13) : dark ? seed_range(seed, "palette:paper-c", 0.02, 0.08)
 		: vivid ? seed_range(seed, "palette:paper-c", 0.09, 0.16) : tinted ? seed_range(seed, "palette:paper-c", 0.04, 0.11)
-		: seed_range(seed, "palette:paper-c", 0.004, 0.035);
-	/* A bright paper takes a darker accent; dark papers a light one. */
+		: earth ? seed_range(seed, "palette:paper-c", 0.03, 0.08) : seed_range(seed, "palette:paper-c", 0.004, 0.035);
+	/* A bright paper takes a darker accent, a mid-tone a deep one; dark
+	 * papers a light one. */
 	gdouble accent_l = dark ? seed_range(seed, "palette:accent", 0.72, 0.84) : vivid ? seed_range(seed, "palette:accent", 0.36, 0.48)
-		: seed_range(seed, "palette:accent", 0.47, 0.6);
+		: earth ? seed_range(seed, "palette:accent", 0.3, 0.42) : seed_range(seed, "palette:accent", 0.47, 0.6);
 	gdouble accent_c = seed_range(seed, "palette:accent-c", 0.12, 0.2);
 	gdouble toward = dark ? 0.01 : -0.01;
 	g_autofree gchar *paper = oklch_hex(paper_l, paper_c, base);
 	g_autofree gchar *surface = oklch_hex(paper_l + (dark ? 0.05 : -0.04), paper_c + 0.005, base);
 	g_autofree gchar *line = oklch_hex(paper_l + (dark ? 0.14 : -0.14), paper_c, base);
-	/* Ink and muted text carry a little of the base hue, more on some sites. */
-	g_autofree gchar *ink = guarded_text(paper, surface, dark ? 0.95 : 0.2, seed_range(seed, "palette:ink-c", 0.01, 0.06), base, toward * 2);
+	/* Ink and muted text carry a little of the base hue, more on some sites;
+	 * on two sites in three the ink is instead a shade of the accent's hue:
+	 * navy, forest, oxblood or umber on light papers, a pale tint on dark
+	 * ones, still stepped to AA. */
+	gboolean shade = seed_pick(seed, "palette:ink-hue", 3) > 0;
+	g_autofree gchar *ink = guarded_text(paper, surface,
+		dark ? (shade ? seed_range(seed, "palette:ink-l", 0.88, 0.95) : 0.95) : shade ? seed_range(seed, "palette:ink-l", 0.22, 0.36) : 0.2,
+		!shade ? seed_range(seed, "palette:ink-c", 0.01, 0.06) : dark ? seed_range(seed, "palette:ink-c", 0.03, 0.06)
+		: seed_range(seed, "palette:ink-c", 0.06, 0.13), shade ? accent_hue : base, toward * 2);
 	g_autofree gchar *muted = guarded_text(paper, surface, dark ? 0.74 : 0.46, seed_range(seed, "palette:muted-c", 0.02, 0.07), base, toward);
 	g_autofree gchar *accent = NULL, *accent_ink = NULL, *hash = g_compute_checksum_for_string(G_CHECKSUM_SHA256, seed, -1);
 	JsonObject *palette = json_object_new(), *tokens = json_object_new();
@@ -4417,7 +4559,7 @@ generate_palette(LsComponents *self, const gchar *seed){
 	{
 		g_autofree gchar *name = g_strconcat("generated-", hash, NULL);
 		g_autofree gchar *summary = g_strdup_printf("A generated %s palette: %s %s paper with a %s accent (%s harmony).",
-			mode, deep ? "saturated deep" : dark ? "deep" : vivid ? "bold" : tinted ? "soft" : "pale", hue_name(base),
+			mode, deep ? "saturated deep" : dark ? "deep" : vivid ? "bold" : tinted ? "soft" : earth ? "muted mid-tone" : "pale", hue_name(base),
 			hue_name(accent_hue), harmony);
 		json_object_set_string_member(palette, "name", name);
 		json_object_set_string_member(palette, "summary", summary);
@@ -4711,16 +4853,28 @@ ls_components_signature_overlap(JsonObject *a, JsonObject *b){
 	return string_set_overlap(sa, sb);
 }
 
-/* The fingerprint a seed deals, before any model has chosen anything. */
+/* The fingerprint a seed deals, before any model has chosen anything: the
+ * home page is the dealt forms of its families and the dealt extra, or the
+ * identity's home sequence for a library without section forms. */
 static JsonObject *
 dealt_fingerprint(LsComponents *self, const gchar *seed, const gchar *sector){
 	g_autoptr(JsonObject) look = ls_components_suggest_look(self, seed);
 	g_autoptr(JsonObject) structure = ls_components_deal_structure(self, seed);
 	g_autoptr(JsonObject) identity = ls_components_suggest_identity(self, seed, sector);
 	g_autofree gchar *opening = ls_components_suggest_opening(self, seed);
+	g_autoptr(JsonArray) home = json_array_new();
+	JsonObject *forms = member_object(structure, "forms");
+	JsonArray *extras = member_array(structure, "extras");
+	const gchar *families[] = {"offer", "process", "practical", "close"};
+	guint i;
+	for (i = 0; forms != NULL && i < G_N_ELEMENTS(families); i++)
+		if (ls_string(forms, families[i]) != NULL)
+			json_array_add_string_element(home, ls_string(forms, families[i]));
+	for (i = 0; extras != NULL && i < json_array_get_length(extras); i++)
+		json_array_add_string_element(home, json_array_get_string_element(extras, i));
 	return fingerprint_new(look, structure, member_object(member_object(identity, "palette"), "tokens"),
 		member_object(member_object(identity, "type"), "tokens"), opening,
-		member_array(member_object(identity, "home"), "sections"));
+		forms != NULL ? home : member_array(member_object(identity, "home"), "sections"));
 }
 
 gchar *
@@ -4735,7 +4889,7 @@ ls_components_choose_seed(LsComponents *self, const gchar *seed, const gchar *se
 		*closest = 0;
 	if (avoid == NULL || json_array_get_length(avoid) == 0)
 		return g_strdup(seed);
-	for (attempt = 0; attempt < 32; attempt++) {
+	for (attempt = 0; attempt < LS_COMPONENTS_DEALS; attempt++) {
 		g_autofree gchar *candidate = attempt == 0 ? g_strdup(seed) : g_strdup_printf("%s\n~%u", seed, attempt);
 		g_autoptr(JsonObject) dealt = dealt_fingerprint(self, candidate, sector);
 		gdouble worst = 0;
@@ -4749,8 +4903,6 @@ ls_components_choose_seed(LsComponents *self, const gchar *seed, const gchar *se
 			g_free(best);
 			best = g_steal_pointer(&candidate);
 		}
-		if (worst < LS_COMPONENTS_TOO_CLOSE)
-			break;
 	}
 	if (closest != NULL)
 		*closest = best_score;

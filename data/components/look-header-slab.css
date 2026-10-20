@@ -1,0 +1,6 @@
+/* header/slab: the wordmark reversed out of a solid ink slab running in from the page edge. */
+:where(.look-header-slab) .site-header { border-bottom: var(--border-strong) solid var(--ink); }
+.look-header-slab .site-header .brand { padding: 0.1em 0.5em; background: var(--ls-ink); color: var(--ls-paper); }
+/* In a bar the slab fills the header's height and runs to the screen edge. */
+.look-header-slab:not(.look-frame-center, .look-frame-masthead) .site-header .brand { align-self: stretch; margin-block: calc(var(--space-3) * -1); padding: var(--space-3) var(--space-5) var(--space-3) 0; border-image: conic-gradient(var(--ls-ink) 0 0) fill 0 / / 0 0 0 100vmax; }
+@media (min-width: 64rem) { .look-header-slab:is(.look-frame-rail, .look-frame-split) .site-header .brand { margin-block: 0; } }

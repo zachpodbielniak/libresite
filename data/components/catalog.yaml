@@ -1658,3 +1658,254 @@ extra_looks:
   images:
     blob: Pictures in a soft organic shape.
     tilt: Pictures turned slightly, one way then the other.
+# Wider option pools (docs/components.org, "Sameness under a tenth"). Each
+# list joins the block it names when the library loads and is dealt like
+# the rest: looks join their axes (look-AXIS-VALUE.css), openings join a
+# home opening component (COMPONENT--VARIANT.css, dealt through the
+# compositions that list it), layouts the home compositions, kits the
+# motion kits, directions the art directions, forms the section form
+# families, with their fields, and modes the generated palette modes.
+wider:
+  forms: {offer: [directory], process: [split], practical: [facts]}
+  modes: {earth: 18}
+  fields:
+    directory: {title: title, body: note}
+    split: {list: panels, title: heading, body: body}
+    facts: {title: label, body: value}
+  looks:
+    panels:
+      capped: Surface cards under a thick accent cap along the top edge.
+      brutal: Paper cards in a heavy ink frame over a hard accent block shadow.
+      accent: Solid accent panels with accent-ink text.
+      ticket: Surface cards with a round bite out of each corner, like a ticket.
+      well: Panels pressed into the page, a surface fill under an inner shadow.
+      folded: Surface cards with the top corner turned down, like a dog-eared page.
+      marker: No box; each item sits on a hairline led by a short thick accent mark.
+      halo: Rounded paper cards ringed by an accent line set just off their edge.
+      edge: Paper cards with a thick accent bar down their leading edge.
+    footer:
+      card: The footer's contents in a raised paper card on the surface band.
+      slim: One compact row on the page colour, the name, note and links side by side.
+      ribbon: The name on an accent label hanging from an accent rule along the top edge.
+      directory: The links in a ruled grid under the name, each with a trailing arrow.
+      arched: The footer band rises in one wide curve at its top edge.
+      striped: A band of diagonal accent and ink stripes along the top edge, like safety tape.
+      typed: Everything in small monospaced type between dotted rules, like a spec sheet.
+      chips: On the page colour, every link set in an outlined pill.
+      split: The name and note on one half, the links in a column of large type on the other, an accent rule between.
+      block: The name, note and social links in a solid ink block beside the links.
+      legend: The footer drawn as an outlined box, the name set into its top edge.
+      letterhead: The name centred across the footer between double rules, in spaced small capitals.
+      reversed: The links first in a ruled bar, then the name set large with its note.
+    header:
+      reversed: Navigation on the left and the wordmark on the right.
+      accent: The whole bar painted in the accent, with accent-ink text.
+      spread: The links centred in the bar, between the wordmark and the action button.
+      bilevel: The wordmark and action on top, the links on a full-width tinted strip beneath.
+      offset: The bar as a square ink-outlined card with a hard offset shadow.
+      divided: Strong rules above and below, and full-height rules between the wordmark, the links and the action.
+      slab: The wordmark reversed out of a solid ink slab running in from the page edge.
+      ledger: Double ink rules above and below, the wordmark in small spaced capitals.
+      slim: A compact bar under a heavy ink rule along the top of the page, with a small name.
+      wash: A soft accent wash across the bar, fading into the paper.
+      angled: The bar on the surface tint, its lower edge cut on a slant.
+      nameplate: An oversized heavy wordmark, the links level with its foot, over a thick ink rule.
+    nav:
+      highlight: The current page underscored by a broad highlighter stroke in the accent.
+      tabs: Links as tabs; the current page on a tinted tab with an accent base.
+      numbered: Each main link led by a small running number.
+      filled: Square links; the current page on a solid accent block.
+      brackets: Monospace links; the current page held in accent square brackets.
+      muted: Quiet links in the muted colour; the current page in ink and heavy.
+      point: A small accent dot under the current page instead of a line.
+      circled: The current page ringed in an accent oval, as if circled by hand.
+      keys: Links as raised keys; the current page pressed in.
+      segmented: The main links on one rounded tinted track; the current page a raised segment.
+      wavy: Italic links; the current page under a wavy accent line.
+      arrow: An accent arrow leads the current page.
+    rhythm:
+      sheets: Every section a rounded paper sheet laid on a surface-coloured page.
+      stacked: Each section slides up over the one before with rounded top corners and a soft shadow.
+      fade: The page tone drifts from paper to surface and back, section by section, with no hard edge.
+      contrast: Every other section turns to ink, light and dark in turn.
+      spine: A thin rule runs down beside the column with an accent dot where each section starts.
+      ribbons: Every other section is a surface ribbon run in from one side and rounded at its end, the sides taking turns.
+      ledger: The column is ruled down both sides, with a double rule across it between sections.
+    photos:
+      matted: Each photo in a wide surface-coloured mat with a hairline edge, like a framed print.
+      arch: Each photo shaped as an arch, rounded over the top.
+      feather: Photos fade softly into the page along every edge.
+      cut: Photos with two corners cut off on the diagonal, like a stamped plate.
+      window: A fine light line drawn just inside each photo's edge, like a window mount.
+      stacked: Each photo sits on two offset sheets, like a small pile of prints.
+    lettering:
+      marker: A broad accent highlighter stroke under every line of the page headline.
+      shadow: The page headline casts a hard accent shadow, like a painted sign.
+      leadin: The first line of reading text opens in spaced small capitals.
+      initial: The page headline opens on an oversized initial in the accent.
+      twotone: The first line of the page headline in the accent, the rest in ink.
+    heads:
+      highlight: A broad accent marker stroke behind each line of the heading.
+      caps: Compact, widely spaced heavy capitals.
+      trail: An accent line runs on from the heading to the edge of its column.
+      ghost: The section's number set huge and faint behind the heading.
+      bracket: The heading held between square accent brackets.
+      framed: The heading inside a closed double-ruled frame.
+      newsprint: A heavy rule above and a hairline below, across the column, like a newspaper section.
+      shadow: Heavy headings with a hard offset shadow in the accent, like a painted sign.
+      disc: The section's number in a solid accent disc before the heading.
+      initial: The first letter set larger and heavier in the accent.
+      panel: The heading set on a tinted band with an accent foot.
+    buttons:
+      outline: Heavy ink outlines that fill with the accent on hover; secondary buttons are underlined labels.
+      key: Chunky keycaps on a solid base edge that press down on hover.
+      slant: Parallelograms with sloped ends.
+      knob: Rounded buttons ending in a round disc that holds an arrow.
+      ticket: Cut like a ticket, notched at both ends with a perforation by the stub.
+      ring: Heavy-edged labels with a fine ring just inside the edge, like a seal.
+      ink: Solid ink buttons with an accent strip at the leading edge.
+      large: Oversized, softly rounded buttons with a bold label, made for a thumb.
+      chevron: Buttons that point forward like a road sign.
+      wide: Long square bars with the label at the start and an arrow in its own cell at the far end.
+  kits:
+    curtain:
+      summary: The opening's words and picture are uncovered by wipes, section headings wipe in as they scroll into view, and cards draw an accent edge under the pointer.
+      look: {motion: none}
+    bloom:
+      summary: The opening comes into focus from a soft blur, sections sharpen as they scroll into view, and cards and buttons glow under the pointer.
+      look: {motion: none}
+    hinge:
+      summary: The opening's lines swing down and its picture swings open like a door, cards flip up as they scroll into view, and cards turn on their hinge under the pointer.
+      look: {motion: none}
+    beacon:
+      summary: The opening's words drop into place, its first button sends out three slow rings, figures count up, and buttons hold a ring under the pointer.
+      look: {motion: none}
+      script: counters
+    spring:
+      summary: The opening pops in with a springy overshoot, cards spring in as they scroll into view, and buttons and cards bounce under the pointer.
+      look: {motion: none}
+    wash:
+      summary: The opening arrives under a wash of the accent that fades back while its heading darkens to ink, sections wash in as they scroll into view, and cards and buttons take on colour under the pointer.
+      look: {motion: none}
+  directions:
+    halftone:
+      summary: Drawn artwork dissolving into a printer's dot screen toward one corner.
+      look: {art: [flat, woodcut, cutpaper], images: [plain, rounded]}
+      brief: The site prints each artwork through a dot screen that takes over toward one corner, so fine detail there turns to dots. Keep the subject and its key detail toward the upper left, use bold shapes with strong light and dark contrast, and avoid thin lines.
+    stamp:
+      summary: Drawn artwork printed as a postage stamp with a perforated, tinted margin and a round postmark.
+      look: {art: [flat, line, woodcut, open], images: [plain, tilt]}
+      brief: The site prints each artwork as a postage stamp with a perforated margin and a postmark over its top right corner. Compose it like a stamp, one clear centred subject on a plain field, and keep the top right corner free of anything important.
+    blueprint:
+      summary: Drawn artwork mounted on a drafting sheet with a fine accent grid and a dimension line beneath.
+      look: {art: [blueprint, line], images: [plain, rounded]}
+      brief: The site mounts each artwork on a drafting sheet with a grid round it and a dimension line beneath. Draw it as a clean technical drawing on a plain light field, with thin even lines and a few short labels, centred with an even margin.
+    window:
+      summary: Drawn artwork seen through an arched window with glazing bars, a frame and a sill.
+      look: {art: [open, flat, cutpaper, line], images: [plain, rounded, blob]}
+      brief: The site shows each artwork through an arched window whose glazing bars cross it, a little above the middle and down the centre. Draw a scene or a view rather than one small object, keep faces and words off those two lines, and keep the top corners plain because the arch cuts them away.
+    layers:
+      summary: Drawn artwork lying on a stack of offset tinted sheets that step back up and to the left.
+      look: {art: [flat, cutpaper, open, neon], images: [plain, rounded]}
+      brief: The site lays each artwork on a stack of offset sheets tinted in the accent. Fill the whole canvas with a solid background in a colour other than the accent, so the artwork reads as the top sheet, and keep the subject inside a generous margin.
+    torn:
+      summary: Drawn artwork torn from a sheet with ragged top and bottom edges, lifting off the page on a soft shadow.
+      look: {art: [cutpaper, woodcut, flat], images: [plain, print, taped]}
+      brief: The site tears each artwork along its top and bottom edges. Fill the whole canvas with a solid paper-like background and keep the subject clear of the top and bottom twentieth, where the tear eats into it.
+    glow:
+      summary: Drawn artwork backlit like a lightbox sign, a rounded panel with a bright edge and a soft accent halo.
+      look: {art: [neon, line, flat], images: [plain, rounded]}
+      brief: The site backlights each artwork like a lightbox sign with a halo in the accent. Draw on a solid dark or deep-toned field that fills the whole canvas, with bright strokes and shapes that glow against it, and keep a margin inside the rounded corners.
+  openings:
+    hero:
+      slab: The opening on a rounded block of the accent, the picture beside the words and hanging below its edge.
+    cover:
+      band: A wide picture with the words on a solid band of ink that runs in from the left over its foot.
+      letterbox: The headline large across the column, the picture as a wide strip from edge to edge, then the lede and buttons side by side.
+    poster:
+      front: A newspaper front page, a dateline between double rules, the headline centred over a framed picture and the lede in ruled columns.
+    manifesto:
+      run: The lines run on as one large paragraph, the first set heavy and the rest light, each ended by an accent dot.
+      tiles: The first line large on an accent tile, the rest numbered on tiles sharing the rows below it.
+  layouts:
+    banded:
+      summary: Banded. Sections alternate between a full-width tinted band and a narrow reading column with its heading centred.
+      openings: [cover/band, hero/slab, poster/backdrop, cover/full]
+      order: [proof, offer, process, practical, story]
+      avoid: [center]
+      css: true
+    chapters:
+      summary: Chapters. Each section opens under a heavy rule with its number set very large in a margin column beside it.
+      openings: [poster/front, manifesto/run, hero/statement, cover/letterbox]
+      look: {headpos: top}
+      order: [practical, story, process, offer, proof]
+      avoid: [center, offset]
+      css: true
+    gazette:
+      summary: Gazette. On wide screens the home is set like a newspaper page, the sections running down two ruled columns between the opening and the close.
+      openings: [poster/front, manifesto/tiles, poster/type, manifesto/run]
+      look: {headpos: top}
+      order: [proof, story, offer, process, practical]
+      avoid: [center, rail, split, offset]
+      css: true
+    halves:
+      summary: Halves. Each section is split in two, its heading on a tinted half that runs to the screen edge and changes side from one section to the next.
+      openings: [hero/slab, cover/split, manifesto/tiles, hero/split]
+      look: {headpos: top}
+      order: [practical, offer, proof, process, story]
+      avoid: [center]
+      css: true
+    lead:
+      summary: Lead story. The first section after the opening leads in a wide column with the next three stacked beside it as briefs.
+      openings: [cover/letterbox, hero/slab, cover/band, hero/overlap]
+      look: {headpos: top}
+      order: [proof, practical, story, offer, process]
+      avoid: [center, rail, split, offset]
+      css: true
+    mosaic:
+      summary: Mosaic. Sections fill a grid of wide and narrow cells, alternately tinted, two to a row in turning proportions.
+      openings: [manifesto/run, cover/band, poster/front, manifesto/tiles]
+      look: {headpos: top}
+      order: [practical, proof, offer, story, process]
+      avoid: [center, rail, split, offset]
+      css: true
+    pinned:
+      summary: Pinned intro. On wide screens the opening stays pinned in a tinted column on the left while the sections scroll past beside it.
+      openings: [hero/statement, hero/minimal, poster/stamped, manifesto/outlined]
+      look: {headpos: top}
+      order: [process, offer, proof, story, practical]
+      avoid: [rail, split, center, offset]
+      css: true
+    register:
+      summary: Register. Sections read as the entries of an index, each under a hairline rule with its number set large in outline in a margin column.
+      openings: [hero/minimal, manifesto/numbered, hero/centered, poster/type]
+      look: {headpos: top}
+      order: [story, practical, process, proof, offer]
+      avoid: [offset]
+      css: true
+    slant:
+      summary: Slant. Every other section runs across the page as a tinted band with slanted edges, so the page reads as angled ribbons.
+      openings: [cover/full, hero/banner, poster/backdrop, manifesto/stacked]
+      order: [story, proof, offer, process, practical]
+      css: true
+    spine:
+      summary: Spine. A timeline rule runs down the leading edge of the sections on wide screens, a ring marking where each one starts.
+      openings: [hero/split, cover/split, manifesto/outlined, hero/overlap]
+      look: {headpos: top}
+      order: [process, proof, practical, offer, story]
+      avoid: [center]
+      css: true
+    spread:
+      summary: Magazine spread. On wide screens each section opens across two pages, its number and heading on a tinted facing page, the sides alternating.
+      openings: [cover/split, poster/type, manifesto/numbered, hero/statement]
+      look: {headpos: top}
+      order: [story, offer, proof, practical, process]
+      avoid: [center, offset]
+      css: true
+    wall:
+      summary: Gallery wall. Sections hang as framed pieces of uneven widths, two to a row and staggered on wide screens.
+      openings: [cover/framed, hero/centered, poster/backdrop, hero/banner]
+      look: {headpos: top}
+      order: [process, practical, story, offer, proof]
+      avoid: [center]
+      css: true

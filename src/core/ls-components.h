@@ -54,6 +54,15 @@ gchar *ls_components_get_snapshot(LsComponents *self);
  */
 const gchar *ls_components_get_digest(LsComponents *self);
 /**
+ * ls_components_get_catalog:
+ * @self: a component library
+ *
+ * The catalog as loaded: extra and wider entries already joined to the
+ * axes, components and blocks they extend.
+ * Returns: (transfer none): the catalog's root node
+ */
+JsonNode *ls_components_get_catalog(LsComponents *self);
+/**
  * ls_components_get_plan_schema:
  * @self: a component library
  * Returns: (transfer none): JSON Schema for a site plan response
@@ -418,6 +427,14 @@ gboolean ls_components_check_signature(const gchar *css, GError **error);
  */
 #define LS_COMPONENTS_TOO_CLOSE 0.6
 /**
+ * LS_COMPONENTS_DEALS:
+ *
+ * How many deals ls_components_choose_seed() weighs for a site with sites
+ * to avoid: its own seed and derived ones, keeping the one furthest from
+ * the closest avoided site, so sites in one market spread apart.
+ */
+#define LS_COMPONENTS_DEALS 64
+/**
  * LS_COMPONENTS_SIGNATURE_TOO_CLOSE:
  *
  * The ls_components_signature_overlap() share at or above which two
@@ -467,11 +484,10 @@ gdouble ls_components_signature_overlap(JsonObject *a, JsonObject *b);
  * @avoid: (transfer none) (nullable): earlier sites' fingerprints
  * @closest: (out) (optional): the chosen deal's highest similarity to @avoid
  *
- * Deals the structure, look and identity from @seed and, when that deal
- * lands at or above %LS_COMPONENTS_TOO_CLOSE to any fingerprint in @avoid,
- * re-deals from up to 31 derived seeds, keeping the first clear deal or
- * else the least similar. Without @avoid the seed is returned unchanged,
- * so existing sites keep their deal.
+ * Deals the structure, look and identity from @seed and from
+ * %LS_COMPONENTS_DEALS - 1 derived seeds and keeps the deal whose highest
+ * similarity to any fingerprint in @avoid is lowest. Without @avoid the
+ * seed is returned unchanged, so existing sites keep their deal.
  * Returns: (transfer full): the seed to deal this site from
  */
 gchar *ls_components_choose_seed(LsComponents *self, const gchar *seed, const gchar *sector, JsonArray *avoid,

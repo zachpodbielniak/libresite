@@ -1,0 +1,6 @@
+/* buttons/key: chunky keycaps on a solid base edge that press down on hover. */
+.look-buttons-key .button { --ls-key: color-mix(in srgb, var(--accent) 50%, var(--ink)); margin-bottom: 0.3rem; border-radius: 0.6rem; border-color: var(--ls-key); box-shadow: 0 0.3rem 0 var(--ls-key); }
+.look-buttons-key .button:hover { background: var(--accent); color: var(--accent-ink); border-color: var(--ls-key); transform: translateY(0.18rem); box-shadow: 0 0.12rem 0 var(--ls-key); }
+.look-buttons-key .button--ghost, .look-buttons-key .button--ghost:hover { --ls-key: var(--ink); background: var(--paper); color: var(--ink); }
+.look-buttons-key .button:active { transform: translateY(0.3rem); box-shadow: none; }
+@media (prefers-reduced-motion: no-preference) { .look-buttons-key .button { transition: transform 90ms ease, box-shadow 90ms ease, background-color 150ms ease; } }

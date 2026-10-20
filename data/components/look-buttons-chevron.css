@@ -1,0 +1,5 @@
+/* buttons/chevron: buttons that point forward like a road sign; secondary ones are tinted. The full box returns for the focus ring. */
+.look-buttons-chevron .button { padding-right: 2em; border-radius: 0; clip-path: polygon(0 0, calc(100% - 0.9em) 0, 100% 50%, calc(100% - 0.9em) 100%, 0 100%); }
+.look-buttons-chevron .button--ghost { background: color-mix(in srgb, var(--ink) 12%, transparent); border-color: transparent; }
+.look-buttons-chevron .button--ghost:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.look-buttons-chevron .button:focus-visible { clip-path: none; }

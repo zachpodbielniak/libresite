@@ -1,0 +1,19 @@
+/* rhythm/ribbons: every other section is a surface ribbon run in from one side of the page and rounded at its end, the sides taking turns. */
+.look-rhythm-ribbons main > .block { --ls-rib: max(0.75rem, calc((100cqi - var(--max-width)) / 4)); --ls-end: clamp(1.5rem, 6cqi, 4.5rem); }
+@media (min-width: 64rem) { .look-rhythm-ribbons.look-frame-offset main > .block { --ls-rib: max(0.75rem, calc((100cqi - var(--max-width) - var(--ls-offset)) / 4)); } }
+/* Painted, not boxed: the ribbon is the section's background, so the column inside never moves. */
+.look-rhythm-ribbons main > .block:nth-of-type(even):not(.sec-tone, .cta--band, .statement--band, .marquee--accent, .contact-card--strip, .contact-card--band, .page-header--band) {
+	--surface: var(--ls-paper); padding-block: calc(var(--section-space) * 0.8);
+	background: linear-gradient(var(--ls-surface), var(--ls-surface)) left top / calc(100% - var(--ls-rib) - var(--ls-end)) 100% no-repeat,
+		linear-gradient(var(--ls-surface), var(--ls-surface)) right var(--ls-rib) top var(--ls-end) / var(--ls-end) calc(100% - 2 * var(--ls-end)) no-repeat,
+		radial-gradient(circle at 0 100%, var(--ls-surface) var(--ls-end), transparent calc(var(--ls-end) + 0.5px)) right var(--ls-rib) top 0 / var(--ls-end) var(--ls-end) no-repeat,
+		radial-gradient(circle at 0 0, var(--ls-surface) var(--ls-end), transparent calc(var(--ls-end) + 0.5px)) right var(--ls-rib) bottom 0 / var(--ls-end) var(--ls-end) no-repeat;
+}
+.look-rhythm-ribbons main > .block:nth-of-type(4n):not(.sec-tone, .cta--band, .statement--band, .marquee--accent, .contact-card--strip, .contact-card--band, .page-header--band) {
+	background: linear-gradient(var(--ls-surface), var(--ls-surface)) right top / calc(100% - var(--ls-rib) - var(--ls-end)) 100% no-repeat,
+		linear-gradient(var(--ls-surface), var(--ls-surface)) left var(--ls-rib) top var(--ls-end) / var(--ls-end) calc(100% - 2 * var(--ls-end)) no-repeat,
+		radial-gradient(circle at 100% 100%, var(--ls-surface) var(--ls-end), transparent calc(var(--ls-end) + 0.5px)) left var(--ls-rib) top 0 / var(--ls-end) var(--ls-end) no-repeat,
+		radial-gradient(circle at 100% 0, var(--ls-surface) var(--ls-end), transparent calc(var(--ls-end) + 0.5px)) left var(--ls-rib) bottom 0 / var(--ls-end) var(--ls-end) no-repeat;
+}
+.look-rhythm-ribbons main > .block:nth-of-type(even) + .block { padding-top: var(--section-space); }
+.look-rhythm-ribbons main > .block + .block { margin-top: var(--space-3); }

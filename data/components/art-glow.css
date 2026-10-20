@@ -1,0 +1,7 @@
+/* Art direction: glow. Drawn artwork is backlit like a lightbox sign: a
+ * rounded panel with a bright accent edge and a soft halo of the accent
+ * spreading round it. */
+.art-glow main img[src$=".svg"]:not(.brand img, .cover img, .poster__art) { border-radius: clamp(0.75rem, 2.5%, 1.5rem);
+	box-shadow: 0 0 0 calc(var(--border) * 2) color-mix(in srgb, var(--accent) 75%, var(--paper)), 0 0 1.25rem 0.15rem color-mix(in srgb, var(--accent) 55%, transparent), 0 0 3.5rem 0.6rem color-mix(in srgb, var(--accent) 22%, transparent); }
+.art-glow main .block:nth-of-type(even) img[src$=".svg"]:not(.brand img, .cover img, .poster__art) { box-shadow: 0 0 0 calc(var(--border) * 2) color-mix(in srgb, var(--accent) 75%, var(--paper)), 0 1.25rem 2.5rem -0.75rem color-mix(in srgb, var(--accent) 60%, transparent), 0 0 3.5rem 0.4rem color-mix(in srgb, var(--accent) 18%, transparent); }
+.art-glow main { overflow-x: clip; }

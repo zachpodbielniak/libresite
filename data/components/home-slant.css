@@ -1,0 +1,26 @@
+/* Home composition: slant. Every other section after the opening runs as a
+ * band of the surface colour across the page, its top and bottom edges cut
+ * on a parallel slant, the top edge lined in the accent; sections with a
+ * band of their own are cut the same way. The slant tilts the other way at
+ * each step, so the page reads as a run of angled ribbons. */
+.page--kind-home.home-slant main > .block:not(:first-child) { --ls-slant: clamp(1rem, 5cqi, 4.5rem); }
+.page--kind-home.home-slant main > .block:not(:first-child):nth-child(even):not(.sec-tone, .cta, .contact-card, .call, .form, .marquee, .statement--band) {
+	--paper: var(--ls-surface); --surface: var(--ls-paper); background: var(--ls-surface);
+}
+.page--kind-home.home-slant main > .block:not(:first-child):is(.sec-tone, .cta--band, .statement--band, .contact-card--band, :nth-child(even):not(.cta, .contact-card, .call, .form, .marquee)) { padding-block: var(--section-space); }
+.page--kind-home.home-slant main > .block:not(:first-child):is(.sec-tone, .cta--band, .statement--band, .contact-card--band, :nth-child(even):not(.cta, .contact-card, .call, .form, .marquee)) + .block { padding-top: var(--section-space); }
+.page--kind-home.home-slant main > .block:not(:first-child):is(.sec-tone, .cta--band, .statement--band, .contact-card--band, :nth-child(even):not(.cta, .contact-card, .call, .form, .marquee)) {
+	position: relative; margin-block: calc(var(--ls-slant) * -0.5);
+	clip-path: polygon(0 var(--ls-slant), 100% 0, 100% calc(100% - var(--ls-slant)), 0 100%);
+}
+.page--kind-home.home-slant main > .block:not(:first-child):is(.sec-tone, .cta--band, .statement--band, .contact-card--band, :nth-child(even):not(.cta, .contact-card, .call, .form, .marquee)) > .wrap { margin-block: var(--ls-slant); }
+.page--kind-home.home-slant main > .block:not(:first-child):is(.sec-tone, .cta--band, .statement--band, .contact-card--band, :nth-child(even):not(.cta, .contact-card, .call, .form, .marquee))::after {
+	content: ""; position: absolute; inset: 0 0 auto; height: calc(var(--ls-slant) + 0.4rem); background: var(--accent);
+	clip-path: polygon(0 var(--ls-slant), 100% 0, 100% 0.4rem, 0 calc(var(--ls-slant) + 0.4rem));
+}
+.page--kind-home.home-slant main > .block:not(:first-child):is(.sec-tone, .cta--band, .statement--band, .contact-card--band, :nth-child(even):not(.cta, .contact-card, .call, .form, .marquee)):nth-child(4n + 1), .page--kind-home.home-slant main > .block:not(:first-child):is(.sec-tone, .cta--band, .statement--band, .contact-card--band, :nth-child(even):not(.cta, .contact-card, .call, .form, .marquee)):nth-child(4n) {
+	clip-path: polygon(0 0, 100% var(--ls-slant), 100% 100%, 0 calc(100% - var(--ls-slant)));
+}
+.page--kind-home.home-slant main > .block:not(:first-child):is(.sec-tone, .cta--band, .statement--band, .contact-card--band, :nth-child(even):not(.cta, .contact-card, .call, .form, .marquee)):nth-child(4n + 1)::after, .page--kind-home.home-slant main > .block:not(:first-child):is(.sec-tone, .cta--band, .statement--band, .contact-card--band, :nth-child(even):not(.cta, .contact-card, .call, .form, .marquee)):nth-child(4n)::after {
+	clip-path: polygon(0 0, 100% var(--ls-slant), 100% calc(var(--ls-slant) + 0.4rem), 0 0.4rem);
+}

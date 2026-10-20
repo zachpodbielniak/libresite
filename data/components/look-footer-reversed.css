@@ -1,0 +1,6 @@
+/* footer/reversed: the links first, spread in a ruled bar, then the name set large with its note. */
+.look-footer-reversed .site-footer__inner { grid-template-columns: minmax(0, 1fr); }
+.look-footer-reversed .site-footer nav { order: -1; border-block: var(--border) solid var(--line-strong); }
+.look-footer-reversed .site-footer nav ul { text-transform: uppercase; letter-spacing: 0.08em; }
+@media (min-width: 48rem) { .look-footer-reversed .site-footer nav ul { justify-content: space-between; } }
+.look-footer-reversed .site-footer .brand { font-size: var(--step-3); line-height: 1.1; }

@@ -1,0 +1,6 @@
+/* heads/disc: the section's number in a solid accent disc before its heading. */
+.look-heads-disc main section[style*="--ls-n"] h2[id$="-h"]::before {
+	content: var(--ls-n) / ""; display: inline-grid; place-items: center; width: 2.3em; height: 2.3em; margin-right: 0.45em; vertical-align: middle;
+	border-radius: 50%; background: var(--accent); color: var(--accent-ink);
+	font: 700 max(0.5em, 0.8rem) / 1 var(--font-mono); letter-spacing: 0; text-transform: none;
+}

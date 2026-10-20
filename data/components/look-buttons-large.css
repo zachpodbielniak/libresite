@@ -1,0 +1,3 @@
+/* buttons/large: oversized, softly rounded buttons with a bold label, made for a thumb; the header and call bar keep their size. */
+.look-buttons-large main .button:not(.action-bar .button) { min-height: 3.6rem; padding: 0.8em 1.8em; border-width: 3px; border-radius: 1rem; font-size: var(--step-1); font-weight: 700; }
+.look-buttons-large main .actions { gap: var(--space-4); }

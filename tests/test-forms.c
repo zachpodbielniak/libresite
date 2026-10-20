@@ -62,8 +62,14 @@ test_forms(void){
 	GList *name;
 	guint s, total = 0;
 	for (name = names; name != NULL; name = name->next) {
+		JsonObject *wider = block("wider");
+		JsonObject *more = wider != NULL && json_object_has_member(wider, "forms")
+			? json_object_get_object_member(wider, "forms") : NULL;
 		g_assert_cmpuint(json_array_get_length(json_object_get_array_member(families, name->data)), >=, 2);
 		total += json_array_get_length(json_object_get_array_member(families, name->data));
+		/* Forms from the wider block join their family. */
+		if (more != NULL && json_object_has_member(more, name->data))
+			total += json_array_get_length(json_object_get_array_member(more, name->data));
 	}
 	for (s = 0; s < 300; s++) {
 		g_autofree gchar *seed = g_strdup_printf("form-%u\nA business %u.", s, s);

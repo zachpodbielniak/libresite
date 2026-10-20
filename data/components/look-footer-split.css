@@ -1,0 +1,8 @@
+/* footer/split: the name and note on one half, the links in a column of large type on the other, an accent rule between. */
+.look-footer-split .site-footer nav { padding-top: var(--space-4); border-top: calc(var(--border-strong) * 2) solid var(--accent); }
+.look-footer-split .site-footer nav ul { flex-direction: column; gap: 0; font-family: var(--font-display); font-size: var(--step-1); }
+@media (min-width: 48rem) {
+	.look-footer-split .site-footer__inner { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0; }
+	.look-footer-split .site-footer__inner > div { padding-right: var(--space-6); }
+	.look-footer-split .site-footer nav { padding: 0 0 0 var(--space-6); border-top: 0; border-left: calc(var(--border-strong) * 2) solid var(--accent); }
+}

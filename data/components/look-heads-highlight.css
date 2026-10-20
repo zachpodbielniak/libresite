@@ -1,0 +1,4 @@
+/* heads/highlight: a broad accent marker stroke behind each line of a section heading. */
+/* The stroke is the site's own accent, so on an accent-painted band it melts
+ * into the band instead of thinning the contrast of the heading on it. */
+.look-heads-highlight main h2[id$="-h"] { width: fit-content; max-width: 100%; border-inline: 0.14em solid transparent; background: linear-gradient(transparent 58%, color-mix(in srgb, var(--ls-accent) 38%, transparent) 58% 96%, transparent 96%) 0 0 / 100% 1lh repeat-y border-box; }

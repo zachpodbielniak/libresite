@@ -1,0 +1,2 @@
+/* heads/caps: section headings in compact, widely spaced heavy capitals. */
+.look-heads-caps main h2[id$="-h"] { font-size: calc(var(--step-2) * 1.1); font-weight: 800; line-height: 1.2; letter-spacing: 0.09em; text-transform: uppercase; overflow-wrap: break-word; }

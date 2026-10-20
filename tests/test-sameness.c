@@ -13,11 +13,13 @@
 
 /* The gate: the ten sites may share at most this much on average, no two
  * may come out more alike than the pair limit, and the home section order
- * and the component mix may each average at most their own limit. */
-#define SAMENESS_MEAN_LIMIT 0.20
-#define SAMENESS_PAIR_LIMIT 0.35
-#define SAMENESS_ORDER_LIMIT 0.35
-#define SAMENESS_MIX_LIMIT 0.35
+ * and the component mix may each average at most their own limit. The aim
+ * is 0.10 on average; look and mix hold it above that for the reasons in
+ * docs/components.org, "Sameness under a tenth". */
+#define SAMENESS_MEAN_LIMIT 0.15
+#define SAMENESS_PAIR_LIMIT 0.25
+#define SAMENESS_ORDER_LIMIT 0.15
+#define SAMENESS_MIX_LIMIT 0.25
 
 static const gchar *const routes[] = {"index.html", "services.html", "contact.html"};
 
@@ -153,16 +155,23 @@ load_briefs(void){
 }
 
 static gchar *
-recipe_for(JsonObject *brief){
+recipe_for(JsonObject *brief, JsonArray *avoid){
 	g_autoptr(JsonNode) node = NULL;
-	g_autofree gchar *text = g_strdup_printf(
-		"{\"version\": 1, \"name\": \"%s\", \"site\": {\"brief\": \"%s\"},"
+	g_autoptr(JsonNode) earlier = json_node_new(JSON_NODE_ARRAY);
+	g_autofree gchar *avoided = NULL;
+	g_autofree gchar *text = NULL;
+	json_node_set_array(earlier, avoid != NULL ? avoid : json_array_new());
+	avoided = ls_json_encode(earlier);
+	if (avoid == NULL)
+		json_array_unref(json_node_get_array(earlier));
+	text = g_strdup_printf(
+		"{\"version\": 1, \"name\": \"%s\", \"site\": {\"brief\": \"%s\", \"avoid\": %s},"
 		" \"ai\": {\"provider\": \"claude-code\", \"retries\": 0},"
 		" \"pipeline\": {\"steps\": ["
 		"  {\"id\": \"plan\", \"type\": \"plan\", \"options\": {\"sector\": \"trades\"},"
 		"   \"instructions\": \"Plan a home page, a services page and a contact page.\"},"
 		"  {\"id\": \"pages\", \"type\": \"pages\", \"options\": {\"parallel\": 6}}]}}",
-		json_object_get_string_member(brief, "slug"), json_object_get_string_member(brief, "brief"));
+		json_object_get_string_member(brief, "slug"), json_object_get_string_member(brief, "brief"), avoided);
 	/* The briefs hold no quotes or backslashes, so the text is plain JSON. */
 	node = ls_json_parse(text, NULL);
 	g_assert_nonnull(node);
@@ -185,23 +194,23 @@ text_of(LsContext *context, const gchar *path){
 }
 
 /* Reads the sections a page actually rendered, after the builder dealt its
- * variants: section.html writes "block block--NAME NAME NAME--VARIANT". */
+ * variants: section.html writes "block block--NAME NAME NAME--VARIANT". The
+ * home order is read as component and variant, so the sections every trade
+ * needs count as alike only in the same form at the same place. */
 static void
 read_sections(const gchar *html, GPtrArray *order, GHashTable *components, GHashTable *mix){
 	g_autoptr(GRegex) regex = g_regex_new(
 		"<section class=\"block block--([a-z0-9-]+) [a-z0-9-]+ [a-z0-9-]+--([a-z0-9-]+)", 0, 0, NULL);
 	g_autoptr(GMatchInfo) match = NULL;
-	gboolean first = TRUE;
 	g_regex_match(regex, html, 0, &match);
 	while (g_match_info_matches(match)) {
 		g_autofree gchar *component = g_match_info_fetch(match, 1);
 		g_autofree gchar *variant = g_match_info_fetch(match, 2);
 		gchar *both = g_strdup_printf("%s/%s", component, variant);
 		if (order != NULL)
-			g_ptr_array_add(order, g_strdup(first ? both : component));
+			g_ptr_array_add(order, g_strdup(both));
 		g_hash_table_add(mix, both);
 		g_hash_table_add(components, g_strdup(component));
-		first = FALSE;
 		g_match_info_next(match, NULL);
 	}
 }
@@ -209,9 +218,9 @@ read_sections(const gchar *html, GPtrArray *order, GHashTable *components, GHash
 /* Builds one brief through the plan and pages steps. With @output set the
  * finished site is also written to @output/SLUG for the browser check. */
 static Site *
-build_site(JsonObject *brief, const gchar *output){
+build_site(JsonObject *brief, JsonArray *avoid, const gchar *output){
 	g_autoptr(GError) error = NULL;
-	g_autofree gchar *text = recipe_for(brief);
+	g_autofree gchar *text = recipe_for(brief, avoid);
 	g_autoptr(LsRecipe) recipe = ls_recipe_new(text, &error);
 	g_autoptr(LsPrompts) prompts = NULL;
 	g_autoptr(LsContext) context = ls_context_new();
@@ -429,8 +438,8 @@ test_measures(void){
 static void
 test_rebuild(void){
 	g_autoptr(JsonArray) briefs = load_briefs();
-	g_autoptr(Site) first = build_site(json_array_get_object_element(briefs, 0), NULL);
-	g_autoptr(Site) second = build_site(json_array_get_object_element(briefs, 0), NULL);
+	g_autoptr(Site) first = build_site(json_array_get_object_element(briefs, 0), NULL, NULL);
+	g_autoptr(Site) second = build_site(json_array_get_object_element(briefs, 0), NULL, NULL);
 	gdouble values[G_N_ELEMENTS(parts)];
 	g_assert_cmpstr(first->index, ==, second->index);
 	pair_parts(first, second, values);
@@ -451,6 +460,7 @@ test_briefs(void){
 	const gchar *output = g_getenv("SAMENESS_OUTPUT");
 	g_autoptr(JsonArray) briefs = load_briefs();
 	g_autoptr(GPtrArray) sites = g_ptr_array_new_with_free_func((GDestroyNotify)site_free);
+	g_autoptr(JsonArray) avoid = json_array_new();
 	g_autoptr(JsonObject) report = json_object_new();
 	JsonObject *means = json_object_new();
 	JsonArray *pairs = json_array_new();
@@ -458,8 +468,12 @@ test_briefs(void){
 	const gchar *worst_a = NULL, *worst_b = NULL;
 	guint i, j, p, count = 0;
 	g_assert_cmpuint(json_array_get_length(briefs), ==, 10);
-	for (i = 0; i < json_array_get_length(briefs); i++)
-		g_ptr_array_add(sites, build_site(json_array_get_object_element(briefs, i), output));
+	for (i = 0; i < json_array_get_length(briefs); i++) {
+		g_ptr_array_add(sites, build_site(json_array_get_object_element(briefs, i), avoid, output));
+		/* Each order in one market avoids the sites built before it, as an
+		 * embedder passes them in site.avoid (docs/components.org, "Sameness"). */
+		json_array_add_object_element(avoid, json_object_ref(((Site *)g_ptr_array_index(sites, i))->fingerprint));
+	}
 	for (i = 0; i < sites->len; i++)
 		for (j = i + 1; j < sites->len; j++) {
 			Site *a = g_ptr_array_index(sites, i), *b = g_ptr_array_index(sites, j);

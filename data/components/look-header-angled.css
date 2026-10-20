@@ -1,0 +1,5 @@
+/* header/angled: the bar on the surface tint, its lower edge cut on a slant. */
+.look-header-angled .site-header { --ls-slant: 1.25rem; border-bottom: 0; padding-bottom: var(--ls-slant); background: linear-gradient(var(--surface), var(--surface)) top / 100% calc(100% - var(--ls-slant)) no-repeat, linear-gradient(to bottom right, var(--surface) 50%, transparent calc(50% + 1px)) bottom / 100% var(--ls-slant) no-repeat; }
+/* A side panel is a plain tinted column. */
+@media (min-width: 64rem) { .look-header-angled:is(.look-frame-rail, .look-frame-split) > .site-header { padding-bottom: 0; background: var(--surface); } }
+@media (min-width: 48rem) { .look-header-angled .site-header { --ls-slant: 2rem; } }

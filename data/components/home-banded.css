@@ -1,0 +1,21 @@
+/* Home composition: banded. Sections after the opening alternate between a
+ * full-width tinted band, its content across a wider column, and a narrow
+ * reading column on the paper with its heading centred. Closing sections,
+ * toned sections and scrolling bands keep their own colours. */
+.page--kind-home.home-banded main > .block:not(:first-child) { padding-block: var(--section-space); }
+.page--kind-home.home-banded main > .block:not(:first-child, .cta, .contact-card, .call, .form, .links, .social, .share, .pager, .marquee, .sec-tone):nth-child(even) {
+	--paper: var(--ls-surface); --surface: var(--ls-paper);
+	background: var(--ls-surface); border-block: var(--border) solid var(--line);
+}
+@container (min-width: 56rem) {
+	.page--kind-home.home-banded main > .block:not(:first-child, .cta, .contact-card, .call, .form, .links, .social, .share, .pager, .marquee, .sec-tone, .sec-w-narrow, .sec-w-bleed):nth-child(even) > .wrap {
+		width: min(100% - 2 * var(--gutter), max(var(--max-width), 80rem));
+	}
+	.page--kind-home.home-banded main > .block:not(:first-child, .cta, .contact-card, .call, .form, .links, .social, .share, .pager, .marquee, .sec-w-bleed):nth-child(odd) > .wrap {
+		width: min(100% - 2 * var(--gutter), var(--max-width), 44rem);
+	}
+	.page--kind-home.home-banded main > .block:not(:first-child, .cta, .contact-card, .call, .form, .links, .social, .share, .pager, .marquee, .sec-w-bleed):nth-child(odd) > .wrap > .section-head {
+		margin-inline: auto; text-align: center;
+	}
+	.page--kind-home.home-banded main > .block:not(:first-child, .cta, .contact-card, .call, .form, .links, .social, .share, .pager, .marquee, .sec-w-bleed):nth-child(odd) > .wrap > .section-head .prose { margin-inline: auto; }
+}

@@ -1,0 +1,4 @@
+/* buttons/ink: solid ink buttons with an accent strip at the leading edge; they turn to the accent on hover. */
+.look-buttons-ink .button { padding-left: 1.6em; background: var(--ink); color: var(--paper); border-color: var(--ink); border-radius: 0.15rem; box-shadow: inset 0.4em 0 0 var(--accent); }
+.look-buttons-ink .button--ghost { background: transparent; color: var(--ink); }
+.look-buttons-ink .button:hover { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); box-shadow: inset 0.4em 0 0 var(--accent-ink); }

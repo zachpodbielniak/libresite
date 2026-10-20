@@ -1,0 +1,5 @@
+/* buttons/outline: heavy ink outlines that fill with the accent on hover; secondary buttons are underlined labels. */
+.look-buttons-outline .button { background: transparent; color: var(--ink); border: 3px solid var(--ink); }
+.look-buttons-outline .button:hover { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.look-buttons-outline .button--ghost { border-color: transparent; padding-inline: 0.4em; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 0.3em; }
+.look-buttons-outline .button--ghost:hover { background: transparent; color: var(--ink); border-color: transparent; text-decoration-color: var(--accent); }

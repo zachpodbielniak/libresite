@@ -1,0 +1,23 @@
+/* poster/front: a newspaper front page. A dateline between double rules,
+ * the headline centred, the picture under it in a fine frame, then the
+ * lede in ruled columns where the column has room. */
+.poster--front .poster__frame {
+	display: grid;
+	grid-template-columns: [full-start] minmax(var(--gutter), 1fr) [content-start] minmax(0, var(--max-width)) [content-end] minmax(var(--gutter), 1fr) [full-end];
+}
+.poster--front .poster__inner { display: contents; }
+.poster--front .poster__frame > *, .poster--front .poster__inner > * { grid-column: content-start / content-end; min-width: 0; }
+.poster--front .poster__kicker { grid-row: 1; margin: 0 0 var(--space-5); padding-block: var(--space-2); border-block: calc(var(--border) * 4) double var(--ink); color: var(--ink); text-align: center; }
+.poster--front .poster__title { grid-row: 2; justify-self: center; max-width: 18ch; text-align: center; font-size: clamp(2.6rem, 10cqi, min(8.5rem, var(--max-width) * 0.1)); line-height: 0.95; }
+.poster--front .poster__art { grid-row: 3; display: block; width: 100%; height: auto; max-height: none; aspect-ratio: 3 / 2; object-fit: cover; margin-top: var(--space-6); padding: var(--space-2); border: var(--border) solid var(--line-strong); }
+/* The frame holds the whole page, not the picture, so marks meant for a
+ * picture's own box stay off it. */
+.poster--front .poster__frame::before { content: none !important; }
+.poster--front .poster__foot { grid-row: 4; margin-top: var(--space-5); padding-top: var(--space-4); border-top: var(--border) solid var(--line-strong); }
+.poster--front .poster__foot .actions { justify-content: center; }
+@container (min-width: 56rem) {
+	.poster--front .poster__art { aspect-ratio: 2 / 1; }
+	.poster--front .poster__foot { grid-template-columns: minmax(0, 1fr); }
+	.poster--front .poster__lede { max-width: none; columns: 2; column-gap: var(--space-7); column-rule: var(--border) solid var(--line); }
+	.poster--front .poster__foot .actions { justify-content: center; margin: 0; }
+}

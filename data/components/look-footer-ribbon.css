@@ -1,0 +1,7 @@
+/* footer/ribbon: the name on an accent label hanging from an accent rule along the footer's top edge. */
+.look-footer-ribbon .site-footer { padding-top: 0; border-top: calc(var(--border-strong) * 2) solid var(--ls-accent); }
+.look-footer-ribbon .site-footer .brand {
+	--ink: var(--ls-accent-ink); --paper: var(--ls-accent); --accent: var(--ls-accent-ink); --accent-text: var(--ls-accent-ink);
+	margin: 0 0 var(--space-5); padding: var(--space-3) var(--space-4) var(--space-4); background: var(--ls-accent); color: var(--ls-accent-ink); border-radius: 0 0 var(--radius) var(--radius);
+}
+.look-footer-ribbon .site-footer nav { padding-top: var(--space-4); }

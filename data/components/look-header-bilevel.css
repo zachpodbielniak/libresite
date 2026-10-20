@@ -1,0 +1,11 @@
+/* header/bilevel: the wordmark and action on top, the links on a full-width tinted strip beneath. */
+/* Only a top bar splits in two: stacked frames and side panels keep their own header. */
+@media (min-width: 48rem) {
+	body.look-header-bilevel:not(.look-frame-center, .look-frame-masthead, .look-frame-rail, .look-frame-split) .site-header__inner { display: grid; grid-template-columns: minmax(0, 1fr) fit-content(50%); align-items: center; gap: var(--space-3) var(--space-5); padding-block: var(--space-4) 0; isolation: isolate; }
+	body.look-header-bilevel:not(.look-frame-center, .look-frame-masthead, .look-frame-rail, .look-frame-split) .site-header__inner::after { content: ""; grid-area: 2 / 1 / 3 / -1; align-self: stretch; z-index: -1; background: var(--surface); box-shadow: 0 0 0 100vmax var(--surface); clip-path: inset(0 -100vmax); }
+	body.look-header-bilevel:not(.look-frame-center, .look-frame-masthead, .look-frame-rail, .look-frame-split) .brand { grid-area: 1 / 1; }
+	body.look-header-bilevel:not(.look-frame-center, .look-frame-masthead, .look-frame-rail, .look-frame-split) .site-nav { display: grid; grid-area: 1 / 1 / 3 / -1; grid-template-columns: subgrid; grid-template-rows: subgrid; gap: inherit; pointer-events: none; }
+	body.look-header-bilevel:not(.look-frame-center, .look-frame-masthead, .look-frame-rail, .look-frame-split) .site-nav > * { pointer-events: auto; }
+	body.look-header-bilevel:not(.look-frame-center, .look-frame-masthead, .look-frame-rail, .look-frame-split) .site-nav > ul { grid-area: 2 / 1 / 3 / -1; padding-block: var(--space-1); }
+	body.look-header-bilevel:not(.look-frame-center, .look-frame-masthead, .look-frame-rail, .look-frame-split) .site-nav > .button { grid-area: 1 / 2; justify-self: end; }
+}

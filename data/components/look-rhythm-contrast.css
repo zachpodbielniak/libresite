@@ -1,0 +1,8 @@
+/* rhythm/contrast: every other section turns to ink, light and dark in turn. */
+.look-rhythm-contrast main > .block:nth-of-type(even):not(.sec-tone, .cta--band, .statement--band, .marquee--accent, .contact-card--strip, .contact-card--band, .page-header--band) {
+	--paper: var(--ls-ink); --ink: var(--ls-paper); --surface: color-mix(in srgb, var(--ls-paper) 10%, var(--ls-ink));
+	--muted: var(--ls-paper); --accent: var(--ls-paper); --accent-ink: var(--ls-ink); --accent-text: var(--ls-paper);
+	--line: color-mix(in srgb, var(--ls-paper) 30%, var(--ls-ink)); --line-strong: var(--ls-paper); --focus: var(--ls-paper); --field: var(--ls-ink); --danger: var(--ls-paper);
+	padding-block: var(--section-space); background: var(--ls-ink); color: var(--ls-paper);
+}
+.look-rhythm-contrast main > .block:nth-of-type(even) + .block { padding-top: var(--section-space); }

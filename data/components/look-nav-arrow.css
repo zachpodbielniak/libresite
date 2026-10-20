@@ -1,0 +1,7 @@
+/* nav/arrow: an accent arrow leads the current page; others show it faintly on hover. */
+.look-nav-arrow .site-nav a:not(.button) { gap: 0.35em; border-bottom-color: transparent; }
+.look-nav-arrow .site-nav a:not(.button)::before { content: "\2192" / ""; color: transparent; }
+.look-nav-arrow .site-nav a:not(.button):hover { border-bottom-color: transparent; }
+.look-nav-arrow .site-nav a:not(.button):hover::before { color: var(--muted); }
+.look-nav-arrow .site-nav a[aria-current="page"], .look-nav-arrow .site-nav__group.is-section > a { border-bottom-color: transparent; }
+.look-nav-arrow .site-nav a[aria-current="page"]::before, .look-nav-arrow .site-nav__group.is-section > a::before { color: var(--accent-text); }

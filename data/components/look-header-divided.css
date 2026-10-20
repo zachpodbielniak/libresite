@@ -1,0 +1,9 @@
+/* header/divided: strong rules above and below, and full-height rules between the wordmark, the links and the action. */
+:where(.look-header-divided) .site-header { border-block: var(--border) solid var(--line-strong); }
+@media (min-width: 48rem) {
+	body.look-header-divided:not(.look-frame-center, .look-frame-masthead, .look-frame-rail, .look-frame-split) .site-header__inner { align-items: stretch; column-gap: 0; padding-block: 0; }
+	body.look-header-divided:not(.look-frame-center, .look-frame-masthead, .look-frame-rail, .look-frame-split) .site-header .brand { padding-block: var(--space-3); padding-right: var(--space-5); border-right: var(--border) solid var(--line-strong); }
+	body.look-header-divided:not(.look-frame-center, .look-frame-masthead, .look-frame-rail, .look-frame-split) .site-nav { column-gap: 0; padding-left: var(--space-5); }
+	body.look-header-divided:not(.look-frame-center, .look-frame-masthead, .look-frame-rail, .look-frame-split) .site-nav > ul:not(:last-child) { align-self: stretch; align-items: center; padding-right: var(--space-5); border-right: var(--border) solid var(--line-strong); }
+	body.look-header-divided:not(.look-frame-center, .look-frame-masthead, .look-frame-rail, .look-frame-split) .site-nav > .button { margin: var(--space-2) 0 var(--space-2) var(--space-5); }
+}

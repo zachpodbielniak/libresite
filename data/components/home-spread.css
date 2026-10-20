@@ -1,0 +1,41 @@
+/* Home composition: magazine spread. Each section after the opening is
+ * numbered; where the page column has room, it opens like a spread: its
+ * number and heading on a tinted facing page, its content on the other,
+ * the fold between them and the sides alternating. Each spread is a
+ * container, so its content lays out for its own page. */
+.page--kind-home.home-spread main { container-name: ls-spread; }
+.page--kind-home.home-spread main > .block:not(:first-child) > .wrap > .section-head::before {
+	content: var(--ls-n, ""); display: block; margin-bottom: var(--space-3);
+	font-family: var(--font-display); font-weight: 800; font-size: var(--step-4); line-height: 1; color: var(--accent-text);
+}
+@container ls-spread (min-width: 60rem) {
+	.page--kind-home.home-spread.look-headpos-top main > .block:not(:first-child, .marquee, .sec-w-bleed, .sec-w-narrow, .sec-offset, .cta, .contact-card, .call, .form):has(> .wrap > .section-head) {
+		position: relative; container-type: inline-size;
+		padding: var(--section-space) 0 var(--section-space) 40%;
+	}
+	.page--kind-home.home-spread.look-headpos-top main > .block:not(:first-child, .marquee, .sec-w-bleed, .sec-w-narrow, .sec-offset, .cta, .contact-card, .call, .form):has(> .wrap > .section-head)::after {
+		content: ""; position: absolute; inset-block: 0; inset-inline-start: 0; width: 40%;
+		background: var(--surface); border-inline-end: var(--border) solid var(--line-strong);
+	}
+	.page--kind-home.home-spread.look-headpos-top main > .block:not(:first-child, .marquee, .sec-w-bleed, .sec-w-narrow, .sec-offset, .cta, .contact-card, .call, .form):has(> .wrap > .section-head) > .wrap {
+		/* The facing page: two fifths of the spread less its margins, as a
+		 * share of this box, which runs from the page's margin to the gutter. */
+		--ls-page: calc(40% + 0.4 * var(--gutter) - 1.6 * var(--space-6));
+		display: grid; grid-template-columns: var(--ls-page) minmax(0, var(--max-width));
+		column-gap: calc(2 * var(--space-6)); justify-content: start; align-items: start;
+		position: relative; width: auto; margin-inline: calc(var(--space-6) - 66.667%) var(--gutter);
+	}
+	.page--kind-home.home-spread.look-headpos-top main > .block:not(:first-child, .marquee, .sec-w-bleed, .sec-w-narrow, .sec-offset, .cta, .contact-card, .call, .form):has(> .wrap > .section-head) > .wrap > * { grid-column: 2; min-width: 0; }
+	.page--kind-home.home-spread.look-headpos-top main > .block:not(:first-child, .marquee, .sec-w-bleed, .sec-w-narrow, .sec-offset, .cta, .contact-card, .call, .form):has(> .wrap > .section-head) > .wrap > .section-head { grid-column: 1; grid-row: 1 / span 20; max-width: none; margin-bottom: 0; }
+	.page--kind-home.home-spread.look-headpos-top main > .block:not(:first-child, .marquee, .sec-w-bleed, .sec-w-narrow, .sec-offset, .cta, .contact-card, .call, .form):has(> .wrap > .section-head) > .wrap > .section-head::before { font-size: var(--step-6); margin-bottom: var(--space-5); }
+	/* Every second spread faces the other way, unless its content scrolls
+	 * sideways: what waits off to the side must not sit under the heading. */
+	.page--kind-home.home-spread.look-headpos-top main > .block:not(:first-child, .marquee, .sec-w-bleed, .sec-w-narrow, .sec-offset, .cta, .contact-card, .call, .form):has(> .wrap > .section-head):nth-child(odd):not(.carousel, .strip, .gallery--strip, .gallery--filmstrip, .voices--ribbon, .jumpnav) { padding-inline: 0 40%; }
+	.page--kind-home.home-spread.look-headpos-top main > .block:not(:first-child, .marquee, .sec-w-bleed, .sec-w-narrow, .sec-offset, .cta, .contact-card, .call, .form):has(> .wrap > .section-head):nth-child(odd):not(.carousel, .strip, .gallery--strip, .gallery--filmstrip, .voices--ribbon, .jumpnav)::after { inset-inline: auto 0; border-inline-width: var(--border) 0; }
+	.page--kind-home.home-spread.look-headpos-top main > .block:not(:first-child, .marquee, .sec-w-bleed, .sec-w-narrow, .sec-offset, .cta, .contact-card, .call, .form):has(> .wrap > .section-head):nth-child(odd):not(.carousel, .strip, .gallery--strip, .gallery--filmstrip, .voices--ribbon, .jumpnav) > .wrap {
+		grid-template-columns: minmax(0, var(--max-width)) var(--ls-page); justify-content: end;
+		margin-inline: var(--gutter) calc(var(--space-6) - 66.667%);
+	}
+	.page--kind-home.home-spread.look-headpos-top main > .block:not(:first-child, .marquee, .sec-w-bleed, .sec-w-narrow, .sec-offset, .cta, .contact-card, .call, .form):has(> .wrap > .section-head):nth-child(odd):not(.carousel, .strip, .gallery--strip, .gallery--filmstrip, .voices--ribbon, .jumpnav) > .wrap > * { grid-column: 1; }
+	.page--kind-home.home-spread.look-headpos-top main > .block:not(:first-child, .marquee, .sec-w-bleed, .sec-w-narrow, .sec-offset, .cta, .contact-card, .call, .form):has(> .wrap > .section-head):nth-child(odd):not(.carousel, .strip, .gallery--strip, .gallery--filmstrip, .voices--ribbon, .jumpnav) > .wrap > .section-head { grid-column: 2; }
+}

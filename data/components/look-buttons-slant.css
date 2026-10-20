@@ -1,0 +1,5 @@
+/* buttons/slant: parallelogram buttons with sloped ends; secondary ones are tinted. The full box returns for the focus ring. */
+.look-buttons-slant .button { padding-inline: 1.7em; border-radius: 0; clip-path: polygon(0.75em 0, 100% 0, calc(100% - 0.75em) 100%, 0 100%); }
+.look-buttons-slant .button--ghost { background: color-mix(in srgb, var(--ink) 12%, transparent); border-color: transparent; }
+.look-buttons-slant .button--ghost:hover { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.look-buttons-slant .button:focus-visible { clip-path: none; }

@@ -1,0 +1,7 @@
+/* footer/slim: one compact row on the page colour, the name, note and links side by side. */
+.look-footer-slim .site-footer { padding-block: var(--space-4); background: var(--paper); border-top: var(--border) solid var(--line-strong); }
+.look-footer-slim .site-footer__inner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-6); }
+.look-footer-slim .site-footer__inner > div { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1) var(--space-5); min-width: 0; }
+.look-footer-slim .site-footer .brand { font-size: var(--step-0); }
+.look-footer-slim .site-footer__social { margin: 0; }
+.look-footer-slim .site-footer__credit { margin-top: var(--space-2); }
