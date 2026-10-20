@@ -1,0 +1,839 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Curated font pairings (docs/components.org, "Type and colour range"),
+# dealt like the typefaces in identities.yaml and checked the same way at
+# load. Every family is open source and served by Bunny Fonts; the first
+# family of each stack is the one the fonts list loads.
+version: 1
+pairings:
+  bricolage-figtree:
+    summary: A characterful grotesque with ink traps over a friendly modern sans.
+    fits:
+    - trades
+    - retail
+    - creative
+    - community
+    tokens:
+      font_display: '''Bricolage Grotesque'', system-ui, sans-serif'
+      font_body: Figtree, system-ui, sans-serif
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 800
+      heading_tracking: -0.025
+      heading_leading: 1.02
+      heading_case: none
+    fonts:
+    - family: Bricolage Grotesque
+      weights:
+      - 500
+      - 800
+      italic: false
+    - family: Figtree
+      weights:
+      - 400
+      - 600
+      italic: false
+  bebas-hanken:
+    summary: Tall poster capitals over a clean, open grotesk.
+    fits:
+    - trades
+    - food
+    - retail
+    tokens:
+      font_display: '''Bebas Neue'', ''Arial Narrow'', sans-serif'
+      font_body: '''Hanken Grotesk'', system-ui, sans-serif'
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 400
+      heading_tracking: 0.02
+      heading_leading: 0.95
+      heading_case: uppercase
+    fonts:
+    - family: Bebas Neue
+      weights:
+      - 400
+      italic: false
+    - family: Hanken Grotesk
+      weights:
+      - 400
+      - 600
+      italic: false
+  roboto-slab:
+    summary: A square, sturdy slab over its plain sans companion.
+    fits:
+    - trades
+    - advisory
+    - community
+    tokens:
+      font_display: '''Roboto Slab'', Rockwell, Georgia, serif'
+      font_body: Roboto, system-ui, sans-serif
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 800
+      heading_tracking: -0.01
+      heading_leading: 1.08
+      heading_case: none
+    fonts:
+    - family: Roboto Slab
+      weights:
+      - 500
+      - 800
+      italic: false
+    - family: Roboto
+      weights:
+      - 400
+      - 500
+      italic: false
+  oswald-mulish:
+    summary: Condensed workhorse headings over a soft, wide sans.
+    fits:
+    - trades
+    - software
+    - retail
+    tokens:
+      font_display: Oswald, 'Arial Narrow', sans-serif
+      font_body: Mulish, system-ui, sans-serif
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 700
+      heading_tracking: 0.01
+      heading_leading: 1.0
+      heading_case: uppercase
+    fonts:
+    - family: Oswald
+      weights:
+      - 500
+      - 700
+      italic: false
+    - family: Mulish
+      weights:
+      - 400
+      - 700
+      italic: false
+  big-shoulders-chivo:
+    summary: Stencil-straight display capitals over a dense grotesque.
+    fits:
+    - trades
+    - food
+    - community
+    tokens:
+      font_display: '''Big Shoulders Display'', ''Arial Narrow'', sans-serif'
+      font_body: Chivo, system-ui, sans-serif
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 900
+      heading_tracking: 0.0
+      heading_leading: 0.95
+      heading_case: uppercase
+    fonts:
+    - family: Big Shoulders Display
+      weights:
+      - 700
+      - 900
+      italic: false
+    - family: Chivo
+      weights:
+      - 400
+      - 700
+      italic: false
+  bitter-fira:
+    summary: A warm slab built for screens over a technical humanist sans.
+    fits:
+    - trades
+    - advisory
+    - community
+    tokens:
+      font_display: Bitter, Georgia, serif
+      font_body: '''Fira Sans'', system-ui, sans-serif'
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 800
+      heading_tracking: -0.015
+      heading_leading: 1.1
+      heading_case: none
+    fonts:
+    - family: Bitter
+      weights:
+      - 600
+      - 800
+      italic: false
+    - family: Fira Sans
+      weights:
+      - 400
+      - 600
+      italic: false
+  alfa-cabin:
+    summary: A heavy, friendly slab over a rounded workshop sans.
+    fits:
+    - trades
+    - food
+    - retail
+    tokens:
+      font_display: '''Alfa Slab One'', Rockwell, Georgia, serif'
+      font_body: Cabin, system-ui, sans-serif
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 400
+      heading_tracking: 0.0
+      heading_leading: 1.05
+      heading_case: none
+    fonts:
+    - family: Alfa Slab One
+      weights:
+      - 400
+      italic: false
+    - family: Cabin
+      weights:
+      - 400
+      - 600
+      italic: false
+  archivo-narrow-public:
+    summary: Narrow, upright headings over a plain public sans.
+    fits:
+    - trades
+    - software
+    - community
+    tokens:
+      font_display: '''Archivo Narrow'', ''Arial Narrow'', sans-serif'
+      font_body: '''Public Sans'', system-ui, sans-serif'
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 700
+      heading_tracking: 0.0
+      heading_leading: 1.02
+      heading_case: none
+    fonts:
+    - family: Archivo Narrow
+      weights:
+      - 600
+      - 700
+      italic: false
+    - family: Public Sans
+      weights:
+      - 400
+      - 600
+      italic: false
+  arvo-karla:
+    summary: A geometric slab over a quirky grotesque.
+    fits:
+    - trades
+    - food
+    - creative
+    tokens:
+      font_display: Arvo, Rockwell, Georgia, serif
+      font_body: Karla, system-ui, sans-serif
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 700
+      heading_tracking: -0.01
+      heading_leading: 1.1
+      heading_case: none
+    fonts:
+    - family: Arvo
+      weights:
+      - 700
+      italic: false
+    - family: Karla
+      weights:
+      - 400
+      - 700
+      italic: false
+  rokkitt-work:
+    summary: A tall, narrow slab over a steady working sans.
+    fits:
+    - trades
+    - retail
+    - community
+    tokens:
+      font_display: Rokkitt, Rockwell, Georgia, serif
+      font_body: '''Work Sans'', system-ui, sans-serif'
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 800
+      heading_tracking: -0.01
+      heading_leading: 1.0
+      heading_case: none
+    fonts:
+    - family: Rokkitt
+      weights:
+      - 600
+      - 800
+      italic: false
+    - family: Work Sans
+      weights:
+      - 400
+      - 600
+      italic: false
+  young-serif-instrument:
+    summary: A plump, warm serif over a neat contemporary sans.
+    fits:
+    - food
+    - creative
+    - wellness
+    - trades
+    tokens:
+      font_display: '''Young Serif'', Georgia, serif'
+      font_body: '''Instrument Sans'', system-ui, sans-serif'
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 400
+      heading_tracking: -0.02
+      heading_leading: 1.08
+      heading_case: none
+    fonts:
+    - family: Young Serif
+      weights:
+      - 400
+      italic: false
+    - family: Instrument Sans
+      weights:
+      - 400
+      - 600
+      italic: false
+  gloock-albert:
+    summary: A sharp, high-contrast serif over a clean geometric sans.
+    fits:
+    - creative
+    - advisory
+    - retail
+    tokens:
+      font_display: Gloock, Georgia, serif
+      font_body: '''Albert Sans'', system-ui, sans-serif'
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 400
+      heading_tracking: -0.02
+      heading_leading: 1.05
+      heading_case: none
+    fonts:
+    - family: Gloock
+      weights:
+      - 400
+      italic: false
+    - family: Albert Sans
+      weights:
+      - 400
+      - 600
+      italic: false
+  instrument-onest:
+    summary: A slender editorial serif over a calm, even sans.
+    fits:
+    - creative
+    - wellness
+    - advisory
+    tokens:
+      font_display: '''Instrument Serif'', Georgia, serif'
+      font_body: Onest, system-ui, sans-serif
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 400
+      heading_tracking: -0.01
+      heading_leading: 1.05
+      heading_case: none
+    fonts:
+    - family: Instrument Serif
+      weights:
+      - 400
+      italic: false
+    - family: Onest
+      weights:
+      - 400
+      - 600
+      italic: false
+  abril-rubik:
+    summary: A Didone poster face over a soft rounded grotesk.
+    fits:
+    - food
+    - retail
+    - creative
+    tokens:
+      font_display: '''Abril Fatface'', Georgia, serif'
+      font_body: Rubik, system-ui, sans-serif
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 400
+      heading_tracking: -0.01
+      heading_leading: 1.05
+      heading_case: none
+    fonts:
+    - family: Abril Fatface
+      weights:
+      - 400
+      italic: false
+    - family: Rubik
+      weights:
+      - 400
+      - 600
+      italic: false
+  bodoni-jakarta:
+    summary: Fashion-page Bodoni over a crisp geometric sans.
+    fits:
+    - retail
+    - creative
+    - wellness
+    tokens:
+      font_display: '''Bodoni Moda'', Didot, Georgia, serif'
+      font_body: '''Plus Jakarta Sans'', system-ui, sans-serif'
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 700
+      heading_tracking: -0.02
+      heading_leading: 1.05
+      heading_case: none
+    fonts:
+    - family: Bodoni Moda
+      weights:
+      - 600
+      - 800
+      italic: false
+    - family: Plus Jakarta Sans
+      weights:
+      - 400
+      - 600
+      italic: false
+  baskerville-karla:
+    summary: A bookish Baskerville over a friendly grotesque.
+    fits:
+    - advisory
+    - community
+    - food
+    tokens:
+      font_display: '''Libre Baskerville'', Baskerville, Georgia, serif'
+      font_body: Karla, system-ui, sans-serif
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 700
+      heading_tracking: -0.01
+      heading_leading: 1.15
+      heading_case: none
+    fonts:
+    - family: Libre Baskerville
+      weights:
+      - 700
+      italic: false
+    - family: Karla
+      weights:
+      - 400
+      - 600
+      italic: false
+  garamond-figtree:
+    summary: Old-style Garamond headings over a modern sans.
+    fits:
+    - advisory
+    - community
+    - wellness
+    tokens:
+      font_display: '''EB Garamond'', Garamond, Georgia, serif'
+      font_body: Figtree, system-ui, sans-serif
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 600
+      heading_tracking: -0.01
+      heading_leading: 1.1
+      heading_case: none
+    fonts:
+    - family: EB Garamond
+      weights:
+      - 500
+      - 700
+      italic: false
+    - family: Figtree
+      weights:
+      - 400
+      - 600
+      italic: false
+  spectral-plex:
+    summary: A screen-first serif over a precise corporate sans.
+    fits:
+    - advisory
+    - software
+    - community
+    tokens:
+      font_display: Spectral, Georgia, serif
+      font_body: '''IBM Plex Sans'', system-ui, sans-serif'
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 700
+      heading_tracking: -0.01
+      heading_leading: 1.1
+      heading_case: none
+    fonts:
+    - family: Spectral
+      weights:
+      - 600
+      - 800
+      italic: false
+    - family: IBM Plex Sans
+      weights:
+      - 400
+      - 600
+      italic: false
+  lora-mulish:
+    summary: A calligraphic serif over a soft, wide sans.
+    fits:
+    - wellness
+    - community
+    - food
+    tokens:
+      font_display: Lora, Georgia, serif
+      font_body: Mulish, system-ui, sans-serif
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 700
+      heading_tracking: -0.01
+      heading_leading: 1.12
+      heading_case: none
+    fonts:
+    - family: Lora
+      weights:
+      - 600
+      - 700
+      italic: false
+    - family: Mulish
+      weights:
+      - 400
+      - 600
+      italic: false
+  merriweather-pair:
+    summary: A sturdy reading serif over its matching sans.
+    fits:
+    - community
+    - advisory
+    - trades
+    tokens:
+      font_display: Merriweather, Georgia, serif
+      font_body: '''Merriweather Sans'', system-ui, sans-serif'
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 900
+      heading_tracking: -0.015
+      heading_leading: 1.1
+      heading_case: none
+    fonts:
+    - family: Merriweather
+      weights:
+      - 700
+      - 900
+      italic: false
+    - family: Merriweather Sans
+      weights:
+      - 400
+      - 700
+      italic: false
+  crimson-schibsted:
+    summary: A classic text serif over a newsroom grotesk.
+    fits:
+    - advisory
+    - creative
+    - community
+    tokens:
+      font_display: '''Crimson Pro'', Georgia, serif'
+      font_body: '''Schibsted Grotesk'', system-ui, sans-serif'
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 700
+      heading_tracking: -0.01
+      heading_leading: 1.08
+      heading_case: none
+    fonts:
+    - family: Crimson Pro
+      weights:
+      - 600
+      - 800
+      italic: false
+    - family: Schibsted Grotesk
+      weights:
+      - 400
+      - 600
+      italic: false
+  literata-vietnam:
+    summary: A literary serif over a rounded, readable sans.
+    fits:
+    - community
+    - wellness
+    - advisory
+    tokens:
+      font_display: Literata, Georgia, serif
+      font_body: '''Be Vietnam Pro'', system-ui, sans-serif'
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 700
+      heading_tracking: -0.015
+      heading_leading: 1.1
+      heading_case: none
+    fonts:
+    - family: Literata
+      weights:
+      - 600
+      - 800
+      italic: false
+    - family: Be Vietnam Pro
+      weights:
+      - 400
+      - 600
+      italic: false
+  syne-epilogue:
+    summary: A wide, art-school display face over a flexible grotesque.
+    fits:
+    - creative
+    - software
+    tokens:
+      font_display: Syne, system-ui, sans-serif
+      font_body: Epilogue, system-ui, sans-serif
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 800
+      heading_tracking: -0.02
+      heading_leading: 1.0
+      heading_case: none
+    fonts:
+    - family: Syne
+      weights:
+      - 700
+      - 800
+      italic: false
+    - family: Epilogue
+      weights:
+      - 400
+      - 600
+      italic: false
+  unbounded-golos:
+    summary: Broad rounded display capitals over a tidy text sans.
+    fits:
+    - software
+    - creative
+    - retail
+    tokens:
+      font_display: Unbounded, system-ui, sans-serif
+      font_body: '''Golos Text'', system-ui, sans-serif'
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 700
+      heading_tracking: -0.02
+      heading_leading: 1.05
+      heading_case: none
+    fonts:
+    - family: Unbounded
+      weights:
+      - 600
+      - 800
+      italic: false
+    - family: Golos Text
+      weights:
+      - 400
+      - 600
+      italic: false
+  lexend:
+    summary: One highly readable family at two weights.
+    fits:
+    - community
+    - wellness
+    - software
+    - trades
+    tokens:
+      font_display: Lexend, system-ui, sans-serif
+      font_body: Lexend, system-ui, sans-serif
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 700
+      heading_tracking: -0.01
+      heading_leading: 1.1
+      heading_case: none
+    fonts:
+    - family: Lexend
+      weights:
+      - 400
+      - 700
+      italic: false
+  red-hat:
+    summary: A confident display cut over its matching text cut.
+    fits:
+    - software
+    - advisory
+    - trades
+    tokens:
+      font_display: '''Red Hat Display'', system-ui, sans-serif'
+      font_body: '''Red Hat Text'', system-ui, sans-serif'
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 900
+      heading_tracking: -0.02
+      heading_leading: 1.02
+      heading_case: none
+    fonts:
+    - family: Red Hat Display
+      weights:
+      - 700
+      - 900
+      italic: false
+    - family: Red Hat Text
+      weights:
+      - 400
+      - 500
+      italic: false
+  jakarta-mono:
+    summary: A geometric sans with a mono for figures and labels.
+    fits:
+    - software
+    - retail
+    - advisory
+    tokens:
+      font_display: '''Plus Jakarta Sans'', system-ui, sans-serif'
+      font_body: '''DM Mono'', ui-monospace, monospace'
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 800
+      heading_tracking: -0.025
+      heading_leading: 1.02
+      heading_case: none
+    fonts:
+    - family: Plus Jakarta Sans
+      weights:
+      - 400
+      - 800
+      italic: false
+    - family: DM Mono
+      weights:
+      - 400
+      - 500
+      italic: false
+  kanit-barlow:
+    summary: Sporty, squared headings over a plain grotesk.
+    fits:
+    - trades
+    - food
+    - software
+    tokens:
+      font_display: Kanit, system-ui, sans-serif
+      font_body: Barlow, system-ui, sans-serif
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 800
+      heading_tracking: -0.01
+      heading_leading: 1.0
+      heading_case: none
+    fonts:
+    - family: Kanit
+      weights:
+      - 600
+      - 800
+      italic: false
+    - family: Barlow
+      weights:
+      - 400
+      - 600
+      italic: false
+  saira-condensed:
+    summary: Engineered condensed capitals over the same family's text.
+    fits:
+    - trades
+    - software
+    tokens:
+      font_display: '''Saira Condensed'', ''Arial Narrow'', sans-serif'
+      font_body: Saira, system-ui, sans-serif
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 800
+      heading_tracking: 0.01
+      heading_leading: 0.98
+      heading_case: uppercase
+    fonts:
+    - family: Saira Condensed
+      weights:
+      - 600
+      - 800
+      italic: false
+    - family: Saira
+      weights:
+      - 400
+      - 500
+      italic: false
+  rubik-karla:
+    summary: Rounded heavy headings over a quirky text grotesque.
+    fits:
+    - retail
+    - food
+    - community
+    tokens:
+      font_display: Rubik, system-ui, sans-serif
+      font_body: Karla, system-ui, sans-serif
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 800
+      heading_tracking: -0.02
+      heading_leading: 1.02
+      heading_case: none
+    fonts:
+    - family: Rubik
+      weights:
+      - 500
+      - 800
+      italic: false
+    - family: Karla
+      weights:
+      - 400
+      - 600
+      italic: false
+  schibsted:
+    summary: One newsroom grotesk, heavy for headings.
+    fits:
+    - advisory
+    - software
+    - trades
+    tokens:
+      font_display: '''Schibsted Grotesk'', system-ui, sans-serif'
+      font_body: '''Schibsted Grotesk'', system-ui, sans-serif'
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 800
+      heading_tracking: -0.02
+      heading_leading: 1.02
+      heading_case: none
+    fonts:
+    - family: Schibsted Grotesk
+      weights:
+      - 400
+      - 800
+      italic: false
+  familjen-crimson:
+    summary: A sans headline over a serif text, the reverse of the usual pairing.
+    fits:
+    - advisory
+    - creative
+    - community
+    tokens:
+      font_display: '''Familjen Grotesk'', system-ui, sans-serif'
+      font_body: '''Crimson Pro'', Georgia, serif'
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 700
+      heading_tracking: -0.015
+      heading_leading: 1.05
+      heading_case: none
+    fonts:
+    - family: Familjen Grotesk
+      weights:
+      - 600
+      - 700
+      italic: false
+    - family: Crimson Pro
+      weights:
+      - 400
+      - 600
+      italic: false
+  space-mono-work:
+    summary: A typewriter mono for headings over a working sans.
+    fits:
+    - software
+    - creative
+    - trades
+    tokens:
+      font_display: '''Space Mono'', ui-monospace, monospace'
+      font_body: '''Work Sans'', system-ui, sans-serif'
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 700
+      heading_tracking: -0.02
+      heading_leading: 1.1
+      heading_case: none
+    fonts:
+    - family: Space Mono
+      weights:
+      - 400
+      - 700
+      italic: false
+    - family: Work Sans
+      weights:
+      - 400
+      - 600
+      italic: false
+  sanchez-rubik:
+    summary: A soft slab over a rounded grotesk.
+    fits:
+    - food
+    - trades
+    - community
+    tokens:
+      font_display: Sanchez, Rockwell, Georgia, serif
+      font_body: Rubik, system-ui, sans-serif
+      font_mono: ui-monospace, 'SFMono-Regular', Menlo, monospace
+      heading_weight: 400
+      heading_tracking: -0.01
+      heading_leading: 1.08
+      heading_case: none
+    fonts:
+    - family: Sanchez
+      weights:
+      - 400
+      italic: false
+    - family: Rubik
+      weights:
+      - 400
+      - 600
+      italic: false
