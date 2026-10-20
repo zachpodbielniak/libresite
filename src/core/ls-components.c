@@ -35,6 +35,8 @@ struct _LsComponents {
 	JsonObject *roles;	/* section role -> component names */
 	JsonObject *kits;	/* motion kit name -> kit; NULL without */
 	JsonObject *directions;	/* art direction name -> direction; NULL without */
+	JsonObject *headlines;	/* headline angle name -> description; NULL without */
+	JsonObject *subjects;	/* art subject name -> description; NULL without */
 	JsonNode *network_catalog;
 	JsonObject *networks;	/* social network -> {label, hosts, path}; NULL without networks.yaml */
 	GPtrArray *order;
@@ -1286,6 +1288,32 @@ ls_components_get_direction_brief(LsComponents *self, const gchar *name){
 	return direction != NULL ? ls_string(direction, "brief") : NULL;
 }
 
+/* content_angles: {headlines, subjects}, each name -> description;
+ * optional so archived libraries load. */
+static gboolean
+load_angles(LsComponents *self, JsonObject *root, GError **error){
+	JsonObject *block = member_object(root, "content_angles");
+	JsonObject *groups[2];
+	guint g;
+	if (!json_object_has_member(root, "content_angles"))
+		return TRUE;
+	groups[0] = member_object(block, "headlines");
+	groups[1] = member_object(block, "subjects");
+	if (block == NULL || !ls_object_keys(block, "|headlines|subjects|", NULL) || groups[0] == NULL || groups[1] == NULL ||
+		json_object_get_size(groups[0]) == 0 || json_object_get_size(groups[1]) == 0)
+		return catalog_invalid(error, "content_angles", "needs headlines and subjects"), FALSE;
+	for (g = 0; g < 2; g++) {
+		g_autoptr(GList) names = json_object_get_members(groups[g]);
+		GList *name;
+		for (name = names; name != NULL; name = name->next)
+			if (ls_string(groups[g], name->data) == NULL)
+				return catalog_invalid(error, name->data, "content angles map names to descriptions"), FALSE;
+	}
+	self->headlines = groups[0];
+	self->subjects = groups[1];
+	return TRUE;
+}
+
 LsComponents *
 ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 	g_autoptr(LsComponents) self = g_object_new(LS_TYPE_COMPONENTS, NULL);
@@ -1305,7 +1333,7 @@ ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 	if (self->catalog == NULL)
 		return NULL;
 	root = JSON_NODE_HOLDS_OBJECT(self->catalog) ? json_node_get_object(self->catalog) : NULL;
-	if (root == NULL || !ls_object_keys(root, "|version|looks|kinds|components|compositions|motion_kits|palette_generator|extra_variants|art_directions|", error) ||
+	if (root == NULL || !ls_object_keys(root, "|version|looks|kinds|components|compositions|motion_kits|palette_generator|extra_variants|art_directions|content_angles|", error) ||
 		(self->components = member_object(root, "components")) == NULL ||
 		(self->kinds = member_object(root, "kinds")) == NULL ||
 		(self->looks = member_object(root, "looks")) == NULL) {
@@ -1405,7 +1433,8 @@ ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 			return NULL;
 	}
 	if (!load_compositions(self, digest, root, error) || !load_kits(self, digest, root, error) ||
-		!load_generator(self, root, error) || !load_directions(self, digest, root, error))
+		!load_generator(self, root, error) || !load_directions(self, digest, root, error) ||
+		!load_angles(self, root, error))
 		return NULL;
 	self->plan_schema = build_plan_schema(self, error);
 	if (self->plan_schema == NULL || !load_themes(self, digest, error) ||
@@ -1461,6 +1490,45 @@ seed_composition(LsComponents *self, const gchar *seed){
 		return NULL;
 	look = ls_components_suggest_look(self, seed);
 	return deal_composition(self, seed, ls_string(look, "frame"), "composition");
+}
+
+/* One name of @group picked from @seed with @salt. */
+static const gchar *
+angle_pick(JsonObject *group, const gchar *seed, const gchar *salt){
+	g_autoptr(GList) names = group != NULL ? json_object_get_members(group) : NULL;
+	return names != NULL ? g_list_nth_data(names, seed_pick(seed, salt, g_list_length(names))) : NULL;
+}
+
+const gchar *
+ls_components_get_angle_description(LsComponents *self, const gchar *group, const gchar *name){
+	JsonObject *entries;
+	g_return_val_if_fail(LS_IS_COMPONENTS(self), NULL);
+	entries = g_strcmp0(group, "headline") == 0 ? self->headlines : g_strcmp0(group, "subject") == 0 ? self->subjects : NULL;
+	return entries != NULL && name != NULL ? ls_string(entries, name) : NULL;
+}
+
+JsonObject *
+ls_components_suggest_angles(LsComponents *self, const gchar *seed){
+	JsonObject *out;
+	const gchar *headline, *subject;
+	g_return_val_if_fail(LS_IS_COMPONENTS(self), NULL);
+	g_return_val_if_fail(seed != NULL, NULL);
+	out = json_object_new();
+	headline = angle_pick(self->headlines, seed, "angle:headline");
+	subject = angle_pick(self->subjects, seed, "angle:subject");
+	if (headline != NULL) {
+		JsonObject *entry = json_object_new();
+		json_object_set_string_member(entry, "name", headline);
+		json_object_set_string_member(entry, "description", ls_string(self->headlines, headline));
+		json_object_set_object_member(out, "headline", entry);
+	}
+	if (subject != NULL) {
+		JsonObject *entry = json_object_new();
+		json_object_set_string_member(entry, "name", subject);
+		json_object_set_string_member(entry, "description", ls_string(self->subjects, subject));
+		json_object_set_object_member(out, "subject", entry);
+	}
+	return out;
 }
 
 gchar *
@@ -1622,6 +1690,14 @@ ls_components_deal_structure(LsComponents *self, const gchar *seed){
 			json_object_set_string_member(structure, "opening", opening);
 		if (composition != NULL)
 			json_object_set_string_member(structure, "composition", composition);
+		/* And what its home headline and artwork take as their angle. */
+		{
+			g_autoptr(JsonObject) angles = ls_components_suggest_angles(self, seed);
+			if (member_object(angles, "headline") != NULL)
+				json_object_set_string_member(structure, "angle", ls_string(member_object(angles, "headline"), "name"));
+			if (member_object(angles, "subject") != NULL)
+				json_object_set_string_member(structure, "subject", ls_string(member_object(angles, "subject"), "name"));
+		}
 		/* And its art direction. */
 		if (self->directions != NULL) {
 			g_autoptr(GList) directions = json_object_get_members(self->directions);
@@ -1765,6 +1841,13 @@ check_structure(Problems *problems, LsComponents *self, JsonObject *plan){
 		gboolean known = FALSE;
 		if (g_str_equal(key->data, "variants"))
 			continue;
+		if (g_str_equal(key->data, "angle") || g_str_equal(key->data, "subject")) {
+			JsonObject *group = g_str_equal(key->data, "angle") ? self->headlines : self->subjects;
+			const gchar *chosen = ls_string(structure, key->data);
+			if (group == NULL || chosen == NULL || !json_object_has_member(group, chosen))
+				problem(problems, "structure.%s must be a content angle from the catalog", (const gchar *)key->data);
+			continue;
+		}
 		if (g_str_equal(key->data, "direction")) {
 			if (art_direction(self, ls_string(structure, "direction")) == NULL)
 				problem(problems, "structure.direction must be an art direction from the catalog");

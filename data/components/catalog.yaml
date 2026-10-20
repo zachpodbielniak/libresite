@@ -1563,3 +1563,26 @@ art_directions:
       summary: Drawn artwork as line drawings inside a fine offset outline with corner marks.
       look: {art: [line, blueprint], images: [plain]}
       brief: The site shows each artwork as a line drawing inside a fine outline. Use single-weight lines on an open background, with at most one accent fill.
+# Content angles (docs/components.org, "Content angles"). The builder deals
+# each unthemed or themed site one headline angle for its home page and one
+# subject for its artwork, from its seed; the plan, page and art writers are
+# told them. The words and drawings stay the model's.
+content_angles:
+  headlines:
+    promise: Lead with the one result the customer gets, in their own words, not a slogan.
+    problem: Name the trouble the customer has right now and say that it ends here.
+    place: Ground it in the kind of homes, yards or seasons the business works in, without inventing a place name.
+    craft: Show how the work is done, one specific technique or habit of the crew.
+    time: Lead with when, how quickly, how long it lasts or the season it is for, without promising a time that was not supplied.
+    question: Ask the question the customer is asking themselves, and answer it in the lede.
+    plain: Say exactly what the business does, in plain short words, no adjectives.
+    character: Let the business's personality speak, as its owner would say it across a kitchen table.
+  subjects:
+    tool: The trade's most characteristic tool, drawn close up.
+    material: The material the work is made of, as a texture or a close detail.
+    detail: One telling detail of the finished work, close up, never the whole house.
+    process: A moment of the work in progress, with hands and tools but no faces.
+    result: The finished result as the customer sees it from inside their home or yard.
+    pattern: A repeating pattern built from the trade's own shapes.
+    setting: The setting at a time of day, such as a yard at dusk or a room in morning light.
+    diagram: A clear cutaway or diagram of how the system works.
