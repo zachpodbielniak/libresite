@@ -30,9 +30,10 @@ static JsonObject *
 directions(void){
 	static JsonNode *node = NULL;
 	if (node == NULL) {
-		g_autofree gchar *text = NULL;
-		g_assert_true(g_file_get_contents("data/components/catalog.yaml", &text, NULL, NULL));
-		node = ls_yaml_parse(text, NULL);
+		/* As loaded, so entries from the wider block are there too. */
+		g_autoptr(LsComponents) library = ls_components_new(NULL);
+		g_assert_nonnull(library);
+		node = json_node_ref(ls_components_get_catalog(library));
 		g_assert_nonnull(node);
 	}
 	return json_object_get_object_member(json_object_get_object_member(json_node_get_object(node), "art_directions"),

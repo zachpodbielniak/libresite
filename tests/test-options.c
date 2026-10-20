@@ -25,13 +25,57 @@ load(const gchar *path){
 	return ls_json_parse(text, NULL);
 }
 
+/* Copies every member of @from into @into. */
+static void
+join(JsonObject *into, JsonObject *from){
+	g_autoptr(GList) names = json_object_get_members(from);
+	GList *name;
+	for (name = names; name != NULL; name = name->next)
+		json_object_set_member(into, name->data, json_node_copy(json_object_get_member(from, name->data)));
+}
+
+/* The catalog with the wider block joined where the library joins it, so
+ * every wider option gets its site too. */
 static JsonObject *
 catalog(void){
 	static JsonNode *node = NULL;
 	if (node == NULL) {
 		g_autofree gchar *text = NULL;
+		JsonObject *root, *wider;
 		g_assert_true(g_file_get_contents("data/components/catalog.yaml", &text, NULL, NULL));
 		node = ls_yaml_parse(text, NULL);
+		root = json_node_get_object(node);
+		wider = json_object_has_member(root, "wider") ? json_object_get_object_member(root, "wider") : NULL;
+		if (wider != NULL && json_object_has_member(wider, "looks")) {
+			JsonObject *looks = json_object_get_object_member(wider, "looks");
+			g_autoptr(GList) axes = json_object_get_members(looks);
+			GList *axis;
+			if (!json_object_has_member(root, "extra_looks"))
+				json_object_set_object_member(root, "extra_looks", json_object_new());
+			for (axis = axes; axis != NULL; axis = axis->next) {
+				JsonObject *extra = json_object_get_object_member(root, "extra_looks");
+				if (!json_object_has_member(extra, axis->data))
+					json_object_set_object_member(extra, axis->data, json_object_new());
+				join(json_object_get_object_member(extra, axis->data), json_object_get_object_member(looks, axis->data));
+			}
+		}
+		if (wider != NULL && json_object_has_member(wider, "openings")) {
+			JsonObject *openings = json_object_get_object_member(wider, "openings");
+			g_autoptr(GList) owners = json_object_get_members(openings);
+			GList *owner;
+			for (owner = owners; owner != NULL; owner = owner->next)
+				join(json_object_get_object_member(json_object_get_object_member(json_object_get_object_member(root,
+					"components"), owner->data), "variants"), json_object_get_object_member(openings, owner->data));
+		}
+		{
+			const gchar *joins[][3] = {{"layouts", "compositions", "layouts"}, {"kits", "motion_kits", "kits"},
+				{"directions", "art_directions", "directions"}};
+			guint j;
+			for (j = 0; wider != NULL && j < G_N_ELEMENTS(joins); j++)
+				if (json_object_has_member(wider, joins[j][0]))
+					join(json_object_get_object_member(json_object_get_object_member(root, joins[j][1]), joins[j][2]),
+						json_object_get_object_member(wider, joins[j][0]));
+		}
 	}
 	return json_node_get_object(node);
 }

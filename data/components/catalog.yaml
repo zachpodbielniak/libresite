@@ -1658,3 +1658,19 @@ extra_looks:
   images:
     blob: Pictures in a soft organic shape.
     tilt: Pictures turned slightly, one way then the other.
+# Wider option pools (docs/components.org, "Sameness under a tenth"). Each
+# list joins the block it names when the library loads and is dealt like
+# the rest: looks join their axes (look-AXIS-VALUE.css), openings join a
+# home opening component (COMPONENT--VARIANT.css, dealt through the
+# compositions that list it), layouts the home compositions, kits the
+# motion kits, directions the art directions, and forms the section form
+# families, with their fields.
+wider:
+  forms:
+    offer: [directory]
+    process: [split]
+    practical: [facts]
+  fields:
+    directory: {title: title, body: note}
+    split: {list: panels, title: heading, body: body}
+    facts: {title: label, body: value}

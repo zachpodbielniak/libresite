@@ -1370,6 +1370,123 @@ load_forms(LsComponents *self, JsonObject *root, GError **error){
 	return TRUE;
 }
 
+/* Joins @extra, a map of look axes to new values with descriptions, to the
+ * catalog's axes, each value with its look-AXIS-VALUE.css. @owner holds
+ * @name; without the member nothing joins. */
+static gboolean
+join_looks(LsComponents *self, GChecksum *digest, JsonObject *owner, const gchar *name, JsonObject *extra, GError **error){
+	g_autoptr(GList) axes = NULL;
+	GList *axis;
+	if (owner == NULL || !json_object_has_member(owner, name))
+		return TRUE;
+	if (extra == NULL)
+		return catalog_invalid(error, name, "must map look axes to new values"), FALSE;
+	axes = json_object_get_members(extra);
+	for (axis = axes; axis != NULL; axis = axis->next) {
+		JsonObject *values = member_object(member_object(self->looks, axis->data), "values");
+		JsonObject *added = member_object(extra, axis->data);
+		g_autoptr(GList) fresh = added != NULL ? json_object_get_members(added) : NULL;
+		GList *value;
+		if (values == NULL || added == NULL)
+			return catalog_invalid(error, axis->data, "extra looks extend catalog look axes"), FALSE;
+		for (value = fresh; value != NULL; value = value->next) {
+			g_autofree gchar *file = g_strdup_printf("look-%s-%s.css", (const gchar *)axis->data, (const gchar *)value->data);
+			g_autofree gchar *style = NULL;
+			if (json_object_has_member(values, value->data) || ls_string(added, value->data) == NULL)
+				return catalog_invalid(error, axis->data, "an extra look value is new and has a description"), FALSE;
+			style = load_resource(self, digest, file, TRUE, error);
+			if (style == NULL)
+				return FALSE;
+			json_object_set_string_member(values, value->data, ls_string(added, value->data));
+		}
+	}
+	return TRUE;
+}
+
+/* The wider block's home compositions, motion kits, art directions and
+ * section forms join their own blocks, which then check them as their
+ * own: each name is new, and each form joins one family. */
+static gboolean
+widen_blocks(JsonObject *root, GError **error){
+	JsonObject *wider = member_object(root, "wider");
+	const gchar *joins[][3] = {{"layouts", "compositions", "layouts"}, {"kits", "motion_kits", "kits"},
+		{"directions", "art_directions", "directions"}, {"fields", "section_forms", "fields"}};
+	g_autoptr(GList) names = NULL;
+	GList *name;
+	guint j, i;
+	if (!json_object_has_member(root, "wider"))
+		return TRUE;
+	if (wider == NULL || !ls_object_keys(wider, "|looks|openings|layouts|kits|directions|forms|fields|", NULL))
+		return catalog_invalid(error, "wider", "holds looks, openings, layouts, kits, directions, forms and fields"), FALSE;
+	for (j = 0; j < G_N_ELEMENTS(joins); j++) {
+		JsonObject *added = member_object(wider, joins[j][0]);
+		JsonObject *into = member_object(member_object(root, joins[j][1]), joins[j][2]);
+		if (!json_object_has_member(wider, joins[j][0]))
+			continue;
+		if (added == NULL || into == NULL)
+			return catalog_invalid(error, joins[j][0], "wider entries join an existing block"), FALSE;
+		names = json_object_get_members(added);
+		for (name = names; name != NULL; name = name->next) {
+			if (json_object_has_member(into, name->data))
+				return catalog_invalid(error, name->data, "a wider entry has a new name"), FALSE;
+			json_object_set_member(into, name->data, json_node_copy(json_object_get_member(added, name->data)));
+		}
+		g_list_free(g_steal_pointer(&names));
+	}
+	if (json_object_has_member(wider, "forms")) {
+		JsonObject *added = member_object(wider, "forms");
+		JsonObject *families = member_object(member_object(root, "section_forms"), "families");
+		if (added == NULL || families == NULL)
+			return catalog_invalid(error, "forms", "wider forms join existing section form families"), FALSE;
+		names = json_object_get_members(added);
+		for (name = names; name != NULL; name = name->next) {
+			JsonArray *more = member_array(added, name->data), *family = member_array(families, name->data);
+			if (more == NULL || family == NULL)
+				return catalog_invalid(error, name->data, "wider forms join existing section form families"), FALSE;
+			for (i = 0; i < json_array_get_length(more); i++)
+				json_array_add_element(family, json_node_copy(json_array_get_element(more, i)));
+		}
+	}
+	return TRUE;
+}
+
+/* The wider block's openings: new variants of the home opening components,
+ * each restyling the component's own markup in COMPONENT--VARIANT.css and
+ * dealt through the compositions that list it. */
+static gboolean
+join_openings(LsComponents *self, GChecksum *digest, JsonObject *root, GError **error){
+	JsonObject *wider = member_object(root, "wider");
+	JsonObject *openings = member_object(wider, "openings");
+	JsonArray *home = member_array(member_object(self->kinds, "home"), "openings");
+	g_autoptr(GList) owners = NULL;
+	GList *owner;
+	if (wider == NULL || !json_object_has_member(wider, "openings"))
+		return TRUE;
+	if (openings == NULL)
+		return catalog_invalid(error, "openings", "must map home openings to new variants"), FALSE;
+	owners = json_object_get_members(openings);
+	for (owner = owners; owner != NULL; owner = owner->next) {
+		JsonObject *variants = member_object(member_object(self->components, owner->data), "variants");
+		JsonObject *added = member_object(openings, owner->data);
+		g_autoptr(GList) values = added != NULL ? json_object_get_members(added) : NULL;
+		GList *value;
+		if (variants == NULL || added == NULL || !json_list_has(home, owner->data) || g_str_equal(owner->data, "custom"))
+			return catalog_invalid(error, owner->data, "wider openings extend the home opening components"), FALSE;
+		for (value = values; value != NULL; value = value->next) {
+			g_autofree gchar *file = g_strdup_printf("%s--%s.css", (const gchar *)owner->data, (const gchar *)value->data);
+			g_autofree gchar *style = NULL;
+			if (json_object_has_member(variants, value->data) || ls_string(added, value->data) == NULL)
+				return catalog_invalid(error, owner->data, "a wider opening is new and has a description"), FALSE;
+			style = load_resource(self, digest, file, TRUE, error);
+			if (style == NULL)
+				return FALSE;
+			json_object_set_string_member(variants, value->data, ls_string(added, value->data));
+			g_ptr_array_add(self->extras, g_strdup_printf("%s--%s", (const gchar *)owner->data, (const gchar *)value->data));
+		}
+	}
+	return TRUE;
+}
+
 LsComponents *
 ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 	g_autoptr(LsComponents) self = g_object_new(LS_TYPE_COMPONENTS, NULL);
@@ -1389,7 +1506,7 @@ ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 	if (self->catalog == NULL)
 		return NULL;
 	root = JSON_NODE_HOLDS_OBJECT(self->catalog) ? json_node_get_object(self->catalog) : NULL;
-	if (root == NULL || !ls_object_keys(root, "|version|looks|kinds|components|compositions|motion_kits|palette_generator|extra_variants|art_directions|content_angles|section_forms|extra_looks|", error) ||
+	if (root == NULL || !ls_object_keys(root, "|version|looks|kinds|components|compositions|motion_kits|palette_generator|extra_variants|art_directions|content_angles|section_forms|extra_looks|wider|", error) ||
 		(self->components = member_object(root, "components")) == NULL ||
 		(self->kinds = member_object(root, "kinds")) == NULL ||
 		(self->looks = member_object(root, "looks")) == NULL) {
@@ -1399,33 +1516,13 @@ ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 	}
 	if (!check_look_definitions(self->looks, error))
 		return NULL;
-	/* Extra look values join their axes, each with its own styles; the block
-	 * is optional so archived libraries load as before. */
-	if (json_object_has_member(root, "extra_looks")) {
-		JsonObject *extra = member_object(root, "extra_looks");
-		g_autoptr(GList) axes = extra != NULL ? json_object_get_members(extra) : NULL;
-		GList *axis;
-		if (extra == NULL)
-			return catalog_invalid(error, "extra_looks", "must map look axes to new values"), NULL;
-		for (axis = axes; axis != NULL; axis = axis->next) {
-			JsonObject *values = member_object(member_object(self->looks, axis->data), "values");
-			JsonObject *added = member_object(extra, axis->data);
-			g_autoptr(GList) fresh = added != NULL ? json_object_get_members(added) : NULL;
-			GList *value;
-			if (values == NULL || added == NULL)
-				return catalog_invalid(error, axis->data, "extra looks extend catalog look axes"), NULL;
-			for (value = fresh; value != NULL; value = value->next) {
-				g_autofree gchar *file = g_strdup_printf("look-%s-%s.css", (const gchar *)axis->data, (const gchar *)value->data);
-				g_autofree gchar *style = NULL;
-				if (json_object_has_member(values, value->data) || ls_string(added, value->data) == NULL)
-					return catalog_invalid(error, axis->data, "an extra look value is new and has a description"), NULL;
-				style = load_resource(self, digest, file, TRUE, error);
-				if (style == NULL)
-					return NULL;
-				json_object_set_string_member(values, value->data, ls_string(added, value->data));
-			}
-		}
-	}
+	/* Extra look values join their axes, each with its own styles; the
+	 * blocks are optional so archived libraries load as before. */
+	if (!join_looks(self, digest, root, "extra_looks", member_object(root, "extra_looks"), error) ||
+		!join_looks(self, digest, member_object(root, "wider"), "looks",
+			member_object(member_object(root, "wider"), "looks"), error) ||
+		!widen_blocks(root, error))
+		return NULL;
 	for (i = 0; i < G_N_ELEMENTS(shared); i++) {
 		g_autofree gchar *text = load_resource(self, digest, shared[i], TRUE, error);
 		if (text == NULL)
@@ -1483,6 +1580,8 @@ ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 			}
 		}
 	}
+	if (!join_openings(self, digest, root, error))
+		return NULL;
 	/* Page kinds name only real components; home is the one hero kind. */
 	{
 		g_autoptr(GList) kind_names = json_object_get_members(self->kinds);
@@ -1525,6 +1624,12 @@ ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 		return NULL;
 	self->digest = g_strdup(g_checksum_get_string(digest));
 	return (LsComponents *)g_steal_pointer(&self);
+}
+
+JsonNode *
+ls_components_get_catalog(LsComponents *self){
+	g_return_val_if_fail(LS_IS_COMPONENTS(self), NULL);
+	return self->catalog;
 }
 
 const gchar *
@@ -4711,16 +4816,28 @@ ls_components_signature_overlap(JsonObject *a, JsonObject *b){
 	return string_set_overlap(sa, sb);
 }
 
-/* The fingerprint a seed deals, before any model has chosen anything. */
+/* The fingerprint a seed deals, before any model has chosen anything: the
+ * home page is the dealt forms of its families and the dealt extra, or the
+ * identity's home sequence for a library without section forms. */
 static JsonObject *
 dealt_fingerprint(LsComponents *self, const gchar *seed, const gchar *sector){
 	g_autoptr(JsonObject) look = ls_components_suggest_look(self, seed);
 	g_autoptr(JsonObject) structure = ls_components_deal_structure(self, seed);
 	g_autoptr(JsonObject) identity = ls_components_suggest_identity(self, seed, sector);
 	g_autofree gchar *opening = ls_components_suggest_opening(self, seed);
+	g_autoptr(JsonArray) home = json_array_new();
+	JsonObject *forms = member_object(structure, "forms");
+	JsonArray *extras = member_array(structure, "extras");
+	const gchar *families[] = {"offer", "process", "practical", "close"};
+	guint i;
+	for (i = 0; forms != NULL && i < G_N_ELEMENTS(families); i++)
+		if (ls_string(forms, families[i]) != NULL)
+			json_array_add_string_element(home, ls_string(forms, families[i]));
+	for (i = 0; extras != NULL && i < json_array_get_length(extras); i++)
+		json_array_add_string_element(home, json_array_get_string_element(extras, i));
 	return fingerprint_new(look, structure, member_object(member_object(identity, "palette"), "tokens"),
 		member_object(member_object(identity, "type"), "tokens"), opening,
-		member_array(member_object(identity, "home"), "sections"));
+		forms != NULL ? home : member_array(member_object(identity, "home"), "sections"));
 }
 
 gchar *
@@ -4735,7 +4852,7 @@ ls_components_choose_seed(LsComponents *self, const gchar *seed, const gchar *se
 		*closest = 0;
 	if (avoid == NULL || json_array_get_length(avoid) == 0)
 		return g_strdup(seed);
-	for (attempt = 0; attempt < 32; attempt++) {
+	for (attempt = 0; attempt < LS_COMPONENTS_DEALS; attempt++) {
 		g_autofree gchar *candidate = attempt == 0 ? g_strdup(seed) : g_strdup_printf("%s\n~%u", seed, attempt);
 		g_autoptr(JsonObject) dealt = dealt_fingerprint(self, candidate, sector);
 		gdouble worst = 0;
@@ -4749,8 +4866,6 @@ ls_components_choose_seed(LsComponents *self, const gchar *seed, const gchar *se
 			g_free(best);
 			best = g_steal_pointer(&candidate);
 		}
-		if (worst < LS_COMPONENTS_TOO_CLOSE)
-			break;
 	}
 	if (closest != NULL)
 		*closest = best_score;

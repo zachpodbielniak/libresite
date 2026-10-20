@@ -44,9 +44,10 @@ direction_choices(JsonNode *plan, const gchar *axis){
 	JsonObject *structure = json_object_get_object_member(json_node_get_object(plan), "structure");
 	JsonObject *directions, *direction, *look;
 	if (catalog == NULL) {
-		g_autofree gchar *text = NULL;
-		g_assert_true(g_file_get_contents("data/components/catalog.yaml", &text, NULL, NULL));
-		catalog = ls_yaml_parse(text, NULL);
+		/* As loaded, so entries from the wider block are there too. */
+		g_autoptr(LsComponents) library = ls_components_new(NULL);
+		g_assert_nonnull(library);
+		catalog = json_node_ref(ls_components_get_catalog(library));
 	}
 	directions = json_object_get_object_member(json_object_get_object_member(json_node_get_object(catalog), "art_directions"),
 		"directions");
@@ -64,9 +65,10 @@ override(JsonNode *plan, const gchar *axis){
 	JsonObject *structure = json_object_get_object_member(json_node_get_object(plan), "structure");
 	JsonObject *kits, *kit, *own;
 	if (catalog == NULL) {
-		g_autofree gchar *text = NULL;
-		g_assert_true(g_file_get_contents("data/components/catalog.yaml", &text, NULL, NULL));
-		catalog = ls_yaml_parse(text, NULL);
+		/* As loaded, so entries from the wider block are there too. */
+		g_autoptr(LsComponents) library = ls_components_new(NULL);
+		g_assert_nonnull(library);
+		catalog = json_node_ref(ls_components_get_catalog(library));
 	}
 	kits = json_object_get_object_member(json_object_get_object_member(json_node_get_object(catalog), "motion_kits"), "kits");
 	kit = json_object_has_member(structure, "kit") ? json_object_get_object_member(kits, json_object_get_string_member(structure, "kit")) : NULL;
@@ -84,9 +86,10 @@ composition_look(const gchar *composition){
 	static JsonNode *catalog = NULL;
 	JsonObject *layout;
 	if (catalog == NULL) {
-		g_autofree gchar *text = NULL;
-		g_assert_true(g_file_get_contents("data/components/catalog.yaml", &text, NULL, NULL));
-		catalog = ls_yaml_parse(text, NULL);
+		/* As loaded, so entries from the wider block are there too. */
+		g_autoptr(LsComponents) library = ls_components_new(NULL);
+		g_assert_nonnull(library);
+		catalog = json_node_ref(ls_components_get_catalog(library));
 	}
 	layout = json_object_get_object_member(json_object_get_object_member(json_object_get_object_member(
 		json_node_get_object(catalog), "compositions"), "layouts"), composition);
