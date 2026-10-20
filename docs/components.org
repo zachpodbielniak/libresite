@@ -708,3 +708,32 @@ bash tests/motion.sh "$WEBDRIVER_URL" build/motion
 =tests/motion.sh= opens each kit at 390 and 1440 px in two passes. With reduced motion, after scrolling through the page, =document.getAnimations()= must be empty, the marquee band hidden and the figures their supplied text; without it, something must animate, the figures must end on their supplied text and no page may scroll sideways. On 2026-10-20 all 24 loads passed in headless Firefox (1 to 6 animations per kit with motion, none with reduced motion), and a figure sampled mid-count read 821 on its way to 1,240 with 1,240 as its accessible name. Firefox ran no scroll-driven parts, which are behind a preference there; they were not checked in another browser.
 
 The sameness score barely moves (structural 0.427 to 0.426, overall 0.393 to 0.392, screens 0.142 and 0.262): the plans, home pages and still screenshots it compares do not show motion. The fingerprint counts the kit in place of the stock motion it replaces, since every kit sets that to none. The ten briefs drew five of the six kits. The home composition browser check still passes with the kits in place.
+
+* Type and colour range
+
+With the seed deciding the palette and type (see [[*The seed decides][the seed decides]]), the range of those choices became the limit: a trades site drew from six palettes and three type pairings, so ten trades sites shared colours and type often. Two changes widen it.
+
+- Curated pairings: =data/components/pairings.yaml= adds 34 font pairings (=pairings=) to the typefaces of =identities.yaml=, in the same shape (summary, sector =fits=, the seven type tokens, up to three Bunny Fonts families). They join the typefaces at load and are checked with them: a valid plan with each pairing over a palette, no house default (no Fraunces), no repeated names. Every sector now has at least eight pairings and trades has 22; the library has 49 in all. The pairings range from poster capitals (Bebas Neue, Big Shoulders Display, Oswald), slabs (Roboto Slab, Bitter, Arvo, Rokkitt, Alfa Slab One, Sanchez) and grotesques with character (Bricolage Grotesque, Syne, Unbounded, Familjen Grotesk) to book and editorial serifs (Libre Baskerville, EB Garamond, Spectral, Literata, Bodoni Moda, Gloock, Instrument Serif, Young Serif). An archived library without the file keeps its own typefaces.
+- Generated palettes: =palette_generator= at the end of =catalog.yaml= sets =share= (70): that percent of sites get a palette built from their seed by =ls_components_suggest_identity()= instead of a curated one that fits their sector. The generator picks a mode by weight (light 50, dark 25, tinted 25), a base hue anywhere on the wheel and an accent hue at one of the =harmonies= offsets (complementary, split either side, triadic, analogous, on either side), and builds the seven colours in OKLCH, pulling chroma in until each fits sRGB. The contrast guard then steps ink and muted away from the paper until each reads at 4.6:1 on both paper and surface, gives the accent whichever of white, ink and paper reads best on it and steps the accent's lightness until that reaches 4.6:1, and turns the accent a third of the wheel if the result is the house default. The palette is named =generated-= and eight hex digits of the seed hash, with a one-line summary (mode, paper and accent hue names, harmony) for the plan prompt. Plans still pass the plan contrast checks and plan repair afterwards; the guard's 4.6 leaves room for rounding to =#rrggbb=. Without the block only curated palettes are dealt.
+
+=tests/test-type-colour.c= checks that the library has at least 40 pairings with eight per sector and loads only families named first in a stack; that over 1600 seeds across all sectors 60 to 80 percent of palettes are generated, every one deterministic, unique, AA on all five text pairs, its plan valid and its own identity, at least 15 percent dark and half light, with accents in all twelve 30-degree hue bands; and that the ten sameness briefs get ten different palettes and at least seven different pairings.
+
+** Sameness with the wider range
+
+Measured as before on 2026-10-20:
+
+| Measure | Motion kits | Type and colour | Limit |
+|---------+-------------+-----------------+-------|
+| structural mean | 0.426 | 0.359 | 0.35 |
+| structural worst pair | 0.712 | 0.532 | 0.55 |
+| look | 0.25 | 0.25 | |
+| order | 0.71 | 0.71 | |
+| mix | 0.47 | 0.47 | |
+| palette | 0.40 | 0.25 | |
+| type | 0.31 | 0.07 | |
+| screens at 390 | 0.142 | 0.178 | 0.2 |
+| screens at 1440 | 0.262 | 0.329 | 0.2 |
+| overall mean | 0.392 | 0.343 | 0.35 |
+| overall worst pair | 0.616 | 0.488 | |
+
+The structural pair limit now holds, and the overall mean is under its limit; the structural mean is just over. The screen likeness rose, most at 1440: with dark and tinted pages in the set, more pages share large dark or tinted areas in the same places, which the squashed grey grid scores as alike even though the colours differ (a light and a dark page are both "flat field with a dark band"). The ten home pages are visibly different in colour and type now; what still repeats is the fixture's own section run and artwork, which the remaining children (component variants and art direction) address.
