@@ -103,6 +103,67 @@ test_photo_opening(void){
 		g_error("photo sites open with only %u openings", g_hash_table_size(seen));
 }
 
+/* Whether @block's @name list holds an opening its picture leads. */
+static gboolean
+any_led(JsonObject *block, const gchar *name){
+	JsonArray *openings = block != NULL && json_object_has_member(block, name)
+		? json_object_get_array_member(block, name) : NULL;
+	guint i;
+	for (i = 0; openings != NULL && i < json_array_get_length(openings); i++)
+		if (is_picture_led(json_array_get_string_element(openings, i)))
+			return TRUE;
+	return FALSE;
+}
+
+/* Whether @composition offers an opening its picture leads: its own
+ * openings, or those the bold block deals into it. */
+static gboolean
+offers_led(const gchar *composition){
+	static JsonNode *catalog = NULL;
+	const gchar *blocks[] = {"compositions", "wider"};
+	JsonObject *root;
+	guint b;
+	if (catalog == NULL) {
+		g_autofree gchar *text = NULL;
+		g_assert_true(g_file_get_contents("data/components/catalog.yaml", &text, NULL, NULL));
+		catalog = ls_yaml_parse(text, NULL);
+	}
+	root = json_node_get_object(catalog);
+	for (b = 0; b < G_N_ELEMENTS(blocks); b++) {
+		JsonObject *layouts = object(object(root, blocks[b]), "layouts");
+		if (json_object_has_member(layouts, composition) && any_led(object(layouts, composition), "openings"))
+			return TRUE;
+	}
+	return any_led(object(object(root, "bold"), "deal_in"), composition);
+}
+
+/* A photo site whose composition offers no picture-led opening picks from
+ * every such home opening, not only the first component that has one. */
+static void
+test_photo_fallback(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(GHashTable) kinds = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+	guint s, fell = 0;
+	for (s = 0; s < 400; s++) {
+		g_autofree gchar *seed = g_strdup_printf("fallback-%u\nA business %u.", s, s);
+		g_autoptr(JsonNode) plan = dealt_plan(components, seed, TRUE);
+		g_autoptr(JsonNode) bare = dealt_plan(components, seed, FALSE);
+		JsonObject *structure = object(json_node_get_object(plan), "structure");
+		const gchar *composition = json_object_get_string_member_with_default(structure, "composition", NULL);
+		const gchar *opening = json_object_get_string_member(structure, "opening");
+		/* Only sites whose own opening and composition offer no picture
+		 * fall back to the pool. */
+		if ((composition != NULL && offers_led(composition)) ||
+			is_picture_led(json_object_get_string_member(object(json_node_get_object(bare), "structure"), "opening")))
+			continue;
+		fell++;
+		g_hash_table_add(kinds, g_strndup(opening, (gsize)(strchr(opening, '/') - opening)));
+	}
+	g_assert_cmpuint(fell, >=, 10);
+	if (g_hash_table_size(kinds) < 2)
+		g_error("%u fallback photo sites all open with one component", fell);
+}
+
 /* Supplied photos keep their colour: no site is dealt a black-and-white or
  * two-tone photo treatment, and the printed-ink artwork treatment leaves
  * photos alone. */
@@ -262,6 +323,7 @@ int
 main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
 	g_test_add_func("/wow/photo-opening", test_photo_opening);
+	g_test_add_func("/wow/photo-fallback", test_photo_fallback);
 	g_test_add_func("/wow/photo-colour", test_photo_colour);
 	g_test_add_func("/wow/gaps", test_gaps);
 	g_test_add_func("/wow/photo-twice", test_photo_twice);
