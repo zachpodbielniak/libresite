@@ -1,0 +1,18 @@
+<div class="wrap">
+{{#heading}}<div class="section-head">
+<{{htag}} id="{{id}}-h">{{{heading_html}}}</{{htag}}>
+{{#intro}}<div class="prose">{{{intro}}}</div>
+{{/intro}}</div>
+{{/heading}}<div class="jobsheet__panel">
+<ol class="jobsheet__sheet" role="list">
+{{#items}}<li class="jobsheet__row">
+<span class="jobsheet__n" aria-hidden="true">{{n2}}</span>
+<div class="jobsheet__what">
+<{{subtag}} class="jobsheet__title">{{title}}</{{subtag}}>
+{{#body}}<div class="prose">{{{body}}}</div>
+{{/body}}</div>
+<span class="jobsheet__tick" aria-hidden="true"></span>
+</li>
+{{/items}}</ol>
+</div>
+</div>

@@ -1,0 +1,23 @@
+/* volumes: offers as chapters, a numbered index of them first, then each
+ * under a huge light title with its words beside it. Rebuilt from scratch
+ * after docs/inspiration.org, sections 20. */
+.volumes__index { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); margin: 0 0 var(--space-7); padding: 0; list-style: none; }
+.volumes__index a {
+	display: inline-flex; align-items: center; gap: var(--space-2); min-height: 44px;
+	font-family: var(--font-display); font-weight: 600; text-decoration: none; border-bottom: var(--border-strong) solid var(--line);
+}
+.volumes__index a:hover { border-color: var(--ls-accent); color: inherit; }
+.volumes__in { font-family: var(--font-mono); font-size: var(--step--1); color: var(--accent-text); }
+.volumes__chapter { display: grid; gap: var(--space-3) var(--space-6); padding-block: var(--space-6); border-top: var(--border) solid var(--line-strong); scroll-margin-top: var(--space-6); }
+.volumes__n { font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+.volumes__title { margin: 0; font-size: clamp(2.2rem, 7cqi, min(5.5rem, var(--max-width) * 0.07)); font-weight: 300; line-height: 0.98; letter-spacing: -0.03em; text-transform: uppercase; }
+.volumes__more { margin: var(--space-4) 0 0; }
+.volumes__more a { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; }
+.volumes--bold .volumes__chapter { padding-inline: clamp(var(--space-4), 4cqi, var(--space-7)); border: 0; background: var(--surface); border-radius: max(var(--radius), 0.5rem); }
+.volumes--bold .volumes__chapter + .volumes__chapter { margin-top: var(--space-3); }
+.volumes--bold .volumes__title { font-weight: 900; text-transform: none; letter-spacing: -0.035em; }
+@container (min-width: 56rem) {
+	.volumes__chapter { grid-template-columns: 4rem minmax(0, 1.4fr) minmax(0, 1fr); align-items: start; }
+	.volumes__n { padding-top: 0.9em; }
+	.volumes__text { padding-top: 0.6em; }
+}

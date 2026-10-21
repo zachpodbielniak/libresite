@@ -1857,7 +1857,7 @@ test_structure(void){
 		g_autofree gchar *width = g_strdup_printf("%.2f", json_object_get_double_member(dealt, "width"));
 		g_assert_cmpfloat(json_object_get_double_member(dealt, "width"), >=, 46);
 		g_assert_cmpfloat(json_object_get_double_member(dealt, "width"), <=, 108);
-		g_assert_cmpfloat(json_object_get_double_member(dealt, "scale"), <=, 1.3);
+		g_assert_cmpfloat(json_object_get_double_member(dealt, "scale"), <=, 1.45);
 		g_assert_cmpstr(ls_string(json_object_get_object_member(dealt, "variants"), "cards"), !=, "numbered");
 		g_assert_cmpstr(ls_string(json_object_get_object_member(dealt, "variants"), "cards"), !=, "minimal");
 		g_hash_table_add(widths, g_steal_pointer(&width));

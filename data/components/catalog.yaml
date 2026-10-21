@@ -1909,3 +1909,202 @@ wider:
       order: [process, practical, story, offer, proof]
       avoid: [center]
       css: true
+# Bold openings and forms (docs/components.org, "Bold openings and forms").
+# Rebuilt from scratch after the survey in docs/inspiration.org; nothing is
+# copied. openings join the home opening components like the wider block's
+# (COMPONENT--VARIANT.css), pictures says what each does with a picture
+# (needs, shows or hides), and deal_in adds them to existing compositions so
+# they open a good share of sites. components are new section components
+# (NAME.html, NAME.css), each joining a section form family (forms, fields)
+# and a composition role (roles). weights replace the generated palette
+# modes' weights, toward bold colour fields and deep grounds.
+bold:
+  openings:
+    cover:
+      flood: The whole first screen in the accent, the headline in huge capitals in the accent's ink and the picture knocked back to a dark print beneath it.
+      wordmark: The picture full width, the headline set huge across its foot on a band of the page colour that bites into it.
+      halves: Half the screen a flat block of the accent holding a heavy headline, the other half the picture at full height.
+      tint: The picture washed entirely in the accent, a heavy headline in the accent's ink over it.
+      stub: The picture full-bleed with the words on a ticket stub pinned in its top corner, ruled and notched.
+      cinema: The picture as a wide cinema screen between ink bars, the headline below it in spaced capitals like a title card.
+    hero:
+      arch: A centred headline on the page colour, the picture rising from below it in a tall arch.
+      brutal: The headline, words, buttons and picture as tiles in heavy ink frames with hard offset shadows, in the accent and the surface.
+      kinetic: A headline set very large that rises out of a mask on arrival, its emphasis swept in the accent, then drifts back as the page scrolls.
+      breakout: The words on an ink block, the picture breaking out above the block's top edge, with a drawn arrow pointing at the first button.
+    poster:
+      fold: The headline so large it runs past the first screen, the words and buttons small in the corner above it.
+    manifesto:
+      stepped: The lines in large capitals, each stepped further in than the one above, every second one in the accent.
+  pictures:
+    cover/flood: needs
+    cover/wordmark: needs
+    cover/halves: needs
+    cover/tint: needs
+    cover/stub: needs
+    cover/cinema: needs
+    hero/arch: needs
+    hero/brutal: shows
+    hero/kinetic: shows
+    hero/breakout: needs
+    poster/fold: hides
+  deal_in:
+    split: [cover/halves, hero/breakout, hero/arch]
+    full-bleed: [cover/flood, cover/wordmark, cover/cinema]
+    editorial: [poster/fold, manifesto/stepped, hero/kinetic]
+    bento: [hero/brutal, cover/stub, cover/tint]
+    oversized-type: [poster/fold, hero/kinetic, cover/wordmark]
+    side-rail: [hero/kinetic, manifesto/stepped, hero/arch]
+    stacked-cards: [hero/brutal, cover/stub, hero/breakout]
+    zigzag: [cover/halves, hero/breakout, cover/tint]
+    banded: [cover/flood, cover/tint, cover/cinema]
+    chapters: [poster/fold, cover/cinema, manifesto/stepped]
+    gazette: [poster/fold, manifesto/stepped, hero/kinetic]
+    halves: [cover/halves, hero/brutal, cover/flood]
+    lead: [cover/cinema, cover/stub, hero/arch]
+    mosaic: [hero/brutal, cover/tint, manifesto/stepped]
+    pinned: [hero/kinetic, hero/arch, manifesto/stepped]
+    register: [hero/kinetic, poster/fold, cover/stub]
+    slant: [cover/flood, cover/wordmark, cover/halves]
+    spine: [hero/breakout, hero/arch, cover/halves]
+    spread: [cover/wordmark, cover/cinema, hero/breakout]
+    wall: [cover/stub, cover/tint, hero/brutal]
+  components:
+    slabs:
+      summary: Offers as wide stacked slabs in turning grounds, each numbered, its name set large beside its words.
+      variants:
+        turning: Slabs turn between the surface, the ink and the accent.
+        ruled: Slabs on the page colour between heavy rules, the number in the accent.
+      slots:
+        heading: {type: text, max: 140}
+        intro: {type: rich, max: 600}
+        items:
+          type: items
+          min_items: 2
+          max_items: 8
+          fields:
+            title: {type: text, required: true, max: 100}
+            body: {type: rich, max: 800}
+            link: {type: link}
+    menuboard:
+      summary: Offers as ruled rows like a menu board, a running number, the name in large type and a round arrow; the row under the pointer tints.
+      variants:
+        rows: Full-width ruled rows.
+        board: Rows on an ink board.
+      slots:
+        heading: {type: text, max: 140}
+        intro: {type: rich, max: 600}
+        items:
+          type: items
+          min_items: 2
+          max_items: 12
+          fields:
+            title: {type: text, required: true, max: 100}
+            body: {type: rich, max: 800}
+            link: {type: link}
+    volumes:
+      summary: Offers as chapters, a numbered index of them first, then each under a huge light title with its words beside it.
+      variants:
+        chapters: Each chapter under a hairline, the title light and huge.
+        bold: Each chapter on a tinted band, the title heavy.
+      slots:
+        heading: {type: text, max: 140}
+        intro: {type: rich, max: 600}
+        items:
+          type: items
+          min_items: 2
+          max_items: 8
+          fields:
+            title: {type: text, required: true, max: 100}
+            body: {type: rich, max: 800}
+            link: {type: link}
+    jobsheet:
+      summary: A process as a printed job sheet, slightly turned on a dark panel, each step a ruled row with a boxed number and a tick.
+      variants:
+        sheet: A white sheet on an ink panel.
+        carbon: A tinted carbon copy on the accent.
+      slots:
+        heading: {type: text, max: 140}
+        intro: {type: rich, max: 600}
+        items:
+          type: items
+          min_items: 2
+          max_items: 8
+          fields:
+            title: {type: text, required: true, max: 100}
+            body: {type: rich, max: 600}
+    progress:
+      summary: A process down a line that fills in the accent as the visitor scrolls, each step's number lighting as it is reached.
+      variants:
+        line: Steps down one side of the line.
+        sides: Steps alternating either side of the line where the column has room.
+      slots:
+        heading: {type: text, max: 140}
+        intro: {type: rich, max: 600}
+        items:
+          type: items
+          min_items: 2
+          max_items: 8
+          fields:
+            title: {type: text, required: true, max: 100}
+            body: {type: rich, max: 600}
+    stairs:
+      summary: A process as a flight of wide bands, each stepped further in than the last, a huge number on its leading edge.
+      variants:
+        up: Steps climb from left to right.
+        solid: Steps in solid accent bands.
+      slots:
+        heading: {type: text, max: 140}
+        intro: {type: rich, max: 600}
+        items:
+          type: items
+          min_items: 2
+          max_items: 6
+          fields:
+            title: {type: text, required: true, max: 100}
+            body: {type: rich, max: 600}
+    expect:
+      summary: Practical answers as dark fact cards headed by a large number, for what customers are shy to ask.
+      variants:
+        cards: Ink cards in a grid.
+        accent: Accent cards in a grid.
+      slots:
+        heading: {type: text, max: 140}
+        intro: {type: rich, max: 600}
+        items:
+          type: items
+          min_items: 1
+          max_items: 9
+          fields:
+            title: {type: text, required: true, max: 200}
+            body: {type: rich, required: true, max: 2000}
+    broadsheet:
+      summary: Questions set huge and light, one to a hairline row, each answer in a narrow column beside it.
+      variants:
+        rows: Hairline rows on the page colour.
+        ink: Rows on an ink ground.
+      slots:
+        heading: {type: text, max: 140}
+        intro: {type: rich, max: 600}
+        items:
+          type: items
+          min_items: 1
+          max_items: 12
+          fields:
+            title: {type: text, required: true, max: 200}
+            body: {type: rich, required: true, max: 2000}
+  roles:
+    offer: [slabs, menuboard, volumes]
+    process: [jobsheet, progress, stairs]
+    practical: [expect, broadsheet]
+  forms: {offer: [slabs, menuboard, volumes], process: [jobsheet, progress, stairs], practical: [expect, broadsheet]}
+  fields:
+    slabs: {title: title, body: body}
+    menuboard: {title: title, body: body}
+    volumes: {title: title, body: body}
+    jobsheet: {title: title, body: body}
+    progress: {title: title, body: body}
+    stairs: {title: title, body: body}
+    expect: {title: title, body: body}
+    broadsheet: {title: title, body: body}
+  weights: {light: 14, dark: 14, tinted: 18, vivid: 26, deep: 22}

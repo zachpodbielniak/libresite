@@ -350,5 +350,33 @@
     <file>components/home-spine.css</file>
     <file>components/home-spread.css</file>
     <file>components/home-wall.css</file>
+    <file>components/cover--flood.css</file>
+    <file>components/cover--wordmark.css</file>
+    <file>components/cover--halves.css</file>
+    <file>components/cover--tint.css</file>
+    <file>components/cover--stub.css</file>
+    <file>components/cover--cinema.css</file>
+    <file>components/hero--arch.css</file>
+    <file>components/hero--brutal.css</file>
+    <file>components/hero--kinetic.css</file>
+    <file>components/hero--breakout.css</file>
+    <file>components/poster--fold.css</file>
+    <file>components/manifesto--stepped.css</file>
+    <file>components/slabs.html</file>
+    <file>components/slabs.css</file>
+    <file>components/menuboard.html</file>
+    <file>components/menuboard.css</file>
+    <file>components/volumes.html</file>
+    <file>components/volumes.css</file>
+    <file>components/jobsheet.html</file>
+    <file>components/jobsheet.css</file>
+    <file>components/progress.html</file>
+    <file>components/progress.css</file>
+    <file>components/stairs.html</file>
+    <file>components/stairs.css</file>
+    <file>components/expect.html</file>
+    <file>components/expect.css</file>
+    <file>components/broadsheet.html</file>
+    <file>components/broadsheet.css</file>
   </gresource>
 </gresources>

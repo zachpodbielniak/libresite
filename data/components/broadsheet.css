@@ -1,0 +1,17 @@
+/* broadsheet: questions set huge and light, one to a hairline row, each
+ * answer in a narrow column beside it. Rebuilt from scratch after
+ * docs/inspiration.org, sections 28. */
+.broadsheet__list { border-bottom: var(--border) solid var(--line-strong); }
+.broadsheet__row { display: grid; gap: var(--space-3) var(--space-7); padding-block: var(--space-5) var(--space-6); border-top: var(--border) solid var(--line-strong); }
+.broadsheet__q { margin: 0; font-size: clamp(1.7rem, 4.6cqi, min(3.6rem, var(--max-width) * 0.046)); font-weight: 300; line-height: 1.05; letter-spacing: -0.02em; }
+.broadsheet--ink .wrap {
+	--paper: var(--ls-ink); --ink: var(--ls-paper); --surface: color-mix(in srgb, var(--ls-paper) 10%, var(--ls-ink));
+	--muted: var(--ls-paper); --accent: var(--ls-paper); --accent-ink: var(--ls-ink); --accent-text: var(--ls-paper);
+	--line: color-mix(in srgb, var(--ls-paper) 30%, var(--ls-ink)); --line-strong: var(--ls-paper); --focus: var(--ls-paper);
+	background: var(--ls-ink); color: var(--ls-paper);
+	padding: clamp(var(--space-5), 5cqi, var(--space-8)); border-radius: max(var(--radius), 0.75rem);
+}
+@container (min-width: 56rem) {
+	.broadsheet__row { grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); align-items: start; }
+	.broadsheet__a { padding-top: 0.6em; }
+}

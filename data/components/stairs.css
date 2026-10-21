@@ -1,0 +1,20 @@
+/* stairs: a process as a flight of wide bands, each stepped further in
+ * than the last, a huge number on its leading edge. Rebuilt from scratch
+ * after docs/inspiration.org, openings 40 and sections 14. */
+.stairs__list { --tread: clamp(0.75rem, 5cqi, 6rem); margin: 0; padding: 0; list-style: none; display: grid; gap: var(--space-2); }
+.stairs__step {
+	display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-4); align-items: start;
+	padding: var(--space-5) clamp(var(--space-4), 4cqi, var(--space-6)); background: var(--surface); border-radius: max(var(--radius), 0.4rem);
+}
+.stairs__step:nth-child(2) { margin-left: var(--tread); }
+.stairs__step:nth-child(3) { margin-left: calc(var(--tread) * 2); }
+.stairs__step:nth-child(4) { margin-left: calc(var(--tread) * 3); }
+.stairs__step:nth-child(n + 5) { margin-left: calc(var(--tread) * 4); }
+.stairs__n { min-width: 1.2ch; font-family: var(--font-display); font-size: clamp(2.8rem, 9cqi, 6rem); font-weight: 900; line-height: 0.8; color: var(--accent-text); }
+.stairs__title { margin: 0 0 0.25em; font-size: var(--step-2); }
+.stairs--solid .stairs__step {
+	--paper: var(--ls-accent); --ink: var(--ls-accent-ink); --surface: color-mix(in srgb, var(--ls-accent-ink) 12%, var(--ls-accent));
+	--muted: var(--ls-accent-ink); --accent: var(--ls-accent-ink); --accent-ink: var(--ls-accent); --accent-text: var(--ls-accent-ink);
+	--line: color-mix(in srgb, var(--ls-accent-ink) 35%, var(--ls-accent)); --line-strong: var(--ls-accent-ink); --focus: var(--ls-accent-ink);
+	background: var(--ls-accent); color: var(--ls-accent-ink);
+}

@@ -1,0 +1,36 @@
+/* progress: a process down a line that fills in the accent as the visitor
+ * scrolls, each step's number lighting as it is reached. Without scroll
+ * timelines, or for reduced motion, the line is full and every number lit.
+ * Rebuilt from scratch after docs/inspiration.org, motion 12 and sections
+ * 21. */
+.progress__list { position: relative; margin: 0; padding: 0; list-style: none; --rail: 1.5rem; }
+.progress__list::before, .progress__list::after {
+	content: ""; position: absolute; top: 0.5rem; bottom: 0.5rem; left: calc(var(--rail) - 2px); width: 4px; border-radius: 2px;
+}
+.progress__list::before { background: var(--line); }
+.progress__list::after { background: var(--ls-accent); transform-origin: top; }
+.progress__step { position: relative; display: grid; grid-template-columns: calc(var(--rail) * 2) minmax(0, 1fr); gap: var(--space-4); }
+.progress__step + .progress__step { margin-top: var(--space-6); }
+.progress__n {
+	position: relative; z-index: 1; display: grid; place-items: center; width: calc(var(--rail) * 2); height: calc(var(--rail) * 2);
+	border-radius: 50%; background: var(--ls-accent); color: var(--ls-accent-ink); border: 4px solid var(--paper);
+	font-family: var(--font-display); font-weight: 800; font-size: var(--step-0);
+}
+.progress__title { margin: 0.35em 0 0.25em; font-size: var(--step-2); }
+@container (min-width: 56rem) {
+	.progress--sides .progress__list { --rail: 1.75rem; }
+	.progress--sides .progress__list::before, .progress--sides .progress__list::after { left: calc(50% - 2px); }
+	.progress--sides .progress__step { grid-template-columns: minmax(0, 1fr) calc(var(--rail) * 2) minmax(0, 1fr); gap: var(--space-6); }
+	.progress--sides .progress__n { grid-column: 2; grid-row: 1; }
+	.progress--sides .progress__step:nth-child(odd) .progress__text { grid-column: 1; grid-row: 1; text-align: right; }
+	.progress--sides .progress__step:nth-child(odd) .progress__text .prose { margin-left: auto; }
+	.progress--sides .progress__step:nth-child(even) .progress__text { grid-column: 3; grid-row: 1; }
+}
+@media (prefers-reduced-motion: no-preference) {
+	@supports (animation-timeline: view()) {
+		.progress__list::after { animation: ls-progress-fill linear both; animation-timeline: view(); animation-range: entry 40% cover 75%; }
+		.progress__n { animation: ls-progress-light linear both; animation-timeline: view(); animation-range: entry 80% cover 45%; }
+	}
+}
+@keyframes ls-progress-fill { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes ls-progress-light { from { background-color: var(--paper); color: var(--ink); } to { background-color: var(--ls-accent); color: var(--ls-accent-ink); } }
