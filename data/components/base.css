@@ -17,9 +17,20 @@ body {
 img, svg { display: block; max-width: 100%; height: auto; }
 /* Photographs never outgrow the screen: a tall one crops to cover its box. */
 img:is([src$=".jpg"], [src$=".jpeg"], [src$=".png"], [src$=".webp"]) { width: 100%; max-height: min(80vh, 52rem); object-fit: cover; }
+/* A photo its box would crop to a strip, under 40 percent of itself (a
+ * portrait in a wide band), is shown whole on a mat instead (site.js). */
+main img.is-matted { object-fit: contain !important; background: var(--surface); }
 .brand img { max-height: none; }
 a { color: inherit; text-decoration-thickness: max(1px, 0.08em); text-underline-offset: 0.18em; }
 a:hover { color: var(--accent-text); }
+/* A link that stands alone is a tap target at least 44px square: a
+ * breadcrumb, a contents entry, and a link that is a whole list item,
+ * contact detail, item title or line of its own. Links inside running text
+ * keep the line. */
+:is(.crumbs, .page-contents) a, main :is(li, dd):not(.prose *) > a:only-child, main p[class] > a:only-child, main .prose .link-line > a,
+main :is(h2, h3, h4, cite, [class$="__title"], [class$="__name"]) > a:only-child {
+	display: inline-flex; align-items: center; min-height: 44px; min-width: 44px;
+}
 :focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
 ::selection { background: var(--accent); color: var(--accent-ink); }
 h1, h2, h3, h4 {
@@ -172,7 +183,7 @@ main :is(.wrap, [class$="__list"], [class*="__list "], [class$="__grid"], [class
 .site-footer__credit { margin-top: var(--space-5); margin-bottom: 0; color: var(--muted); font-size: var(--step--1); }
 .site-footer__credit a { color: inherit; }
 .site-footer ul { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-5); margin: 0; padding: 0; list-style: none; font-size: var(--step--1); }
-.site-footer a { display: inline-flex; align-items: center; min-height: 44px; }
+.site-footer a { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; }
 @media (min-width: 48rem) {
 	/* The note keeps a readable width; the links shrink and wrap beside it. */
 	.site-footer__inner { grid-template-columns: minmax(min(100%, 16rem), 1fr) minmax(0, auto); align-items: start; }
@@ -191,6 +202,8 @@ input, select, textarea {
 textarea { min-height: 8em; resize: vertical; }
 input[type="checkbox"] { width: 1.25rem; min-height: 1.25rem; accent-color: var(--accent); }
 .field--check { grid-template-columns: auto minmax(0, 1fr); align-items: center; }
+/* The checkbox is small; its label toggles it, a full-height tap target. */
+.field--check label { display: flex; align-items: center; min-height: 44px; }
 [aria-invalid="true"] { border-color: var(--danger); }
 .field-error { color: var(--danger); font-weight: 600; font-size: var(--step--1); }
 .field-error:empty { display: none; }

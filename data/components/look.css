@@ -6,7 +6,8 @@
 
 /* Fixed copies of the site colors. Inverted areas swap the working tokens
  * locally, so every component inside them keeps readable pairs. */
-:root { --ls-paper: var(--paper); --ls-ink: var(--ink); --ls-surface: var(--surface); --ls-accent: var(--accent); --ls-accent-ink: var(--accent-ink); }
+:root { --ls-paper: var(--paper); --ls-ink: var(--ink); --ls-surface: var(--surface); --ls-accent: var(--accent); --ls-accent-ink: var(--accent-ink);
+	--ls-accent-surface: var(--accent-surface, color-mix(in srgb, var(--ls-accent-ink) 12%, var(--ls-accent))); }
 
 /* Header. */
 .look-header-centered .site-header__inner { flex-direction: column; justify-content: center; padding-block: var(--space-4); }
@@ -421,8 +422,10 @@ main > .block.sec-pad-tight + .block { padding-top: calc(var(--section-space) * 
  * keeps its contrast. */
 main > .block.sec-tone { padding-block: var(--section-space); }
 main > .block.sec-tone + .block { padding-top: var(--section-space); }
-main > .block.sec-tone.sec-tone-tint { --paper: var(--ls-surface); background: var(--ls-surface); }
-main > .block.sec-tone.sec-tone-ink, main .notice--banner .notice__box, main .hours--board > .wrap > .hours__list {
+/* A section that paints its own accent band keeps it: a dealt tint or ink
+ * would repaint the band under text coloured for the accent. */
+main > .block.sec-tone.sec-tone-tint:not(.cta--band, .statement--band, .marquee--accent, .contact-card--band) { --paper: var(--ls-surface); background: var(--ls-surface); }
+main > .block.sec-tone.sec-tone-ink:not(.cta--band, .statement--band, .marquee--accent, .contact-card--band), main .notice--banner .notice__box, main .hours--board > .wrap > .hours__list {
 	--paper: var(--ls-ink); --ink: var(--ls-paper); --surface: color-mix(in srgb, var(--ls-paper) 10%, var(--ls-ink));
 	--muted: var(--ls-paper); --accent: var(--ls-paper); --accent-ink: var(--ls-ink); --accent-text: var(--ls-paper);
 	--line: color-mix(in srgb, var(--ls-paper) 30%, var(--ls-ink)); --line-strong: var(--ls-paper); --focus: var(--ls-paper); --field: var(--ls-ink); --danger: var(--ls-paper);
@@ -433,7 +436,7 @@ main > .block.sec-tone.sec-tone-ink, main .notice--banner .notice__box, main .ho
  * even when a plan restyle colours their text with var(--accent). */
 main > .block.sec-tone.sec-tone-accent, main .block:is(.cta--band, .statement--band, .marquee--accent, .contact-card--band), main .media--flush .media__text, main .cta--sidebar .cta__text, main .facts--ribbon .facts__list,
 main .offer__stub, main .notice--accent .notice__box, main .split--contrast .split__panel:last-child {
-	--paper: var(--ls-accent); --ink: var(--ls-accent-ink); --surface: color-mix(in srgb, var(--ls-accent-ink) 12%, var(--ls-accent));
+	--paper: var(--ls-accent); --ink: var(--ls-accent-ink); --surface: var(--ls-accent-surface);
 	--muted: var(--ls-accent-ink); --accent: var(--ls-accent-ink); --accent-ink: var(--ls-accent); --accent-text: var(--ls-accent-ink);
 	--line: color-mix(in srgb, var(--ls-accent-ink) 35%, var(--ls-accent)); --line-strong: var(--ls-accent-ink); --focus: var(--ls-accent-ink); --field: var(--ls-accent); --danger: var(--ls-accent-ink);
 	background: var(--ls-accent); color: var(--ls-accent-ink);

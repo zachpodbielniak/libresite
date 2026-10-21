@@ -467,7 +467,7 @@ test_fonts(void){
 	g_assert_no_error(error);
 	bundle = ls_json_parse(text, NULL);
 	contains(file_content(bundle, "index.html"), "<link rel=\"stylesheet\" href=\"https://fonts.bunny.net/css?"
-		"family=fraunces:400,400i,700,700i|ibm-plex-sans:500&amp;display=swap\">");
+		"family=fraunces:400,400i,700,700i|ibm-plex-sans:500&amp;display=optional\">");
 	json_object_set_member(json_node_get_object(plan), "fonts", json_node_copy(bad));
 	g_assert_false(ls_components_check_plan(components, plan, &error));
 	g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
