@@ -1033,3 +1033,28 @@ The ten fixture sites, measured on 2026-10-20 before and after this change (the 
 | largest home page | 105 KB, 23 KB gzipped | 112 KB, 25 KB gzipped | 150 KB, 40 KB |
 
 =make gate= passed: 1,420 option page loads at 390, 768 and 1440 with no problems (every bold opening and form among them), 1,412 text elements at AA in light and dark, no motion with reduced motion and no page scrolling sideways. Two faults it found on the way were fixed: the kinetic headline split words in the editorial column (big type in the bold openings is now capped by the column width, like the stock poster), and a mixed muted colour in dark blocks that the contrast check cannot read (dark blocks now use the plain light colour, as the stock ones do).
+
+* The wow pass
+
+The fixture sites answer every business alike, so the wow is judged on real runs. On 2026-10-20 six briefs went through one real-model run each (=claude-code=, the recipes' own plan, pages and art prompts): two plumbers, two roofers and two landscapers, all invented, each supplied four licensed stock photos (StockSnap, CC0). Each home was shot at 390 and 1440 and judged the way a picky designer would: would the owner believe a designer made this for them alone?
+
+** The five weakest things
+
+1. *Bland, photo-less openings.* Half the sites opened on type alone or on a drawing although the owner had sent photos: the opening is dealt before the photos were known, and some openings set their picture under the words, below the first screen. Photos are now known before the deal, and a site with photos is dealt an opening its picture leads on the first screen (every cover, the split, backdrop and breakout heroes). The arch and the banner raise their picture below the words, so photo sites skip them (=wow.photo_below= in =catalog.yaml=). The plan prompt suggests the same opening.
+2. *Customers' photos drained of colour.* Black-and-white and two-tone photo treatments, and the printed-ink artwork treatment, turned a customer's own photos grey. They are no longer dealt (=wow.undealt=; a theme may still wear them), the printed-ink filter touches drawn artwork only, and gradient lettering no longer clips away the band of page colour a cover's headline sits on over its photo.
+3. *Screens of nothing.* Slow paces on airy density put up to 11 rem between sections, a screenful at 1440. Section space now tops out at 8 rem.
+4. *A signature divider fencing every section.* The site's own divider drew between every pair of sections and added a section's worth of space of its own. It now punctuates every third gap in its own small space.
+5. *The same photo twice.* The opening's photo came back in the next section or the gallery. Each supplied photo now shows once per page while unused ones are left.
+
+Recomposing the six from the second run's recorded answers showed two more, both fixed: a split opening in the narrow journal frame shrank its photo to a stamp (it now leaves the 46 rem column), and a banner's photo fell below the first screen (now skipped, as above).
+
+=tests/test-wow.c= holds all of these: 300 photo sites open on a supplied photo with at least ten openings among them and the prompt agrees; 3000 dealt looks never drain photos; the gap and divider limits; no photo twice; the split breaks out of the journal column.
+
+** Before and after
+
+Before: the first real run on the epic before this change. After: the same six briefs rerun for real with the fixes as they stood, then recomposed with the finished library from that run's recorded answers (no third model run), first screen only.
+
+- 1440: [[file:images/wow/before-1440.jpg][before]], [[file:images/wow/after-1440.jpg][after]]
+- 390: [[file:images/wow/before-390.jpg][before]], [[file:images/wow/after-390.jpg][after]]
+
+Every home now opens on the owner's own photo at 1440, in colour. What is still weak: one plumber's photo is black and white at the source (photo choice, not the builder); on a phone the split opening shows its words before its photo; the headlines are the writer's and vary well, but the openings over a busy photo depend on its calm areas.
