@@ -1,0 +1,41 @@
+/* menuboard: offers as ruled rows like a menu board: a running number, the
+ * name in large type, its words under it and a round arrow; the row under
+ * the pointer tints and the whole row follows its link. Rebuilt from
+ * scratch after docs/inspiration.org, sections 7. */
+.menuboard__list { margin: 0; padding: 0; list-style: none; border-bottom: var(--border) solid var(--line-strong); }
+.menuboard__row {
+	position: relative; display: grid; grid-template-columns: 2.6rem minmax(0, 1fr) 2.75rem; gap: var(--space-3) var(--space-4);
+	align-items: start; padding: var(--space-5) var(--space-2); border-top: var(--border) solid var(--line-strong);
+}
+.menuboard__n { padding-top: 0.55em; font-family: var(--font-mono); font-size: var(--step--1); color: var(--muted); }
+.menuboard__title { margin: 0 0 0.25em; font-size: var(--step-3); line-height: 1.08; letter-spacing: -0.015em; }
+.menuboard__title a { text-decoration: none; }
+.menuboard__title a::after { content: ""; position: absolute; inset: 0; }
+.menuboard__title a:hover { color: inherit; }
+.menuboard__arrow {
+	display: grid; place-items: center; width: 2.75rem; height: 2.75rem; margin-top: 0.2em;
+	border: var(--border-strong) solid var(--ink); border-radius: 50%;
+}
+.menuboard__arrow::before { content: "\2192"; font-size: 1.15rem; line-height: 1; }
+.menuboard__row:has(a):hover { background: var(--surface); }
+.menuboard__row:has(a):hover .menuboard__arrow { background: var(--ls-accent); border-color: var(--ls-accent); color: var(--ls-accent-ink); }
+.menuboard--board .menuboard__list {
+	--paper: var(--ls-ink); --ink: var(--ls-paper); --surface: color-mix(in srgb, var(--ls-paper) 10%, var(--ls-ink));
+	--muted: var(--ls-paper); --accent: var(--ls-paper); --accent-ink: var(--ls-ink); --accent-text: var(--ls-paper);
+	--line: color-mix(in srgb, var(--ls-paper) 30%, var(--ls-ink)); --line-strong: var(--ls-paper); --focus: var(--ls-paper);
+	background: var(--ls-ink); color: var(--ls-paper);
+	padding: var(--space-3) clamp(var(--space-3), 3cqi, var(--space-6)); border: 0; border-radius: max(var(--radius), 0.5rem);
+}
+.menuboard--board .menuboard__row:first-child { border-top: 0; }
+@container (min-width: 48rem) {
+	.menuboard__row { grid-template-columns: 3.5rem minmax(0, 1.4fr) minmax(0, 1fr) 3rem; align-items: center; }
+	.menuboard__main { display: contents; }
+	.menuboard__title { margin: 0; font-size: var(--step-4); }
+	.menuboard__n { padding-top: 0; }
+	.menuboard__arrow { margin: 0; justify-self: end; }
+}
+@media (prefers-reduced-motion: no-preference) {
+	.menuboard__row, .menuboard__arrow { transition: background-color 180ms ease, border-color 180ms ease, color 180ms ease; }
+	.menuboard__arrow::before { transition: transform 180ms ease; }
+	.menuboard__row:has(a):hover .menuboard__arrow::before { transform: translateX(3px) rotate(-45deg); }
+}

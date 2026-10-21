@@ -1,0 +1,39 @@
+/* cover/stub: the picture full-bleed with the words on a ticket stub pinned
+ * in its top corner: hairline frame, a dashed tear line under the kicker and
+ * notches bitten from both sides. On phones the stub overlaps the
+ * picture's foot instead. Rebuilt from scratch after docs/inspiration.org,
+ * openings 24. */
+/* The opening shapes its own picture; photo looks and art directions that
+ * reshape pictures elsewhere stand aside here. */
+.block.cover--stub.cover--stub .cover__art img { border: 0; border-radius: 0; padding: 0; background: none; box-shadow: none; clip-path: none; -webkit-mask: none; mask: none; transform: none; }
+.cover--stub .cover__frame { display: flex; flex-direction: column; }
+.cover--stub .cover__art img { width: 100%; height: clamp(16rem, 62cqi, 26rem); max-height: none; object-fit: cover; }
+.cover--stub .cover__text { position: relative; margin-top: calc(-1 * clamp(2.5rem, 12cqi, 5rem)); padding-block: 0 var(--space-6); }
+.cover--stub .cover__text > .wrap {
+	--notch: 0.9rem;
+	position: relative; width: min(100% - 2 * var(--gutter), 30rem); margin-inline: var(--gutter) auto;
+	padding: var(--space-5) clamp(var(--space-4), 4cqi, var(--space-6)); background: var(--paper);
+	border: var(--border-strong) solid var(--ink);
+	-webkit-mask: radial-gradient(circle var(--notch) at 0 4.2rem, #0000 98%, #000) left / 51% 100% no-repeat,
+		radial-gradient(circle var(--notch) at 100% 4.2rem, #0000 98%, #000) right / 51% 100% no-repeat;
+	mask: radial-gradient(circle var(--notch) at 0 4.2rem, #0000 98%, #000) left / 51% 100% no-repeat,
+		radial-gradient(circle var(--notch) at 100% 4.2rem, #0000 98%, #000) right / 51% 100% no-repeat;
+}
+.cover--stub .cover__text > .wrap > .kicker {
+	min-height: 2.6rem; margin: 0 0 var(--space-4); padding-bottom: var(--space-3);
+	border-bottom: var(--border-strong) dashed var(--line-strong); color: var(--ink); letter-spacing: 0.14em;
+}
+.cover--stub .cover__title { max-width: none; font-size: clamp(2rem, 6cqi, min(3.6rem, var(--max-width) * 0.06)); line-height: 1; letter-spacing: -0.02em; }
+.cover--stub .cover__title--long { font-size: clamp(1.7rem, 4.6cqi, min(2.6rem, var(--max-width) * 0.046)); }
+.cover--stub .cover__title .em { color: var(--accent-text); font-style: normal; }
+.cover--stub .cover__lede { font-size: var(--step-0); }
+.cover--stub .cover__text .wrap > :last-child { margin-bottom: 0; }
+@container (min-width: 48rem) {
+	.cover--stub .cover__frame { display: grid; grid-template-columns: minmax(0, 1fr); }
+	.cover--stub .cover__art, .cover--stub .cover__text { grid-area: 1 / 1; }
+	.cover--stub .cover__art { position: relative; min-height: min(86vh, 52rem); }
+	.cover--stub .cover__art img { position: absolute; inset: 0; height: 100%; }
+	/* The mask cuts the notches, so the shadow is drawn round the cut stub. */
+	.cover--stub .cover__text { align-self: start; margin: 0; padding-block: clamp(var(--space-6), 6cqi, var(--space-8)) var(--space-7); filter: drop-shadow(0 0.9rem 1.2rem rgb(0 0 0 / 0.35)); }
+	.cover--stub .cover__text > .wrap { margin-inline: max(var(--gutter), (100% - var(--max-width)) / 2) auto; transform: rotate(-1.2deg); }
+}

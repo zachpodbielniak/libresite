@@ -1,0 +1,29 @@
+/* cover/halves: half the screen a flat block of the accent holding a heavy
+ * headline, the other half the picture at full height; on phones the block
+ * comes first and the picture below it. Rebuilt from scratch after
+ * docs/inspiration.org, openings 12. */
+/* The opening shapes its own picture; photo looks and art directions that
+ * reshape pictures elsewhere stand aside here. */
+.block.cover--halves.cover--halves .cover__art img { border: 0; border-radius: 0; padding: 0; background: none; box-shadow: none; clip-path: none; -webkit-mask: none; mask: none; transform: none; }
+.cover--halves .cover__frame { display: flex; flex-direction: column; }
+.cover--halves .cover__text {
+	--paper: var(--ls-accent); --ink: var(--ls-accent-ink); --surface: color-mix(in srgb, var(--ls-accent-ink) 12%, var(--ls-accent));
+	--muted: var(--ls-accent-ink); --accent: var(--ls-accent-ink); --accent-ink: var(--ls-accent); --accent-text: var(--ls-accent-ink);
+	--line: color-mix(in srgb, var(--ls-accent-ink) 35%, var(--ls-accent)); --line-strong: var(--ls-accent-ink); --focus: var(--ls-accent-ink);
+	order: -1; display: flex; align-items: center; padding-block: clamp(var(--space-7), 9cqi, var(--space-8));
+	background: var(--ls-accent); color: var(--ls-accent-ink);
+}
+.cover--halves .cover__title { max-width: 13ch; font-size: clamp(2.7rem, 9cqi, min(7.5rem, var(--max-width) * 0.09)); font-weight: 900; line-height: 0.92; letter-spacing: -0.035em; }
+.cover--halves .cover__title--long { max-width: 18ch; font-size: clamp(2.2rem, 6.5cqi, min(5rem, var(--max-width) * 0.065)); }
+.cover--halves .cover__title .em { font-style: italic; }
+.cover--halves .cover__text a:not(.button):hover { color: inherit; }
+.cover--halves .cover__art img { width: 100%; height: clamp(16rem, 70cqi, 30rem); max-height: none; object-fit: cover; }
+.cover--halves .cover__text > .wrap > :last-child { margin-bottom: 0; }
+@container (min-width: 48rem) {
+	.cover--halves .cover__frame { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: min(88vh, 54rem); }
+	.cover--halves .cover__art { order: 2; }
+	.cover--halves .cover__art img { height: 100%; }
+	.cover--halves .cover__text > .wrap { width: auto; margin-inline: max(var(--gutter), (100cqi - var(--max-width)) / 2) clamp(var(--gutter), 5cqi, var(--space-8)); }
+	.cover--halves .cover__title { font-size: clamp(2.7rem, 6.2cqi, min(7.5rem, var(--max-width) * 0.062)); }
+	.cover--halves .cover__title--long { font-size: clamp(2.2rem, 4.2cqi, min(5rem, var(--max-width) * 0.042)); }
+}

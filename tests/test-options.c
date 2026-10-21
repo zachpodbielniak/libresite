@@ -34,8 +34,8 @@ join(JsonObject *into, JsonObject *from){
 		json_object_set_member(into, name->data, json_node_copy(json_object_get_member(from, name->data)));
 }
 
-/* The catalog with the wider block joined where the library joins it, so
- * every wider option gets its site too. */
+/* The catalog with the wider and bold blocks joined where the library
+ * joins them, so every wider and bold option gets its site too. */
 static JsonObject *
 catalog(void){
 	static JsonNode *node = NULL;
@@ -75,6 +75,17 @@ catalog(void){
 				if (json_object_has_member(wider, joins[j][0]))
 					join(json_object_get_object_member(json_object_get_object_member(root, joins[j][1]), joins[j][2]),
 						json_object_get_object_member(wider, joins[j][0]));
+		}
+		/* The bold block's openings and components. */
+		if (json_object_has_member(root, "bold")) {
+			JsonObject *bold = json_object_get_object_member(root, "bold");
+			JsonObject *openings = json_object_get_object_member(bold, "openings");
+			g_autoptr(GList) owners = json_object_get_members(openings);
+			GList *owner;
+			for (owner = owners; owner != NULL; owner = owner->next)
+				join(json_object_get_object_member(json_object_get_object_member(json_object_get_object_member(root,
+					"components"), owner->data), "variants"), json_object_get_object_member(openings, owner->data));
+			join(json_object_get_object_member(root, "components"), json_object_get_object_member(bold, "components"));
 		}
 	}
 	return json_node_get_object(node);

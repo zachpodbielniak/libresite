@@ -38,6 +38,7 @@ struct _LsComponents {
 	JsonObject *headlines;	/* headline angle name -> description; NULL without */
 	JsonObject *subjects;	/* art subject name -> description; NULL without */
 	JsonObject *forms;	/* section_forms block; NULL without */
+	JsonObject *pictures;	/* bold opening -> needs, shows, photo or hides; NULL without */
 	JsonNode *network_catalog;
 	JsonObject *networks;	/* social network -> {label, hosts, path}; NULL without networks.yaml */
 	GPtrArray *order;
@@ -1407,18 +1408,18 @@ join_looks(LsComponents *self, GChecksum *digest, JsonObject *owner, const gchar
  * section forms and palette modes join their own blocks, which then check
  * them as their own: each name is new, and each form joins one family. */
 static gboolean
-widen_blocks(JsonObject *root, GError **error){
-	JsonObject *wider = member_object(root, "wider");
+widen_blocks(JsonObject *root, const gchar *block, const gchar *keys, GError **error){
+	JsonObject *wider = member_object(root, block);
 	const gchar *joins[][3] = {{"layouts", "compositions", "layouts"}, {"kits", "motion_kits", "kits"},
 		{"directions", "art_directions", "directions"}, {"fields", "section_forms", "fields"},
 		{"modes", "palette_generator", "modes"}};
 	g_autoptr(GList) names = NULL;
 	GList *name;
 	guint j, i;
-	if (!json_object_has_member(root, "wider"))
+	if (!json_object_has_member(root, block))
 		return TRUE;
-	if (wider == NULL || !ls_object_keys(wider, "|looks|openings|layouts|kits|directions|forms|fields|modes|", NULL))
-		return catalog_invalid(error, "wider", "holds looks, openings, layouts, kits, directions, forms, fields and modes"), FALSE;
+	if (wider == NULL || !ls_object_keys(wider, keys, NULL))
+		return catalog_invalid(error, block, "holds only the members documented for it"), FALSE;
 	for (j = 0; j < G_N_ELEMENTS(joins); j++) {
 		JsonObject *added = member_object(wider, joins[j][0]);
 		JsonObject *into = member_object(member_object(root, joins[j][1]), joins[j][2]);
@@ -1455,8 +1456,8 @@ widen_blocks(JsonObject *root, GError **error){
  * each restyling the component's own markup in COMPONENT--VARIANT.css and
  * dealt through the compositions that list it. */
 static gboolean
-join_openings(LsComponents *self, GChecksum *digest, JsonObject *root, GError **error){
-	JsonObject *wider = member_object(root, "wider");
+join_openings(LsComponents *self, GChecksum *digest, JsonObject *root, const gchar *block, GError **error){
+	JsonObject *wider = member_object(root, block);
 	JsonObject *openings = member_object(wider, "openings");
 	JsonArray *home = member_array(member_object(self->kinds, "home"), "openings");
 	g_autoptr(GList) owners = NULL;
@@ -1488,6 +1489,107 @@ join_openings(LsComponents *self, GChecksum *digest, JsonObject *root, GError **
 	return TRUE;
 }
 
+/* ---- Bold openings and forms ------------------------------------------------ */
+
+/* The bold block (docs/components.org, "Bold openings and forms") holds
+ * what the wider block may, plus its own members below. */
+#define BOLD_KEYS "|looks|openings|layouts|kits|directions|forms|fields|modes|components|roles|deal_in|weights|pictures|"
+
+/* The bold block's own members, joined before anything checks them:
+ * components join the catalog's (each loads NAME.html and its styles like
+ * the rest), roles append to the composition roles, deal_in appends
+ * openings to existing compositions and weights replace the weights of
+ * existing palette modes. */
+static gboolean
+embolden(JsonObject *root, GError **error){
+	JsonObject *bold = member_object(root, "bold");
+	JsonObject *components = member_object(root, "components");
+	JsonObject *roles = member_object(member_object(root, "compositions"), "roles");
+	JsonObject *layouts = member_object(member_object(root, "compositions"), "layouts");
+	JsonObject *modes = member_object(member_object(root, "palette_generator"), "modes");
+	g_autoptr(GList) names = NULL;
+	GList *name;
+	guint i, j;
+	if (bold == NULL)
+		return TRUE;
+	if (json_object_has_member(bold, "components")) {
+		JsonObject *added = member_object(bold, "components");
+		if (added == NULL || components == NULL)
+			return catalog_invalid(error, "components", "bold components map new names to components"), FALSE;
+		names = json_object_get_members(added);
+		for (name = names; name != NULL; name = name->next) {
+			if (json_object_has_member(components, name->data) || member_object(added, name->data) == NULL)
+				return catalog_invalid(error, name->data, "a bold component has a new name"), FALSE;
+			json_object_set_member(components, name->data, json_node_copy(json_object_get_member(added, name->data)));
+		}
+		g_list_free(g_steal_pointer(&names));
+	}
+	for (j = 0; j < 2; j++) {
+		const gchar *member = j == 0 ? "roles" : "deal_in";
+		JsonObject *added = member_object(bold, member);
+		if (!json_object_has_member(bold, member))
+			continue;
+		if (added == NULL || (j == 0 ? roles : layouts) == NULL)
+			return catalog_invalid(error, member, "bold roles and deal_in extend existing compositions"), FALSE;
+		names = json_object_get_members(added);
+		for (name = names; name != NULL; name = name->next) {
+			JsonArray *more = member_array(added, name->data);
+			JsonArray *into = j == 0 ? member_array(roles, name->data)
+				: member_array(member_object(layouts, name->data), "openings");
+			if (more == NULL || into == NULL)
+				return catalog_invalid(error, name->data, j == 0 ? "bold roles join existing composition roles"
+					: "bold deal_in adds openings to existing compositions"), FALSE;
+			for (i = 0; i < json_array_get_length(more); i++) {
+				const gchar *entry = json_array_get_string_element(more, i);
+				if (entry == NULL || json_list_has(into, entry))
+					return catalog_invalid(error, name->data, "bold roles and deal_in add each new name once"), FALSE;
+				json_array_add_string_element(into, entry);
+			}
+		}
+		g_list_free(g_steal_pointer(&names));
+	}
+	if (json_object_has_member(bold, "weights")) {
+		JsonObject *added = member_object(bold, "weights");
+		if (added == NULL || modes == NULL)
+			return catalog_invalid(error, "weights", "bold weights replace existing palette mode weights"), FALSE;
+		names = json_object_get_members(added);
+		for (name = names; name != NULL; name = name->next) {
+			JsonNode *weight = json_object_get_member(added, name->data);
+			if (!json_object_has_member(modes, name->data) || !JSON_NODE_HOLDS_VALUE(weight) ||
+				json_node_get_value_type(weight) != G_TYPE_INT64 || json_node_get_int(weight) < 0 ||
+				json_node_get_int(weight) > 100)
+				return catalog_invalid(error, name->data, "bold weights replace existing palette mode weights (0 to 100)"), FALSE;
+			json_object_set_int_member(modes, name->data, json_node_get_int(weight));
+		}
+	}
+	return TRUE;
+}
+
+static gboolean is_dealt_opening(LsComponents *self, const gchar *opening);
+
+/* The bold block's pictures: what each of its openings does with one. It
+ * needs one, shows one when given, or hides it. */
+static gboolean
+load_pictures(LsComponents *self, JsonObject *root, GError **error){
+	JsonObject *bold = member_object(root, "bold");
+	JsonObject *pictures = member_object(bold, "pictures");
+	const gchar *rules[] = {"needs", "shows", "hides", NULL};
+	g_autoptr(GList) names = NULL;
+	GList *name;
+	if (bold == NULL || !json_object_has_member(bold, "pictures"))
+		return TRUE;
+	if (pictures == NULL)
+		return catalog_invalid(error, "pictures", "maps home openings to needs, shows or hides"), FALSE;
+	names = json_object_get_members(pictures);
+	for (name = names; name != NULL; name = name->next) {
+		const gchar *rule = ls_string(pictures, name->data);
+		if (!is_dealt_opening(self, name->data) || rule == NULL || !g_strv_contains(rules, rule))
+			return catalog_invalid(error, name->data, "pictures map home openings to needs, shows or hides"), FALSE;
+	}
+	self->pictures = pictures;
+	return TRUE;
+}
+
 LsComponents *
 ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 	g_autoptr(LsComponents) self = g_object_new(LS_TYPE_COMPONENTS, NULL);
@@ -1507,7 +1609,7 @@ ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 	if (self->catalog == NULL)
 		return NULL;
 	root = JSON_NODE_HOLDS_OBJECT(self->catalog) ? json_node_get_object(self->catalog) : NULL;
-	if (root == NULL || !ls_object_keys(root, "|version|looks|kinds|components|compositions|motion_kits|palette_generator|extra_variants|art_directions|content_angles|section_forms|extra_looks|wider|", error) ||
+	if (root == NULL || !ls_object_keys(root, "|version|looks|kinds|components|compositions|motion_kits|palette_generator|extra_variants|art_directions|content_angles|section_forms|extra_looks|wider|bold|", error) ||
 		(self->components = member_object(root, "components")) == NULL ||
 		(self->kinds = member_object(root, "kinds")) == NULL ||
 		(self->looks = member_object(root, "looks")) == NULL) {
@@ -1522,7 +1624,10 @@ ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 	if (!join_looks(self, digest, root, "extra_looks", member_object(root, "extra_looks"), error) ||
 		!join_looks(self, digest, member_object(root, "wider"), "looks",
 			member_object(member_object(root, "wider"), "looks"), error) ||
-		!widen_blocks(root, error))
+		!widen_blocks(root, "wider", "|looks|openings|layouts|kits|directions|forms|fields|modes|", error) ||
+		!join_looks(self, digest, member_object(root, "bold"), "looks",
+			member_object(member_object(root, "bold"), "looks"), error) ||
+		!widen_blocks(root, "bold", BOLD_KEYS, error) || !embolden(root, error))
 		return NULL;
 	for (i = 0; i < G_N_ELEMENTS(shared); i++) {
 		g_autofree gchar *text = load_resource(self, digest, shared[i], TRUE, error);
@@ -1581,7 +1686,8 @@ ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 			}
 		}
 	}
-	if (!join_openings(self, digest, root, error))
+	if (!join_openings(self, digest, root, "wider", error) || !join_openings(self, digest, root, "bold", error) ||
+		!load_pictures(self, root, error))
 		return NULL;
 	/* Page kinds name only real components; home is the one hero kind. */
 	{
@@ -1795,7 +1901,7 @@ static const Gene structure_genes[] = {
 	{"pace", 0.45, 2.1},	/* space between sections, times the density default */
 	{"pad", 0.7, 1.6},	/* inner spacing, times the space token */
 	{"grid", 0.72, 1.5},	/* minimum card width, times the component default */
-	{"scale", 0.85, 1.3},	/* display heading sizes */
+	{"scale", 1, 1.45},	/* display heading sizes */
 	{"narrow", 0, 0.55},	/* share of reading sections set in a narrow column */
 	{"bleed", 0, 0.5},	/* share of visual sections that run edge to edge */
 	{"band", 0, 0.6},	/* share of sections painted as a tinted, ink or accent band */
@@ -2266,20 +2372,85 @@ sentences(const gchar *text){
 	return out;
 }
 
+/* What @component/@variant does with a picture: "needs" one, "shows" one
+ * when given or "hides" it. The bold block names its own openings; the
+ * stock ones are fixed here. */
+static const gchar *
+opening_picture(LsComponents *self, const gchar *component, const gchar *variant){
+	g_autofree gchar *pair = g_strdup_printf("%s/%s", component, variant);
+	if (self->pictures != NULL && ls_string(self->pictures, pair) != NULL)
+		return ls_string(self->pictures, pair);
+	if (g_strcmp0(component, "cover") == 0 ||
+		(g_strcmp0(component, "hero") == 0 && (g_strcmp0(variant, "split") == 0 || g_strcmp0(variant, "banner") == 0)) ||
+		(g_strcmp0(component, "poster") == 0 && g_strcmp0(variant, "backdrop") == 0))
+		return "needs";
+	if ((g_strcmp0(component, "hero") == 0 && g_strcmp0(variant, "minimal") != 0) ||
+		(g_strcmp0(component, "poster") == 0 && g_strcmp0(variant, "front") == 0))
+		return "shows";
+	return "hides";
+}
+
 /* Openings that cannot draw without a picture. */
 static gboolean
-opening_needs_art(const gchar *component, const gchar *variant){
-	return g_strcmp0(component, "cover") == 0 ||
-		(g_strcmp0(component, "hero") == 0 && (g_strcmp0(variant, "split") == 0 || g_strcmp0(variant, "banner") == 0)) ||
-		(g_strcmp0(component, "poster") == 0 && g_strcmp0(variant, "backdrop") == 0);
+opening_needs_art(LsComponents *self, const gchar *component, const gchar *variant){
+	return g_str_equal(opening_picture(self, component, variant), "needs");
 }
 
 /* Openings that show their picture; the others hide it or have none. */
 static gboolean
-opening_shows_art(const gchar *component, const gchar *variant){
-	return g_strcmp0(component, "cover") == 0 ||
-		(g_strcmp0(component, "hero") == 0 && g_strcmp0(variant, "minimal") != 0) ||
-		(g_strcmp0(component, "poster") == 0 && (g_strcmp0(variant, "backdrop") == 0 || g_strcmp0(variant, "front") == 0));
+opening_shows_art(LsComponents *self, const gchar *component, const gchar *variant){
+	return !g_str_equal(opening_picture(self, component, variant), "hides");
+}
+
+static JsonObject *plan_photo(JsonObject *plan, const gchar *src);
+
+/* The supplied photo an opening leads with, as an image slot: the first
+ * landscape one, else the first; NULL without photos. */
+static JsonNode *
+lead_photo(JsonObject *plan){
+	JsonArray *photos = member_array(plan, "photos");
+	JsonObject *pick = NULL, *image;
+	JsonNode *node;
+	guint i;
+	for (i = 0; photos != NULL && i < json_array_get_length(photos); i++) {
+		JsonObject *photo = JSON_NODE_HOLDS_OBJECT(json_array_get_element(photos, i))
+			? json_array_get_object_element(photos, i) : NULL;
+		if (photo == NULL || ls_string(photo, "path") == NULL)
+			continue;
+		if (pick == NULL)
+			pick = photo;
+		if (json_object_get_int_member_with_default(photo, "width", 0) >= json_object_get_int_member_with_default(photo, "height", 1)) {
+			pick = photo;
+			break;
+		}
+	}
+	if (pick == NULL)
+		return NULL;
+	node = json_node_new(JSON_NODE_OBJECT);
+	image = json_object_new();
+	json_object_set_string_member(image, "src", ls_string(pick, "path"));
+	json_object_set_string_member(image, "alt", ls_string(pick, "alt") != NULL ? ls_string(pick, "alt") : "");
+	json_node_take_object(node, image);
+	return node;
+}
+
+/* A supplied photo leads any opening that shows a picture, ahead of a
+ * drawing: @content's art becomes the lead photo unless it already is a
+ * photo. Returns whether @content changed. */
+static gboolean
+photo_first(LsComponents *self, JsonObject *plan, JsonObject *content, const gchar *component, const gchar *variant){
+	JsonObject *slots = member_object(member_object(self->components, component), "slots");
+	JsonObject *art = member_object(content, "art");
+	JsonNode *photo;
+	if (content == NULL || slots == NULL || !json_object_has_member(slots, "art") ||
+		!opening_shows_art(self, component, variant) ||
+		(art != NULL && plan_photo(plan, ls_string(art, "src")) != NULL))
+		return FALSE;
+	photo = lead_photo(plan);
+	if (photo == NULL)
+		return FALSE;
+	json_object_set_member(content, "art", photo);
+	return TRUE;
 }
 
 /* The plan's first artwork other than the mark, as an image slot. */
@@ -2365,11 +2536,12 @@ convert_opening(LsComponents *self, JsonObject *plan, JsonObject *source, const 
 	}
 	/* A picture the writer put in the opening (often a supplied photo) is
 	 * never dropped for an opening that would hide it. */
-	if (json_object_has_member(from, "art") && !opening_shows_art(component, variant)) {
+	if (json_object_has_member(from, "art") && !opening_shows_art(self, component, variant)) {
 		json_node_unref(out);
 		return NULL;
 	}
-	if (opening_needs_art(component, variant) && !json_object_has_member(content, "art")) {
+	photo_first(self, plan, content, component, variant);
+	if (opening_needs_art(self, component, variant) && !json_object_has_member(content, "art")) {
 		JsonNode *art = borrowed_art(plan);
 		if (art == NULL) {
 			json_node_unref(out);
@@ -2407,8 +2579,10 @@ ls_components_apply_opening(LsComponents *self, JsonNode *plan_node, const gchar
 	{
 		g_autofree gchar *current = g_strdup_printf("%s/%s", component, ls_string(first, "variant") != NULL
 			? ls_string(first, "variant") : "");
+		/* The writer already opens as dealt; a supplied photo still leads. */
 		if (g_str_equal(current, opening))
-			return FALSE;
+			return photo_first(self, plan, member_object(first, "content"), component,
+				ls_string(first, "variant") != NULL ? ls_string(first, "variant") : "");
 	}
 	/* The dealt opening first, then the composition's other openings and
 	 * then every other one, each list entered at a point the site's
@@ -4504,7 +4678,7 @@ generate_palette(LsComponents *self, const gchar *seed){
 	 * papers a light one. */
 	gdouble accent_l = dark ? seed_range(seed, "palette:accent", 0.72, 0.84) : vivid ? seed_range(seed, "palette:accent", 0.36, 0.48)
 		: earth ? seed_range(seed, "palette:accent", 0.3, 0.42) : seed_range(seed, "palette:accent", 0.47, 0.6);
-	gdouble accent_c = seed_range(seed, "palette:accent-c", 0.12, 0.2);
+	gdouble accent_c = seed_range(seed, "palette:accent-c", 0.14, 0.22);
 	gdouble toward = dark ? 0.01 : -0.01;
 	g_autofree gchar *paper = oklch_hex(paper_l, paper_c, base);
 	g_autofree gchar *surface = oklch_hex(paper_l + (dark ? 0.05 : -0.04), paper_c + 0.005, base);

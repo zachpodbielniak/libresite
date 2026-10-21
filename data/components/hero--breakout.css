@@ -1,0 +1,44 @@
+/* hero/breakout: the words on an ink block, the picture breaking out above
+ * the block's top edge, and a drawn arrow pointing at the first button.
+ * Rebuilt from scratch after docs/inspiration.org, openings 15. */
+/* The opening shapes its own picture; photo looks and art directions that
+ * reshape pictures elsewhere stand aside here. */
+.block.hero--breakout.hero--breakout .hero__art img { border: 0; border-radius: 0; padding: 0; background: none; box-shadow: none; clip-path: none; -webkit-mask: none; mask: none; transform: none; }
+.hero--breakout { --breakout-rise: clamp(2.5rem, 9cqi, 7rem); }
+.block.hero--breakout { padding-top: calc(var(--section-space) * 0.6 + var(--breakout-rise)); }
+.hero--breakout .hero__inner {
+	--paper: var(--ls-ink); --ink: var(--ls-paper); --surface: color-mix(in srgb, var(--ls-paper) 10%, var(--ls-ink));
+	--muted: var(--ls-paper); --accent: var(--ls-paper); --accent-ink: var(--ls-ink); --accent-text: var(--ls-paper);
+	--line: color-mix(in srgb, var(--ls-paper) 30%, var(--ls-ink)); --line-strong: var(--ls-paper); --focus: var(--ls-paper);
+	display: flex; flex-direction: column; padding: 0 clamp(var(--space-5), 5cqi, var(--space-8)) clamp(var(--space-6), 5cqi, var(--space-8));
+	background: var(--ls-ink); color: var(--ls-paper); border-radius: max(var(--radius), 0.75rem);
+}
+.hero--breakout .hero__art { order: -1; margin: calc(-1 * var(--breakout-rise)) 0 var(--space-6); }
+.block.hero--breakout.hero--breakout .hero__art img {
+	width: 100%; height: clamp(15rem, 52cqi, 30rem); max-height: none; object-fit: cover;
+	border-radius: max(var(--radius), 0.75rem); box-shadow: 0 1.5rem 2.5rem -1.5rem rgb(0 0 0 / 0.6);
+}
+.hero--breakout .hero__title { font-size: clamp(2.5rem, 7.5cqi, min(6.5rem, var(--max-width) * 0.075)); font-weight: 800; line-height: 0.95; letter-spacing: -0.03em; }
+.hero--breakout .hero__title--long { font-size: clamp(2rem, 4.8cqi, min(4.2rem, var(--max-width) * 0.048)); }
+.hero--breakout .hero__title .em { color: var(--ls-paper); font-style: italic; }
+.hero--breakout .hero__text a:not(.button):hover { color: inherit; }
+/* The drawn arrow: a hand-drawn curve that ends at the first button. */
+.hero--breakout .actions { position: relative; margin-top: calc(var(--space-5) + 3.5rem); }
+.hero--breakout .actions::before {
+	content: ""; position: absolute; left: 0; bottom: calc(100% + 0.25rem); width: 4.5rem; height: 3.25rem; pointer-events: none;
+	background: var(--ls-accent);
+	-webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 90 64' fill='none' stroke='%23000' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M86 6C60 4 30 10 22 30c-4 10-2 20 4 28'/%3E%3Cpath d='M14 48l12 12 6-16'/%3E%3C/svg%3E") center / contain no-repeat;
+	mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 90 64' fill='none' stroke='%23000' stroke-width='4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M86 6C60 4 30 10 22 30c-4 10-2 20 4 28'/%3E%3Cpath d='M14 48l12 12 6-16'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+@container (min-width: 56rem) {
+	.hero--breakout .hero__inner:has(> .hero__art) { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: var(--space-7); align-items: end; }
+	/* Stretched with a negative top margin, the picture spans the words' row
+	 * and rises above the block by the same amount. */
+	.hero--breakout .hero__art { order: 2; align-self: stretch; display: flex; margin: calc(-1 * var(--breakout-rise)) 0 0; }
+	.block.hero--breakout.hero--breakout .hero__art img { height: 100%; min-height: clamp(24rem, 40cqi, 34rem); }
+	.hero--breakout .hero__text { padding-top: clamp(var(--space-6), 5cqi, var(--space-8)); }
+}
+@media (prefers-reduced-motion: no-preference) {
+	.hero--breakout .actions::before { animation: ls-breakout-draw 900ms 400ms ease-out both; }
+}
+@keyframes ls-breakout-draw { from { clip-path: inset(0 0 0 100%); } to { clip-path: inset(0); } }

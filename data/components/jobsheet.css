@@ -1,0 +1,27 @@
+/* jobsheet: a process as a printed job sheet, slightly turned on a dark
+ * panel; each step a ruled row with a boxed number and a drawn tick.
+ * Rebuilt from scratch after docs/inspiration.org, sections 26. */
+.jobsheet__panel { padding: clamp(var(--space-4), 6cqi, var(--space-8)); background: var(--ls-ink); border-radius: max(var(--radius), 0.75rem); }
+.jobsheet__sheet {
+	--paper: var(--ls-paper); --ink: var(--ls-ink); --muted: var(--ls-ink); --line: color-mix(in srgb, var(--ls-ink) 22%, var(--ls-paper));
+	max-width: 52rem; margin: 0 auto; padding: var(--space-4) clamp(var(--space-4), 4cqi, var(--space-7)) var(--space-6);
+	list-style: none; background: var(--ls-paper); color: var(--ls-ink); border-top: calc(var(--border-strong) * 3) solid var(--ls-accent);
+	box-shadow: 0 1.5rem 2.5rem -1.25rem rgb(0 0 0 / 0.55);
+}
+.jobsheet__row { display: grid; grid-template-columns: 2.75rem minmax(0, 1fr) 1.75rem; gap: var(--space-4); align-items: start; padding-block: var(--space-4); border-bottom: var(--border) solid var(--line); }
+.jobsheet__n {
+	display: grid; place-items: center; width: 2.5rem; height: 2.5rem; border: var(--border-strong) solid var(--ink);
+	font-family: var(--font-mono); font-size: var(--step--1); font-weight: 700; letter-spacing: 0.04em;
+}
+.jobsheet__title { margin: 0 0 0.2em; font-family: var(--font-mono); font-size: var(--step-1); font-weight: 700; letter-spacing: 0.02em; text-transform: uppercase; }
+.jobsheet__tick { width: 1.4rem; height: 0.75rem; margin-top: 0.7rem; border-left: 0.22rem solid var(--ls-accent); border-bottom: 0.22rem solid var(--ls-accent); transform: rotate(-48deg); }
+.jobsheet--carbon .jobsheet__panel { background: var(--ls-accent); }
+.jobsheet--carbon .jobsheet__sheet {
+	--paper: var(--ls-surface); --line: color-mix(in srgb, var(--ls-ink) 26%, var(--ls-surface));
+	background: var(--ls-surface); border-top-color: var(--ls-ink);
+}
+.jobsheet--carbon .jobsheet__tick { border-color: var(--ls-ink); }
+@container (min-width: 48rem) {
+	.jobsheet__sheet { transform: rotate(-1.1deg); }
+	.jobsheet__row { grid-template-columns: 3.5rem minmax(0, 1fr) 2rem; }
+}

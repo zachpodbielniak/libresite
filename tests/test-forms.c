@@ -67,9 +67,12 @@ test_forms(void){
 			? json_object_get_object_member(wider, "forms") : NULL;
 		g_assert_cmpuint(json_array_get_length(json_object_get_array_member(families, name->data)), >=, 2);
 		total += json_array_get_length(json_object_get_array_member(families, name->data));
-		/* Forms from the wider block join their family. */
+		/* Forms from the wider and bold blocks join their family. */
 		if (more != NULL && json_object_has_member(more, name->data))
 			total += json_array_get_length(json_object_get_array_member(more, name->data));
+		if (block("bold") != NULL && json_object_has_member(json_object_get_object_member(block("bold"), "forms"), name->data))
+			total += json_array_get_length(json_object_get_array_member(json_object_get_object_member(block("bold"), "forms"),
+				name->data));
 	}
 	for (s = 0; s < 300; s++) {
 		g_autofree gchar *seed = g_strdup_printf("form-%u\nA business %u.", s, s);

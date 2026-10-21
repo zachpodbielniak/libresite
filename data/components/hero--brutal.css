@@ -1,0 +1,36 @@
+/* hero/brutal: neo-brutalist tiles. The headline on an accent tile, the
+ * words on a surface tile, the buttons and the picture in heavy ink frames
+ * with hard offset shadows. Rebuilt from scratch after
+ * docs/inspiration.org, openings 33. */
+/* The opening shapes its own picture; photo looks and art directions that
+ * reshape pictures elsewhere stand aside here. */
+.block.hero--brutal.hero--brutal .hero__art img { border: 0; border-radius: 0; padding: 0; background: none; box-shadow: none; clip-path: none; -webkit-mask: none; mask: none; transform: none; }
+.hero--brutal { --brutal-edge: max(3px, calc(var(--border-strong) * 1.5)); --brutal-drop: clamp(5px, 1.2cqi, 10px); }
+.hero--brutal .hero__text { display: grid; gap: calc(var(--space-4) + var(--brutal-drop)); }
+.hero--brutal .hero__text > * { margin: 0; border: var(--brutal-edge) solid var(--ls-ink); box-shadow: var(--brutal-drop) var(--brutal-drop) 0 var(--ls-ink); }
+.hero--brutal .hero__text > .kicker {
+	justify-self: start; padding: var(--space-2) var(--space-3); background: var(--ls-paper); color: var(--ls-ink); transform: rotate(-2deg);
+}
+.hero--brutal .hero__title {
+	--paper: var(--ls-accent); --ink: var(--ls-accent-ink); --accent-text: var(--ls-accent-ink);
+	max-width: none; padding: clamp(var(--space-4), 4cqi, var(--space-6)); background: var(--ls-accent); color: var(--ls-accent-ink);
+	font-size: clamp(2.5rem, 8cqi, min(6.5rem, var(--max-width) * 0.08)); font-weight: 900; line-height: 0.92; letter-spacing: -0.03em;
+}
+.hero--brutal .hero__title--long { font-size: clamp(2rem, 5cqi, min(4.2rem, var(--max-width) * 0.05)); }
+.hero--brutal .hero__title .em { font-style: normal; background: var(--ls-ink); color: var(--ls-paper); padding: 0 0.12em; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.hero--brutal .hero__lede { padding: var(--space-4) var(--space-5); background: var(--ls-surface); color: var(--ls-ink); max-width: none; }
+.hero--brutal .hero__text > .actions { padding: var(--space-4); background: var(--ls-paper); }
+.hero--brutal .actions .button { border: var(--brutal-edge) solid var(--ls-ink); border-radius: 0; box-shadow: 3px 3px 0 var(--ls-ink); }
+.hero--brutal .hero__art { margin: calc(var(--space-4) + var(--brutal-drop)) 0 0; padding: clamp(var(--space-3), 2.5cqi, var(--space-5)); background: var(--ls-accent); border: var(--brutal-edge) solid var(--ls-ink); box-shadow: var(--brutal-drop) var(--brutal-drop) 0 var(--ls-ink); }
+.block.hero--brutal.hero--brutal .hero__art img { border: var(--brutal-edge) solid var(--ls-ink); background: var(--ls-paper); }
+@media (prefers-reduced-motion: no-preference) {
+	.hero--brutal .actions .button { transition: transform 120ms ease, box-shadow 120ms ease, background-color 150ms ease, color 150ms ease; }
+	.hero--brutal .actions .button:hover { transform: translate(3px, 3px); box-shadow: 0 0 0 var(--ls-ink); }
+}
+@container (min-width: 56rem) {
+	.hero--brutal .hero__inner:has(> .hero__art) { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr); gap: var(--space-6); align-items: stretch; }
+	.hero--brutal .hero__art { margin: 0; display: flex; }
+	.hero--brutal .hero__art img { height: 100%; max-height: none; object-fit: cover; }
+	.hero--brutal .hero__text { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); align-content: start; }
+	.hero--brutal .hero__text > :is(.kicker, .hero__title) { grid-column: 1 / -1; }
+}
