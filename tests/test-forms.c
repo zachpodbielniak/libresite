@@ -175,6 +175,107 @@ test_extras(void){
 	g_assert_false(ls_components_apply_extras(components, plan, page));
 }
 
+/* Whether section @index of @page still carries @text somewhere. */
+static gboolean
+carries(JsonNode *page, guint index, const gchar *text){
+	g_autoptr(JsonNode) node = json_node_new(JSON_NODE_OBJECT);
+	g_autofree gchar *encoded = NULL;
+	json_node_set_object(node, section(page, index));
+	encoded = ls_json_encode(node);
+	return strstr(encoded, text) != NULL;
+}
+
+/* @close's page: the hero, then @call as its closing section. */
+static JsonNode *
+closing_page(const gchar *call){
+	g_autofree gchar *text = g_strdup_printf("{\"path\":\"index.html\",\"sections\":[{\"component\":\"hero\","
+		"\"variant\":\"statement\",\"content\":{\"heading\":\"Repairs\"}},%s]}", call);
+	JsonNode *page = ls_json_parse(text, NULL);
+	g_assert_nonnull(page);
+	return page;
+}
+
+/* The closing call changes form only when the new form carries all of it:
+ * its words and every action survive, or it keeps the form it was written
+ * in (docs/components.org, "Section forms and extras"). */
+static void
+test_closing(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(JsonNode) plan = load("tests/fixtures/composed/plan.json");
+	const gchar *targets[] = {"statement", "links", "cta"};
+	JsonObject *forms;
+	guint t;
+	g_assert_true(ls_components_apply_seed(components, plan, "closing\nbrief", NULL, FALSE));
+	forms = json_object_get_object_member(member(plan, "structure"), "forms");
+	for (t = 0; t < G_N_ELEMENTS(targets); t++) {
+		/* A call with words and two actions: whatever form it ends in
+		 * holds the words and both actions. */
+		g_autoptr(JsonNode) call = closing_page("{\"component\":\"cta\",\"variant\":\"band\",\"content\":{"
+			"\"heading\":\"Book a visit\",\"body\":\"Call before visiting.\",\"actions\":["
+			"{\"href\":\"visit.html\",\"label\":\"Book online\"},{\"href\":\"tel:+15550100\",\"label\":\"Call us\"}]}}");
+		/* Words in rich text no other form can set: the call stays a call. */
+		g_autoptr(JsonNode) rich = closing_page("{\"component\":\"cta\",\"variant\":\"band\",\"content\":{"
+			"\"heading\":\"Book a visit\",\"body\":\"Call **before** visiting.\",\"actions\":["
+			"{\"href\":\"visit.html\",\"label\":\"Book online\"},{\"href\":\"tel:+15550100\",\"label\":\"Call us\"}]}}");
+		/* Links with words beside each: no single call or statement holds
+		 * them all, so they stay links. */
+		g_autoptr(JsonNode) links = closing_page("{\"component\":\"links\",\"variant\":\"list\",\"content\":{"
+			"\"heading\":\"Where next\",\"items\":[{\"link\":{\"href\":\"visit.html\",\"label\":\"Book online\"},"
+			"\"body\":\"Pick a time.\"},{\"link\":{\"href\":\"work.html\",\"label\":\"Areas\"},"
+			"\"body\":\"Where we work.\"}]}}");
+		/* A bare call fits a statement whole, and becomes one. */
+		g_autoptr(JsonNode) bare = closing_page("{\"component\":\"cta\",\"variant\":\"band\",\"content\":{"
+			"\"heading\":\"Book a visit\",\"actions\":[{\"href\":\"visit.html\",\"label\":\"Book online\"}]}}");
+		const gchar *kept[] = {"Book a visit", "Call before visiting.", "visit.html", "Book online", "tel:+15550100", "Call us"};
+		guint k;
+		json_object_set_string_member(forms, "close", targets[t]);
+		ls_components_apply_forms(components, plan, "index.html", call);
+		for (k = 0; k < G_N_ELEMENTS(kept); k++)
+			if (!carries(call, 1, kept[k]))
+				g_error("closing form %s lost \"%s\"", targets[t], kept[k]);
+		g_assert_false(ls_components_apply_forms(components, plan, "index.html", rich));
+		g_assert_cmpstr(component_at(rich, 1), ==, "cta");
+		g_assert_true(carries(rich, 1, "Call **before** visiting."));
+		g_assert_true(carries(rich, 1, "tel:+15550100"));
+		ls_components_apply_forms(components, plan, "index.html", links);
+		g_assert_cmpstr(component_at(links, 1), ==, "links");
+		g_assert_true(carries(links, 1, "Pick a time."));
+		g_assert_true(carries(links, 1, "Where we work."));
+		ls_components_apply_forms(components, plan, "index.html", bare);
+		if (g_str_equal(targets[t], "statement")) {
+			g_assert_cmpstr(component_at(bare, 1), ==, "statement");
+			g_assert_true(carries(bare, 1, "Book a visit"));
+			g_assert_true(carries(bare, 1, "visit.html"));
+		}
+	}
+}
+
+/* Other forms keep every word too: an intro or an item field the dealt
+ * form has no place for keeps the section in a form that has. */
+static void
+test_keeps(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(JsonNode) plan = load("tests/fixtures/composed/plan.json");
+	const gchar *targets[] = {"big-list", "bento", "entries", "services"};
+	guint t;
+	g_assert_true(ls_components_apply_seed(components, plan, "keeps\nbrief", NULL, FALSE));
+	for (t = 0; t < G_N_ELEMENTS(targets); t++) {
+		g_autoptr(JsonNode) page = closing_page("{\"component\":\"cards\",\"variant\":\"grid\",\"content\":{"
+			"\"heading\":\"What we do\",\"intro\":\"Three kinds of repair.\",\"items\":["
+			"{\"title\":\"Chairs\",\"tag\":\"Same day\",\"body\":\"Loose joints made firm.\"},"
+			"{\"title\":\"Tables\",\"body\":\"Wobbles fixed.\"},{\"title\":\"Cabinets\",\"body\":\"Doors hung true.\"}]}},"
+			"{\"component\":\"cta\",\"variant\":\"band\",\"content\":{\"heading\":\"Start\",\"actions\":"
+			"[{\"href\":\"start.html\",\"label\":\"Start\"}]}}");
+		const gchar *kept[] = {"What we do", "Three kinds of repair.", "Chairs", "Same day", "Loose joints made firm.", "Doors hung true."};
+		guint k;
+		json_object_set_string_member(json_object_get_object_member(member(plan, "structure"), "forms"), "offer", targets[t]);
+		ls_components_apply_forms(components, plan, "index.html", page);
+		for (k = 0; k < G_N_ELEMENTS(kept); k++)
+			if (!carries(page, 1, kept[k]))
+				g_error("offer form %s lost \"%s\" (now %s)", targets[t], kept[k], component_at(page, 1));
+	}
+}
+
 /* No two of the ten fixture businesses share opening, composition,
  * palette and type, nor composition, home sequence and dealt variants. */
 static void
@@ -220,6 +321,8 @@ int
 main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
 	g_test_add_func("/forms/forms", test_forms);
+	g_test_add_func("/forms/closing", test_closing);
+	g_test_add_func("/forms/keeps", test_keeps);
 	g_test_add_func("/forms/extras", test_extras);
 	g_test_add_func("/forms/unique", test_unique);
 	return g_test_run();

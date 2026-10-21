@@ -2491,13 +2491,17 @@ photo_opening(LsComponents *self, const gchar *seed, const gchar *composition, c
 	JsonArray *fitting = member_array(composition_layout(self, composition), "openings");
 	JsonArray *openings = member_array(member_object(self->kinds, "home"), "openings");
 	g_autoptr(GPtrArray) led = g_ptr_array_new_with_free_func(g_free);
+	gboolean fallback;
 	guint i;
 	if (pair_needs_art(self, opening))
 		return g_strdup(opening);
 	for (i = 0; fitting != NULL && i < json_array_get_length(fitting); i++)
 		if (pair_needs_art(self, json_array_get_string_element(fitting, i)))
 			g_ptr_array_add(led, g_strdup(json_array_get_string_element(fitting, i)));
-	for (i = 0; led->len == 0 && openings != NULL && i < json_array_get_length(openings); i++) {
+	fallback = led->len == 0;
+	/* None in the composition: the pool is every home opening a picture
+	 * leads, gathered whole before one is picked. */
+	for (i = 0; fallback && openings != NULL && i < json_array_get_length(openings); i++) {
 		const gchar *name = json_array_get_string_element(openings, i);
 		g_autoptr(GList) variants = NULL;
 		GList *variant;
@@ -2986,6 +2990,47 @@ convert_call(JsonObject *source, const gchar *target){
 	}
 }
 
+/* Every scalar under @node (strings, numbers, flags) into @values,
+ * counted, member names aside. */
+static void
+count_values(JsonNode *node, GHashTable *values){
+	if (node == NULL)
+		return;
+	if (JSON_NODE_HOLDS_OBJECT(node)) {
+		g_autoptr(GList) members = json_object_get_values(json_node_get_object(node));
+		GList *member;
+		for (member = members; member != NULL; member = member->next)
+			count_values(member->data, values);
+	} else if (JSON_NODE_HOLDS_ARRAY(node)) {
+		JsonArray *array = json_node_get_array(node);
+		guint i;
+		for (i = 0; i < json_array_get_length(array); i++)
+			count_values(json_array_get_element(array, i), values);
+	} else if (JSON_NODE_HOLDS_VALUE(node)) {
+		gchar *key = ls_json_encode(node);
+		g_hash_table_insert(values, key, GUINT_TO_POINTER(GPOINTER_TO_UINT(g_hash_table_lookup(values, key)) + 1));
+	}
+}
+
+/* Whether @converted's content carries every word, link and setting of
+ * @source's, as often as @source has it: a form change may rename and
+ * move the owner's content, never drop it. Validation cannot see a loss,
+ * so this is the only guard against one. */
+static gboolean
+keeps_content(JsonObject *source, JsonNode *converted){
+	g_autoptr(GHashTable) before = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+	g_autoptr(GHashTable) after = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+	GHashTableIter iter;
+	gpointer key, count;
+	count_values(json_object_get_member(source, "content"), before);
+	count_values(json_object_get_member(json_node_get_object(converted), "content"), after);
+	g_hash_table_iter_init(&iter, before);
+	while (g_hash_table_iter_next(&iter, &key, &count))
+		if (GPOINTER_TO_UINT(g_hash_table_lookup(after, key)) < GPOINTER_TO_UINT(count))
+			return FALSE;
+	return TRUE;
+}
+
 /* @source's words in @target: heading and intro where the target has
  * them, and every item's title, body and link through the field names. */
 static JsonNode *
@@ -3069,6 +3114,8 @@ ls_components_apply_forms(LsComponents *self, JsonNode *plan_node, const gchar *
 			if (g_str_equal(target, component))
 				break;
 			converted = call_form(self, component) ? convert_call(source, target) : convert_form(self, source, target);
+			if (!keeps_content(source, converted))
+				continue;
 			candidate = node_copy(page);
 			candidate_sections = member_array(json_node_get_object(candidate), "sections");
 			{
