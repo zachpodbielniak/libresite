@@ -1343,7 +1343,9 @@ test_signature_rules(void){
 		bundle = ls_json_parse(text, NULL);
 		css = file_content(bundle, "styles.css");
 		g_assert_nonnull(strstr(css, "/* Site signature */"));
-		g_assert_true(g_str_has_suffix(css, "border-bottom: 2px dashed currentColor; }\n}\n"));
+		/* Last, but for the builder's rule that rations its divider. */
+		g_assert_nonnull(strstr(css, "border-bottom: 2px dashed currentColor; }\nmain > .block + .block::before"));
+		g_assert_true(g_str_has_suffix(css, "::before { display: none; }\n}\n"));
 		g_assert_nonnull(strstr(css, "@layer ls-base, ls-modules, ls-components, ls-look, ls-signature;"));
 		g_assert_nonnull(strstr(css, "/* Site signature */\n@layer ls-signature {\n"));
 		json_object_set_string_member(json_node_get_object(plan), "signature", bad[0]);

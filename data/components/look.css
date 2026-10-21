@@ -183,8 +183,10 @@ main > .block:first-child:not(.cover--full, .cover--split) img:is([src$=".jpg"],
 /* Lettering. */
 .look-lettering-dropcap main :is(.block--text, .block--article, .block--story, .block--lead):first-of-type .prose > p:first-of-type::first-letter { float: left; margin: 0.08em 0.12em 0 0; font-family: var(--font-display); font-size: 3.4em; font-weight: var(--heading-weight); line-height: 0.82; color: var(--accent-text); }
 .look-lettering-smallcaps :is(.kicker, .site-nav a, th, .card__meta, .site-footer nav a) { font-variant-caps: all-small-caps; letter-spacing: 0.06em; }
-.look-lettering-gradient main h1 { background: linear-gradient(100deg, var(--ink) 30%, var(--accent-text)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-@supports not ((background-clip: text) or (-webkit-background-clip: text)) { .look-lettering-gradient main h1 { color: var(--ink); background: none; } }
+/* Not on a heading set over a picture: the fill clipped to the letters would
+ * wipe out the band of page colour it sits on. */
+.look-lettering-gradient main h1:not(.cover h1, .poster--backdrop h1, .hero--banner h1) { background: linear-gradient(100deg, var(--ink) 30%, var(--accent-text)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+@supports not ((background-clip: text) or (-webkit-background-clip: text)) { .look-lettering-gradient main h1:not(.cover h1, .poster--backdrop h1, .hero--banner h1) { color: var(--ink); background: none; } }
 /* Outline lettering only on a main heading of three words or fewer, and only
  * where the column is wide: a longer heading or a phone keeps it filled. */
 @container (min-width: 40rem) {
@@ -245,7 +247,8 @@ body .split--contrast .split__panel:last-child { background: var(--accent); colo
 .look-images-rounded main img { border-radius: clamp(0.75rem, 2cqi, 1.5rem); }
 /* A cover is edge to edge and a framed media figure has its own mount: one frame, never two. */
 .look-images-framed main img:not(.cover img, .media--framed img, .brand img) { padding: clamp(0.35rem, 1cqi, 0.75rem); border: var(--border) solid var(--line-strong); border-radius: 0; background: var(--paper); }
-.look-images-print main img { filter: grayscale(1) contrast(1.15); }
+/* Artwork only: a customer's photos keep their colour. */
+.look-images-print main img[src$=".svg"] { filter: grayscale(1) contrast(1.15); }
 .look-images-shadow main img { border-radius: var(--radius); box-shadow: 0.6rem 0.6rem 0 var(--accent); }
 .look-images-shadow main :is(.bento__art, .strip__item img) { box-shadow: none; }
 
@@ -368,6 +371,9 @@ body main .page-header--index .kicker::before { content: none !important; }
 }
 /* center: a narrow journal column under a centered header. */
 .look-frame-center { --max-width: min(var(--frame-width), 46rem); }
+/* A split opening leaves the journal column: beside the words in 46rem its
+ * photo shrinks to a stamp. */
+.look-frame-center main > .hero--split:first-child { --max-width: min(var(--frame-width), 80rem); }
 .look-frame-center .site-header__inner { flex-direction: column; justify-content: center; text-align: center; padding-block: var(--space-5); }
 .look-frame-center .site-nav { justify-content: center; }
 .look-frame-center .site-header__tagline { display: block; margin: 0; font-size: var(--step--1); color: var(--muted); }

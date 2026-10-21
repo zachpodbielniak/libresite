@@ -259,6 +259,33 @@ const gchar *ls_components_get_angle_description(LsComponents *self, const gchar
  */
 gchar *ls_components_suggest_opening(LsComponents *self, const gchar *seed);
 /**
+ * ls_components_suggest_photo_opening:
+ * @self: a component library
+ * @seed: stable text identifying the site
+ *
+ * The home opening a site from @seed wears when its order supplies photos:
+ * the dealt opening when a picture leads it on the first screen (every
+ * cover, a split, backdrop or breakout opening; not the arch or banner,
+ * which raise it below the words), else one of the dealt composition's
+ * openings that a picture leads, else one of every such opening. The plan
+ * step deals the same one into structure.opening once photos are known.
+ * Returns: (transfer full) (nullable): component/variant, such as cover/full
+ */
+gchar *ls_components_suggest_photo_opening(LsComponents *self, const gchar *seed);
+/**
+ * ls_components_spread_photos:
+ * @self: a component library
+ * @plan: (transfer none): a plan with its supplied photos
+ * @page: (transfer none): a page specification, changed in place
+ *
+ * Shows each supplied photo once per page: a section that repeats a photo
+ * already shown above it (often the one the opening leads with) takes a
+ * supplied photo the page has not shown yet, with its alt text; with none
+ * left, the repeat stays.
+ * Returns: whether @page changed
+ */
+gboolean ls_components_spread_photos(LsComponents *self, JsonNode *plan, JsonNode *page);
+/**
  * ls_components_list_sectors:
  * @self: a component library
  *
