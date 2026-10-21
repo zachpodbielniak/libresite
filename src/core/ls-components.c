@@ -446,6 +446,16 @@ line_kind(const gchar *line, const gchar **content){
 	return LINE_TEXT;
 }
 
+/* Whether @s to @end is one link and nothing else: such a line stands
+ * alone, so its paragraph or list item is marked as a link line and the
+ * link becomes a full-size tap target instead of a link in running text. */
+static gboolean
+link_only(const gchar *s, const gchar *end){
+	const gchar *middle = s < end && *s == '[' ? find(s + 1, end, "](") : NULL;
+	const gchar *stop = middle != NULL ? find(middle + 2, end, ")") : NULL;
+	return middle != NULL && stop != NULL && middle > s + 1 && stop > middle + 2 && stop + 1 == end;
+}
+
 /* Paragraphs, bullet and numbered lists; everything else is escaped text. */
 static gchar *
 rich_render(RichState *state, const gchar *text){
@@ -467,7 +477,7 @@ rich_render(RichState *state, const gchar *text){
 		LineKind kind = line_kind(line, &content);
 		if (*line == '\0' || kind != LINE_TEXT) {
 			if (paragraph->len > 0) {
-				g_string_append(out, "<p>");
+				g_string_append(out, link_only(paragraph->str, paragraph->str + paragraph->len) ? "<p class=\"link-line\">" : "<p>");
 				rich_inline(state, paragraph->str, paragraph->str + paragraph->len, out);
 				g_string_append(out, "</p>\n");
 				g_string_truncate(paragraph, 0);
@@ -490,12 +500,12 @@ rich_render(RichState *state, const gchar *text){
 			in_list = TRUE;
 			open = kind;
 		}
-		g_string_append(out, "<li>");
+		g_string_append(out, link_only(content, content + strlen(content)) ? "<li class=\"link-line\">" : "<li>");
 		rich_inline(state, content, content + strlen(content), out);
 		g_string_append(out, "</li>");
 	}
 	if (paragraph->len > 0) {
-		g_string_append(out, "<p>");
+		g_string_append(out, link_only(paragraph->str, paragraph->str + paragraph->len) ? "<p class=\"link-line\">" : "<p>");
 		rich_inline(state, paragraph->str, paragraph->str + paragraph->len, out);
 		g_string_append(out, "</p>\n");
 	}
@@ -3971,8 +3981,40 @@ font_href(JsonObject *plan){
 				g_string_append_printf(out, ",%" G_GINT64_FORMAT "i", weight);
 		}
 	}
-	g_string_append(out, "&display=swap");
+	/* Optional display: a web font that arrives after the page is first
+	 * drawn is kept for the next page instead of swapping in and moving
+	 * the header and opening under the visitor. The preloads below fetch
+	 * the files alongside the stylesheet, so they are normally in time. */
+	g_string_append(out, "&display=optional");
 	return g_string_free(out, FALSE);
+}
+
+/* The most font files a page preloads. */
+#define FONT_PRELOADS 8
+
+/* The Latin file of each family's weight (and its italic) on Bunny Fonts,
+ * at the address the stylesheet asks for, so the page head can start
+ * fetching them with the stylesheet. */
+static JsonArray *
+font_preloads(JsonObject *plan){
+	JsonArray *fonts = member_array(plan, "fonts");
+	JsonArray *out = json_array_new();
+	guint i, j, k;
+	for (i = 0; fonts != NULL && i < json_array_get_length(fonts); i++) {
+		JsonObject *font = json_array_get_object_element(fonts, i);
+		JsonArray *weights = member_array(font, "weights");
+		gboolean italic = json_object_has_member(font, "italic") && json_object_get_boolean_member(font, "italic");
+		g_autofree gchar *family = slugify(ls_string(font, "family"), 40);
+		for (j = 0; weights != NULL && j < json_array_get_length(weights); j++)
+			for (k = 0; k < (italic ? 2u : 1u) && json_array_get_length(out) < FONT_PRELOADS; k++) {
+				JsonObject *preload = json_object_new();
+				g_autofree gchar *href = g_strdup_printf("https://fonts.bunny.net/%s/files/%s-latin-%" G_GINT64_FORMAT "-%s.woff2",
+					family, family, json_array_get_int_element(weights, j), k == 0 ? "normal" : "italic");
+				json_object_set_string_member(preload, "href", href);
+				json_array_add_object_element(out, preload);
+			}
+	}
+	return out;
 }
 
 static void
@@ -7042,8 +7084,10 @@ render_page(Render *render, const gchar *path, const gchar *title, const gchar *
 		json_object_set_string_member(view, "page_css", ls_string(page, "css"));
 	{
 		g_autofree gchar *fonts = font_href(plan);
-		if (fonts != NULL)
+		if (fonts != NULL) {
 			json_object_set_string_member(view, "font_href", fonts);
+			json_object_set_array_member(view, "font_preloads", font_preloads(plan));
+		}
 	}
 	return render_template(render, "layout.html", view);
 }
@@ -7066,6 +7110,20 @@ gene(JsonObject *structure, const gchar *name, gdouble fallback){
 		: json_node_get_double(value);
 }
 
+/* The warning red: deep on a light paper, soft on a dark one, and readable
+ * on the paper and on the surface panels it also marks (a warning
+ * callout's title); otherwise the ink. */
+static const gchar *
+danger_color(const gchar *paper, const gchar *surface, const gchar *ink){
+	gdouble rgb[3];
+	const gchar *red;
+	parse_color(paper, rgb);
+	red = luminance(rgb) > 0.4 ? "#a4161a" : "#ff8a80";
+	return contrast(red, paper) >= 4.5 && contrast(red, surface) >= 4.5 ? red : ink;
+}
+
+static gchar *accent_surface(const gchar *accent, const gchar *accent_ink);
+
 /* Tokens become custom properties; derived colors keep contrast guarantees. */
 static gchar *
 token_css(JsonObject *tokens, JsonObject *structure){
@@ -7078,7 +7136,6 @@ token_css(JsonObject *tokens, JsonObject *structure){
 	gdouble ratio = token_number(tokens, &number_tokens[1]);
 	gdouble space = token_number(tokens, &number_tokens[5]);
 	gdouble border = token_number(tokens, &number_tokens[4]);
-	gdouble rgb[3];
 	gint step;
 	guint i;
 	for (i = 0; i < G_N_ELEMENTS(color_tokens); i++) {
@@ -7089,13 +7146,14 @@ token_css(JsonObject *tokens, JsonObject *structure){
 		g_autofree gchar *text = accent_text(accent, paper, ls_string(tokens, "surface"), ls_string(tokens, "ink"));
 		g_string_append_printf(out, "\t--accent-text: %s;\n", text);
 	}
+	{
+		g_autofree gchar *panel = accent_surface(accent, ls_string(tokens, "accent_ink"));
+		g_string_append_printf(out, "\t--accent-surface: %s;\n", panel);
+	}
 	g_string_append_printf(out, "\t--focus: %s;\n", contrast(accent, paper) >= 3 ? accent : ls_string(tokens, "ink"));
 	g_string_append_printf(out, "\t--line-strong: %s;\n", contrast(ls_string(tokens, "line"), paper) >= 3
 		? ls_string(tokens, "line") : ls_string(tokens, "muted"));
-	parse_color(paper, rgb);
-	g_string_append_printf(out, "\t--danger: %s;\n", luminance(rgb) > 0.4
-		? (contrast("#a4161a", paper) >= 4.5 ? "#a4161a" : ls_string(tokens, "ink"))
-		: (contrast("#ff8a80", paper) >= 4.5 ? "#ff8a80" : ls_string(tokens, "ink")));
+	g_string_append_printf(out, "\t--danger: %s;\n", danger_color(paper, ls_string(tokens, "surface"), ls_string(tokens, "ink")));
 	g_string_append(out, "\t--field: var(--paper);\n");
 	for (i = 0; i < G_N_ELEMENTS(font_tokens); i++) {
 		g_autofree gchar *name = g_strdelimit(g_strdup(font_tokens[i]), "_", '-');
@@ -7191,6 +7249,23 @@ accent_text(const gchar *accent, const gchar *paper, const gchar *surface, const
 	return g_strdup(ink);
 }
 
+/* The panel colour on an accent band: the accent moved a little toward its
+ * text, as the band's cards and boxes show it, unless that costs the text
+ * its AA contrast (a mid accent under white text); then moved the other
+ * way, and failing both the accent itself. */
+static gchar *
+accent_surface(const gchar *accent, const gchar *accent_ink){
+	gdouble rgb[3];
+	g_autofree gchar *toward = mix_color(accent, accent_ink, 0.12);
+	g_autofree gchar *away = NULL;
+	if (contrast(accent_ink, toward) >= 4.5)
+		return g_steal_pointer(&toward);
+	if (!parse_color(accent_ink, rgb))
+		return g_strdup(accent);
+	away = mix_color(accent, luminance(rgb) > 0.4 ? "#000000" : "#ffffff", 0.12);
+	return contrast(accent_ink, away) >= 4.5 ? g_steal_pointer(&away) : g_strdup(accent);
+}
+
 
 /* look.scheme auto: the other scheme's working colors, derived from the
  * tokens and repaired to the same AA pairs, for visitors whose device asks
@@ -7242,14 +7317,7 @@ scheme_css(JsonObject *tokens){
 		? accent : ls_string(alt, "ink"));
 	g_string_append_printf(out, "\t--line-strong: %s;\n", ls_string(alt, "muted"));
 	/* The warning red follows the alternate paper, as token_css() does. */
-	{
-		const gchar *alt_paper = ls_string(alt, "paper");
-		gdouble alt_rgb[3];
-		parse_color(alt_paper, alt_rgb);
-		g_string_append_printf(out, "\t--danger: %s;\n", luminance(alt_rgb) > 0.4
-			? (contrast("#a4161a", alt_paper) >= 4.5 ? "#a4161a" : ls_string(alt, "ink"))
-			: (contrast("#ff8a80", alt_paper) >= 4.5 ? "#ff8a80" : ls_string(alt, "ink")));
-	}
+	g_string_append_printf(out, "\t--danger: %s;\n", danger_color(ls_string(alt, "paper"), ls_string(alt, "surface"), ls_string(alt, "ink")));
 	g_string_append(out, "}\n}\n");
 	return g_string_free(out, FALSE);
 }

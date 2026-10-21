@@ -54,7 +54,9 @@ stop () {
 # counted; large text (24px, or 18.66px bold) needs 3:1, the rest 4.5:1.
 measure=$(cat <<'JS'
 const done = arguments[arguments.length - 1];
-const parse = c => { const m = c.match(/[\d.]+/g); return m ? m.map(Number) : null; };
+/* rgb() channels run to 255; mixed colours come back as color(srgb) in 0 to 1. */
+const parse = c => { const m = c.match(/[\d.]+/g); if (!m) return null; const v = m.map(Number);
+  return c.startsWith("color(") ? v.map((x, i) => i < 3 ? x * 255 : x) : v; };
 const lum = ([r, g, b]) => [r, g, b].map(v => { v /= 255; return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; })
   .reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0);
 const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };

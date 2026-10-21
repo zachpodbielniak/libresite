@@ -201,6 +201,10 @@ base_plan(LsComponents *components){
 		json_object_set_array_member(root, "modules", modules);
 	}
 	g_assert_true(ls_components_apply_seed(components, plan, "options\nEvery option at every width.", "trades", FALSE));
+	/* The fixture's restyle (red tabs) tests the restyle plumbing; the
+	 * browser gates judge the library's own colours. */
+	if (json_object_has_member(root, "restyle"))
+		json_object_remove_member(root, "restyle");
 	return plan;
 }
 

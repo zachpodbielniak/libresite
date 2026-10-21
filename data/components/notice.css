@@ -1,7 +1,7 @@
 .block.notice { padding-block: var(--space-4); }
 .notice__box { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2) var(--space-5); padding: var(--space-3) var(--space-5); border-radius: var(--radius); }
 .notice__text { font-weight: 600; }
-.notice__link { font-weight: 700; }
+.notice__link { display: inline-flex; align-items: center; min-height: 44px; font-weight: 700; }
 .notice--accent .notice__box { background: var(--accent); color: var(--accent-ink); }
 .notice--accent a { color: inherit; }
 .notice--quiet .notice__box { border: var(--border-strong) solid var(--line-strong); }

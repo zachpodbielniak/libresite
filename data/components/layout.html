@@ -17,7 +17,8 @@
 <meta name="color-scheme" content="{{color_scheme}}">
 <meta name="theme-color" content="{{theme_color}}">
 {{#font_href}}<link rel="preconnect" href="https://fonts.bunny.net">
-<link rel="stylesheet" href="{{font_href}}">
+{{#font_preloads}}<link rel="preload" href="{{href}}" as="font" type="font/woff2" crossorigin>
+{{/font_preloads}}<link rel="stylesheet" href="{{font_href}}">
 {{/font_href}}<link rel="stylesheet" href="styles.css">
 {{#page_css}}<style>
 {{{page_css}}}
