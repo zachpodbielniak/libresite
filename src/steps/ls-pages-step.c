@@ -387,7 +387,8 @@ plan_prompt(LsPrompts *prompts, LsRecipe *recipe, JsonObject *config, LsComponen
 		json_object_set_array_member(task, "supplied_photos", json_array_ref(photos));
 	{
 		g_autofree gchar *seed = plan_seed(components, recipe, config, NULL);
-		g_autofree gchar *opening = ls_components_suggest_opening(components, seed);
+		g_autofree gchar *opening = photos != NULL && json_array_get_length(photos) > 0
+			? ls_components_suggest_photo_opening(components, seed) : ls_components_suggest_opening(components, seed);
 		g_autoptr(JsonObject) angles = ls_components_suggest_angles(components, seed);
 		if (opening != NULL)
 			json_object_set_string_member(task, "suggested_opening", opening);
@@ -514,14 +515,8 @@ plan_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *prom
 		if (response != NULL && (plan = parse_object(response, &local_error)) != NULL &&
 			theme != NULL && !ls_components_apply_theme(components, plan, theme, &local_error))
 			g_clear_pointer(&plan, json_node_unref);
-		/* The design is the builder's: the look, colours, type, opening and
-		 * structure are dealt from the seed, so sites cannot converge on the
-		 * model's favourite design; the model writes the words and art. */
-		if (plan != NULL && JSON_NODE_HOLDS_OBJECT(plan)) {
-			g_autofree gchar *seed = plan_seed(components, recipe, config, NULL);
-			ls_components_apply_seed(components, plan, seed, plan_sector(config), theme != NULL);
-		}
-		/* Supplied photographs are the builder's facts, never the model's. */
+		/* Supplied photographs are the builder's facts, never the model's,
+		 * and known before the deal: a site with photos opens on one. */
 		if (plan != NULL && JSON_NODE_HOLDS_OBJECT(plan)) {
 			JsonObject *root = json_node_get_object(plan);
 			if (json_object_has_member(root, "photos"))
@@ -533,6 +528,13 @@ plan_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *prom
 				text = ls_json_encode(copy);
 				json_object_set_member(root, "photos", ls_json_parse(text, NULL));
 			}
+		}
+		/* The design is the builder's: the look, colours, type, opening and
+		 * structure are dealt from the seed, so sites cannot converge on the
+		 * model's favourite design; the model writes the words and art. */
+		if (plan != NULL && JSON_NODE_HOLDS_OBJECT(plan)) {
+			g_autofree gchar *seed = plan_seed(components, recipe, config, NULL);
+			ls_components_apply_seed(components, plan, seed, plan_sector(config), theme != NULL);
 		}
 		/* Supplied social profiles are the builder's facts too. */
 		if (plan != NULL && JSON_NODE_HOLDS_OBJECT(plan)) {
@@ -765,6 +767,8 @@ accept_job(Job *job, LsComponents *components, JsonNode *plan, GError **error){
 			ls_components_apply_extras(components, plan, node);
 			ls_components_apply_composition(components, plan, node);
 		}
+		/* Each supplied photo shows once per page. */
+		ls_components_spread_photos(components, plan, node);
 		if (!ls_components_check_page(components, plan, job->path, node, error))
 			return FALSE;
 		g_clear_pointer(&job->spec, json_node_unref);

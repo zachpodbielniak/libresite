@@ -2108,3 +2108,12 @@ bold:
     expect: {title: title, body: body}
     broadsheet: {title: title, body: body}
   weights: {light: 14, dark: 14, tinted: 18, vivid: 26, deep: 22}
+# The wow pass (docs/components.org, "The wow pass"): look values a theme may
+# wear but the builder never deals. Black-and-white and two-tone photo
+# treatments drained real customers' photos of their colour.
+wow:
+  undealt:
+    photos: [mono, duotone]
+  # A site with photos opens on one; these openings raise their picture
+  # under the words, below the first screen, so photo sites skip them.
+  photo_below: [hero/arch, hero/banner]

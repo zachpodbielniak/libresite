@@ -39,6 +39,8 @@ struct _LsComponents {
 	JsonObject *subjects;	/* art subject name -> description; NULL without */
 	JsonObject *forms;	/* section_forms block; NULL without */
 	JsonObject *pictures;	/* bold opening -> needs, shows, photo or hides; NULL without */
+	JsonObject *undealt;	/* look axis -> values a theme may wear but never dealt; NULL without */
+	JsonArray *photo_below;	/* openings whose picture sits below the first screen; NULL without */
 	JsonNode *network_catalog;
 	JsonObject *networks;	/* social network -> {label, hosts, path}; NULL without networks.yaml */
 	GPtrArray *order;
@@ -1590,6 +1592,47 @@ load_pictures(LsComponents *self, JsonObject *root, GError **error){
 	return TRUE;
 }
 
+/* The wow block's undealt looks: values of an axis a theme may wear but the
+ * builder never deals, such as photo treatments that drain a customer's
+ * photos of their colour. */
+static gboolean
+load_undealt(LsComponents *self, JsonObject *root, GError **error){
+	JsonObject *wow = member_object(root, "wow");
+	JsonObject *undealt = member_object(wow, "undealt");
+	g_autoptr(GList) axes = NULL;
+	GList *axis;
+	if (!json_object_has_member(root, "wow"))
+		return TRUE;
+	if (wow == NULL || !ls_object_keys(wow, "|undealt|photo_below|", NULL) || undealt == NULL)
+		return catalog_invalid(error, "wow", "needs undealt, a map of look axes to values"), FALSE;
+	if (json_object_has_member(wow, "photo_below")) {
+		JsonArray *below = member_array(wow, "photo_below");
+		guint i;
+		for (i = 0; below != NULL && i < json_array_get_length(below); i++)
+			if (!is_dealt_opening(self, json_array_get_string_element(below, i)))
+				below = NULL;
+		if (below == NULL)
+			return catalog_invalid(error, "photo_below", "lists home openings as component/variant"), FALSE;
+		self->photo_below = below;
+	}
+	axes = json_object_get_members(undealt);
+	for (axis = axes; axis != NULL; axis = axis->next) {
+		JsonObject *values = member_object(member_object(self->looks, axis->data), "values");
+		JsonArray *list = member_array(undealt, axis->data);
+		g_autoptr(GList) names = values != NULL ? json_object_get_members(values) : NULL;
+		guint i;
+		if (values == NULL || list == NULL || json_array_get_length(list) + 2 > json_object_get_size(values))
+			return catalog_invalid(error, axis->data, "undealt names some values of a look axis, leaving two"), FALSE;
+		for (i = 0; i < json_array_get_length(list); i++) {
+			const gchar *value = json_array_get_string_element(list, i);
+			if (value == NULL || !json_object_has_member(values, value) || g_strcmp0(names->data, value) == 0)
+				return catalog_invalid(error, axis->data, "undealt values belong to the axis and are not its default"), FALSE;
+		}
+	}
+	self->undealt = undealt;
+	return TRUE;
+}
+
 LsComponents *
 ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 	g_autoptr(LsComponents) self = g_object_new(LS_TYPE_COMPONENTS, NULL);
@@ -1609,7 +1652,7 @@ ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 	if (self->catalog == NULL)
 		return NULL;
 	root = JSON_NODE_HOLDS_OBJECT(self->catalog) ? json_node_get_object(self->catalog) : NULL;
-	if (root == NULL || !ls_object_keys(root, "|version|looks|kinds|components|compositions|motion_kits|palette_generator|extra_variants|art_directions|content_angles|section_forms|extra_looks|wider|bold|", error) ||
+	if (root == NULL || !ls_object_keys(root, "|version|looks|kinds|components|compositions|motion_kits|palette_generator|extra_variants|art_directions|content_angles|section_forms|extra_looks|wider|bold|wow|", error) ||
 		(self->components = member_object(root, "components")) == NULL ||
 		(self->kinds = member_object(root, "kinds")) == NULL ||
 		(self->looks = member_object(root, "looks")) == NULL) {
@@ -1687,7 +1730,7 @@ ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 		}
 	}
 	if (!join_openings(self, digest, root, "wider", error) || !join_openings(self, digest, root, "bold", error) ||
-		!load_pictures(self, root, error))
+		!load_pictures(self, root, error) || !load_undealt(self, root, error))
 		return NULL;
 	/* Page kinds name only real components; home is the one hero kind. */
 	{
@@ -1879,6 +1922,17 @@ ls_components_suggest_look(LsComponents *self, const gchar *seed){
 				continue;
 			}
 		}
+		/* Values a theme may wear but the builder never deals stand aside. */
+		if (member_array(self->undealt, axis->data) != NULL) {
+			JsonArray *skip = member_array(self->undealt, axis->data);
+			GList *value = names;
+			while (value != NULL) {
+				GList *next = value->next;
+				if (json_list_has(skip, value->data))
+					names = g_list_delete_link(names, value);
+				value = next;
+			}
+		}
 		pick = seed_pick(seed, axis->data, g_list_length(names));
 		json_object_set_string_member(look, axis->data, g_list_nth_data(names, pick));
 	}
@@ -2033,6 +2087,7 @@ ls_components_deal_structure(LsComponents *self, const gchar *seed){
 }
 
 static gdouble gene(JsonObject *structure, const gchar *name, gdouble fallback);
+static gchar *photo_opening(LsComponents *self, const gchar *seed, const gchar *composition, const gchar *opening);
 
 gboolean
 ls_components_apply_structure(LsComponents *self, JsonNode *plan_node, const gchar *seed, gboolean themed){
@@ -2080,6 +2135,13 @@ ls_components_apply_structure(LsComponents *self, JsonNode *plan_node, const gch
 				json_object_set_string_member(structure, "composition", fitting);
 			else
 				json_object_remove_member(structure, "composition");
+		}
+		/* A site with supplied photos opens on one. */
+		if (member_array(plan, "photos") != NULL && json_array_get_length(member_array(plan, "photos")) > 0) {
+			g_autofree gchar *led = photo_opening(self, seed, ls_string(structure, "composition"),
+				ls_string(structure, "opening"));
+			if (led != NULL)
+				json_object_set_string_member(structure, "opening", led);
 		}
 		layout = composition_layout(self, ls_string(structure, "composition"));
 		if (!themed && member_object(layout, "look") != NULL) {
@@ -2400,6 +2462,67 @@ opening_needs_art(LsComponents *self, const gchar *component, const gchar *varia
 static gboolean
 opening_shows_art(LsComponents *self, const gchar *component, const gchar *variant){
 	return !g_str_equal(opening_picture(self, component, variant), "hides");
+}
+
+/* Whether the opening @pair (component/variant) is led by its picture on
+ * the first screen: it needs one, and does not raise it below the words. */
+static gboolean
+pair_needs_art(LsComponents *self, const gchar *pair){
+	const gchar *slash = pair != NULL ? strchr(pair, '/') : NULL;
+	g_autofree gchar *component = slash != NULL ? g_strndup(pair, (gsize)(slash - pair)) : NULL;
+	return component != NULL && opening_needs_art(self, component, slash + 1) && !json_list_has(self->photo_below, pair);
+}
+
+/* The opening a site with supplied photos wears: @opening when its picture
+ * leads it, else one of @composition's openings that a picture leads, else
+ * one of every such home opening, picked from @seed. */
+static gchar *
+photo_opening(LsComponents *self, const gchar *seed, const gchar *composition, const gchar *opening){
+	JsonArray *fitting = member_array(composition_layout(self, composition), "openings");
+	JsonArray *openings = member_array(member_object(self->kinds, "home"), "openings");
+	g_autoptr(GPtrArray) led = g_ptr_array_new_with_free_func(g_free);
+	guint i;
+	if (pair_needs_art(self, opening))
+		return g_strdup(opening);
+	for (i = 0; fitting != NULL && i < json_array_get_length(fitting); i++)
+		if (pair_needs_art(self, json_array_get_string_element(fitting, i)))
+			g_ptr_array_add(led, g_strdup(json_array_get_string_element(fitting, i)));
+	for (i = 0; led->len == 0 && openings != NULL && i < json_array_get_length(openings); i++) {
+		const gchar *name = json_array_get_string_element(openings, i);
+		g_autoptr(GList) variants = NULL;
+		GList *variant;
+		if (g_str_equal(name, "custom"))
+			continue;
+		variants = json_object_get_members(member_object(member_object(self->components, name), "variants"));
+		for (variant = variants; variant != NULL; variant = variant->next) {
+			gchar *pair = g_strdup_printf("%s/%s", name, (const gchar *)variant->data);
+			if (pair_needs_art(self, pair))
+				g_ptr_array_add(led, pair);
+			else
+				g_free(pair);
+		}
+	}
+	if (led->len == 0)
+		return g_strdup(opening);
+	return g_strdup(g_ptr_array_index(led, seed_pick(seed, "opening:photo", led->len)));
+}
+
+gchar *
+ls_components_suggest_photo_opening(LsComponents *self, const gchar *seed){
+	g_autoptr(JsonObject) look = NULL;
+	g_autofree gchar *opening = NULL;
+	const gchar *composition, *frame;
+	g_return_val_if_fail(LS_IS_COMPONENTS(self), NULL);
+	g_return_val_if_fail(seed != NULL, NULL);
+	look = ls_components_suggest_look(self, seed);
+	opening = ls_components_suggest_opening(self, seed);
+	composition = seed_composition(self, seed);
+	frame = ls_string(look, "frame");
+	/* The composition the plan keeps: one that suits the dealt frame. */
+	if (composition != NULL && frame != NULL &&
+		json_list_has(member_array(composition_layout(self, composition), "avoid"), frame))
+		composition = deal_composition(self, seed, frame, "composition:frame");
+	return photo_opening(self, seed, composition, opening);
 }
 
 static JsonObject *plan_photo(JsonObject *plan, const gchar *src);
@@ -5750,6 +5873,60 @@ plan_photo(JsonObject *plan, const gchar *src){
 	return NULL;
 }
 
+/* Walks @node in page order: every image slot showing a supplied photo the
+ * page has shown already takes one it has not, while any are left. */
+static gboolean
+spread_node(JsonObject *plan, JsonNode *node, GHashTable *shown){
+	gboolean changed = FALSE;
+	if (node == NULL)
+		return FALSE;
+	if (JSON_NODE_HOLDS_ARRAY(node)) {
+		JsonArray *list = json_node_get_array(node);
+		guint i;
+		for (i = 0; i < json_array_get_length(list); i++)
+			changed |= spread_node(plan, json_array_get_element(list, i), shown);
+	} else if (JSON_NODE_HOLDS_OBJECT(node)) {
+		JsonObject *object = json_node_get_object(node);
+		const gchar *src = ls_string(object, "src");
+		g_autoptr(GList) members = NULL;
+		GList *member;
+		if (src != NULL && plan_photo(plan, src) != NULL) {
+			if (g_hash_table_contains(shown, src)) {
+				JsonArray *photos = member_array(plan, "photos");
+				guint i;
+				for (i = 0; i < json_array_get_length(photos); i++) {
+					JsonObject *photo = json_array_get_object_element(photos, i);
+					if (g_hash_table_contains(shown, ls_string(photo, "path")))
+						continue;
+					json_object_set_string_member(object, "src", ls_string(photo, "path"));
+					json_object_set_string_member(object, "alt", ls_string(photo, "alt") != NULL ? ls_string(photo, "alt") : "");
+					changed = TRUE;
+					break;
+				}
+			}
+			g_hash_table_add(shown, g_strdup(ls_string(object, "src")));
+			return changed;
+		}
+		members = json_object_get_members(object);
+		for (member = members; member != NULL; member = member->next)
+			changed |= spread_node(plan, json_object_get_member(object, member->data), shown);
+	}
+	return changed;
+}
+
+gboolean
+ls_components_spread_photos(LsComponents *self, JsonNode *plan_node, JsonNode *page){
+	g_autoptr(GHashTable) shown = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+	JsonObject *plan;
+	g_return_val_if_fail(LS_IS_COMPONENTS(self), FALSE);
+	if (plan_node == NULL || !JSON_NODE_HOLDS_OBJECT(plan_node) || page == NULL || !JSON_NODE_HOLDS_OBJECT(page))
+		return FALSE;
+	plan = json_node_get_object(plan_node);
+	if (member_array(plan, "photos") == NULL || json_array_get_length(member_array(plan, "photos")) < 2)
+		return FALSE;
+	return spread_node(plan, json_object_get_member(json_node_get_object(page), "sections"), shown);
+}
+
 /* The file a page shows for @src: a sized photo's largest variant, otherwise
  * @src itself. Pages, link previews and focus rules all use this name. */
 static const gchar *
@@ -6969,9 +7146,11 @@ token_css(JsonObject *tokens, JsonObject *structure){
 		append_number(out, "frame-width", gene(structure, "width", 76), "rem");
 		g_string_append_printf(out, "\t--gutter: clamp(1rem, %svw, %srem);\n",
 			g_ascii_formatd(a, sizeof a, "%.3g", gutter * 1.6), g_ascii_formatd(b, sizeof b, "%.3g", MAX(1, gutter)));
+		/* Slow paces breathe, but sections never drift more than eight rem
+		 * apart: beyond that a wide screen shows a screenful of nothing. */
 		g_string_append_printf(out, "\t--section-space: clamp(%srem, %svw, %srem);\n",
-			g_ascii_formatd(a, sizeof a, "%.3g", 1.5 + pace), g_ascii_formatd(b, sizeof b, "%.3g", 6 * pace),
-			g_ascii_formatd(c, sizeof c, "%.3g", 5 * pace + 1));
+			g_ascii_formatd(a, sizeof a, "%.3g", MIN(1.5 + pace, 4)), g_ascii_formatd(b, sizeof b, "%.3g", 6 * pace),
+			g_ascii_formatd(c, sizeof c, "%.3g", MIN(5 * pace + 1, 8)));
 		append_number(out, "grid-scale", gene(structure, "grid", 1), "");
 	}
 	g_string_append(out, "\t--max-width: var(--frame-width);\n");
@@ -7315,8 +7494,12 @@ ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages
 	/* The site's signature sits in the last layer: it leads over the library,
 	 * the site's own CSS still leads over it, and the library's few
 	 * !important guards (focus rings, the index label) hold against it. */
+	/* The signature's divider punctuates the page at every third gap and
+	 * keeps to its own small space, so it never fences off every section. */
 	if (ls_string(plan, "signature") != NULL)
-		g_string_append_printf(css, "\n/* Site signature */\n@layer ls-signature {\n%s\n}\n", ls_string(plan, "signature"));
+		g_string_append_printf(css, "\n/* Site signature */\n@layer ls-signature {\n%s\n"
+			"main > .block + .block::before { margin-block: 0 var(--space-5); }\n"
+			"main > .block + .block:not(:nth-child(3n+1))::before { display: none; }\n}\n", ls_string(plan, "signature"));
 	add_file(files, "styles.css", css->str);
 	add_file(files, "site.js", js->str);
 	add_file(files, "robots.txt", robots->str);
