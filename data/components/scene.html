@@ -1,0 +1,9 @@
+<figure class="scene__stage">
+<div class="scene__media">
+<div class="scene__frame"><picture>{{#portrait}}<source media="(max-width: 767px)" srcset="{{#srcset}}{{srcset}}{{/srcset}}{{^srcset}}{{src}}{{/srcset}}">{{/portrait}}{{#art}}<img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}"{{#srcset}} srcset="{{srcset}}" sizes="100vw"{{/srcset}} fetchpriority="high" decoding="async">{{/art}}</picture>
+{{#clip}}<video class="scene__film" muted playsinline loop preload="none" data-src="{{clip}}"{{#clip_portrait}} data-portrait="{{clip_portrait}}"{{/clip_portrait}} aria-hidden="true" tabindex="-1"></video><button class="scene__play" type="button" hidden>Play film</button>{{/clip}}
+</div>
+</div>
+<div class="scene__copy">{{#kicker}}<p class="kicker">{{kicker}}</p>{{/kicker}}<{{htag}} id="{{id}}-h">{{{heading_html}}}</{{htag}}><div class="scene__intro prose">{{{body}}}</div>{{#actions}}<a class="button" href="{{href}}">{{label}} <span aria-hidden="true">↗</span></a>{{/actions}}</div>
+<figcaption class="scene__credit">{{media_kind}} · {{source}}</figcaption>
+</figure>

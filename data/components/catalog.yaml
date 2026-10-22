@@ -2122,3 +2122,30 @@ wow:
   # cover's ink bars, wide screen and title card. Photo sites skip them.
   frame_below:
     masthead: [cover/cinema]
+
+# Asset-first sequences: subject before composition, one material world.
+bar:
+  components:
+    scene:
+      summary: An asset-first opening with a reviewed phone crop and a still-first optional native film. Only for a plan with supplied media and visual direction.
+      variants:
+        full: A full-width environmental scene with copy on a protected solid field.
+        split: Large portrait or craft image paired with a short display statement.
+        object: A monumental isolated object or close detail on its own material stage.
+      slots:
+        heading: {type: text, required: true, max: 52}
+        kicker: {type: text, max: 100}
+        body: {type: rich, max: 180}
+        art: {type: image, required: true}
+        portrait: {type: image, required: true}
+        actions: {type: links, max_items: 1}
+    material:
+      summary: The craft or proof beat of one related asset sequence. Source-backed facts are supplied by the builder, never invented.
+      variants:
+        detail: A close detail at monumental scale beside a short explanation.
+        proof: A featured project and its factual band, or honestly labelled illustrative material.
+      slots:
+        heading: {type: text, required: true, max: 52}
+        kicker: {type: text, max: 100}
+        body: {type: rich, max: 180}
+        art: {type: image, required: true}

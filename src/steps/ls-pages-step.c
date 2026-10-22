@@ -6,6 +6,7 @@
 #include "core/ls-components.h"
 #include "core/ls-images.h"
 #include "core/ls-module.h"
+#include "core/ls-visual.h"
 #include <string.h>
 #include <math.h>
 
@@ -482,6 +483,8 @@ plan_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *prom
 			closest * 100, closest >= LS_COMPONENTS_TOO_CLOSE ? " (no clearer deal found)" : "");
 		g_signal_emit_by_name(self, "progress", note);
 	}
+	if (!ls_visual_check_assets(member_object_of(ls_recipe_get_root(recipe), "site"), context, error))
+		return FALSE;
 	photos = plan_photos(recipe, context, error);
 	if (photos == NULL)
 		return FALSE;
@@ -536,6 +539,14 @@ plan_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *prom
 		 * model's favourite design; the model writes the words and art. */
 		if (plan != NULL && JSON_NODE_HOLDS_OBJECT(plan)) {
 			g_autofree gchar *seed = plan_seed(components, recipe, config, NULL);
+			{
+				JsonObject *site = member_object_of(ls_recipe_get_root(recipe), "site");
+				JsonNode *media = json_object_get_member(site, "media");
+				JsonObject *root = json_node_get_object(plan);
+				json_object_remove_member(root, "media");
+				if (media != NULL)
+					json_object_set_member(root, "media", json_node_copy(media));
+			}
 			ls_components_apply_seed(components, plan, seed, plan_sector(config), theme != NULL);
 		}
 		/* Supplied social profiles are the builder's facts too. */
@@ -771,6 +782,7 @@ accept_job(Job *job, LsComponents *components, JsonNode *plan, GError **error){
 		}
 		/* Each supplied photo shows once per page. */
 		ls_components_spread_photos(components, plan, node);
+		ls_visual_apply_page(json_node_get_object(plan), json_node_get_object(node));
 		if (!ls_components_check_page(components, plan, job->path, node, error))
 			return FALSE;
 		g_clear_pointer(&job->spec, json_node_unref);
@@ -1259,7 +1271,7 @@ pages_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *pro
 	}
 	/* The signature layer is written beside the pages. A catalog without the
 	 * stage, a themed site or a review simply goes without one. */
-	if (!review && !recipe_themed(recipe)) {
+	if (!review && !recipe_themed(recipe) && member_object_of(plan_object, "visual") == NULL) {
 		g_autoptr(GError) local_error = NULL;
 		g_autofree gchar *prompt = signature_prompt(prompts, recipe, config, plan_object, &local_error);
 		if (prompt != NULL) {

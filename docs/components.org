@@ -1082,3 +1082,93 @@ Eighteen invented businesses across eighteen trades and moods (HVAC, electrician
 4. *Long headlines at display size.* A headline of many short words took one word per line at display size; more than five words now steps down like a long headline, and the page prompt asks for a 3 to 8 word headline and a lede of at most 24 words, leaving explanation to later sections.
 
 Not changed: two photographs are grey at the source (one black and white), and services pages carry no photographs, so they read plainer than the homes.
+* Asset-first visual sequences (draft)
+
+This work is not release-approved. The new =scene= and =material= components
+are an opt-in path for supplied media. Plans without =media= retain the seeded
+variety pipeline. Integration still requires six successful live generations
+and an approved comparison against the visual references.
+
+** Contract and ordering
+
+=site.media= selects =hero=, =portrait= and =detail= from =site.photos= before
+composition; optional =proof= names a related photo. =kind= is =project=,
+=stock= or =illustration=; =source= records provenance. Only project media
+with a proof image may carry up to three =facts=, each with =value=, =label=
+and =source=. Paths and facts come from the order, never the model.
+
+The planner writes =visual=: an internal =idea=, =world=, =layout=,
+=headline=, =intro=, =craft_heading=, =craft_copy=, =proof_heading=,
+=proof_copy= and =close_heading=. Headings have at most eight words and 52
+characters; body fields have at most 180 characters. The builder renders
+outcome, craft and optional proof before the remaining home sections.
+
+The six material directions are chalk, copper, forest, electric, ceramic and
+oven; openings are full, split and object. The sequence owns its composition
+and interaction styles instead of inheriting a motion kit or signature layer.
+Reference patterns were independently implemented; no reference-site code or
+artwork is included. Stock imagery remains labelled, not customer-project proof.
+
+** Motion media
+
+Optional =clip= and =clip_portrait= are seeded local MP4/WebM binaries under
+=assets/=, at most 2 MiB each. Container signatures are checked; decoding is
+left to the browser. This is not a transcoding or full codec validator.
+The still loads first; no film bytes are requested until Play film is pressed.
+Reduced motion and low-data preference retain the still. Pause, offscreen and
+hidden-document pause, and failed-playback fallback use native browser APIs.
+Video and picture share a frame, independent of wrapped source credits.
+Essential copy remains on a solid field outside the moving image.
+
+** Verification and release acceptance
+
+=tests/test-bar.c= checks media references/provenance, unsupported proof facts,
+heading limits, all eighteen world/layout combinations and clip bounds.
+=tests/bar.py= checks media at 390, 768 and 1440: zero initial film requests,
+phone source selection, reduced motion/low data, play/pause, failure fallback,
+frame alignment, heading lines, layout shift and separate code/poster budgets.
+This browser gate uses =ffmpeg= and =ffprobe= (Fedora =ffmpeg-free=) alongside
+the existing Firefox WebDriver. The gate does not install packages.
+
+=make visual-review VISUAL_REVIEW_DIR=...= is a separate release check.
+The directory supplies =provenance.json= with exactly six distinct records
+(=slug= and =fresh_run=true=). Under =captures/SLUG/=, each site supplies
+=390-first.jpg=, =390-scroll-1.jpg= through =390-scroll-3.jpg=,
+=390-scroll.webm=, and the same five files with the =1440-= prefix.
+
+=review.json= is keyed by =SLUG/WIDTH=. Each entry has =approved=,
+=reference=, =judgment= and =sha256=. The digest covers each filename in the
+order above, encoded as UTF-8, followed by its raw bytes. A changed capture
+invalidates its approval. Failed generation, recorded substitutes, missing or
+undecodable captures, absent judgments and negative comparisons fail the gate.
+Fixture checks cannot approve visual quality. Run =make test= and =make gate=
+as well; this review does not replace them.
+
+The original six-brief attempt succeeded for three briefs. A continuation
+ran three fresh batches with a smaller model: four, six and six sites completed.
+Two failures exposed native chalk/oven palettes that tripped the existing
+house-default guard after every retry. Their accents are now slate and cocoa;
+the guard itself is unchanged. All six worlds pass both identity and plan checks.
+
+Retry errors identify the actual visual field and its bound. Word counting
+ignores repeated whitespace; the tagline's 160-character bound is in both
+schema and prompt. A full opening requires a supplied portrait crop with
+width/height at most 1.2; otherwise the planner must choose split or object.
+This preserves the general crop guard instead of hiding its empty mats with
+aggressive cropping. Credits occupy their own grid row even when long, and
+long business names leave room for the phone menu.
+
+Eleven focused native tests pass. Full-suite, browser-gate and comparative
+visual acceptance are separate requirements; this draft is not release-approved.
+
+The continuation's final six-site set still fails comparative visual acceptance
+at both phone and desktop widths. Openings collapse into two dominant structures;
+subsequent beats repeat alternating photo/text panels. Stock subjects cannot
+supply attributable project proof, distinctive object art or craft footage. Full
+openings also need subject-aware text placement: the opaque copy field can hide
+the useful part of a photograph. Generic service descriptions remain common.
+The eleven focused native tests and 142 media browser checks pass, but these do
+not establish the reference standard. The draft remains unmerged; the full suite,
+full gate and final install verification are not claimed. Further work needs
+coherent licensed asset sets, a richer narrative layout system and another
+explicitly authorized live-generation allowance.

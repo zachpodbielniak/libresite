@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
 #include "core/ls-components.h"
 #include "core/ls-module.h"
+#include "core/ls-visual.h"
 #include "core/ls-template.h"
 #include "core/ls-util.h"
 #include <math.h>
@@ -1680,7 +1681,7 @@ ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 	if (self->catalog == NULL)
 		return NULL;
 	root = JSON_NODE_HOLDS_OBJECT(self->catalog) ? json_node_get_object(self->catalog) : NULL;
-	if (root == NULL || !ls_object_keys(root, "|version|looks|kinds|components|compositions|motion_kits|palette_generator|extra_variants|art_directions|content_angles|section_forms|extra_looks|wider|bold|wow|", error) ||
+	if (root == NULL || !ls_object_keys(root, "|version|looks|kinds|components|compositions|motion_kits|palette_generator|extra_variants|art_directions|content_angles|section_forms|extra_looks|wider|bold|wow|bar|", error) ||
 		(self->components = member_object(root, "components")) == NULL ||
 		(self->kinds = member_object(root, "kinds")) == NULL ||
 		(self->looks = member_object(root, "looks")) == NULL) {
@@ -1700,6 +1701,23 @@ ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 			member_object(member_object(root, "bold"), "looks"), error) ||
 		!widen_blocks(root, "bold", BOLD_KEYS, error) || !embolden(root, error))
 		return NULL;
+	/* Each later collection owns an append-only catalog block. */
+	{
+		JsonObject *bar = member_object(root, "bar");
+		JsonObject *added = member_object(bar, "components");
+		g_autoptr(GList) extra = added != NULL ? json_object_get_members(added) : NULL;
+		GList *entry;
+		for (entry = extra; entry != NULL; entry = entry->next) {
+			if (json_object_has_member(self->components, entry->data))
+				return catalog_invalid(error, entry->data, "bar components must have new names"), NULL;
+			json_object_set_member(self->components, entry->data, json_node_copy(json_object_get_member(added, entry->data)));
+		}
+		if (bar != NULL) {
+			g_autofree gchar *style = load_resource(self, digest, "visual.css", TRUE, error);
+			if (style == NULL)
+				return NULL;
+		}
+	}
 	for (i = 0; i < G_N_ELEMENTS(shared); i++) {
 		g_autofree gchar *text = load_resource(self, digest, shared[i], TRUE, error);
 		if (text == NULL)
@@ -2415,6 +2433,7 @@ ls_components_apply_seed(LsComponents *self, JsonNode *plan_node, const gchar *s
 		if (json_object_has_member(type, "fonts"))
 			json_object_set_member(plan, "fonts", node_copy(json_object_get_member(type, "fonts")));
 	}
+	ls_visual_apply_plan(plan);
 	return TRUE;
 }
 
@@ -4226,11 +4245,16 @@ check_plan_into(Problems *problems, LsComponents *self, JsonNode *node){
 		return;
 	}
 	if (!ls_object_keys(plan, "|name|tagline|lang|character|missing|tokens|fonts|brand|nav|action|footer|voice|look|"
-		"art|photos|social|form|contact|modules|credit|pages|css|restyle|ui|structure|signature|", NULL))
+		"art|photos|media|visual|social|form|contact|modules|credit|pages|css|restyle|ui|structure|signature|", NULL))
 		problem(problems, "unknown top-level key; allowed: name, tagline, lang, character, missing, tokens, fonts, "
 			"brand, nav, action, footer, voice, look, art, photos, pages, css, restyle, ui");
 	check_missing(problems, plan);
 	check_photos(problems, plan);
+	{
+		g_autoptr(GError) visual_error = NULL;
+		if (!ls_visual_check_plan(plan, &visual_error))
+			problem(problems, "%s", visual_error->message);
+	}
 	check_social(problems, self, plan);
 	check_supplied_form(problems, plan);
 	check_contact(problems, plan);
@@ -5909,7 +5933,8 @@ check_page_into(LsComponents *self, Problems *problems, JsonNode *plan_node, con
 		if (i == 0 && blank(ls_string(content, "heading")))
 			problem(problems, "the first section must have a heading; it becomes the page h1");
 		/* Structure follows the page kind: only home may open like a landing page. */
-		if (i == 0 && kind != NULL && !kind_allows(kind, name)) {
+		if (i == 0 && kind != NULL && !kind_allows(kind, name) &&
+			!(g_str_equal(name, "scene") && g_strcmp0(kind_name, "home") == 0 && member_object(plan, "visual") != NULL)) {
 			GString *openings = g_string_new(NULL);
 			JsonArray *allowed = member_array(kind, "openings");
 			guint j;
@@ -6463,7 +6488,7 @@ section_classes(Render *render, const gchar *name, guint index, gboolean reading
 
 /* Components that keep one variant across the whole site: the page opening
  * is the site's signature, so every interior page opens alike. */
-static const gchar *const steady_components[] = {"page-header", NULL};
+static const gchar *const steady_components[] = {"page-header", "scene", "material", NULL};
 
 /* The variant a section renders with. A dealt component has a small
  * per-site family: the dealt variant and two others picked from the site
@@ -6613,7 +6638,8 @@ render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArra
 		JsonObject *content = supplied != NULL ? supplied : member_object(section, "content");
 		g_autoptr(GList) variants = json_object_get_members(member_object(component, "variants"));
 		JsonObject *dealt_variants = member_object(member_object(render->plan, "structure"), "variants");
-		const gchar *dealt = dealt_variants != NULL ? ls_string(dealt_variants, name) : NULL;
+		const gchar *dealt = dealt_variants != NULL && !g_str_equal(name, "scene") && !g_str_equal(name, "material")
+			? ls_string(dealt_variants, name) : NULL;
 		/* A dealt family restyles the component coherently across the site. */
 		const gchar *variant = dealt != NULL ? section_variant(render, component, name, dealt, i) : ls_string(section, "variant") != NULL
 			? ls_string(section, "variant") : (const gchar *)variants->data;
@@ -6650,6 +6676,8 @@ render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArra
 				json_object_set_boolean_member(view, has, json_array_get_length(json_node_get_array(value)) > 0);
 			}
 		}
+		if (g_str_equal(name, "scene") || g_str_equal(name, "material"))
+			ls_visual_view(render->plan, view, i);
 		/* Builder facts the model never writes: supplied profiles and share targets. */
 		if (g_str_equal(name, "social")) {
 			JsonArray *profiles = profile_views(render);
@@ -6909,7 +6937,7 @@ static const gchar *
 home_composition(LsComponents *self, JsonObject *plan){
 	const gchar *name = member_object(plan, "structure") != NULL
 		? ls_string(member_object(plan, "structure"), "composition") : NULL;
-	return composition_layout(self, name) != NULL ? name : NULL;
+	return member_object(plan, "visual") == NULL && composition_layout(self, name) != NULL ? name : NULL;
 }
 
 /* The plan's motion kit, when the library knows it. */
@@ -6917,7 +6945,7 @@ static const gchar *
 site_kit(LsComponents *self, JsonObject *plan){
 	const gchar *name = member_object(plan, "structure") != NULL
 		? ls_string(member_object(plan, "structure"), "kit") : NULL;
-	return motion_kit(self, name) != NULL ? name : NULL;
+	return member_object(plan, "visual") == NULL && motion_kit(self, name) != NULL ? name : NULL;
 }
 
 /* One body class per look axis, falling back to the catalog default. */
@@ -7007,6 +7035,12 @@ render_page(Render *render, const gchar *path, const gchar *title, const gchar *
 			if (json_object_has_member(motion_kit(render->self, kit), "marquee") &&
 				json_object_get_boolean_member(motion_kit(render->self, kit), "marquee"))
 				json_object_set_boolean_member(view, "kit_marquee", TRUE);
+		}
+		if (member_object(plan, "visual") != NULL) {
+			gchar *more = g_strconcat(classes, " visual-sequence", NULL);
+			g_free(classes);
+			classes = more;
+			json_object_set_boolean_member(view, "kit_marquee", FALSE);
 		}
 		json_object_set_string_member(view, "look_classes", classes);
 	}
@@ -7673,10 +7707,12 @@ ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages
 	 * !important guards (focus rings, the index label) hold against it. */
 	/* The signature's divider punctuates the page at every third gap and
 	 * keeps to its own small space, so it never fences off every section. */
-	if (ls_string(plan, "signature") != NULL)
+	if (ls_string(plan, "signature") != NULL && member_object(plan, "visual") == NULL)
 		g_string_append_printf(css, "\n/* Site signature */\n@layer ls-signature {\n%s\n"
 			"main > .block + .block::before { margin-block: 0 var(--space-5); }\n"
 			"main > .block + .block:not(:nth-child(3n+1))::before { display: none; }\n}\n", ls_string(plan, "signature"));
+	if (member_object(plan, "visual") != NULL && file_text(self, "visual.css") != NULL)
+		g_string_append_printf(css, "\n@layer ls-signature {\n%s\n}\n", file_text(self, "visual.css"));
 	add_file(files, "styles.css", css->str);
 	add_file(files, "site.js", js->str);
 	add_file(files, "robots.txt", robots->str);

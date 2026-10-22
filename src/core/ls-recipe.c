@@ -2,6 +2,7 @@
 #include "core/ls-recipe.h"
 #include "core/ls-context.h"
 #include "core/ls-module.h"
+#include "core/ls-visual.h"
 #include <string.h>
 #include <yaml-glib.h>
 struct _LsRecipe {
@@ -422,7 +423,7 @@ validate_site(JsonObject *site, GError **error){
 	guint i;
 	if (!ls_object_keys(site,
 		"|brief|audience|style|stack|frontend|backend|database|requirements|pages|offers|contact|brand|copy_lock|languages|"
-		"photos|social|avoid|form|modules|credit|",
+		"photos|media|social|avoid|form|modules|credit|",
 		error))
 		return FALSE;
 	if (!json_object_has_member(site, "brief")) {
@@ -437,6 +438,9 @@ validate_site(JsonObject *site, GError **error){
 		const gchar *key = (const gchar *)item->data;
 		if (g_str_equal(key, "pages") || g_str_equal(key, "offers")) {
 			if (!records(site, key, g_str_equal(key, "pages"), error))
+				return FALSE;
+		} else if (g_str_equal(key, "media")) {
+			if (!ls_visual_check_media(site, error))
 				return FALSE;
 		} else if (g_str_equal(key, "photos")) {
 			if (!photo_list(site, error))
