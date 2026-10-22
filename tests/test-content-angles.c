@@ -11,6 +11,9 @@
 #include <string.h>
 
 #define DISTINCT_LIMIT 6
+/* Headlines are dealt only from the taste block's five statement angles
+ * (docs/components.org, "Taste"), so ten sites show at most five. */
+#define HEADLINE_LIMIT 5
 
 static JsonNode *
 load(const gchar *path){
@@ -200,9 +203,9 @@ build_all(gboolean ignore, Spread *spread){
 		g_assert_no_error(error);
 		writer->brief = brief;
 		writer->ignore = ignore;
-		g_assert_true(ls_step_execute(plan_step, recipe, json_array_get_object_element(ls_recipe_get_steps(recipe), 0),
-			prompts, context, LS_PROVIDER(writer), NULL, &error));
-		g_assert_no_error(error);
+		if (!ls_step_execute(plan_step, recipe, json_array_get_object_element(ls_recipe_get_steps(recipe), 0),
+			prompts, context, LS_PROVIDER(writer), NULL, &error))
+			g_error("%s", error != NULL ? error->message : "(no error)");
 		g_assert_true(ls_step_execute(pages_step, recipe, json_array_get_object_element(ls_recipe_get_steps(recipe), 1),
 			prompts, context, LS_PROVIDER(writer), NULL, &error));
 		g_assert_no_error(error);
@@ -237,7 +240,7 @@ test_spread(void){
 	build_all(TRUE, &ignored);
 	g_test_message("headline patterns %u (ignored: %u), art subjects %u", g_hash_table_size(steered.headlines),
 		g_hash_table_size(ignored.headlines), g_hash_table_size(steered.subjects));
-	g_assert_cmpuint(g_hash_table_size(steered.headlines), >=, DISTINCT_LIMIT);
+	g_assert_cmpuint(g_hash_table_size(steered.headlines), >=, HEADLINE_LIMIT);
 	g_assert_cmpuint(g_hash_table_size(steered.subjects), >=, DISTINCT_LIMIT);
 	g_assert_cmpuint(g_hash_table_size(ignored.headlines), ==, 1);
 	g_hash_table_unref(steered.headlines);

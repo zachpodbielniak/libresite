@@ -1,0 +1,5 @@
+body { margin: 0; font: 18px/1.5 sans-serif; color: #111; background: #fff; }
+.outline { color: transparent; -webkit-text-stroke: 2px #111; font-size: 64px; }
+.neon { background: #99ffff; min-height: 200px; }
+.tilted { transform: rotate(-2deg); width: 300px; height: 120px; background: #eee; }
+.blob { width: 160px; height: 160px; border-radius: 50%; background: #c8e; }

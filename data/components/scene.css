@@ -1,0 +1,36 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.scene { padding: 0; }
+.scene__stage { display: grid; margin: 0; }
+.scene__media { position: relative; margin: 0; background: var(--surface); }
+.scene__frame { position: relative; }
+.scene__media picture { display: block; }
+.scene__media img { display: block; width: 100%; height: 40svh; min-height: 16rem; max-height: none; object-fit: cover; }
+.scene__credit { grid-column: 1 / -1; padding: .5rem 1rem; background: var(--paper); color: var(--ink); font-size: 1rem; }
+.scene__copy { padding: clamp(1.25rem, 4cqi, 4rem); background: var(--paper); color: var(--ink); }
+.scene__copy h1 { font-size: clamp(2.5rem, 6.8cqi, 6.5rem); line-height: 1.02; letter-spacing: -.045em; max-width: 15ch; margin: .6em 0 .3em; text-wrap: balance; }
+.scene__intro { max-width: 38ch; margin-bottom: 1.5rem; }
+.scene__film { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; pointer-events: none; }
+.scene__film.is-playing { opacity: 1; }
+.scene__play { position: absolute; right: 1rem; bottom: 1rem; min-height: 44px; min-width: 44px; background: #fff; color: #111; border: 1px solid #111; padding: .6rem 1rem; z-index: 2; }
+.scene__play[hidden] { display: none; }
+/* Copy and photograph share one grid row; the credit owns the following
+ * row, so even a long attribution cannot overlap the opaque text field. */
+.scene--full .scene__media, .scene--full .scene__copy { grid-area: 1 / 1; }
+.scene--full .scene__media img { height: min(82svh, 48rem); min-height: 38rem; }
+.scene--full .scene__copy { position: relative; align-self: end; z-index: 1; padding: clamp(1.25rem, 3cqi, 2.5rem); background: #14191c; color: #fff; --ink: #fff; --paper: #14191c; }
+.scene--full .scene__copy h1 { margin: 0 0 .3em; font-size: clamp(2.5rem, 5.5cqi, 5rem); max-width: 20ch; }
+.scene--full .scene__intro { max-width: 48ch; margin-bottom: 1rem; }
+.scene--full .scene__credit { grid-area: 2 / 1; }
+.scene--full .scene__play { top: 1rem; bottom: auto; }
+@media (min-width: 768px) {
+  .scene--split .scene__stage { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .scene--split .scene__copy { display: flex; flex-direction: column; justify-content: center; align-items: start; }
+  .scene--split .scene__media img { height: 78svh; }
+  .scene--full .scene__media img { height: 82svh; }
+  .scene--full .scene__copy { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 0 3rem; align-items: end; }
+  .scene--full .scene__copy h1 { grid-column: 1; grid-row: 1 / span 3; }
+  .scene--full .scene__intro, .scene--full .scene__copy > :is(.button,.kicker) { grid-column: 2; justify-self: start; }
+  .scene--object .scene__stage { grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); align-items: center; }
+  .scene--object .scene__media img { height: 76svh; object-fit: contain; padding: 2rem; }
+}
+@media (prefers-reduced-motion: reduce) { .scene__film, .scene__play { display: none !important; } }

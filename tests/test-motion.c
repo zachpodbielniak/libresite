@@ -54,6 +54,14 @@ member(JsonNode *plan, const gchar *name){
 
 /* Several kits, every one dealt across sites, each with its look, the same
  * seed always dealing the same kit, and themes left still. */
+/* The catalog's taste block (docs/components.org, "Taste"): what the
+ * builder may deal. Without it everything may be. */
+static JsonObject *
+taste_block(LsComponents *components){
+	JsonObject *root = json_node_get_object(ls_components_get_catalog(components));
+	return json_object_has_member(root, "taste") ? json_object_get_object_member(root, "taste") : NULL;
+}
+
 static void
 test_deal(void){
 	g_autoptr(LsComponents) components = library();
@@ -77,15 +85,31 @@ test_deal(void){
 			JsonObject *wanted = json_object_get_object_member(kit, "look");
 			g_autoptr(GList) axes = json_object_get_members(wanted);
 			GList *axis;
-			for (axis = axes; axis != NULL; axis = axis->next)
+			for (axis = axes; axis != NULL; axis = axis->next) {
+				JsonObject *calm = json_object_get_object_member(taste_block(components), "looks");
+				/* Taste may move a kit's gimmick back inside the calm values. */
+				if (calm != NULL && json_object_has_member(calm, axis->data)) {
+					JsonArray *allowed = json_object_get_array_member(calm, axis->data);
+					gboolean kept = FALSE;
+					guint k;
+					for (k = 0; k < json_array_get_length(allowed); k++)
+						kept |= g_strcmp0(json_array_get_string_element(allowed, k),
+							json_object_get_string_member(wanted, axis->data)) == 0;
+					if (!kept)
+						continue;
+				}
 				g_assert_cmpstr(json_object_get_string_member(member(plan, "look"), axis->data), ==,
 					json_object_get_string_member(wanted, axis->data));
+			}
 		}
 		g_assert_true(ls_components_check_plan(components, plan, &error));
 		g_assert_no_error(error);
 		g_hash_table_add(dealt, g_strdup(name));
 	}
-	g_assert_cmpuint(g_hash_table_size(dealt), ==, json_object_get_size(kits()));
+	/* Every kit taste allows is dealt, and no other. */
+	g_assert_cmpuint(g_hash_table_size(dealt), ==, taste_block(components) != NULL
+		? json_array_get_length(json_object_get_array_member(taste_block(components), "kits"))
+		: json_object_get_size(kits()));
 	{
 		g_autoptr(JsonNode) plan = load("tests/fixtures/composed/plan.json");
 		g_autoptr(GError) error = NULL;

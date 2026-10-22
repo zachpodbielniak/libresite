@@ -10,6 +10,13 @@
     <file>components/article.html</file>
     <file>components/base.css</file>
     <file>components/supplied-photos.css</file>
+    <file>components/scene.html</file>
+    <file>components/scene.css</file>
+    <file>components/scene.js</file>
+    <file>components/material.html</file>
+    <file>components/material.css</file>
+    <file>components/visual.css</file>
+
     <file>components/look.css</file>
     <file>components/look-lettering-wide.css</file>
     <file>components/look-lettering-italic.css</file>

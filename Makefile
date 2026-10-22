@@ -55,7 +55,7 @@ sameness: all $(OUTDIR)/test-sameness
 # at 390, 768 and 1440 (tests/options.sh), and the mobile findings on photo
 # sites, every option and the ten sites at 390 and 1440 (tests/mobile.sh).
 GATE_OUT = $(OUTDIR)/gate
-gate: all $(OUTDIR)/test-sameness $(OUTDIR)/test-compositions $(OUTDIR)/test-variants $(OUTDIR)/test-art-direction $(OUTDIR)/test-motion $(OUTDIR)/test-options $(OUTDIR)/test-mobile $(OUTDIR)/test-showcase
+gate: all $(OUTDIR)/test-sameness $(OUTDIR)/test-compositions $(OUTDIR)/test-variants $(OUTDIR)/test-art-direction $(OUTDIR)/test-motion $(OUTDIR)/test-options $(OUTDIR)/test-mobile $(OUTDIR)/test-showcase $(OUTDIR)/test-bar
 	@test -n "$(WEBDRIVER_URL)" || { echo 'make gate needs WEBDRIVER_URL, such as http://localhost:4444 from geckodriver' >&2; exit 2; }
 	rm -rf $(GATE_OUT)
 	SAMENESS_OUTPUT=$(CURDIR)/$(GATE_OUT)/sameness G_DEBUG=fatal-warnings $(OUTDIR)/test-sameness
@@ -75,6 +75,22 @@ gate: all $(OUTDIR)/test-sameness $(OUTDIR)/test-compositions $(OUTDIR)/test-var
 	bash tests/mobile.sh "$(WEBDRIVER_URL)" $(GATE_OUT)/mobile $(GATE_OUT)/options $(GATE_OUT)/sameness
 	SHOWCASE_OUTPUT=$(CURDIR)/$(GATE_OUT)/showcase G_DEBUG=fatal-warnings $(OUTDIR)/test-showcase
 	bash tests/showcase.sh "$(WEBDRIVER_URL)" $(GATE_OUT)/showcase
+	BAR_OUTPUT=$(CURDIR)/$(GATE_OUT)/bar G_DEBUG=fatal-warnings $(OUTDIR)/test-bar
+	python3 tests/bar.py $(GATE_OUT)/bar --prepare --webdriver "$(WEBDRIVER_URL)"
+	bash tests/options.sh "$(WEBDRIVER_URL)" $(GATE_OUT)/bar
+	# The bar sites carry every component of the composed fixture (forms,
+	# filters, a journal) plus the visual sequence: 180 KB raw for them,
+	# the gzip limit unchanged.
+	GATE_WEIGHT_LIMIT=184320 bash tests/gate.sh "$(WEBDRIVER_URL)" $(GATE_OUT)/bar
+	# The taste gate catches each gimmick on a page built to have them all.
+	mkdir -p $(GATE_OUT)/taste-bad && cp -r tests/fixtures/taste-bad/. $(GATE_OUT)/taste-bad/
+	! bash tests/gate.sh "$(WEBDRIVER_URL)" $(GATE_OUT)/taste-bad >/dev/null
+	jq -e '[.pages[] | (.rotated | length) > 0 and (.blobs | length) > 0 and (.loud | length) > 0 and (.stroked | length) > 0] | all' $(GATE_OUT)/taste-bad/gate.json >/dev/null
+# Live visual acceptance is separate from the hermetic fixture gate.
+.PHONY: visual-review
+visual-review:
+	@test -n "$(VISUAL_REVIEW_DIR)" || { echo 'visual-review needs VISUAL_REVIEW_DIR containing six real runs and reviews' >&2; exit 2; }
+	python3 tests/bar.py "$(VISUAL_REVIEW_DIR)" --review
 # Optional probes compile against pinned generation libraries without making
 # database/client development packages mandatory for the builder itself.
 stack-tests:

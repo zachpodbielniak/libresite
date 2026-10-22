@@ -1,6 +1,8 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
 #include "core/ls-components.h"
 #include "core/ls-module.h"
+#include "core/ls-visual.h"
+#include "core/ls-taste.h"
 #include "core/ls-template.h"
 #include "core/ls-util.h"
 #include <math.h>
@@ -40,6 +42,7 @@ struct _LsComponents {
 	JsonObject *forms;	/* section_forms block; NULL without */
 	JsonObject *pictures;	/* bold opening -> needs, shows, photo or hides; NULL without */
 	JsonObject *undealt;	/* look axis -> values a theme may wear but never dealt; NULL without */
+	JsonObject *taste;	/* the calm systems the builder deals from; NULL without */
 	JsonArray *photo_below;	/* openings whose picture sits below the first screen; NULL without */
 	JsonObject *frame_below;	/* frame -> openings whose headline it pushes below the first screen; NULL without */
 	JsonNode *network_catalog;
@@ -1603,6 +1606,107 @@ load_pictures(LsComponents *self, JsonObject *root, GError **error){
 	return TRUE;
 }
 
+/* Whether @pair (component/variant) names a real variant of a component. */
+static gboolean
+real_variant(LsComponents *self, const gchar *pair){
+	const gchar *slash = pair != NULL ? strchr(pair, '/') : NULL;
+	g_autofree gchar *component = slash != NULL ? g_strndup(pair, (gsize)(slash - pair)) : NULL;
+	JsonObject *variants = component != NULL
+		? member_object(member_object(self->components, component), "variants") : NULL;
+	return variants != NULL && json_object_has_member(variants, slash + 1);
+}
+
+/* The taste block: allowed look values, kits, art directions and section
+ * forms, banned openings and variants, and the colour limit. */
+static gboolean
+load_taste(LsComponents *self, JsonObject *root, GError **error){
+	JsonObject *taste = member_object(root, "taste");
+	JsonObject *looks, *forms;
+	g_autoptr(GList) names = NULL;
+	GList *name;
+	const gchar *lists[] = {"kits", "directions", "extras", "angles", "openings", "variants"};
+	guint l, i;
+	if (!json_object_has_member(root, "taste"))
+		return TRUE;
+	if (taste == NULL || !ls_object_keys(taste, "|looks|kits|directions|forms|extras|angles|openings|variants|chroma|", NULL) ||
+		(looks = member_object(taste, "looks")) == NULL || (forms = member_object(taste, "forms")) == NULL ||
+		!JSON_NODE_HOLDS_VALUE(json_object_get_member(taste, "chroma")) ||
+		json_object_get_double_member(taste, "chroma") <= 0 || json_object_get_double_member(taste, "chroma") > 1)
+		return catalog_invalid(error, "taste", "needs looks, forms and a chroma from 0 to 1"), FALSE;
+	for (l = 0; l < G_N_ELEMENTS(lists); l++)
+		if (member_array(taste, lists[l]) == NULL)
+			return catalog_invalid(error, "taste", "lists kits, directions, extras, angles, openings and variants"), FALSE;
+	for (i = 0; i < json_array_get_length(member_array(taste, "angles")); i++)
+		if (self->headlines == NULL || ls_string(self->headlines, json_array_get_string_element(member_array(taste, "angles"), i)) == NULL)
+			return catalog_invalid(error, "taste", "angles are headline angles"), FALSE;
+	names = json_object_get_members(looks);
+	for (name = names; name != NULL; name = name->next) {
+		JsonObject *values = member_object(member_object(self->looks, name->data), "values");
+		JsonArray *allowed = member_array(looks, name->data);
+		g_autoptr(GList) all = values != NULL ? json_object_get_members(values) : NULL;
+		if (allowed == NULL || json_array_get_length(allowed) == 0 || values == NULL ||
+			g_strcmp0(json_array_get_string_element(allowed, 0), all->data) != 0)
+			return catalog_invalid(error, name->data, "taste looks list values of a look axis, its default first"), FALSE;
+		for (i = 0; i < json_array_get_length(allowed); i++)
+			if (!json_object_has_member(values, json_array_get_string_element(allowed, i)))
+				return catalog_invalid(error, name->data, "taste looks name values of the axis"), FALSE;
+	}
+	for (i = 0; i < json_array_get_length(member_array(taste, "kits")); i++)
+		if (motion_kit(self, json_array_get_string_element(member_array(taste, "kits"), i)) == NULL)
+			return catalog_invalid(error, "taste", "kits are motion kits"), FALSE;
+	for (i = 0; i < json_array_get_length(member_array(taste, "directions")); i++)
+		if (art_direction(self, json_array_get_string_element(member_array(taste, "directions"), i)) == NULL)
+			return catalog_invalid(error, "taste", "directions are art directions"), FALSE;
+	for (i = 0; i < json_array_get_length(member_array(taste, "openings")); i++)
+		if (!is_dealt_opening(self, json_array_get_string_element(member_array(taste, "openings"), i)))
+			return catalog_invalid(error, "taste", "openings are home openings as component/variant"), FALSE;
+	for (i = 0; i < json_array_get_length(member_array(taste, "variants")); i++)
+		if (!real_variant(self, json_array_get_string_element(member_array(taste, "variants"), i)))
+			return catalog_invalid(error, "taste", "variants are component/variant pairs"), FALSE;
+	{
+		JsonObject *families = member_object(self->forms, "families");
+		g_autoptr(GList) kinds = json_object_get_members(forms);
+		for (name = kinds; name != NULL; name = name->next) {
+			JsonArray *allowed = member_array(forms, name->data), *family = member_array(families, name->data);
+			if (allowed == NULL || family == NULL || json_array_get_length(allowed) == 0)
+				return catalog_invalid(error, name->data, "taste forms list forms of a section family"), FALSE;
+			for (i = 0; i < json_array_get_length(allowed); i++)
+				if (!json_list_has(family, json_array_get_string_element(allowed, i)))
+					return catalog_invalid(error, name->data, "taste forms belong to their family"), FALSE;
+		}
+	}
+	self->taste = taste;
+	return TRUE;
+}
+
+/* Whether the taste block lets the builder deal @value on look @axis. */
+static gboolean
+taste_look(LsComponents *self, const gchar *axis, const gchar *value){
+	JsonArray *allowed = self->taste != NULL ? member_array(member_object(self->taste, "looks"), axis) : NULL;
+	return allowed == NULL || json_list_has(allowed, value);
+}
+
+/* Whether @name is on the taste block's allowed @list (kits, directions,
+ * extras); everything is allowed without the block. */
+static gboolean
+taste_listed(LsComponents *self, const gchar *list, const gchar *name){
+	JsonArray *allowed = self->taste != NULL ? member_array(self->taste, list) : NULL;
+	return allowed == NULL || json_list_has(allowed, name);
+}
+
+/* Whether @pair is on the taste block's banned @list (openings, variants). */
+static gboolean
+taste_banned(LsComponents *self, const gchar *list, const gchar *pair){
+	return self->taste != NULL && pair != NULL && json_list_has(member_array(self->taste, list), pair);
+}
+
+/* Whether @form may be dealt for the section @family. */
+static gboolean
+taste_form(LsComponents *self, const gchar *family, const gchar *form){
+	JsonArray *allowed = self->taste != NULL ? member_array(member_object(self->taste, "forms"), family) : NULL;
+	return allowed == NULL || json_list_has(allowed, form);
+}
+
 /* The wow block's undealt looks: values of an axis a theme may wear but the
  * builder never deals, such as photo treatments that drain a customer's
  * photos of their colour. */
@@ -1680,7 +1784,7 @@ ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 	if (self->catalog == NULL)
 		return NULL;
 	root = JSON_NODE_HOLDS_OBJECT(self->catalog) ? json_node_get_object(self->catalog) : NULL;
-	if (root == NULL || !ls_object_keys(root, "|version|looks|kinds|components|compositions|motion_kits|palette_generator|extra_variants|art_directions|content_angles|section_forms|extra_looks|wider|bold|wow|", error) ||
+	if (root == NULL || !ls_object_keys(root, "|version|looks|kinds|components|compositions|motion_kits|palette_generator|extra_variants|art_directions|content_angles|section_forms|extra_looks|wider|bold|wow|bar|taste|", error) ||
 		(self->components = member_object(root, "components")) == NULL ||
 		(self->kinds = member_object(root, "kinds")) == NULL ||
 		(self->looks = member_object(root, "looks")) == NULL) {
@@ -1700,6 +1804,23 @@ ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 			member_object(member_object(root, "bold"), "looks"), error) ||
 		!widen_blocks(root, "bold", BOLD_KEYS, error) || !embolden(root, error))
 		return NULL;
+	/* Each later collection owns an append-only catalog block. */
+	{
+		JsonObject *bar = member_object(root, "bar");
+		JsonObject *added = member_object(bar, "components");
+		g_autoptr(GList) extra = added != NULL ? json_object_get_members(added) : NULL;
+		GList *entry;
+		for (entry = extra; entry != NULL; entry = entry->next) {
+			if (json_object_has_member(self->components, entry->data))
+				return catalog_invalid(error, entry->data, "bar components must have new names"), NULL;
+			json_object_set_member(self->components, entry->data, json_node_copy(json_object_get_member(added, entry->data)));
+		}
+		if (bar != NULL) {
+			g_autofree gchar *style = load_resource(self, digest, "visual.css", TRUE, error);
+			if (style == NULL)
+				return NULL;
+		}
+	}
 	for (i = 0; i < G_N_ELEMENTS(shared); i++) {
 		g_autofree gchar *text = load_resource(self, digest, shared[i], TRUE, error);
 		if (text == NULL)
@@ -1800,7 +1921,7 @@ ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 	}
 	if (!load_compositions(self, digest, root, error) || !load_kits(self, digest, root, error) ||
 		!load_generator(self, root, error) || !load_directions(self, digest, root, error) ||
-		!load_angles(self, root, error) || !load_forms(self, root, error))
+		!load_angles(self, root, error) || !load_forms(self, root, error) || !load_taste(self, root, error))
 		return NULL;
 	self->plan_schema = build_plan_schema(self, error);
 	if (self->plan_schema == NULL || !load_themes(self, digest, error) ||
@@ -1887,6 +2008,11 @@ ls_components_suggest_angles(LsComponents *self, const gchar *seed){
 	g_return_val_if_fail(seed != NULL, NULL);
 	out = json_object_new();
 	headline = angle_pick(self->headlines, seed, "angle:headline");
+	/* Only the angles that state what the business does. */
+	if (headline != NULL && !taste_listed(self, "angles", headline)) {
+		JsonArray *calm = member_array(self->taste, "angles");
+		headline = json_array_get_string_element(calm, seed_pick(seed, "taste:angle", json_array_get_length(calm)));
+	}
 	subject = angle_pick(self->subjects, seed, "angle:subject");
 	if (headline != NULL) {
 		JsonObject *entry = json_object_new();
@@ -1914,9 +2040,12 @@ ls_components_suggest_opening(LsComponents *self, const gchar *seed){
 	{
 		const gchar *composition = seed_composition(self, seed);
 		JsonArray *fitting = member_array(composition_layout(self, composition), "openings");
-		if (fitting != NULL && json_array_get_length(fitting) > 0)
-			return g_strdup(json_array_get_string_element(fitting,
-				seed_pick(seed, "opening", json_array_get_length(fitting))));
+		g_autoptr(GPtrArray) calm = g_ptr_array_new();
+		for (i = 0; fitting != NULL && i < json_array_get_length(fitting); i++)
+			if (!taste_banned(self, "openings", json_array_get_string_element(fitting, i)))
+				g_ptr_array_add(calm, (gpointer)json_array_get_string_element(fitting, i));
+		if (calm->len > 0)
+			return g_strdup(g_ptr_array_index(calm, seed_pick(seed, "opening", calm->len)));
 	}
 	openings = member_array(member_object(self->kinds, "home"), "openings");
 	for (i = 0; openings != NULL && i < json_array_get_length(openings); i++) {
@@ -1926,8 +2055,13 @@ ls_components_suggest_opening(LsComponents *self, const gchar *seed){
 		if (g_str_equal(name, "custom"))
 			continue;
 		variants = json_object_get_members(member_object(member_object(self->components, name), "variants"));
-		for (variant = variants; variant != NULL; variant = variant->next)
-			g_ptr_array_add(choices, g_strdup_printf("%s/%s", name, (const gchar *)variant->data));
+		for (variant = variants; variant != NULL; variant = variant->next) {
+			gchar *pair = g_strdup_printf("%s/%s", name, (const gchar *)variant->data);
+			if (taste_banned(self, "openings", pair))
+				g_free(pair);
+			else
+				g_ptr_array_add(choices, pair);
+		}
 	}
 	if (choices->len == 0)
 		return NULL;
@@ -1963,6 +2097,16 @@ ls_components_suggest_look(LsComponents *self, const gchar *seed){
 			while (value != NULL) {
 				GList *next = value->next;
 				if (json_list_has(skip, value->data))
+					names = g_list_delete_link(names, value);
+				value = next;
+			}
+		}
+		/* So do values outside the calm systems. */
+		{
+			GList *value = names;
+			while (value != NULL) {
+				GList *next = value->next;
+				if (!taste_look(self, axis->data, value->data) && g_list_length(names) > 1)
 					names = g_list_delete_link(names, value);
 				value = next;
 			}
@@ -2055,7 +2199,7 @@ ls_components_deal_structure(LsComponents *self, const gchar *seed){
 			continue;
 		for (value = values; value != NULL; value = value->next) {
 			g_autofree gchar *pair = g_strdup_printf("%s/%s", (const gchar *)name->data, (const gchar *)value->data);
-			if (!in_list(meaningful_variants, pair))
+			if (!in_list(meaningful_variants, pair) && !taste_banned(self, "variants", pair))
 				g_ptr_array_add(choices, g_strdup(value->data));
 		}
 		if (choices->len < 2)
@@ -2093,28 +2237,51 @@ ls_components_deal_structure(LsComponents *self, const gchar *seed){
 			for (family = kinds; family != NULL; family = family->next) {
 				JsonArray *list = member_array(families, family->data);
 				g_autofree gchar *salt = g_strconcat("form:", (const gchar *)family->data, NULL);
-				json_object_set_string_member(forms, family->data,
-					json_array_get_string_element(list, seed_pick(seed, salt, json_array_get_length(list))));
+				g_autoptr(GPtrArray) calm = g_ptr_array_new();
+				guint f;
+				for (f = 0; f < json_array_get_length(list); f++)
+					if (taste_form(self, family->data, json_array_get_string_element(list, f)))
+						g_ptr_array_add(calm, (gpointer)json_array_get_string_element(list, f));
+				if (calm->len == 0)
+					continue;
+				json_object_set_string_member(forms, family->data, g_ptr_array_index(calm, seed_pick(seed, salt, calm->len)));
 			}
 			json_object_set_object_member(structure, "forms", forms);
 			/* One extra at most, so two sites seldom share one. */
 			if (extras != NULL && json_array_get_length(extras) > 0 && seed_pick(seed, "extra", 100) < (guint)share) {
 				e = seed_pick(seed, "extra:which", json_array_get_length(extras));
-				json_array_add_string_element(chosen, json_array_get_string_element(extras, e));
+				if (taste_listed(self, "extras", json_array_get_string_element(extras, e)))
+					json_array_add_string_element(chosen, json_array_get_string_element(extras, e));
 			}
 			json_object_set_array_member(structure, "extras", chosen);
 		}
 		/* And its art direction. */
 		if (self->directions != NULL) {
 			g_autoptr(GList) directions = json_object_get_members(self->directions);
-			json_object_set_string_member(structure, "direction",
-				g_list_nth_data(directions, seed_pick(seed, "direction", g_list_length(directions))));
+			GList *item = directions;
+			while (item != NULL) {
+				GList *next = item->next;
+				if (!taste_listed(self, "directions", item->data))
+					directions = g_list_delete_link(directions, item);
+				item = next;
+			}
+			if (directions != NULL)
+				json_object_set_string_member(structure, "direction",
+					g_list_nth_data(directions, seed_pick(seed, "direction", g_list_length(directions))));
 		}
 		/* So is its motion: one kit for the whole site. */
 		if (self->kits != NULL && json_object_get_size(self->kits) > 0) {
 			g_autoptr(GList) kits = json_object_get_members(self->kits);
-			json_object_set_string_member(structure, "kit",
-				g_list_nth_data(kits, seed_pick(seed, "kit", g_list_length(kits))));
+			GList *item = kits;
+			while (item != NULL) {
+				GList *next = item->next;
+				if (!taste_listed(self, "kits", item->data))
+					kits = g_list_delete_link(kits, item);
+				item = next;
+			}
+			if (kits != NULL)
+				json_object_set_string_member(structure, "kit",
+					g_list_nth_data(kits, seed_pick(seed, "kit", g_list_length(kits))));
 		}
 	}
 	return structure;
@@ -2123,6 +2290,9 @@ ls_components_deal_structure(LsComponents *self, const gchar *seed){
 static gdouble gene(JsonObject *structure, const gchar *name, gdouble fallback);
 static gchar *photo_opening(LsComponents *self, const gchar *seed, const gchar *composition, const gchar *opening,
 	const gchar *frame);
+static void taste_clamp_look(LsComponents *self, JsonObject *look, const gchar *seed);
+static gdouble taste_lightness(const gchar *hex);
+static gboolean pair_leads(LsComponents *self, const gchar *pair, const gchar *frame);
 
 gboolean
 ls_components_apply_structure(LsComponents *self, JsonNode *plan_node, const gchar *seed, gboolean themed){
@@ -2209,6 +2379,36 @@ ls_components_apply_structure(LsComponents *self, JsonNode *plan_node, const gch
 		for (p = 0; p < G_N_ELEMENTS(plain); p++)
 			if (member_object(self->looks, plain[p][0]) != NULL)
 				json_object_set_string_member(look, plain[p][0], plain[p][1]);
+	}
+	/* No dealt site wears a gimmick: the opening and look stay inside the
+	 * taste block's calm systems. */
+	if (!themed) {
+		JsonObject *structure = member_object(plan, "structure");
+		const gchar *opening = ls_string(structure, "opening");
+		taste_clamp_look(self, look, seed);
+		if (taste_banned(self, "openings", opening)) {
+			gboolean photos = member_array(plan, "photos") != NULL && json_array_get_length(member_array(plan, "photos")) > 0;
+			JsonArray *openings = member_array(member_object(self->kinds, "home"), "openings");
+			g_autoptr(GPtrArray) calm = g_ptr_array_new_with_free_func(g_free);
+			guint i;
+			for (i = 0; openings != NULL && i < json_array_get_length(openings); i++) {
+				const gchar *name = json_array_get_string_element(openings, i);
+				g_autoptr(GList) variants = NULL;
+				GList *variant;
+				if (g_str_equal(name, "custom"))
+					continue;
+				variants = json_object_get_members(member_object(member_object(self->components, name), "variants"));
+				for (variant = variants; variant != NULL; variant = variant->next) {
+					gchar *pair = g_strdup_printf("%s/%s", name, (const gchar *)variant->data);
+					if (!taste_banned(self, "openings", pair) && (!photos || pair_leads(self, pair, ls_string(look, "frame"))))
+						g_ptr_array_add(calm, pair);
+					else
+						g_free(pair);
+				}
+			}
+			if (calm->len > 0)
+				json_object_set_string_member(structure, "opening", g_ptr_array_index(calm, seed_pick(seed, "taste:opening", calm->len)));
+		}
 	}
 	/* Headings beside or hanging off the content need a wide column: the
 	 * narrow journal frame and narrow dealt columns keep them on top. */
@@ -2350,6 +2550,105 @@ node_copy(JsonNode *node){
 	return ls_json_parse(text, NULL);
 }
 
+/* Brings every look axis the taste block names back inside its calm values,
+ * whatever dealt it (a composition, a kit, an art direction). */
+static void
+taste_clamp_look(LsComponents *self, JsonObject *look, const gchar *seed){
+	JsonObject *looks = self->taste != NULL ? member_object(self->taste, "looks") : NULL;
+	g_autoptr(GList) axes = looks != NULL ? json_object_get_members(looks) : NULL;
+	GList *axis;
+	for (axis = axes; look != NULL && axis != NULL; axis = axis->next) {
+		JsonArray *allowed = member_array(looks, axis->data);
+		const gchar *value = ls_string(look, axis->data);
+		g_autofree gchar *salt = g_strconcat("taste:", (const gchar *)axis->data, NULL);
+		if (value != NULL && !json_list_has(allowed, value))
+			json_object_set_string_member(look, axis->data,
+				json_array_get_string_element(allowed, seed_pick(seed, salt, json_array_get_length(allowed))));
+	}
+}
+
+/* A neon colour: chroma over this and HSL lightness over that. */
+#define TASTE_NEON_CHROMA 0.35
+#define TASTE_NEON_LIGHTNESS 0.45
+
+/* Keeps the page and surface colours calm: each is moved toward its own
+ * grey until under the taste block's chroma limit. */
+static void
+taste_calm_tokens(LsComponents *self, JsonObject *tokens){
+	const gchar *keys[] = {"paper", "surface"};
+	guint i;
+	if (self->taste == NULL || tokens == NULL)
+		return;
+	for (i = 0; i < G_N_ELEMENTS(keys); i++) {
+		const gchar *value = ls_string(tokens, keys[i]);
+		/* Deep colours stay calm however saturated; only a light, coloured
+		 * ground is loud. */
+		if (value != NULL && taste_lightness(value) >= 0.45) {
+			g_autofree gchar *calm = ls_taste_calm(value, json_object_get_double_member(self->taste, "chroma"));
+			json_object_set_string_member(tokens, keys[i], calm);
+		}
+	}
+	/* The accent fills bands too, so a vivid, light one (neon) is toned
+	 * down to a strong colour; its ink is then kept readable on it. */
+	{
+		const gchar *accent = ls_string(tokens, "accent");
+		gdouble rgb[3] = {0, 0, 0};
+		if (accent != NULL && parse_color(accent, rgb) && ls_taste_chroma(accent) > TASTE_NEON_CHROMA &&
+			(MAX(MAX(rgb[0], rgb[1]), rgb[2]) + MIN(MIN(rgb[0], rgb[1]), rgb[2])) / 2 > TASTE_NEON_LIGHTNESS) {
+			g_autofree gchar *calm = ls_taste_calm(accent, TASTE_NEON_CHROMA);
+			/* Its ink: the current one when it still reads, else the
+			 * page's ink or paper, else plain black or white, whichever
+			 * reads best. */
+			const gchar *inks[] = {ls_string(tokens, "accent_ink"), ls_string(tokens, "ink"), ls_string(tokens, "paper"),
+				"#111111", "#ffffff"};
+			const gchar *best = NULL;
+			g_autofree gchar *ink = NULL;
+			guint n;
+			for (n = 0; n < G_N_ELEMENTS(inks) && (best == NULL || contrast(best, calm) < 4.6); n++)
+				if (inks[n] != NULL && (best == NULL || contrast(inks[n], calm) > contrast(best, calm)))
+					best = inks[n];
+			ink = g_strdup(best != NULL ? best : "#ffffff");
+			/* A mid-tone accent that neither reads on is shaded away from
+			 * its ink, a tenth at a time. */
+			for (n = 0; n < 10 && contrast(ink, calm) < 4.6; n++) {
+				gdouble c[3];
+				gchar *moved;
+				parse_color(ink, c);
+				moved = ls_taste_mix(calm, luminance(c) > 0.18 ? "#000000" : "#ffffff", 0.1);
+				g_free(calm);
+				calm = moved;
+			}
+			json_object_set_string_member(tokens, "accent", calm);
+			json_object_set_string_member(tokens, "accent_ink", ink);
+		}
+	}
+	/* Calmer grounds shift the text's contrast: ink and muted text move
+	 * away from the page, a tenth at a time, until both grounds pass AA
+	 * with a little room. */
+	{
+		const gchar *text[] = {"ink", "muted"};
+		const gchar *paper = ls_string(tokens, "paper"), *surface = ls_string(tokens, "surface");
+		gdouble rgb[3] = {0, 0, 0};
+		const gchar *away;
+		guint step;
+		if (paper == NULL || !parse_color(paper, rgb))
+			return;
+		away = luminance(rgb) > 0.18 ? "#000000" : "#ffffff";
+		for (i = 0; i < G_N_ELEMENTS(text); i++) {
+			g_autofree gchar *colour = g_strdup(ls_string(tokens, text[i]));
+			if (colour == NULL)
+				continue;
+			for (step = 0; step < 10 && (contrast(colour, paper) < 4.6 ||
+				(surface != NULL && contrast(colour, surface) < 4.6)); step++) {
+				gchar *moved = ls_taste_mix(colour, away, 0.2);
+				g_free(colour);
+				colour = moved;
+			}
+			json_object_set_string_member(tokens, text[i], colour);
+		}
+	}
+}
+
 gboolean
 ls_components_apply_seed(LsComponents *self, JsonNode *plan_node, const gchar *seed, const gchar *sector,
 	gboolean themed){
@@ -2415,6 +2714,11 @@ ls_components_apply_seed(LsComponents *self, JsonNode *plan_node, const gchar *s
 		if (json_object_has_member(type, "fonts"))
 			json_object_set_member(plan, "fonts", node_copy(json_object_get_member(type, "fonts")));
 	}
+	/* The visual sequence sets its world's colours first, so the calm
+	 * rules cover them too. */
+	ls_visual_apply_plan(plan);
+	taste_clamp_look(self, look, seed);
+	taste_calm_tokens(self, tokens);
 	return TRUE;
 }
 
@@ -2512,7 +2816,7 @@ pair_needs_art(LsComponents *self, const gchar *pair){
  * screen under @frame. */
 static gboolean
 pair_leads(LsComponents *self, const gchar *pair, const gchar *frame){
-	return pair_needs_art(self, pair) &&
+	return pair_needs_art(self, pair) && !taste_banned(self, "openings", pair) &&
 		(frame == NULL || !json_list_has(member_array(self->frame_below, frame), pair));
 }
 
@@ -2785,7 +3089,7 @@ ls_components_apply_opening(LsComponents *self, JsonNode *plan_node, const gchar
 			variants = json_object_get_members(member_object(member_object(self->components, name), "variants"));
 			for (variant = variants; variant != NULL; variant = variant->next) {
 				gchar *pair = g_strdup_printf("%s/%s", name, (const gchar *)variant->data);
-				if (g_str_equal(pair, opening) || json_list_has(fitting, pair))
+				if (g_str_equal(pair, opening) || json_list_has(fitting, pair) || taste_banned(self, "openings", pair))
 					g_free(pair);
 				else
 					g_ptr_array_add(rest, pair);
@@ -2795,7 +3099,7 @@ ls_components_apply_opening(LsComponents *self, JsonNode *plan_node, const gchar
 		start = seed_pick(seed, "opening:fallback", MAX(n, 1));
 		for (i = 0; i < n; i++) {
 			const gchar *pair = json_array_get_string_element(fitting, (start + i) % n);
-			if (g_strcmp0(pair, opening) != 0)
+			if (g_strcmp0(pair, opening) != 0 && !taste_banned(self, "openings", pair))
 				g_ptr_array_add(choices, g_strdup(pair));
 		}
 		start = seed_pick(seed, "opening:rest", MAX(rest->len, 1));
@@ -3548,6 +3852,13 @@ missing_talk(const gchar *text){
 	return NULL;
 }
 
+/* Plan fields that brief the writers and never reach a visitor. */
+static gboolean
+instruction_field(const gchar *where){
+	return g_str_equal(where, "voice") || g_str_equal(where, "character") || g_str_has_prefix(where, "missing") ||
+		g_str_has_suffix(where, ".brief");
+}
+
 static void
 check_text(Problems *problems, const gchar *where, JsonNode *node, gboolean required, gsize max){
 	const gchar *text;
@@ -3570,6 +3881,9 @@ check_text(Problems *problems, const gchar *where, JsonNode *node, gboolean requ
 	else if ((talk = missing_talk(text)) != NULL)
 		problem(problems, "%s tells visitors about facts that were not supplied (\"%s\"); leave anything missing "
 			"out silently and write about what is true", where, talk);
+	else if (!instruction_field(where) && (talk = ls_taste_disclosure(text, g_str_equal(where, "footer.note"))) != NULL)
+		problem(problems, "%s talks about the site itself (\"%s\"); visible copy never says illustrative, and any "
+			"note that the business or its photos are examples belongs only in footer.note, in other words", where, talk);
 }
 
 static gboolean
@@ -4186,7 +4500,7 @@ check_restyle(Problems *problems, LsComponents *self, JsonObject *plan){
 	g_autoptr(GList) names = NULL;
 	GList *name;
 	gsize total = 0;
-	if (!json_object_has_member(plan, "restyle"))
+	if (!json_object_has_member(plan, "restyle") || JSON_NODE_HOLDS_NULL(json_object_get_member(plan, "restyle")))
 		return;
 	if (restyle == NULL) {
 		problem(problems, "restyle must map component names to CSS");
@@ -4226,11 +4540,16 @@ check_plan_into(Problems *problems, LsComponents *self, JsonNode *node){
 		return;
 	}
 	if (!ls_object_keys(plan, "|name|tagline|lang|character|missing|tokens|fonts|brand|nav|action|footer|voice|look|"
-		"art|photos|social|form|contact|modules|credit|pages|css|restyle|ui|structure|signature|", NULL))
+		"art|photos|media|visual|social|form|contact|modules|credit|pages|css|restyle|ui|structure|signature|", NULL))
 		problem(problems, "unknown top-level key; allowed: name, tagline, lang, character, missing, tokens, fonts, "
 			"brand, nav, action, footer, voice, look, art, photos, pages, css, restyle, ui");
 	check_missing(problems, plan);
 	check_photos(problems, plan);
+	{
+		g_autoptr(GError) visual_error = NULL;
+		if (!ls_visual_check_plan(plan, &visual_error))
+			problem(problems, "%s", visual_error->message);
+	}
 	check_social(problems, self, plan);
 	check_supplied_form(problems, plan);
 	check_contact(problems, plan);
@@ -4379,7 +4698,8 @@ check_plan_into(Problems *problems, LsComponents *self, JsonNode *node){
 			}
 		}
 	}
-	if (json_object_has_member(plan, "css")) {
+	/* A null css is no css: strict structured output fills omitted fields. */
+	if (json_object_has_member(plan, "css") && !JSON_NODE_HOLDS_NULL(json_object_get_member(plan, "css"))) {
 		g_autofree gchar *why = is_string(json_object_get_member(plan, "css"))
 			? css_problem(ls_string(plan, "css"), 24000) : g_strdup("css must be a string");
 		if (why != NULL)
@@ -5577,6 +5897,7 @@ collect_part_ids(JsonArray *sections, GHashTable *anchors){
 typedef struct {
 	Problems *problems;
 	LinkScope *scope;
+	JsonObject *plan;	/* for the supplied photos' own alt text */
 } PageCheck;
 
 static void check_value(PageCheck *check, const gchar *where, const gchar *name, JsonObject *slot, JsonNode *value);
@@ -5694,6 +6015,12 @@ check_value(PageCheck *check, const gchar *where, const gchar *name, JsonObject 
 			problem(check->problems, "%s.src %s is not planned art", where, src != NULL ? src : "(missing)");
 		if (image != NULL && (!is_string(alt) || g_utf8_strlen(json_node_get_string(alt), -1) > 300))
 			problem(check->problems, "%s.alt must be text up to 300 characters, or \"\" when decorative", where);
+		/* A supplied photo's own alt is the caller's fact; the site check
+		 * reports it, the writer cannot change it. */
+		else if (image != NULL && ls_taste_disclosure(json_node_get_string(alt), FALSE) != NULL &&
+			g_strcmp0(json_node_get_string(alt), ls_string(plan_photo(check->plan, src), "alt")) != 0)
+			problem(check->problems, "%s.alt talks about the photo itself (\"%s\"); describe what it shows", where,
+				ls_taste_disclosure(json_node_get_string(alt), FALSE));
 	} else if (g_str_equal(type, "choice")) {
 		JsonArray *values = member_array(slot, "values");
 		gboolean found = FALSE;
@@ -5838,7 +6165,7 @@ check_page_into(LsComponents *self, Problems *problems, JsonNode *plan_node, con
 	JsonObject *page = page_node != NULL && JSON_NODE_HOLDS_OBJECT(page_node) ? json_node_get_object(page_node) : NULL;
 	JsonArray *sections;
 	LinkScope scope = {NULL, NULL, NULL};
-	PageCheck check = {problems, &scope};
+	PageCheck check = {problems, &scope, NULL};
 	g_autoptr(GPtrArray) ids = NULL;
 	g_autoptr(GHashTable) modules_placed = g_hash_table_new(g_str_hash, g_str_equal);
 	const gchar *kind_name;
@@ -5849,6 +6176,7 @@ check_page_into(LsComponents *self, Problems *problems, JsonNode *plan_node, con
 		return;
 	}
 	plan_scope(plan, &scope);
+	check.plan = plan;
 	scope.anchors = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 	if (!ls_object_keys(page, builtin ? "|path|kind|title|description|noindex|sections|" : "|path|sections|css|aside|", NULL))
 		problem(problems, "unknown top-level key; allowed: path, sections, css, aside");
@@ -5870,6 +6198,17 @@ check_page_into(LsComponents *self, Problems *problems, JsonNode *plan_node, con
 		problem(problems, "sections must list 1 to %d sections", MAX_SECTIONS);
 	ids = section_ids(sections, scope.anchors);
 	collect_part_ids(sections, scope.anchors);
+	/* The page headline states what the business does; a question leaves
+	 * the visitor to guess. */
+	if (!builtin && sections != NULL && json_array_get_length(sections) > 0 &&
+		JSON_NODE_HOLDS_OBJECT(json_array_get_element(sections, 0))) {
+		JsonObject *opening = member_object(json_array_get_object_element(sections, 0), "content");
+		const gchar *heading = ls_string(opening, "heading");
+		g_autofree gchar *trimmed = heading != NULL ? g_strstrip(g_strdup(heading)) : NULL;
+		if (trimmed != NULL && g_str_has_suffix(trimmed, "?"))
+			problem(problems, "section 1 heading \"%s\" is a question; the page headline states what the business "
+				"does (and where, when a place is supplied) from the brief's facts", heading);
+	}
 	for (i = 0; sections != NULL && i < json_array_get_length(sections); i++) {
 		JsonNode *node = json_array_get_element(sections, i);
 		JsonObject *section = JSON_NODE_HOLDS_OBJECT(node) ? json_node_get_object(node) : NULL;
@@ -5909,7 +6248,8 @@ check_page_into(LsComponents *self, Problems *problems, JsonNode *plan_node, con
 		if (i == 0 && blank(ls_string(content, "heading")))
 			problem(problems, "the first section must have a heading; it becomes the page h1");
 		/* Structure follows the page kind: only home may open like a landing page. */
-		if (i == 0 && kind != NULL && !kind_allows(kind, name)) {
+		if (i == 0 && kind != NULL && !kind_allows(kind, name) &&
+			!(g_str_equal(name, "scene") && g_strcmp0(kind_name, "home") == 0 && member_object(plan, "visual") != NULL)) {
 			GString *openings = g_string_new(NULL);
 			JsonArray *allowed = member_array(kind, "openings");
 			guint j;
@@ -6337,6 +6677,9 @@ compare_letters(gconstpointer a, gconstpointer b){
 	return g_utf8_collate(left, right);
 }
 
+/* The fewest initial letters that earn a directory its letter index. */
+#define DIRECTORY_INDEX_LETTERS 6
+
 /* Group directory entries under their initial letter, keeping the given order
  * within a letter; titles that start with a non-letter gather under '#'. */
 static void
@@ -6367,10 +6710,15 @@ directory_view(JsonObject *view, const gchar *id){
 		json_array_add_element(entries, json_node_copy(item));
 	}
 	g_ptr_array_sort(letters, compare_letters);
+	/* A letter index helps only a long list; over a few entries its
+	 * letters read as chips standing in for content. */
+	if (letters->len >= DIRECTORY_INDEX_LETTERS)
+		json_object_set_boolean_member(view, "letter_index", TRUE);
 	for (i = 0; i < letters->len; i++) {
 		JsonObject *group = json_object_new();
 		g_autofree gchar *group_id = g_strdup_printf("%s-g%u", id, i + 1);
-		json_object_set_string_member(group, "letter", letters->pdata[i]);
+		if (letters->len >= DIRECTORY_INDEX_LETTERS)
+			json_object_set_string_member(group, "letter", letters->pdata[i]);
 		json_object_set_string_member(group, "group_id", group_id);
 		json_object_set_array_member(group, "entries",
 			json_array_ref(g_hash_table_lookup(by_letter, letters->pdata[i])));
@@ -6463,7 +6811,7 @@ section_classes(Render *render, const gchar *name, guint index, gboolean reading
 
 /* Components that keep one variant across the whole site: the page opening
  * is the site's signature, so every interior page opens alike. */
-static const gchar *const steady_components[] = {"page-header", NULL};
+static const gchar *const steady_components[] = {"page-header", "scene", "material", NULL};
 
 /* The variant a section renders with. A dealt component has a small
  * per-site family: the dealt variant and two others picked from the site
@@ -6484,7 +6832,8 @@ section_variant(Render *render, JsonObject *component, const gchar *name, const 
 	values = json_object_get_members(member_object(component, "variants"));
 	for (value = values; value != NULL; value = value->next) {
 		g_autofree gchar *pair = g_strdup_printf("%s/%s", name, (const gchar *)value->data);
-		if (!in_list(meaningful_variants, pair) && g_strcmp0(value->data, dealt) != 0)
+		if (!in_list(meaningful_variants, pair) && g_strcmp0(value->data, dealt) != 0 &&
+			!taste_banned(render->self, "variants", pair))
 			g_ptr_array_add(choices, value->data);
 	}
 	if (choices->len < 2)
@@ -6501,6 +6850,33 @@ section_variant(Render *render, JsonObject *component, const gchar *name, const 
 	count = family[2] != family[1] ? 3 : 2;
 	section_seed = g_strdup_printf("%s\n%s\n%u", ls_string(render->plan, "name"), render->page_path, index);
 	return family[seed_pick(section_seed, name, count)];
+}
+
+/* @variant of component @name, or, when the taste block calls it a gimmick
+ * or a banned opening that a writer named, the component's first calm
+ * variant. */
+static const gchar *
+calm_variant(LsComponents *self, JsonObject *plan, JsonObject *component, const gchar *name, const gchar *variant){
+	g_autofree gchar *pair = g_strdup_printf("%s/%s", name, variant != NULL ? variant : "");
+	JsonObject *structure = member_object(plan, "structure");
+	g_autoptr(GList) values = NULL;
+	GList *value;
+	if (!taste_banned(self, "variants", pair) && !taste_banned(self, "openings", pair))
+		return variant;
+	/* The builder never deals one, so a structure that names it chose it
+	 * on purpose (a theme or an explicit option). */
+	if (structure != NULL && (g_strcmp0(ls_string(structure, "opening"), pair) == 0 ||
+		(member_object(structure, "variants") != NULL &&
+		g_strcmp0(ls_string(member_object(structure, "variants"), name), variant) == 0)))
+		return variant;
+	values = json_object_get_members(member_object(component, "variants"));
+	for (value = values; value != NULL; value = value->next) {
+		g_autofree gchar *other = g_strdup_printf("%s/%s", name, (const gchar *)value->data);
+		/* Member names belong to the catalog, so they outlive the list. */
+		if (!taste_banned(self, "variants", other) && !taste_banned(self, "openings", other))
+			return value->data;
+	}
+	return variant;
 }
 
 /* A link address reduced for comparison: no scheme, no www., no trailing slash. */
@@ -6613,10 +6989,12 @@ render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArra
 		JsonObject *content = supplied != NULL ? supplied : member_object(section, "content");
 		g_autoptr(GList) variants = json_object_get_members(member_object(component, "variants"));
 		JsonObject *dealt_variants = member_object(member_object(render->plan, "structure"), "variants");
-		const gchar *dealt = dealt_variants != NULL ? ls_string(dealt_variants, name) : NULL;
+		const gchar *dealt = dealt_variants != NULL && !g_str_equal(name, "scene") && !g_str_equal(name, "material")
+			? ls_string(dealt_variants, name) : NULL;
 		/* A dealt family restyles the component coherently across the site. */
-		const gchar *variant = dealt != NULL ? section_variant(render, component, name, dealt, i) : ls_string(section, "variant") != NULL
-			? ls_string(section, "variant") : (const gchar *)variants->data;
+		const gchar *variant = calm_variant(render->self, render->plan, component, name, dealt != NULL
+			? section_variant(render, component, name, dealt, i) : ls_string(section, "variant") != NULL
+			? ls_string(section, "variant") : (const gchar *)variants->data);
 		const gchar *id = g_ptr_array_index(ids, i);
 		g_autofree gchar *structure_classes = section_classes(render, name, i, reading, &last_tone);
 		g_autoptr(JsonObject) view = json_object_new();
@@ -6650,6 +7028,8 @@ render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArra
 				json_object_set_boolean_member(view, has, json_array_get_length(json_node_get_array(value)) > 0);
 			}
 		}
+		if (g_str_equal(name, "scene") || g_str_equal(name, "material"))
+			ls_visual_view(render->plan, view, i);
 		/* Builder facts the model never writes: supplied profiles and share targets. */
 		if (g_str_equal(name, "social")) {
 			JsonArray *profiles = profile_views(render);
@@ -6909,7 +7289,7 @@ static const gchar *
 home_composition(LsComponents *self, JsonObject *plan){
 	const gchar *name = member_object(plan, "structure") != NULL
 		? ls_string(member_object(plan, "structure"), "composition") : NULL;
-	return composition_layout(self, name) != NULL ? name : NULL;
+	return member_object(plan, "visual") == NULL && composition_layout(self, name) != NULL ? name : NULL;
 }
 
 /* The plan's motion kit, when the library knows it. */
@@ -6917,7 +7297,7 @@ static const gchar *
 site_kit(LsComponents *self, JsonObject *plan){
 	const gchar *name = member_object(plan, "structure") != NULL
 		? ls_string(member_object(plan, "structure"), "kit") : NULL;
-	return motion_kit(self, name) != NULL ? name : NULL;
+	return member_object(plan, "visual") == NULL && motion_kit(self, name) != NULL ? name : NULL;
 }
 
 /* One body class per look axis, falling back to the catalog default. */
@@ -7007,6 +7387,12 @@ render_page(Render *render, const gchar *path, const gchar *title, const gchar *
 			if (json_object_has_member(motion_kit(render->self, kit), "marquee") &&
 				json_object_get_boolean_member(motion_kit(render->self, kit), "marquee"))
 				json_object_set_boolean_member(view, "kit_marquee", TRUE);
+		}
+		if (member_object(plan, "visual") != NULL) {
+			gchar *more = g_strconcat(classes, " visual-sequence", NULL);
+			g_free(classes);
+			classes = more;
+			json_object_set_boolean_member(view, "kit_marquee", FALSE);
 		}
 		json_object_set_string_member(view, "look_classes", classes);
 	}
@@ -7390,7 +7776,9 @@ scheme_css(JsonObject *tokens){
 		return g_strdup("");
 	light = luminance(rgb) >= 0.2;
 	{
-		g_autofree gchar *base = mix_color(ink, light ? "#000000" : "#ffffff", light ? 0.2 : 0.04);
+		g_autofree gchar *mixed = mix_color(ink, light ? "#000000" : "#ffffff", light ? 0.2 : 0.04);
+		/* The other scheme's ground is as calm as a dealt one (docs/components.org, "Taste"). */
+		g_autofree gchar *base = ls_taste_calm(mixed, 0.15);
 		g_autofree gchar *surface = mix_color(base, paper, 0.07);
 		g_autofree gchar *line = mix_color(base, paper, 0.22);
 		g_autofree gchar *muted = mix_color(paper, base, 0.3);
@@ -7673,10 +8061,12 @@ ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages
 	 * !important guards (focus rings, the index label) hold against it. */
 	/* The signature's divider punctuates the page at every third gap and
 	 * keeps to its own small space, so it never fences off every section. */
-	if (ls_string(plan, "signature") != NULL)
+	if (ls_string(plan, "signature") != NULL && member_object(plan, "visual") == NULL)
 		g_string_append_printf(css, "\n/* Site signature */\n@layer ls-signature {\n%s\n"
 			"main > .block + .block::before { margin-block: 0 var(--space-5); }\n"
 			"main > .block + .block:not(:nth-child(3n+1))::before { display: none; }\n}\n", ls_string(plan, "signature"));
+	if (member_object(plan, "visual") != NULL && file_text(self, "visual.css") != NULL)
+		g_string_append_printf(css, "\n@layer ls-signature {\n%s\n}\n", file_text(self, "visual.css"));
 	add_file(files, "styles.css", css->str);
 	add_file(files, "site.js", js->str);
 	add_file(files, "robots.txt", robots->str);
@@ -7696,4 +8086,270 @@ fail:
 	g_string_free(robots, TRUE);
 	g_ptr_array_unref(problems.messages);
 	return NULL;
+}
+
+/* ---- Taste ---------------------------------------------------------------- */
+
+/* Pages that carry no photograph by design. */
+static gboolean
+photoless_route(const gchar *path){
+	return g_strcmp0(path, "404.html") == 0 || g_strcmp0(path, "privacy.html") == 0 || g_strcmp0(path, "terms.html") == 0;
+}
+
+/* Whether @node, anywhere inside, shows one of @plan's supplied photos. */
+static gboolean
+shows_photo(JsonObject *plan, JsonNode *node){
+	if (node == NULL)
+		return FALSE;
+	if (JSON_NODE_HOLDS_ARRAY(node)) {
+		JsonArray *list = json_node_get_array(node);
+		guint i;
+		for (i = 0; i < json_array_get_length(list); i++)
+			if (shows_photo(plan, json_array_get_element(list, i)))
+				return TRUE;
+	} else if (JSON_NODE_HOLDS_OBJECT(node)) {
+		JsonObject *object = json_node_get_object(node);
+		g_autoptr(GList) members = NULL;
+		GList *member;
+		if (ls_string(object, "src") != NULL && plan_photo(plan, ls_string(object, "src")) != NULL)
+			return TRUE;
+		members = json_object_get_members(object);
+		for (member = members; member != NULL; member = member->next)
+			if (shows_photo(plan, json_object_get_member(object, member->data)))
+				return TRUE;
+	}
+	return FALSE;
+}
+
+gboolean
+ls_components_ensure_photo(LsComponents *self, JsonNode *plan_node, const gchar *path, JsonNode *page){
+	JsonObject *plan, *section, *content, *art, *photo;
+	JsonArray *photos, *sections;
+	g_return_val_if_fail(LS_IS_COMPONENTS(self), FALSE);
+	if (plan_node == NULL || !JSON_NODE_HOLDS_OBJECT(plan_node) || page == NULL || !JSON_NODE_HOLDS_OBJECT(page) ||
+		path == NULL || photoless_route(path))
+		return FALSE;
+	plan = json_node_get_object(plan_node);
+	photos = member_array(plan, "photos");
+	sections = member_array(json_node_get_object(page), "sections");
+	if (photos == NULL || json_array_get_length(photos) == 0 || sections == NULL ||
+		json_array_get_length(sections) == 0 || json_array_get_length(sections) >= MAX_SECTIONS ||
+		shows_photo(plan, json_object_get_member(json_node_get_object(page), "sections")))
+		return FALSE;
+	/* The route picks the photo, so the inner pages of one site differ. */
+	photo = json_array_get_object_element(photos, g_str_hash(path) % json_array_get_length(photos));
+	art = json_object_new();
+	json_object_set_string_member(art, "src", ls_string(photo, "path"));
+	json_object_set_string_member(art, "alt", ls_string(photo, "alt") != NULL ? ls_string(photo, "alt") : "");
+	content = json_object_new();
+	json_object_set_object_member(content, "art", art);
+	section = json_object_new();
+	json_object_set_string_member(section, "component", "media");
+	json_object_set_string_member(section, "variant", "full");
+	json_object_set_object_member(section, "content", content);
+	{
+		JsonArray *rebuilt = json_array_new();
+		guint i;
+		for (i = 0; i < json_array_get_length(sections); i++) {
+			json_array_add_element(rebuilt, json_node_copy(json_array_get_element(sections, i)));
+			if (i == 0)
+				json_array_add_object_element(rebuilt, json_object_ref(section));
+		}
+		json_object_set_array_member(json_node_get_object(page), "sections", rebuilt);
+	}
+	json_object_unref(section);
+	return TRUE;
+}
+
+/* Visible words of @html between @start and @end: tags, scripts and styles
+ * dropped, alt text kept. */
+static gchar *
+visible_text(const gchar *start, const gchar *end){
+	GString *out = g_string_new(NULL);
+	const gchar *p = start;
+	while (p < end) {
+		if (*p != '<') {
+			g_string_append_c(out, *p++);
+			continue;
+		}
+		if (g_ascii_strncasecmp(p, "<script", 7) == 0 || g_ascii_strncasecmp(p, "<style", 6) == 0) {
+			const gchar *close = strstr(p, p[1] == 's' && p[2] == 'c' ? "</script>" : "</style>");
+			p = close != NULL && close < end ? close + 8 : end;
+			continue;
+		}
+		{
+			const gchar *close = strchr(p, '>');
+			const gchar *alt = g_strstr_len(p, close != NULL ? close - p : end - p, " alt=\"");
+			if (alt != NULL) {
+				const gchar *q = strchr(alt + 6, '"');
+				if (q != NULL) {
+					g_string_append_c(out, ' ');
+					g_string_append_len(out, alt + 6, q - alt - 6);
+				}
+			}
+			g_string_append_c(out, ' ');
+			p = close != NULL && close < end ? close + 1 : end;
+		}
+	}
+	return g_string_free(out, FALSE);
+}
+
+/* Whether @html carries the class @name: whole class names only. */
+static gboolean
+has_class(const gchar *html, const gchar *name){
+	const gchar *at;
+	gsize length = strlen(name);
+	for (at = strstr(html, name); at != NULL; at = strstr(at + 1, name))
+		if ((at[-1] == '"' || at[-1] == ' ') && (at[length] == '"' || at[length] == ' '))
+			return TRUE;
+	return FALSE;
+}
+
+static void
+taste_page(LsComponents *self, JsonObject *plan, const gchar *path, const gchar *html, GString *problems){
+	const gchar *body = strstr(html, "<body class=\"");
+	const gchar *footer = strstr(html, "<footer");
+	const gchar *footer_end = footer != NULL ? strstr(footer, "</footer>") : NULL;
+	const gchar *h1 = strstr(html, "<h1");
+	const gchar *end = html + strlen(html);
+	const gchar *talk;
+	g_autofree gchar *main_text = visible_text(html, footer != NULL ? footer : end);
+	g_autofree gchar *footer_text = footer != NULL ? visible_text(footer, footer_end != NULL ? footer_end : end) : NULL;
+	g_autofree gchar *after_text = footer_end != NULL ? visible_text(footer_end, end) : NULL;
+	if ((talk = ls_taste_disclosure(main_text, FALSE)) != NULL || (talk = ls_taste_disclosure(after_text, FALSE)) != NULL)
+		g_string_append_printf(problems, "%s: visible copy talks about the site itself (\"%s\")\n", path, talk);
+	if ((talk = ls_taste_disclosure(footer_text, TRUE)) != NULL)
+		g_string_append_printf(problems, "%s: the footer says \"%s\"\n", path, talk);
+	if (h1 != NULL && strstr(h1, "</h1>") != NULL) {
+		const gchar *open_end = strchr(h1, '>');
+		g_autofree gchar *words = visible_text(open_end + 1, strstr(h1, "</h1>"));
+		g_strstrip(words);
+		if (g_str_has_suffix(words, "?"))
+			g_string_append_printf(problems, "%s: the headline \"%s\" is a question\n", path, words);
+	}
+	/* Letter chips: a letter index over fewer letters than earn one. */
+	{
+		const gchar *index;
+		for (index = strstr(html, "class=\"directory__letters\""); index != NULL;
+			index = strstr(index + 1, "class=\"directory__letters\"")) {
+			const gchar *close = strstr(index, "</nav>");
+			guint count = 0;
+			const gchar *link;
+			for (link = strstr(index, "<a "); link != NULL && close != NULL && link < close; link = strstr(link + 1, "<a "))
+				count++;
+			if (count < DIRECTORY_INDEX_LETTERS)
+				g_string_append_printf(problems, "%s: letter chips (%u letters standing in for content)\n", path, count);
+		}
+	}
+	if (self->taste != NULL) {
+		JsonObject *looks = member_object(self->taste, "looks");
+		JsonArray *variants = member_array(self->taste, "variants");
+		g_autofree gchar *classes = NULL;
+		g_auto(GStrv) names = NULL;
+		guint i;
+		if (body != NULL) {
+			const gchar *close = strchr(body + 13, '"');
+			classes = close != NULL ? g_strndup(body + 13, close - body - 13) : NULL;
+		}
+		names = classes != NULL ? g_strsplit(classes, " ", -1) : NULL;
+		for (i = 0; names != NULL && names[i] != NULL; i++) {
+			g_autoptr(GList) axes = json_object_get_members(looks);
+			GList *axis;
+			for (axis = axes; axis != NULL; axis = axis->next) {
+				g_autofree gchar *prefix = g_strdup_printf("look-%s-", (const gchar *)axis->data);
+				if (g_str_has_prefix(names[i], prefix) &&
+					!json_list_has(member_array(looks, axis->data), names[i] + strlen(prefix)))
+					g_string_append_printf(problems, "%s: look %s %s is outside the calm systems\n", path,
+						(const gchar *)axis->data, names[i] + strlen(prefix));
+			}
+			if (g_str_has_prefix(names[i], "kit-") && !taste_listed(self, "kits", names[i] + 4))
+				g_string_append_printf(problems, "%s: motion kit %s is outside the calm systems\n", path, names[i] + 4);
+			if (g_str_has_prefix(names[i], "art-") && art_direction(self, names[i] + 4) != NULL &&
+				!taste_listed(self, "directions", names[i] + 4))
+				g_string_append_printf(problems, "%s: art direction %s is outside the calm systems\n", path, names[i] + 4);
+		}
+		for (i = 0; variants != NULL && i < json_array_get_length(variants); i++) {
+			const gchar *pair = json_array_get_string_element(variants, i);
+			g_autofree gchar *component = g_strndup(pair, (gsize)(strchr(pair, '/') - pair));
+			g_autofree gchar *name = g_strdup_printf("%s--%s", component, strchr(pair, '/') + 1);
+			if (has_class(html, name))
+				g_string_append_printf(problems, "%s: variant %s is a gimmick\n", path, pair);
+		}
+	}
+	/* A photo site shows a photograph on every page. */
+	if (member_array(plan, "photos") != NULL && json_array_get_length(member_array(plan, "photos")) > 0 &&
+		!photoless_route(path)) {
+		JsonArray *photos = member_array(plan, "photos");
+		gboolean found = FALSE;
+		guint i, j;
+		for (i = 0; !found && i < json_array_get_length(photos); i++) {
+			JsonObject *photo = json_array_get_object_element(photos, i);
+			JsonArray *sized = member_array(photo, "variants");
+			g_autofree gchar *src = g_strdup_printf("src=\"%s\"", ls_string(photo, "path"));
+			found = strstr(html, src) != NULL;
+			for (j = 0; !found && sized != NULL && j < json_array_get_length(sized); j++) {
+				g_autofree gchar *variant = g_strdup_printf("src=\"%s\"",
+					ls_string(json_array_get_object_element(sized, j), "path"));
+				found = strstr(html, variant) != NULL;
+			}
+		}
+		if (!found)
+			g_string_append_printf(problems, "%s: no photograph on the page\n", path);
+	}
+}
+
+/* The brightest channel of a #rrggbb colour, 0 to 1. */
+static gdouble
+taste_lightness(const gchar *hex){
+	gdouble rgb[3];
+	if (!parse_color(hex, rgb))
+		return 0;
+	return MAX(MAX(rgb[0], rgb[1]), rgb[2]);
+}
+
+gboolean
+ls_components_check_taste(LsComponents *self, JsonNode *plan_node, JsonNode *bundle, GString *problems){
+	JsonObject *plan;
+	JsonArray *files;
+	gsize before;
+	guint i;
+	g_return_val_if_fail(LS_IS_COMPONENTS(self), FALSE);
+	g_return_val_if_fail(problems != NULL, FALSE);
+	before = problems->len;
+	if (plan_node == NULL || !JSON_NODE_HOLDS_OBJECT(plan_node) || bundle == NULL || !JSON_NODE_HOLDS_OBJECT(bundle)) {
+		g_string_append(problems, "the plan and bundle must be JSON objects\n");
+		return FALSE;
+	}
+	plan = json_node_get_object(plan_node);
+	files = member_array(json_node_get_object(bundle), "files");
+	for (i = 0; files != NULL && i < json_array_get_length(files); i++) {
+		JsonObject *file = json_array_get_object_element(files, i);
+		const gchar *path = ls_string(file, "path"), *content = ls_string(file, "content");
+		if (path == NULL || content == NULL || ls_string(file, "encoding") != NULL)
+			continue;
+		if (g_str_has_suffix(path, ".html"))
+			taste_page(self, plan, path, content, problems);
+		else if (g_str_equal(path, "styles.css") && self->taste != NULL) {
+			const gchar *keys[] = {"--paper:", "--surface:"};
+			guint k;
+			for (k = 0; k < G_N_ELEMENTS(keys); k++) {
+				const gchar *at;
+				for (at = strstr(content, keys[k]); at != NULL; at = strstr(at + 1, keys[k])) {
+					const gchar *value = at + strlen(keys[k]);
+					g_autofree gchar *hex = NULL;
+					while (*value == ' ')
+						value++;
+					if (*value != '#')
+						continue;
+					hex = g_strndup(value, 7);
+					/* Deep colours stay calm however saturated; only a light,
+					 * coloured ground is loud. */
+					if (ls_taste_chroma(hex) > json_object_get_double_member(self->taste, "chroma") &&
+						taste_lightness(hex) >= 0.45)
+						g_string_append_printf(problems, "styles.css: %s %s is a loud page colour\n", keys[k], hex);
+				}
+			}
+		}
+	}
+	return problems->len == before;
 }

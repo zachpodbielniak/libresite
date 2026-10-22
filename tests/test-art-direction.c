@@ -57,6 +57,14 @@ listed(JsonArray *list, const gchar *value){
 /* The five the issue names, each dealt across sites with its own drawing
  * style and image treatment, the same seed always the same; themes keep
  * their own; the plan check refuses an unknown direction. */
+/* The catalog's taste block (docs/components.org, "Taste"): what the
+ * builder may deal. Without it everything may be. */
+static JsonObject *
+taste_block(LsComponents *components){
+	JsonObject *root = json_node_get_object(ls_components_get_catalog(components));
+	return json_object_has_member(root, "taste") ? json_object_get_object_member(root, "taste") : NULL;
+}
+
 static void
 test_deal(void){
 	g_autoptr(LsComponents) components = library();
@@ -85,16 +93,25 @@ test_deal(void){
 		g_assert_nonnull(direction);
 		look = json_object_get_object_member(direction, "look");
 		axes = json_object_get_members(look);
-		for (axis = axes; axis != NULL; axis = axis->next)
-			g_assert_true(listed(json_object_get_array_member(look, axis->data),
-				json_object_get_string_member(member(plan, "look"), axis->data)));
+		/* The direction's look, unless taste moved a gimmick back inside
+		 * the calm values. */
+		for (axis = axes; axis != NULL; axis = axis->next) {
+			const gchar *worn = json_object_get_string_member(member(plan, "look"), axis->data);
+			JsonObject *calm = json_object_get_object_member(taste_block(components), "looks");
+			g_assert_true(listed(json_object_get_array_member(look, axis->data), worn) ||
+				(calm != NULL && json_object_has_member(calm, axis->data) &&
+				listed(json_object_get_array_member(calm, axis->data), worn)));
+		}
 		/* Photographs are the customer's: no direction sets their treatment. */
 		g_assert_false(json_object_has_member(look, "photos"));
-		g_assert_true(ls_components_check_plan(components, plan, &error));
-		g_assert_no_error(error);
+		if (!ls_components_check_plan(components, plan, &error))
+			g_error("%s: %s", seed, error->message);
 		g_hash_table_add(dealt, g_strdup(name));
 	}
-	g_assert_cmpuint(g_hash_table_size(dealt), ==, json_object_get_size(directions()));
+	/* Every direction taste allows is dealt, and no other. */
+	g_assert_cmpuint(g_hash_table_size(dealt), ==, taste_block(components) != NULL
+		? json_array_get_length(json_object_get_array_member(taste_block(components), "directions"))
+		: json_object_get_size(directions()));
 	{
 		g_autoptr(JsonNode) plan = load("tests/fixtures/composed/plan.json");
 		g_autoptr(GError) error = NULL;

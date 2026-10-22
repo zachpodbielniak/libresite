@@ -81,7 +81,7 @@
             ]
           }
         ],
-        "note": "Prices are illustrative."
+        "note": "Prices are a guide."
       }
     },
     {
@@ -107,7 +107,7 @@
         "people": [
           {
             "name": "The workshop",
-            "role": "Illustrative"
+            "role": "Example"
           }
         ]
       }

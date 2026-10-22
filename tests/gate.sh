@@ -3,7 +3,7 @@
 set -euo pipefail
 case ${1:-} in
 -h|--help)
-	printf '%s\n' 'Usage: gate.sh WEBDRIVER_URL SITES_DIR' 'Render the sites first with SAMENESS_OUTPUT=SITES_DIR build/release/test-sameness (make gate does it all).' 'Opens every home page at 390 and 1440: text must reach WCAG AA contrast in the light and the dark' 'scheme, stroke-only text must be three words or fewer and only on wide screens, nothing may' 'animate with reduced motion, no page may scroll sideways, and each home page must stay within the' 'page-weight budget. Writes gate.json and exits nonzero on any failure.'
+	printf '%s\n' 'Usage: gate.sh WEBDRIVER_URL SITES_DIR' 'Render the sites first with SAMENESS_OUTPUT=SITES_DIR build/release/test-sameness (make gate does it all).' 'Opens every home page at 390 and 1440: text must reach WCAG AA contrast in the light and the dark' 'scheme, no text may be in outline, nothing may be tilted, no decorative circles or neon bands, nothing may' 'animate with reduced motion, no page may scroll sideways, and each home page must stay within the' 'page-weight budget. Writes gate.json and exits nonzero on any failure.'
 	exit 0 ;;
 --license) printf '%s\n' 'AGPL-3.0-or-later'; exit 0 ;;
 esac
@@ -12,7 +12,7 @@ webdriver=${1%/}
 output=$(realpath "$2")
 # The page-weight budget for a home page without its remote web fonts: the
 # HTML, styles, script and local pictures it loads, raw and gzipped.
-weight_limit=153600
+weight_limit=${GATE_WEIGHT_LIMIT:-153600}
 gzip_limit=40960
 session=
 profile=
@@ -74,9 +74,9 @@ const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) +
     /* Stroke-only text reads only when it is short and the screen wide,
      * whatever is behind it. */
     const ink = parse(style.color);
-    if (ink && ink.length > 3 && ink[3] < 0.1 && parseFloat(style.webkitTextStrokeWidth || "0") > 0) {
-      const words = el.textContent.trim().split(/\s+/).length;
-      if (words > 3 || innerWidth < 640) stroked.push(`${el.tagName.toLowerCase()} "${el.textContent.trim().slice(0, 30)}"`);
+    if (parseFloat(style.webkitTextStrokeWidth || "0") > 0) {
+      /* Taste: no outline lettering at all, short or long. */
+      stroked.push(`${el.tagName.toLowerCase()} "${el.textContent.trim().slice(0, 30)}"`);
       skipped++; continue;
     }
     let bg = null, over = false;
@@ -94,7 +94,49 @@ const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) +
     checked++;
     if (got < need - 0.05) low.push(`${el.tagName.toLowerCase()} "${el.textContent.trim().slice(0, 30)}" ${got.toFixed(2)}`);
   }
-  done({width: innerWidth, pageFits: document.documentElement.scrollWidth <= innerWidth + 1,
+  /* Taste (docs/components.org, "Taste"): no tilted boxes, no decorative
+   * circles or blobs, no neon bands. */
+  const rotated = [], blobs = [], loud = [];
+  const label = el => `${el.tagName.toLowerCase()}.${[...el.classList].slice(0, 2).join(".")}`;
+  const tilt = s => {
+    let angle = 0;
+    const m = s.transform.match(/^matrix\(([^)]+)\)/);
+    if (m) { const [a, b] = m[1].split(",").map(Number); angle = Math.atan2(b, a) * 180 / Math.PI; }
+    if (s.rotate && s.rotate !== "none") angle += parseFloat(s.rotate) || 0;
+    angle = Math.abs(angle) % 90;
+    return angle > 0.3 && angle < 89.7;
+  };
+  const round = (s, w, h) => {
+    const r = s.borderTopLeftRadius;
+    const px = r.endsWith("%") ? parseFloat(r) / 100 * Math.min(w, h) : parseFloat(r);
+    return px >= Math.min(w, h) / 2 - 1;
+  };
+  for (const el of document.querySelectorAll("body *")) {
+    const s = getComputedStyle(el);
+    if (s.display === "none" || s.visibility === "hidden") continue;
+    const box = el.getBoundingClientRect();
+    if (box.width >= 48 && box.height >= 48 && tilt(s)) rotated.push(label(el));
+    /* A big round shape with nothing in it is decoration. */
+    if (box.width >= 48 && box.height >= 48 && round(s, box.width, box.height) && !el.textContent.trim() &&
+      !el.querySelector("img, svg, video, picture") && !["IMG", "SVG", "VIDEO", "PICTURE", "svg"].includes(el.tagName) &&
+      (parse(s.backgroundColor)?.[3] ?? 1) > 0.05 && s.backgroundColor !== "rgba(0, 0, 0, 0)") blobs.push(label(el));
+    for (const pseudo of ["::before", "::after"]) {
+      const p = getComputedStyle(el, pseudo);
+      const w = parseFloat(p.width), h = parseFloat(p.height);
+      if (p.content === "none" || p.display === "none" || !(w >= 48 && h >= 48)) continue;
+      if (round(p, w, h) && (p.backgroundColor !== "rgba(0, 0, 0, 0)" || p.borderTopWidth !== "0px")) blobs.push(label(el) + pseudo);
+      if (tilt(p)) rotated.push(label(el) + pseudo);
+    }
+    /* Neon: a large band in a vivid, light colour. */
+    if (box.width >= innerWidth / 2 && box.height >= 120) {
+      const c = parse(s.backgroundColor);
+      if (c && (c.length < 4 || c[3] > 0.9)) {
+        const hi = Math.max(c[0], c[1], c[2]), lo = Math.min(c[0], c[1], c[2]);
+        if ((hi - lo) / 255 > 0.35 && (hi + lo) / 510 > 0.45) loud.push(`${label(el)} ${s.backgroundColor}`);
+      }
+    }
+  }
+  done({width: innerWidth, rotated: rotated.slice(0, 5), blobs: blobs.slice(0, 5), loud: loud.slice(0, 5), pageFits: document.documentElement.scrollWidth <= innerWidth + 1,
     /* The base reduced-motion rule shortens every transition to 0.01ms rather
      * than removing it, so a layout change can start one nobody can see; any
      * CSS animation, or anything lasting 1ms or more, counts. */
@@ -117,19 +159,20 @@ for scheme in 1 0; do
 			result=$(call POST "/session/$session/execute/async" "$(jq -nc --arg script "$measure" '{script:$script,args:[]}')" | jq -c --arg site "$site" --arg scheme "$name" '.value + {site:$site, scheme:$scheme}')
 			printf '%s\n' "$result"
 			results+=("$result")
-			jq -e --argjson width "$width" '.width == $width and .pageFits and .animations == 0 and .lowCount == 0 and (.stroked | length) == 0 and .checked > 20' <<< "$result" >/dev/null || failed=1
+			jq -e --argjson width "$width" '.width == $width and .pageFits and .animations == 0 and .lowCount == 0 and (.stroked | length) == 0 and (.rotated | length) == 0 and (.blobs | length) == 0 and (.loud | length) == 0 and .checked > 20' <<< "$result" >/dev/null || failed=1
 		done
 	done
 	stop
 done
-# Page weight, from the files a home page loads (remote fonts excluded).
+# Page weight, from the files a home page loads (remote fonts excluded; a
+# film named by data-src loads only when asked for, so it is not counted).
 weights=$(
 	for fixture in "$output"/*/index.html; do
 		dir=$(dirname "$fixture")
 		art=0
 		while read -r src; do
 			[[ -f $dir/$src ]] && art=$(( art + $(wc -c < "$dir/$src") ))
-		done < <(grep -o 'src="assets/[^"]*"' "$fixture" | sed 's/^src="//; s/"$//' | sort -u)
+		done < <(grep -o '[[:space:]]src="assets/[^"]*"' "$fixture" | sed 's/^[[:space:]]src="//; s/"$//' | sort -u)
 		raw=$(( $(wc -c < "$fixture") + $(wc -c < "$dir/styles.css") + $(wc -c < "$dir/site.js") + art ))
 		zipped=$(cat "$fixture" "$dir/styles.css" "$dir/site.js" | gzip -9 | wc -c)
 		jq -nc --arg site "$(basename "$dir")" --argjson raw "$raw" --argjson zipped "$zipped" '{site:$site, raw:$raw, gzip:$zipped}'
@@ -137,6 +180,6 @@ weights=$(
 )
 printf '%s\n' "${results[@]}" | jq -s --argjson weights "$weights" --argjson raw "$weight_limit" --argjson gz "$gzip_limit" \
 	'{pages: ., weights: $weights, weight_limit: $raw, gzip_limit: $gz}' > "$output/gate.json"
-jq -r '"weight: largest home page \([.weights[].raw] | max) bytes (limit \(.weight_limit)), \([.weights[].gzip] | max) gzipped (limit \(.gzip_limit)); contrast: \([.pages[].checked] | add) text elements checked, \([.pages[].lowCount] | add) below AA, \([.pages[].skipped] | add) over pictures or in outline skipped, \([.pages[].stroked[]] | length) in outline that is too long or on a phone; animations with reduced motion: \([.pages[].animations] | add); pages scrolling sideways: \([.pages[] | select(.pageFits | not)] | length)"' "$output/gate.json"
+jq -r '"weight: largest home page \([.weights[].raw] | max) bytes (limit \(.weight_limit)), \([.weights[].gzip] | max) gzipped (limit \(.gzip_limit)); contrast: \([.pages[].checked] | add) text elements checked, \([.pages[].lowCount] | add) below AA, \([.pages[].skipped] | add) over pictures or in outline skipped, \([.pages[].stroked[]] | length) in outline; taste: \([.pages[].rotated[]] | length) tilted, \([.pages[].blobs[]] | length) decorative circles, \([.pages[].loud[]] | length) neon bands; animations with reduced motion: \([.pages[].animations] | add); pages scrolling sideways: \([.pages[] | select(.pageFits | not)] | length)"' "$output/gate.json"
 jq -e '[.weights[] | select(.raw > $raw or .gzip > $gz)] | length == 0' --argjson raw "$weight_limit" --argjson gz "$gzip_limit" "$output/gate.json" >/dev/null || failed=1
 exit "$failed"

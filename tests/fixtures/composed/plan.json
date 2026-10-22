@@ -62,7 +62,7 @@
     "label": "Book a repair"
   },
   "footer": {
-    "note": "An illustrative workshop. *No real customers are shown.*",
+    "note": "An example workshop. *No real customers are shown.*",
     "links": [
       {
         "href": "work.html",
@@ -94,7 +94,7 @@
     {
       "path": "work.html",
       "title": "Recent work",
-      "description": "A filterable record of illustrative repairs, restorations and small commissions from the workshop.",
+      "description": "A filterable record of repairs, restorations and small commissions from the workshop.",
       "brief": "Work index",
       "kind": "index"
     },
@@ -109,7 +109,7 @@
       "path": "journal.html",
       "kind": "article",
       "title": "Why we mend instead of replace",
-      "description": "An illustrative essay on repair: what it saves, what it asks of the owner and how a workshop decides.",
+      "description": "An essay on repair: what it saves, what it asks of the owner and how a workshop decides.",
       "brief": "Essay"
     },
     {

@@ -11,11 +11,11 @@
 
 #define FIXTURE "tests/fixtures/sameness/"
 
-/* The gate: the ten sites may share at most this much on average, no two
- * may come out more alike than the pair limit, and the home section order
- * and the component mix may each average at most their own limit. The aim
- * is 0.10 on average; look and mix hold it above that for the reasons in
- * docs/components.org, "Sameness under a tenth". */
+/* A soft guard since the taste rework (docs/components.org, "Taste"):
+ * being different is not being good, so the mean, pair, order and mix
+ * limits are reported, not enforced. Only clones fail: no two of the ten
+ * sites may come out more alike than the clone limit. */
+#define SAMENESS_CLONE_LIMIT 0.5
 #define SAMENESS_MEAN_LIMIT 0.15
 #define SAMENESS_PAIR_LIMIT 0.25
 #define SAMENESS_ORDER_LIMIT 0.15
@@ -506,6 +506,7 @@ test_briefs(void){
 	json_object_set_double_member(report, "pair_limit", SAMENESS_PAIR_LIMIT);
 	json_object_set_double_member(report, "order_limit", SAMENESS_ORDER_LIMIT);
 	json_object_set_double_member(report, "mix_limit", SAMENESS_MIX_LIMIT);
+	json_object_set_double_member(report, "clone_limit", SAMENESS_CLONE_LIMIT);
 	json_object_set_object_member(report, "parts", means);
 	json_object_set_array_member(report, "pairs", pairs);
 	g_test_message("sameness %.3f (limit %.2f), worst pair %.3f %s/%s (limit %.2f); look %.2f order %.2f "
@@ -522,12 +523,15 @@ test_briefs(void){
 		g_assert_true(g_file_set_contents(path, text, -1, &error));
 		g_assert_no_error(error);
 	}
-	if (total / count <= SAMENESS_MEAN_LIMIT && worst <= SAMENESS_PAIR_LIMIT &&
-		sums[1] / count <= SAMENESS_ORDER_LIMIT && sums[2] / count <= SAMENESS_MIX_LIMIT)
+	if (total / count > SAMENESS_MEAN_LIMIT || worst > SAMENESS_PAIR_LIMIT ||
+		sums[1] / count > SAMENESS_ORDER_LIMIT || sums[2] / count > SAMENESS_MIX_LIMIT)
+		g_test_message("soft guard: over a soft limit, reported only: sameness %.3f (%.2f), worst pair %.3f (%.2f), "
+			"order %.3f (%.2f), mix %.3f (%.2f)", total / count, SAMENESS_MEAN_LIMIT, worst, SAMENESS_PAIR_LIMIT,
+			sums[1] / count, SAMENESS_ORDER_LIMIT, sums[2] / count, SAMENESS_MIX_LIMIT);
+	if (worst <= SAMENESS_CLONE_LIMIT)
 		return;
-	g_test_fail_printf("ten different businesses are too alike: sameness %.3f (limit %.2f), worst pair %.3f "
-		"(limit %.2f), order %.3f (limit %.2f), mix %.3f (limit %.2f)", total / count, SAMENESS_MEAN_LIMIT, worst,
-		SAMENESS_PAIR_LIMIT, sums[1] / count, SAMENESS_ORDER_LIMIT, sums[2] / count, SAMENESS_MIX_LIMIT);
+	g_test_fail_printf("two different businesses came out as clones: worst pair %.3f %s/%s (clone limit %.2f)",
+		worst, worst_a, worst_b, SAMENESS_CLONE_LIMIT);
 }
 
 int

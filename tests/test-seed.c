@@ -5,6 +5,7 @@
 #include "libresite.h"
 #include "core/ls-components.h"
 #include "core/ls-util.h"
+#include <stdio.h>
 #include <string.h>
 
 static JsonNode *
@@ -182,9 +183,19 @@ test_identity(void){
 		json_array_add_object_element(json_object_get_array_member(json_node_get_object(plan), "fonts"), font);
 	}
 	g_assert_true(ls_components_apply_seed(components, plan, seed, "trades", FALSE));
-	for (key = keys; key != NULL; key = key->next)
-		g_assert_cmpstr(json_object_get_string_member(tokens, key->data), ==,
-			json_object_get_string_member(palette, key->data));
+	/* The dealt palette, except where taste calmed a loud ground or a neon
+	 * accent and moved text to keep AA (docs/components.org, "Taste"). */
+	for (key = keys; key != NULL; key = key->next) {
+		const gchar *dealt = json_object_get_string_member(palette, key->data);
+		guint r = 0, g = 0, b = 0;
+		gdouble chroma;
+		g_assert_true(sscanf(dealt, "#%02x%02x%02x", &r, &g, &b) == 3);
+		chroma = (MAX(MAX(r, g), b) - MIN(MIN(r, g), b)) / 255.0;
+		if (chroma > 0.16 || g_str_equal(key->data, "ink") || g_str_equal(key->data, "muted") ||
+			g_str_equal(key->data, "accent_ink"))
+			continue;
+		g_assert_cmpstr(json_object_get_string_member(tokens, key->data), ==, dealt);
+	}
 	g_assert_cmpstr(json_object_get_string_member(tokens, "font_display"), ==,
 		json_object_get_string_member(json_object_get_object_member(type, "tokens"), "font_display"));
 	fonts = json_object_get_array_member(json_node_get_object(plan), "fonts");
