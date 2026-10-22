@@ -113,6 +113,27 @@ test_catalog(void){
 /* Each extra variant renders: a page naming it passes the page check,
  * the section carries its class, and its styles come with it and only
  * with it. */
+/* The catalog's taste block (docs/components.org, "Taste"): what the
+ * builder may deal. Without it everything may be. */
+static JsonObject *
+taste_block(LsComponents *components){
+	JsonObject *root = json_node_get_object(ls_components_get_catalog(components));
+	return json_object_has_member(root, "taste") ? json_object_get_object_member(root, "taste") : NULL;
+}
+
+static gboolean
+taste_in(JsonObject *taste, const gchar *list, const gchar *name){
+	JsonArray *names;
+	guint i;
+	if (taste == NULL || !json_object_has_member(taste, list))
+		return FALSE;
+	names = json_object_get_array_member(taste, list);
+	for (i = 0; i < json_array_get_length(names); i++)
+		if (g_strcmp0(json_array_get_string_element(names, i), name) == 0)
+			return TRUE;
+	return FALSE;
+}
+
 static void
 test_render(void){
 	g_autoptr(LsComponents) components = library();
@@ -138,6 +159,12 @@ test_render(void){
 			const gchar *index = NULL, *css = NULL;
 			guint f, r;
 			g_assert_no_error(error);
+			/* A gimmick renders as a calm variant (taste); test-ls-taste covers it. */
+			{
+				g_autofree gchar *pair = g_strdup_printf("%s/%s", covered[i], (const gchar *)name->data);
+				if (taste_in(taste_block(components), "variants", pair))
+					continue;
+			}
 			/* No dealt family: the section renders the variant it names. */
 			if (json_object_has_member(json_node_get_object(plan), "structure"))
 				json_object_remove_member(json_node_get_object(plan), "structure");
@@ -195,26 +222,6 @@ test_render(void){
 	}
 }
 
-/* The catalog's taste block (docs/components.org, "Taste"): what the
- * builder may deal. Without it everything may be. */
-static JsonObject *
-taste_block(LsComponents *components){
-	JsonObject *root = json_node_get_object(ls_components_get_catalog(components));
-	return json_object_has_member(root, "taste") ? json_object_get_object_member(root, "taste") : NULL;
-}
-
-static gboolean
-taste_in(JsonObject *taste, const gchar *list, const gchar *name){
-	JsonArray *names;
-	guint i;
-	if (taste == NULL || !json_object_has_member(taste, list))
-		return FALSE;
-	names = json_object_get_array_member(taste, list);
-	for (i = 0; i < json_array_get_length(names); i++)
-		if (g_strcmp0(json_array_get_string_element(names, i), name) == 0)
-			return TRUE;
-	return FALSE;
-}
 
 /* Chosen per seed: across sites the builder deals every variant of every
  * covered component, the extras included, and the model may name them. */

@@ -132,7 +132,7 @@ const ratio = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) +
       const c = parse(s.backgroundColor);
       if (c && (c.length < 4 || c[3] > 0.9)) {
         const hi = Math.max(c[0], c[1], c[2]), lo = Math.min(c[0], c[1], c[2]);
-        if ((hi - lo) / 255 > 0.35 && hi / 255 > 0.6) loud.push(`${label(el)} ${s.backgroundColor}`);
+        if ((hi - lo) / 255 > 0.35 && (hi + lo) / 510 > 0.45) loud.push(`${label(el)} ${s.backgroundColor}`);
       }
     }
   }

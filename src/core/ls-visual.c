@@ -318,8 +318,11 @@ ls_visual_view(JsonObject *plan, JsonObject *view, guint index){
 	JsonObject *m = obj(plan, "media");
 	if (m == NULL)
 		return;
-	json_object_set_string_member(view, "source", ls_string(m, "source"));
-	json_object_set_string_member(view, "media_kind", ls_string(m, "kind"));
+	/* Only a real project is credited beside its photo; stock or drawn
+	 * media are disclosed once, in the footer note (docs/components.org,
+	 * "Taste"). */
+	if (g_strcmp0(ls_string(m, "kind"), "project") == 0)
+		json_object_set_string_member(view, "project_source", ls_string(m, "source"));
 	if (index == 0 && ls_string(m, "clip") != NULL) {
 		json_object_set_string_member(view, "clip", ls_string(m, "clip"));
 		if (ls_string(m, "clip_portrait") != NULL)

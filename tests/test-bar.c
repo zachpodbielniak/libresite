@@ -35,6 +35,19 @@ test_contract(void){
 	g_assert_no_error(error);
 }
 
+/* A strict structured-output model fills fields it was told to omit with
+ * null; a null css or restyle is no style, not a broken plan. */
+static void
+test_null_style(void){
+	g_autoptr(LsComponents) library = ls_components_new(NULL);
+	g_autoptr(JsonNode) plan = visual_plan();
+	g_autoptr(GError) error = NULL;
+	json_object_set_null_member(json_node_get_object(plan), "restyle");
+	json_object_set_null_member(json_node_get_object(plan), "css");
+	g_assert_true(ls_components_check_plan(library, plan, &error));
+	g_assert_no_error(error);
+}
+
 static void
 test_reject_untrusted(void){
 	g_autoptr(LsComponents) library = ls_components_new(NULL);
@@ -250,7 +263,8 @@ test_sequence(void){
 		g_assert_true(strstr(html, "id=\"craft\"") < strstr(html, "id=\"proof\""));
 		g_assert_nonnull(strstr(html, "data-src=\"assets/film.webm\""));
 		g_assert_null(strstr(html, "<source src=\"assets/film.webm"));
-		g_assert_nonnull(strstr(html, "Fixture photographs"));
+		/* Drawn or stock media are disclosed in the footer, not captioned. */
+		g_assert_null(strstr(html, "Fixture photographs"));
 		g_assert_null(strstr(bundle_file(bundle, "work.html"), "scene__film"));
 		if (output != NULL) {
 			JsonArray *files = json_object_get_array_member(json_node_get_object(bundle), "files");
@@ -280,5 +294,6 @@ main(int argc, char **argv){
 	g_test_add_func("/bar/clip-bounds", test_clip_bounds);
 	g_test_add_func("/bar/coherence", test_coherence);
 	g_test_add_func("/bar/opening-action", test_opening_action);
+	g_test_add_func("/bar/null-style", test_null_style);
 	return g_test_run();
 }

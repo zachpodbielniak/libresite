@@ -1082,7 +1082,7 @@ Eighteen invented businesses across eighteen trades and moods (HVAC, electrician
 4. *Long headlines at display size.* A headline of many short words took one word per line at display size; more than five words now steps down like a long headline, and the page prompt asks for a 3 to 8 word headline and a lede of at most 24 words, leaving explanation to later sections.
 
 Not changed: two photographs are grey at the source (one black and white), and services pages carry no photographs, so they read plainer than the homes.
-* Asset-first visual sequences (draft)
+* Asset-first visual sequences
 
 This work is not release-approved. The new =scene= and =material= components
 are an opt-in path for supplied media. Plans without =media= retain the seeded
@@ -1172,3 +1172,73 @@ not establish the reference standard. The draft remains unmerged; the full suite
 full gate and final install verification are not claimed. Further work needs
 coherent licensed asset sets, a richer narrative layout system and another
 explicitly authorized live-generation allowance.
+
+The draft became the base on 2026-10-21 (Ben, 12:58: "libresite is much
+better"); the taste rework below carries it into the epic.
+
+* Taste
+
+Ben, 2026-10-21, on the eighteen-site showcase: "These look stupid." Variety
+had become gimmicks: tilted cards, outline headlines, decorative circles,
+loud cyan and purple grounds, question headlines, "illustrative business"
+in body copy, and inner pages that were empty coloured boxes with letter
+chips. The sameness score rewarded being different, not being good.
+
+** What the builder deals
+
+The catalog's =taste= block (appended at the end of =catalog.yaml=) is the
+small set of calm systems a dealt site may wear:
+
+- =looks=: the allowed values of each look axis, its default first. No
+  textures, backdrops, torn or waved edges, outline or gradient lettering,
+  tilted or blob images, glass, chrome or knob buttons, circled navigation.
+- =kits= and =directions=: four calm motion kits, three art directions.
+- =forms= and =extras=: the section forms per family and the home extras.
+  No directory or glossary as a services list, no job sheet, no marquee.
+- =angles=: home headline angles that state what the business does (no
+  question, no "character" voice).
+- =openings= and =variants=: never dealt, and rendered as the component's
+  first calm variant when a writer names one.
+- =chroma=: the page and surface colours of a light ground are calmed to
+  this chroma; a neon accent (chroma over 0.35, HSL lightness over 0.45) is
+  toned down, and ink, muted and accent-ink text are moved until AA passes.
+
+Other values stay in the library for themes and explicit options only.
+Inside these systems a site still varies by layout, type pairing and the
+visual sequence's material world.
+
+** Words
+
+Visible copy never says "illustrative". Talk of stock photographs, visual
+references or an invented business belongs only in =footer.note=, in other
+words ("Example business. Stock photography."). The plan and page checks
+refuse anything else, so the model retries with the reason. Stock or drawn
+media in the visual sequence carry no caption; only a real project's
+source is credited beside its photo. Each page's first heading, and the
+visual headline, is a statement: a question is refused.
+
+** Photos on every page
+
+A page of a photo site that shows no supplied photo gets one: a full-width
+photo section after its opening, the photo picked from the route
+(=ls_components_ensure_photo()=). A directory shows its letter index only
+over six letters or more; under that it is a plain list.
+
+** Checks
+
+- =ls_components_check_taste()= checks the composed site: the word
+  "illustrative", disclosure outside the footer, question headlines, pages
+  without a photo, letter chips, look values, kits, directions and variants
+  outside the calm systems, and loud page colours. The pages step fails a
+  dealt (unthemed) site that breaks any of them.
+- The browser gate (=tests/gate.sh=) fails tilted boxes, any outline
+  lettering, big empty round shapes and neon bands at 390 and 1440, and
+  proves it on =tests/fixtures/taste-bad=, a page built to have all four.
+- =tests/test-ls-taste.c= covers each rule, each seen failing first.
+
+** Sameness is a soft guard
+
+The sameness limits (0.15 mean, 0.25 worst pair, order and mix) are
+reported, not enforced. Only clones fail: two of the ten sites more alike
+than 0.5. With the calm systems the ten sites score 0.141 structural, worst
+pair 0.219, inside the old limits anyway.

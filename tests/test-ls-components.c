@@ -678,9 +678,8 @@ test_every_variant(void){
 		GList *variant;
 		for (variant = variant_names; variant != NULL; variant = variant->next) {
 			g_autoptr(JsonObject) pages = fixture_pages();
-			g_autoptr(JsonNode) page = json("{'path':'index.html','sections':[{'component':'hero','variant':'statement',"
-				"'content':{'heading':'Home'}}]}");
-			JsonObject *section = json_object_new();
+			g_autoptr(JsonNode) page = NULL;
+			JsonObject *section;
 			g_autoptr(GError) error = NULL;
 			g_autofree gchar *text = NULL;
 			g_autofree gchar *marker = g_strdup_printf("class=\"block block--%s %s %s--%s",
@@ -690,6 +689,23 @@ test_every_variant(void){
 				(const gchar *)variant->data);
 			g_autoptr(JsonNode) bundle = NULL;
 			const gchar *html;
+			/* A gimmick a writer names renders as a calm variant (taste);
+			 * test-ls-taste covers that. */
+			{
+				JsonObject *taste = json_object_get_object_member(json_node_get_object(catalog), "taste");
+				g_autofree gchar *pair = g_strdup_printf("%s/%s", (const gchar *)name->data, (const gchar *)variant->data);
+				const gchar *lists[] = {"variants", "openings"};
+				gboolean banned = FALSE;
+				guint l, k;
+				for (l = 0; taste != NULL && l < G_N_ELEMENTS(lists); l++)
+					for (k = 0; k < json_array_get_length(json_object_get_array_member(taste, lists[l])); k++)
+						banned |= g_strcmp0(json_array_get_string_element(json_object_get_array_member(taste, lists[l]), k), pair) == 0;
+				if (banned)
+					continue;
+			}
+			page = json("{'path':'index.html','sections':[{'component':'hero','variant':'statement',"
+				"'content':{'heading':'Home'}}]}");
+			section = json_object_new();
 			json_object_set_string_member(section, "component", name->data);
 			json_object_set_string_member(section, "variant", variant->data);
 			json_object_set_member(section, "content", sample_content(name->data, component));

@@ -2019,7 +2019,7 @@ bold:
             body: {type: rich, max: 800}
             link: {type: link}
     jobsheet:
-      summary: A process as a printed job sheet, slightly turned on a dark panel, each step a ruled row with a boxed number and a tick.
+      summary: A process as a printed job sheet on a dark panel, each step a ruled row with a boxed number and a tick.
       variants:
         sheet: A white sheet on an ink panel.
         carbon: A tinted carbon copy on the accent.

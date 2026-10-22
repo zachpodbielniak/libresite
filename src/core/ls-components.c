@@ -2567,6 +2567,10 @@ taste_clamp_look(LsComponents *self, JsonObject *look, const gchar *seed){
 	}
 }
 
+/* A neon colour: chroma over this and HSL lightness over that. */
+#define TASTE_NEON_CHROMA 0.35
+#define TASTE_NEON_LIGHTNESS 0.45
+
 /* Keeps the page and surface colours calm: each is moved toward its own
  * grey until under the taste block's chroma limit. */
 static void
@@ -2582,6 +2586,40 @@ taste_calm_tokens(LsComponents *self, JsonObject *tokens){
 		if (value != NULL && taste_lightness(value) >= 0.45) {
 			g_autofree gchar *calm = ls_taste_calm(value, json_object_get_double_member(self->taste, "chroma"));
 			json_object_set_string_member(tokens, keys[i], calm);
+		}
+	}
+	/* The accent fills bands too, so a vivid, light one (neon) is toned
+	 * down to a strong colour; its ink is then kept readable on it. */
+	{
+		const gchar *accent = ls_string(tokens, "accent");
+		gdouble rgb[3] = {0, 0, 0};
+		if (accent != NULL && parse_color(accent, rgb) && ls_taste_chroma(accent) > TASTE_NEON_CHROMA &&
+			(MAX(MAX(rgb[0], rgb[1]), rgb[2]) + MIN(MIN(rgb[0], rgb[1]), rgb[2])) / 2 > TASTE_NEON_LIGHTNESS) {
+			g_autofree gchar *calm = ls_taste_calm(accent, TASTE_NEON_CHROMA);
+			/* Its ink: the current one when it still reads, else the
+			 * page's ink or paper, else plain black or white, whichever
+			 * reads best. */
+			const gchar *inks[] = {ls_string(tokens, "accent_ink"), ls_string(tokens, "ink"), ls_string(tokens, "paper"),
+				"#111111", "#ffffff"};
+			const gchar *best = NULL;
+			g_autofree gchar *ink = NULL;
+			guint n;
+			for (n = 0; n < G_N_ELEMENTS(inks) && (best == NULL || contrast(best, calm) < 4.6); n++)
+				if (inks[n] != NULL && (best == NULL || contrast(inks[n], calm) > contrast(best, calm)))
+					best = inks[n];
+			ink = g_strdup(best != NULL ? best : "#ffffff");
+			/* A mid-tone accent that neither reads on is shaded away from
+			 * its ink, a tenth at a time. */
+			for (n = 0; n < 10 && contrast(ink, calm) < 4.6; n++) {
+				gdouble c[3];
+				gchar *moved;
+				parse_color(ink, c);
+				moved = ls_taste_mix(calm, luminance(c) > 0.18 ? "#000000" : "#ffffff", 0.1);
+				g_free(calm);
+				calm = moved;
+			}
+			json_object_set_string_member(tokens, "accent", calm);
+			json_object_set_string_member(tokens, "accent_ink", ink);
 		}
 	}
 	/* Calmer grounds shift the text's contrast: ink and muted text move
@@ -2676,9 +2714,11 @@ ls_components_apply_seed(LsComponents *self, JsonNode *plan_node, const gchar *s
 		if (json_object_has_member(type, "fonts"))
 			json_object_set_member(plan, "fonts", node_copy(json_object_get_member(type, "fonts")));
 	}
+	/* The visual sequence sets its world's colours first, so the calm
+	 * rules cover them too. */
+	ls_visual_apply_plan(plan);
 	taste_clamp_look(self, look, seed);
 	taste_calm_tokens(self, tokens);
-	ls_visual_apply_plan(plan);
 	return TRUE;
 }
 
@@ -4460,7 +4500,7 @@ check_restyle(Problems *problems, LsComponents *self, JsonObject *plan){
 	g_autoptr(GList) names = NULL;
 	GList *name;
 	gsize total = 0;
-	if (!json_object_has_member(plan, "restyle"))
+	if (!json_object_has_member(plan, "restyle") || JSON_NODE_HOLDS_NULL(json_object_get_member(plan, "restyle")))
 		return;
 	if (restyle == NULL) {
 		problem(problems, "restyle must map component names to CSS");
@@ -4658,7 +4698,8 @@ check_plan_into(Problems *problems, LsComponents *self, JsonNode *node){
 			}
 		}
 	}
-	if (json_object_has_member(plan, "css")) {
+	/* A null css is no css: strict structured output fills omitted fields. */
+	if (json_object_has_member(plan, "css") && !JSON_NODE_HOLDS_NULL(json_object_get_member(plan, "css"))) {
 		g_autofree gchar *why = is_string(json_object_get_member(plan, "css"))
 			? css_problem(ls_string(plan, "css"), 24000) : g_strdup("css must be a string");
 		if (why != NULL)
@@ -5856,6 +5897,7 @@ collect_part_ids(JsonArray *sections, GHashTable *anchors){
 typedef struct {
 	Problems *problems;
 	LinkScope *scope;
+	JsonObject *plan;	/* for the supplied photos' own alt text */
 } PageCheck;
 
 static void check_value(PageCheck *check, const gchar *where, const gchar *name, JsonObject *slot, JsonNode *value);
@@ -5973,7 +6015,10 @@ check_value(PageCheck *check, const gchar *where, const gchar *name, JsonObject 
 			problem(check->problems, "%s.src %s is not planned art", where, src != NULL ? src : "(missing)");
 		if (image != NULL && (!is_string(alt) || g_utf8_strlen(json_node_get_string(alt), -1) > 300))
 			problem(check->problems, "%s.alt must be text up to 300 characters, or \"\" when decorative", where);
-		else if (image != NULL && ls_taste_disclosure(json_node_get_string(alt), FALSE) != NULL)
+		/* A supplied photo's own alt is the caller's fact; the site check
+		 * reports it, the writer cannot change it. */
+		else if (image != NULL && ls_taste_disclosure(json_node_get_string(alt), FALSE) != NULL &&
+			g_strcmp0(json_node_get_string(alt), ls_string(plan_photo(check->plan, src), "alt")) != 0)
 			problem(check->problems, "%s.alt talks about the photo itself (\"%s\"); describe what it shows", where,
 				ls_taste_disclosure(json_node_get_string(alt), FALSE));
 	} else if (g_str_equal(type, "choice")) {
@@ -6120,7 +6165,7 @@ check_page_into(LsComponents *self, Problems *problems, JsonNode *plan_node, con
 	JsonObject *page = page_node != NULL && JSON_NODE_HOLDS_OBJECT(page_node) ? json_node_get_object(page_node) : NULL;
 	JsonArray *sections;
 	LinkScope scope = {NULL, NULL, NULL};
-	PageCheck check = {problems, &scope};
+	PageCheck check = {problems, &scope, NULL};
 	g_autoptr(GPtrArray) ids = NULL;
 	g_autoptr(GHashTable) modules_placed = g_hash_table_new(g_str_hash, g_str_equal);
 	const gchar *kind_name;
@@ -6131,6 +6176,7 @@ check_page_into(LsComponents *self, Problems *problems, JsonNode *plan_node, con
 		return;
 	}
 	plan_scope(plan, &scope);
+	check.plan = plan;
 	scope.anchors = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 	if (!ls_object_keys(page, builtin ? "|path|kind|title|description|noindex|sections|" : "|path|sections|css|aside|", NULL))
 		problem(problems, "unknown top-level key; allowed: path, sections, css, aside");
@@ -6806,6 +6852,33 @@ section_variant(Render *render, JsonObject *component, const gchar *name, const 
 	return family[seed_pick(section_seed, name, count)];
 }
 
+/* @variant of component @name, or, when the taste block calls it a gimmick
+ * or a banned opening that a writer named, the component's first calm
+ * variant. */
+static const gchar *
+calm_variant(LsComponents *self, JsonObject *plan, JsonObject *component, const gchar *name, const gchar *variant){
+	g_autofree gchar *pair = g_strdup_printf("%s/%s", name, variant != NULL ? variant : "");
+	JsonObject *structure = member_object(plan, "structure");
+	g_autoptr(GList) values = NULL;
+	GList *value;
+	if (!taste_banned(self, "variants", pair) && !taste_banned(self, "openings", pair))
+		return variant;
+	/* The builder never deals one, so a structure that names it chose it
+	 * on purpose (a theme or an explicit option). */
+	if (structure != NULL && (g_strcmp0(ls_string(structure, "opening"), pair) == 0 ||
+		(member_object(structure, "variants") != NULL &&
+		g_strcmp0(ls_string(member_object(structure, "variants"), name), variant) == 0)))
+		return variant;
+	values = json_object_get_members(member_object(component, "variants"));
+	for (value = values; value != NULL; value = value->next) {
+		g_autofree gchar *other = g_strdup_printf("%s/%s", name, (const gchar *)value->data);
+		/* Member names belong to the catalog, so they outlive the list. */
+		if (!taste_banned(self, "variants", other) && !taste_banned(self, "openings", other))
+			return value->data;
+	}
+	return variant;
+}
+
 /* A link address reduced for comparison: no scheme, no www., no trailing slash. */
 static gchar *
 link_key(const gchar *href){
@@ -6919,8 +6992,9 @@ render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArra
 		const gchar *dealt = dealt_variants != NULL && !g_str_equal(name, "scene") && !g_str_equal(name, "material")
 			? ls_string(dealt_variants, name) : NULL;
 		/* A dealt family restyles the component coherently across the site. */
-		const gchar *variant = dealt != NULL ? section_variant(render, component, name, dealt, i) : ls_string(section, "variant") != NULL
-			? ls_string(section, "variant") : (const gchar *)variants->data;
+		const gchar *variant = calm_variant(render->self, render->plan, component, name, dealt != NULL
+			? section_variant(render, component, name, dealt, i) : ls_string(section, "variant") != NULL
+			? ls_string(section, "variant") : (const gchar *)variants->data);
 		const gchar *id = g_ptr_array_index(ids, i);
 		g_autofree gchar *structure_classes = section_classes(render, name, i, reading, &last_tone);
 		g_autoptr(JsonObject) view = json_object_new();

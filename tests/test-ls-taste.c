@@ -150,6 +150,16 @@ loud(const gchar *hex){
 	return ls_taste_chroma(hex) > 0.16 && MAX(MAX(r, g), b) / 255.0 >= 0.45;
 }
 
+/* Vivid and not dark (HSL lightness over 0.45): what reads as neon over
+ * a whole band. A deep rust or navy is strong, not neon. */
+static gboolean
+neon(const gchar *hex){
+	guint r = 0, g = 0, b = 0;
+	if (hex == NULL || sscanf(hex, "#%02x%02x%02x", &r, &g, &b) != 3)
+		return FALSE;
+	return ls_taste_chroma(hex) > 0.35 && (MAX(MAX(r, g), b) + MIN(MIN(r, g), b)) / 510.0 > 0.45;
+}
+
 /* Page and surface stay calm; no neon or loud backgrounds. */
 static void
 test_calm_palette(void){
@@ -166,8 +176,31 @@ test_calm_palette(void){
 		tokens = json_object_get_object_member(json_node_get_object(plan), "tokens");
 		if (loud(ls_string(tokens, "paper")) || loud(ls_string(tokens, "surface")))
 			g_error("seed %s paper %s surface %s", seed, ls_string(tokens, "paper"), ls_string(tokens, "surface"));
+		/* The accent fills bands too: never neon. */
+		if (neon(ls_string(tokens, "accent")))
+			g_error("seed %s accent %s is neon", seed, ls_string(tokens, "accent"));
 		g_assert_true(ls_components_check_identity(library, plan, NULL, &error));
 		g_assert_no_error(error);
+	}
+	/* The visual sequence's material worlds too. */
+	{
+		const gchar *worlds[] = {"chalk", "copper", "forest", "electric", "ceramic", "oven"};
+		g_autoptr(JsonNode) bar = read_json("tests/fixtures/bar.json");
+		for (s = 0; s < G_N_ELEMENTS(worlds); s++) {
+			g_autoptr(JsonNode) plan = read_json("tests/fixtures/composed/plan.json");
+			JsonObject *root = json_node_get_object(plan), *extra = json_node_get_object(bar), *tokens;
+			g_autoptr(GError) error = NULL;
+			json_object_set_member(root, "photos", json_node_copy(json_object_get_member(extra, "photos")));
+			json_object_set_member(root, "media", json_node_copy(json_object_get_member(extra, "media")));
+			json_object_set_member(root, "visual", json_node_copy(json_object_get_member(extra, "visual")));
+			json_object_set_string_member(json_object_get_object_member(root, "visual"), "world", worlds[s]);
+			g_assert_true(ls_components_apply_seed(library, plan, "world", "trades", FALSE));
+			tokens = json_object_get_object_member(root, "tokens");
+			if (neon(ls_string(tokens, "accent")) || loud(ls_string(tokens, "paper")))
+				g_error("world %s: paper %s accent %s", worlds[s], ls_string(tokens, "paper"), ls_string(tokens, "accent"));
+			g_assert_true(ls_components_check_identity(library, plan, NULL, &error));
+			g_assert_no_error(error);
+		}
 	}
 }
 
@@ -297,6 +330,72 @@ test_site_check(void){
 	}
 }
 
+/* A writer may name a gimmick variant itself; the builder renders a calm
+ * one instead. */
+static void
+test_writer_gimmick_variant(void){
+	g_autoptr(LsComponents) library = ls_components_new(NULL);
+	g_autoptr(JsonNode) plan = read_json("tests/fixtures/composed/plan.json"), bundle = NULL;
+	g_autoptr(JsonObject) pages = json_object_new();
+	g_autoptr(GError) error = NULL;
+	g_autofree gchar *text = NULL;
+	const gchar *routes[] = {"index", "work", "start", "journal", "visit"};
+	JsonNode *page;
+	guint i;
+	g_assert_true(ls_components_apply_seed(library, plan, "writer-gimmick", "trades", FALSE));
+	for (i = 0; i < G_N_ELEMENTS(routes); i++) {
+		g_autofree gchar *fixture = g_strdup_printf("tests/fixtures/composed/%s.json", routes[i]);
+		g_autofree gchar *route = g_strdup_printf("%s.html", routes[i]);
+		json_object_set_member(pages, route, read_json(fixture));
+	}
+	page = json_object_get_member(pages, "work.html");
+	json_array_add_element(json_object_get_array_member(json_node_get_object(page), "sections"), ls_json_parse(
+		"{\"component\": \"cards\", \"variant\": \"polaroid\", \"content\": {\"heading\": \"Pieces\", "
+		"\"items\": [{\"title\": \"Chair\"}, {\"title\": \"Table\"}]}}", NULL));
+	json_object_set_string_member(json_array_get_object_element(json_object_get_array_member(
+		json_node_get_object(json_object_get_member(pages, "index.html")), "sections"), 0), "variant", "arch");
+	json_object_set_member(json_node_get_object(plan), "structure", ls_json_parse("{\"variants\": {}}", NULL));
+	text = ls_components_compose(library, plan, pages, NULL, &error);
+	g_assert_no_error(error);
+	bundle = ls_json_parse(text, NULL);
+	g_assert_null(strstr(bundle_file(bundle, "work.html"), "cards--polaroid"));
+	g_assert_null(strstr(bundle_file(bundle, "index.html"), "hero--arch"));
+	g_assert_nonnull(strstr(bundle_file(bundle, "work.html"), "block--cards"));
+}
+
+/* Stock or drawn media carry no caption saying so: the footer note does. */
+static void
+test_stock_caption(void){
+	g_autoptr(LsComponents) library = ls_components_new(NULL);
+	g_autoptr(JsonNode) plan = read_json("tests/fixtures/composed/plan.json"), bundle = NULL;
+	g_autoptr(JsonNode) bar = read_json("tests/fixtures/bar.json");
+	g_autoptr(JsonObject) pages = json_object_new();
+	g_autoptr(GError) error = NULL;
+	g_autofree gchar *text = NULL;
+	const gchar *routes[] = {"index", "work", "start", "journal", "visit"};
+	JsonObject *root = json_node_get_object(plan), *extra = json_node_get_object(bar);
+	guint i;
+	json_object_set_member(root, "photos", json_node_copy(json_object_get_member(extra, "photos")));
+	json_object_set_member(root, "media", json_node_copy(json_object_get_member(extra, "media")));
+	json_object_set_member(root, "visual", json_node_copy(json_object_get_member(extra, "visual")));
+	json_object_set_string_member(json_object_get_object_member(root, "media"), "kind", "stock");
+	json_object_set_string_member(json_object_get_object_member(root, "media"), "source", "CC0 stock photograph");
+	g_assert_true(ls_components_apply_seed(library, plan, "stock-caption", "trades", FALSE));
+	for (i = 0; i < G_N_ELEMENTS(routes); i++) {
+		g_autofree gchar *fixture = g_strdup_printf("tests/fixtures/composed/%s.json", routes[i]);
+		g_autofree gchar *route = g_strdup_printf("%s.html", routes[i]);
+		JsonNode *node = read_json(fixture);
+		ls_visual_apply_page(root, json_node_get_object(node));
+		json_object_set_member(pages, route, node);
+	}
+	text = ls_components_compose(library, plan, pages, NULL, &error);
+	g_assert_no_error(error);
+	bundle = ls_json_parse(text, NULL);
+	g_assert_nonnull(strstr(bundle_file(bundle, "index.html"), "scene--"));
+	g_assert_null(strstr(bundle_file(bundle, "index.html"), "CC0 stock photograph"));
+	g_assert_null(strstr(bundle_file(bundle, "index.html"), "scene__credit"));
+}
+
 int
 main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
@@ -307,5 +406,7 @@ main(int argc, char **argv){
 	g_test_add_func("/taste/calm-palette", test_calm_palette);
 	g_test_add_func("/taste/photo-every-page", test_photo_every_page);
 	g_test_add_func("/taste/site-check", test_site_check);
+	g_test_add_func("/taste/writer-gimmick-variant", test_writer_gimmick_variant);
+	g_test_add_func("/taste/stock-caption", test_stock_caption);
 	return g_test_run();
 }

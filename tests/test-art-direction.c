@@ -104,8 +104,8 @@ test_deal(void){
 		}
 		/* Photographs are the customer's: no direction sets their treatment. */
 		g_assert_false(json_object_has_member(look, "photos"));
-		g_assert_true(ls_components_check_plan(components, plan, &error));
-		g_assert_no_error(error);
+		if (!ls_components_check_plan(components, plan, &error))
+			g_error("%s: %s", seed, error->message);
 		g_hash_table_add(dealt, g_strdup(name));
 	}
 	/* Every direction taste allows is dealt, and no other. */

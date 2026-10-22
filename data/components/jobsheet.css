@@ -22,6 +22,5 @@
 }
 .jobsheet--carbon .jobsheet__tick { border-color: var(--ls-ink); }
 @container (min-width: 48rem) {
-	.jobsheet__sheet { transform: rotate(-1.1deg); }
 	.jobsheet__row { grid-template-columns: 3.5rem minmax(0, 1fr) 2rem; }
 }
