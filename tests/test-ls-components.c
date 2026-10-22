@@ -2094,7 +2094,7 @@ test_sameness(void){
 	}
 	g_assert_cmpfloat(ls_components_similarity(mine, other), <, 0.3);
 	/* No avoid list keeps the seed; an avoid list holding the deal itself moves it. */
-	same = ls_components_choose_seed(components, "harbor\nA repair workshop", NULL, NULL, &closest);
+	same = ls_components_choose_seed(components, "harbor\nA repair workshop", NULL, NULL, FALSE, &closest);
 	g_assert_cmpstr(same, ==, "harbor\nA repair workshop");
 	g_assert_cmpfloat(closest, ==, 0);
 	{
@@ -2134,7 +2134,7 @@ test_sameness(void){
 		g_assert_cmpfloat(ls_components_similarity(json_array_get_object_element(avoid, 0),
 			json_array_get_object_element(avoid, 0)), >, 0.99);
 	}
-	moved = ls_components_choose_seed(components, "harbor\nA repair workshop", NULL, avoid, &closest);
+	moved = ls_components_choose_seed(components, "harbor\nA repair workshop", NULL, avoid, FALSE, &closest);
 	g_assert_cmpstr(moved, !=, "harbor\nA repair workshop");
 	g_assert_cmpfloat(closest, <, LS_COMPONENTS_TOO_CLOSE);
 	/* Two dozen plumbers: without the check at most one pair in ten is
@@ -2148,7 +2148,7 @@ test_sameness(void){
 		for (i = 0; i < 36; i++) {
 			g_autofree gchar *base = g_strdup_printf("plumber %u\nA local plumbing firm", i % 24);
 			g_autofree gchar *seed = i < 24 ? g_strdup(base)
-				: ls_components_choose_seed(components, base, "trades", town, &closest);
+				: ls_components_choose_seed(components, base, "trades", town, FALSE, &closest);
 			g_autoptr(JsonNode) deal = load("plan.json");
 			g_autoptr(JsonObject) identity = ls_components_suggest_identity(components, seed, "trades");
 			JsonObject *tokens = json_object_get_object_member(json_node_get_object(deal), "tokens");

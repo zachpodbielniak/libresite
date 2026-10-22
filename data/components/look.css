@@ -387,6 +387,11 @@ body main .page-header--index .kicker::before { content: none !important; }
 .look-frame-masthead .brand img { display: none; }
 .look-frame-masthead .site-header__tagline { display: block; margin: 0; padding-block: var(--space-2); width: 100%; text-align: center; font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); border-block: var(--border) solid var(--line-strong); }
 .look-frame-masthead .site-nav { justify-content: center; }
+/* A page that opens on a photograph keeps the nameplate but gives the
+ * photograph and its headline the first screen. */
+.look-frame-masthead:has(main > .cover:first-child) .site-header__inner { gap: var(--space-2); padding-block: var(--space-4) var(--space-2); }
+.look-frame-masthead:has(main > .cover:first-child) .brand { font-size: clamp(2rem, 5vw, 4rem); }
+.look-frame-masthead:has(main > .cover:first-child) .site-header__tagline { padding-block: var(--space-1); }
 
 /* Headings wrap between words, never with an inserted hyphen. site.js
  * shrinks a heading whose longest word is wider than its column. */

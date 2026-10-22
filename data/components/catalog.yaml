@@ -2117,3 +2117,8 @@ wow:
   # A site with photos opens on one; these openings raise their picture
   # under the words, below the first screen, so photo sites skip them.
   photo_below: [hero/arch, hero/banner]
+  # Under these frames the opening's headline falls below the first screen
+  # of a 1440 by 900 window: the masthead's nameplate above the cinema
+  # cover's ink bars, wide screen and title card. Photo sites skip them.
+  frame_below:
+    masthead: [cover/cinema]

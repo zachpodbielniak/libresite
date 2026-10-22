@@ -55,7 +55,7 @@ sameness: all $(OUTDIR)/test-sameness
 # at 390, 768 and 1440 (tests/options.sh), and the mobile findings on photo
 # sites, every option and the ten sites at 390 and 1440 (tests/mobile.sh).
 GATE_OUT = $(OUTDIR)/gate
-gate: all $(OUTDIR)/test-sameness $(OUTDIR)/test-compositions $(OUTDIR)/test-variants $(OUTDIR)/test-art-direction $(OUTDIR)/test-motion $(OUTDIR)/test-options $(OUTDIR)/test-mobile
+gate: all $(OUTDIR)/test-sameness $(OUTDIR)/test-compositions $(OUTDIR)/test-variants $(OUTDIR)/test-art-direction $(OUTDIR)/test-motion $(OUTDIR)/test-options $(OUTDIR)/test-mobile $(OUTDIR)/test-showcase
 	@test -n "$(WEBDRIVER_URL)" || { echo 'make gate needs WEBDRIVER_URL, such as http://localhost:4444 from geckodriver' >&2; exit 2; }
 	rm -rf $(GATE_OUT)
 	SAMENESS_OUTPUT=$(CURDIR)/$(GATE_OUT)/sameness G_DEBUG=fatal-warnings $(OUTDIR)/test-sameness
@@ -73,6 +73,8 @@ gate: all $(OUTDIR)/test-sameness $(OUTDIR)/test-compositions $(OUTDIR)/test-var
 	bash tests/options.sh "$(WEBDRIVER_URL)" $(GATE_OUT)/options
 	MOBILE_OUTPUT=$(CURDIR)/$(GATE_OUT)/mobile G_DEBUG=fatal-warnings $(OUTDIR)/test-mobile
 	bash tests/mobile.sh "$(WEBDRIVER_URL)" $(GATE_OUT)/mobile $(GATE_OUT)/options $(GATE_OUT)/sameness
+	SHOWCASE_OUTPUT=$(CURDIR)/$(GATE_OUT)/showcase G_DEBUG=fatal-warnings $(OUTDIR)/test-showcase
+	bash tests/showcase.sh "$(WEBDRIVER_URL)" $(GATE_OUT)/showcase
 # Optional probes compile against pinned generation libraries without making
 # database/client development packages mandatory for the builder itself.
 stack-tests:

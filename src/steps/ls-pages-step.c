@@ -154,9 +154,11 @@ plan_seed(LsComponents *components, LsRecipe *recipe, JsonObject *config, gdoubl
 	JsonObject *root = ls_recipe_get_root(recipe);
 	const gchar *name = ls_string(root, "name");
 	const gchar *brief = ls_string(member_object_of(root, "site"), "brief");
+	JsonArray *photos = member_array_of(member_object_of(root, "site"), "photos");
 	g_autofree gchar *seed = g_strconcat(name != NULL ? name : "", "\n", brief != NULL ? brief : "", NULL);
 	return ls_components_choose_seed(components, seed, plan_sector(config),
-		member_array_of(member_object_of(root, "site"), "avoid"), closest);
+		member_array_of(member_object_of(root, "site"), "avoid"), photos != NULL && json_array_get_length(photos) > 0,
+		closest);
 }
 
 /* The identity dealt to this site: stable for its recipe name and brief. */
