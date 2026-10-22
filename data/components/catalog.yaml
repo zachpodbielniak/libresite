@@ -2149,3 +2149,48 @@ bar:
         kicker: {type: text, max: 100}
         body: {type: rich, max: 180}
         art: {type: image, required: true}
+
+# Taste (Ben, 2026-10-21: variety had become gimmicks). The builder deals
+# only from these calm systems: looks lists the values each axis may take;
+# kits, directions and forms the motion, art and section forms a site may
+# get; openings and variants are never dealt or rendered on a dealt site;
+# angles the home headline angles; chroma caps how coloured the page and surface may be (0 to 1, max minus
+# min channel). Other values stay in the library for themes and explicit
+# options only. docs/components.org, "Taste".
+taste:
+  looks:
+    header: [bar, centered, stacked, inverted, underlined, roomy, slim, ledger, spread, divided]
+    nav: [underline, caps, bold, muted]
+    heads: [plain, rule, split, underline, dash, newsprint, trail, caps]
+    buttons: [square, underline, block, arrow, outline, ink, wide]
+    panels: [flat, outlined, rules, paper, marker, edge, capped]
+    rhythm: [even, bands, divided, airy, tight]
+    align: [left, center]
+    images: [plain, framed]
+    footer: [simple, big, inverted, sitemap, centered, ruled, slim, directory, split, letterhead, reversed, block]
+    texture: [none]
+    motion: [none, rise, reveal]
+    emphasis: [accent, italic]
+    ornament: [none, rule]
+    kicker: [mono, line, accent]
+    backdrop: [none]
+    art: [open, line, flat]
+    photos: [natural]
+    edges: [straight]
+    lettering: [plain, smallcaps, wide, leadin]
+    links: [underline, thick]
+    frame: [top, wide, center, split, rail]
+    headpos: [top, side]
+  kits: [cascade, still, curtain, wash]
+  directions: [framed, lineart, window]
+  forms:
+    offer: [services, cards, entries, big-list]
+    process: [steps, features, columns, tabs]
+    practical: [faq, details, expect]
+    close: [cta, statement, links]
+  extras: [statement, links, big-list]
+  # Home headlines are statements of what the business does.
+  angles: [plain, promise, craft, place, problem]
+  openings: [hero/slab, hero/brutal, hero/kinetic, hero/arch, cover/flood, cover/tint, cover/stub, poster/fold, poster/front, manifesto/run, manifesto/tiles, manifesto/stepped]
+  variants: [cards/polaroid, cards/overlap, gallery/polaroid, poster/stamped, cta/note, manifesto/outlined, steps/chapters, jobsheet/sheet]
+  chroma: 0.16

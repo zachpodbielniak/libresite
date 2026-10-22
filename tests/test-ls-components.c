@@ -761,7 +761,8 @@ test_directory_and_tabs(void){
 	json_object_set_member(pages, "work.html", json(
 		"{'path':'work.html','sections':[{'component':'page-header','content':{'heading':'Woods'}},"
 		"{'component':'directory','variant':'list','content':{'heading':'All woods','items':["
-		"{'title':'elm'},{'title':'Ash'},{'title':'2x4 offcuts'},{'title':'Beech'},{'title':'Alder'}]}},"
+		"{'title':'elm'},{'title':'Ash'},{'title':'2x4 offcuts'},{'title':'Beech'},{'title':'Alder'},"
+		"{'title':'Cedar'},{'title':'Dogwood'},{'title':'Fir'}]}},"
 		"{'component':'tabs','variant':'line','content':{'heading':'Care','items':["
 		"{'label':'Oil','body':'Oil twice a year.'},{'label':'Wax','body':'Wax monthly.'}]}}]}"));
 	text = ls_components_compose(components, plan, pages, NULL, &error);
@@ -774,7 +775,24 @@ test_directory_and_tabs(void){
 	hash = strstr(html, ">#</p>");
 	if (a == NULL || b == NULL || e == NULL || hash == NULL || !(a < b && b < e && e < hash))
 		g_error("directory groups out of order:\n%.3000s", html);
-	g_assert_cmpuint(count(html, "class=\"directory__letter\""), ==, 4);
+	/* Over a few letters the index would be chips standing in for content:
+	 * a short directory is a plain list. */
+	{
+		g_autoptr(JsonObject) few = fixture_pages();
+		g_autoptr(JsonNode) small = NULL;
+		g_autofree gchar *small_text = NULL;
+		json_object_set_member(few, "work.html", json(
+			"{'path':'work.html','sections':[{'component':'page-header','content':{'heading':'Woods'}},"
+			"{'component':'directory','variant':'list','content':{'heading':'All woods','items':["
+			"{'title':'Coat trims'},{'title':'Dental care'},{'title':'Nail care'}]}}]}"));
+		small_text = ls_components_compose(components, plan, few, NULL, &error);
+		g_assert_no_error(error);
+		small = ls_json_parse(small_text, NULL);
+		g_assert_null(strstr(file_content(small, "work.html"), "directory__letters"));
+		g_assert_null(strstr(file_content(small, "work.html"), "directory__letter\""));
+		g_assert_nonnull(strstr(file_content(small, "work.html"), "Coat trims"));
+	}
+	g_assert_cmpuint(count(html, "class=\"directory__letter\""), ==, 7);
 	g_assert_true(strstr(a, "Ash") < strstr(a, "Alder"));
 	contains(html, "<a href=\"#all-woods-g1\">A</a>");
 	contains(html, "aria-label=\"Jump to letter\"");
@@ -1537,8 +1555,8 @@ test_templates_srcset(void){
 	g_assert_cmpuint(seen, >=, 26);
 }
 
-/* Axes with plain: N deal their default to about N percent of sites, so
- * textures and backdrops stay occasional; other axes spread evenly. */
+/* Axes with plain: N deal their default to about N percent of sites;
+ * since the taste rework textures and backdrops are never dealt. */
 static void
 test_plain_share(void){
 	g_autoptr(LsComponents) components = library();
@@ -1549,11 +1567,10 @@ test_plain_share(void){
 		plain_texture += g_str_equal(ls_string(look, "texture"), "none");
 		plain_backdrop += g_str_equal(ls_string(look, "backdrop"), "none");
 	}
-	/* 50 percent plain plus an even share of the rest: about 56 percent. */
-	g_assert_cmpuint(plain_texture, >=, 180);
-	g_assert_cmpuint(plain_texture, <=, 270);
-	g_assert_cmpuint(plain_backdrop, >=, 180);
-	g_assert_cmpuint(plain_backdrop, <=, 270);
+	/* Taste (docs/components.org, "Taste") allows no textures or
+	 * backdrops at all, so every site is plain. */
+	g_assert_cmpuint(plain_texture, ==, 400);
+	g_assert_cmpuint(plain_backdrop, ==, 400);
 }
 
 /* Shop and news filters come from the items themselves, the open-now badge
@@ -1869,8 +1886,9 @@ test_structure(void){
 		g_hash_table_add(frames, g_strdup(ls_string(json_object_get_object_member(
 			json_node_get_object(plan), "look"), "frame")));
 	}
-	/* Every frame gets dealt, and widths are continuous, not a few presets. */
-	g_assert_cmpuint(g_hash_table_size(frames), ==, 7);
+	/* Every frame taste allows gets dealt (five of the seven), and widths
+	 * are continuous, not a few presets. */
+	g_assert_cmpuint(g_hash_table_size(frames), ==, 5);
 	g_assert_cmpuint(g_hash_table_size(widths), >, 100);
 	names = json_object_get_members(variants);
 	for (name = names; name != NULL; name = name->next)
@@ -1881,14 +1899,20 @@ test_structure(void){
 		JsonObject *root = json_node_get_object(plan);
 		JsonObject *look = json_object_get_object_member(root, "look");
 		g_autoptr(JsonObject) dealt = ls_components_suggest_look(components, "structure seed");
-		json_object_set_string_member(look, "buttons", "pill");
+		json_object_set_string_member(look, "buttons", "underline");
 		json_object_set_member(root, "structure", json("{'width': 999}"));
 		g_assert_true(ls_components_apply_structure(components, plan, "structure seed", FALSE));
 		look = json_object_get_object_member(root, "look");
-		g_assert_cmpstr(ls_string(look, "buttons"), ==, "pill");
+		g_assert_cmpstr(ls_string(look, "buttons"), ==, "underline");
+		/* Unless it is a gimmick: taste moves it back inside the calm values. */
+		json_object_set_string_member(look, "buttons", "chrome");
+		g_assert_true(ls_components_apply_structure(components, plan, "structure seed", FALSE));
+		g_assert_cmpstr(ls_string(look, "buttons"), !=, "chrome");
 		g_assert_cmpstr(ls_string(look, "frame"), ==, ls_string(dealt, "frame"));
 		g_assert_cmpstr(ls_string(look, "header"), ==, ls_string(dealt, "header"));
-		g_assert_cmpstr(ls_string(look, "motion"), ==, ls_string(dealt, "motion"));
+		/* Motion is dealt, or set by the dealt calm kit (still sets none). */
+		g_assert_true(g_strcmp0(ls_string(look, "motion"), ls_string(dealt, "motion")) == 0 ||
+			g_strcmp0(ls_string(look, "motion"), "none") == 0);
 		g_assert_cmpfloat(json_object_get_double_member(json_object_get_object_member(root, "structure"), "width"), <=, 108);
 		/* A theme keeps the builder axes it names. */
 		json_object_set_string_member(look, "header", "stacked");
@@ -2578,7 +2602,7 @@ test_missing_talk(void){
 	const gchar *notes[] = {
 		"Prices, opening hours and delivery details have not been supplied for this site, so none are listed.",
 		"Opening hours were not provided.", "Prices to be confirmed.", "Hours: TBD", "Menu details to come."};
-	const gchar *fine[] = {"All work is illustrative.", "Parking is supplied free on Quay Street.",
+	const gchar *fine[] = {"All work shown is an example.", "Parking is supplied free on Quay Street.",
 		"We confirm every booking by email."};
 	guint i;
 	for (i = 0; i < G_N_ELEMENTS(notes); i++) {

@@ -286,6 +286,35 @@ gchar *ls_components_suggest_photo_opening(LsComponents *self, const gchar *seed
  */
 gboolean ls_components_spread_photos(LsComponents *self, JsonNode *plan, JsonNode *page);
 /**
+ * ls_components_ensure_photo:
+ * @self: a component library
+ * @plan: (transfer none): a plan with its supplied photos
+ * @path: the page's route, such as services.html
+ * @page: (transfer none): a page specification, changed in place
+ *
+ * Gives a page of a photo site that shows no supplied photograph one: a
+ * full-width photo section right after its opening section, the photo
+ * picked from the route so inner pages differ. Legal and error pages and
+ * sites without photos are left alone.
+ * Returns: whether @page changed
+ */
+gboolean ls_components_ensure_photo(LsComponents *self, JsonNode *plan, const gchar *path, JsonNode *page);
+/**
+ * ls_components_check_taste:
+ * @self: a component library
+ * @plan: (transfer none): the plan the site was built from
+ * @bundle: (transfer none): the composed {"files": [...]} bundle
+ * @problems: one line is appended per problem found
+ *
+ * Checks a built site for what the catalog's taste block forbids: the word
+ * "illustrative" in visible copy, a page headline that is a question, a
+ * page of a photo site without a photograph, letter chips, a look value,
+ * variant, motion kit or art direction outside the calm systems, and a
+ * page or surface colour louder than the chroma limit.
+ * Returns: whether the site is clean
+ */
+gboolean ls_components_check_taste(LsComponents *self, JsonNode *plan, JsonNode *bundle, GString *problems);
+/**
  * ls_components_list_sectors:
  * @self: a component library
  *

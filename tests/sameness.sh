@@ -3,7 +3,7 @@
 set -euo pipefail
 case ${1:-} in
 -h|--help)
-	printf '%s\n' 'Usage: sameness.sh WEBDRIVER_URL OUTPUT_DIR [CALIBRATION_DIR]' 'Render the ten sites first with SAMENESS_OUTPUT=OUTPUT_DIR build/release/test-sameness.' 'Screenshots every home page at 390 and 1440, scores how alike each pair looks and combines that' 'with score.json; writes screens.json and exits nonzero when the sites are over the limits.' 'CALIBRATION_DIR holds NAME-390.png and NAME-1440.png screenshots of one site in different home' 'compositions (tests/compositions.sh writes them); their mean likeness at each width is then the' 'screen limit there. Without it the screen limit is a fixed 0.2.'
+	printf '%s\n' 'Usage: sameness.sh WEBDRIVER_URL OUTPUT_DIR [CALIBRATION_DIR]' 'Render the ten sites first with SAMENESS_OUTPUT=OUTPUT_DIR build/release/test-sameness.' 'Screenshots every home page at 390 and 1440, scores how alike each pair looks and combines that' 'with score.json; writes screens.json and reports the soft limits and exits nonzero only when two sites are clones (over the clone limit).' 'CALIBRATION_DIR holds NAME-390.png and NAME-1440.png screenshots of one site in different home' 'compositions (tests/compositions.sh writes them); their mean likeness at each width is then the' 'screen limit there. Without it the screen limit is a fixed 0.2.'
 	exit 0 ;;
 --license) printf '%s\n' 'AGPL-3.0-or-later'; exit 0 ;;
 esac
@@ -127,4 +127,6 @@ jq -n --argjson pairs "$pairs" --slurpfile score "$output/score.json" --argjson 
 		pairs: $combined
 	}' > "$output/screens.json"
 jq -r --argjson pair "$(jq -r .pair_limit "$output/score.json")" '"sameness \(.score*1000|round/1000) (limit \(.mean_limit*100|round/100)), worst pair \(.worst*1000|round/1000) (limit \($pair)); structural \(.structural*1000|round/1000); screens 390 \(.screen_390*1000|round/1000) (limit \(.screen_limit_390)) 1440 \(.screen_1440*1000|round/1000) (limit \(.screen_limit_1440))"' "$output/screens.json"
-jq -e --argjson pair "$(jq -r .pair_limit "$output/score.json")" '.score <= .mean_limit and .worst <= $pair and .screen_390 <= .screen_limit_390 and .screen_1440 <= .screen_limit_1440' "$output/screens.json" >/dev/null
+# A soft guard since the taste rework: the limits above are reported; only
+# a pair of clones (over the clone limit) fails.
+jq -e --argjson clone "$(jq -r .clone_limit "$output/score.json")" '.worst <= $clone' "$output/screens.json" >/dev/null

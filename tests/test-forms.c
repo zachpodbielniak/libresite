@@ -82,6 +82,14 @@ test_forms(void){
 			g_hash_table_add(dealt, g_strdup_printf("%s/%s", (const gchar *)name->data,
 				json_object_get_string_member(forms, name->data)));
 	}
+	/* Taste keeps a few calm forms per family (docs/components.org,
+	 * "Taste"): exactly those are dealt. */
+	if (block("taste") != NULL) {
+		JsonObject *calm = json_object_get_object_member(block("taste"), "forms");
+		total = 0;
+		for (name = names; name != NULL; name = name->next)
+			total += json_array_get_length(json_object_get_array_member(calm, name->data));
+	}
 	g_assert_cmpuint(g_hash_table_size(dealt), ==, total);
 	/* Offers as cards: the fixture's services section keeps its words. */
 	{

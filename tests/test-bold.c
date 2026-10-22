@@ -98,6 +98,27 @@ test_pools(void){
 	}
 }
 
+/* The catalog's taste block (docs/components.org, "Taste"): what the
+ * builder may deal. Without it everything may be. */
+static JsonObject *
+taste_block(LsComponents *components){
+	JsonObject *root = json_node_get_object(ls_components_get_catalog(components));
+	return json_object_has_member(root, "taste") ? json_object_get_object_member(root, "taste") : NULL;
+}
+
+static gboolean
+taste_in(JsonObject *taste, const gchar *list, const gchar *name){
+	JsonArray *names;
+	guint i;
+	if (taste == NULL || !json_object_has_member(taste, list))
+		return FALSE;
+	names = json_object_get_array_member(taste, list);
+	for (i = 0; i < json_array_get_length(names); i++)
+		if (g_strcmp0(json_array_get_string_element(names, i), name) == 0)
+			return TRUE;
+	return FALSE;
+}
+
 /* Across sites every bold opening and form is dealt, and the bold
  * openings open a good share of all sites, not a rare few. */
 static void
@@ -117,14 +138,23 @@ test_dealt(void){
 		for (family = families; family != NULL; family = family->next)
 			g_hash_table_add(seen, g_strdup(json_object_get_string_member(forms, family->data)));
 	}
-	for (i = 0; bold_openings[i] != NULL; i++)
-		if (!g_hash_table_contains(seen, bold_openings[i]))
-			g_error("opening %s is never dealt", bold_openings[i]);
-	for (i = 0; i < G_N_ELEMENTS(bold_forms); i++)
-		if (!g_hash_table_contains(seen, bold_forms[i][0]))
-			g_error("form %s is never dealt", bold_forms[i][0]);
-	if (bold * 100 < sites * 35)
-		g_error("bold openings open %u of %u sites, want at least 35 percent", bold, sites);
+	/* Taste bans some openings and keeps a few forms per family; those
+	 * are never dealt, the rest are. */
+	for (i = 0; bold_openings[i] != NULL; i++) {
+		gboolean banned = taste_in(taste_block(components), "openings", bold_openings[i]);
+		if (banned != !g_hash_table_contains(seen, bold_openings[i]))
+			g_error("opening %s is %s", bold_openings[i], banned ? "banned but dealt" : "never dealt");
+	}
+	for (i = 0; i < G_N_ELEMENTS(bold_forms); i++) {
+		JsonObject *forms = taste_block(components) != NULL
+			? json_object_get_object_member(taste_block(components), "forms") : NULL;
+		gboolean allowed = forms == NULL || array_has(json_object_get_array_member(forms, bold_forms[i][1]), bold_forms[i][0]);
+		if (allowed != g_hash_table_contains(seen, bold_forms[i][0]))
+			g_error("form %s is %s", bold_forms[i][0], allowed ? "never dealt" : "outside taste but dealt");
+	}
+	/* Taste bans the loudest bold openings, so the rest open fewer sites. */
+	if (bold * 100 < sites * 15)
+		g_error("bold openings open %u of %u sites, want at least 15 percent", bold, sites);
 }
 
 /* A supplied photo takes the opening's picture ahead of a drawing; with

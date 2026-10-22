@@ -250,7 +250,7 @@ test_sequence(void){
 		g_assert_true(strstr(html, "id=\"craft\"") < strstr(html, "id=\"proof\""));
 		g_assert_nonnull(strstr(html, "data-src=\"assets/film.webm\""));
 		g_assert_null(strstr(html, "<source src=\"assets/film.webm"));
-		g_assert_nonnull(strstr(html, "Illustrative fixture"));
+		g_assert_nonnull(strstr(html, "Fixture photographs"));
 		g_assert_null(strstr(bundle_file(bundle, "work.html"), "scene__film"));
 		if (output != NULL) {
 			JsonArray *files = json_object_get_array_member(json_node_get_object(bundle), "files");

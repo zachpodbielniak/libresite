@@ -1,9 +1,9 @@
 {
   "photos": [
-    {"path":"assets/room.jpg","alt":"A bright room","credit":"Illustrative fixture","width":1600,"height":1000},
-    {"path":"assets/detail.jpg","alt":"A brass fitting","credit":"Illustrative fixture","width":1000,"height":1200},
-    {"path":"assets/proof.jpg","alt":"Pipework detail","credit":"Illustrative fixture","width":1600,"height":1000}
+    {"path":"assets/room.jpg","alt":"A bright room","credit":"Fixture photographs","width":1600,"height":1000},
+    {"path":"assets/detail.jpg","alt":"A brass fitting","credit":"Fixture photographs","width":1000,"height":1200},
+    {"path":"assets/proof.jpg","alt":"Pipework detail","credit":"Fixture photographs","width":1600,"height":1000}
   ],
-  "media": {"hero":"assets/room.jpg","portrait":"assets/detail.jpg","detail":"assets/detail.jpg","proof":"assets/proof.jpg","kind":"illustration","source":"Illustrative fixture, photographed for the media contract and credited with a deliberately long source line"},
-  "visual": {"idea":"Warm brass, precise joints","world":"copper","layout":"split","headline":"Water, working beautifully.","intro":"Kitchen and bathroom plumbing.","craft_heading":"Care in every joint.","craft_copy":"A closer look at the materials.","proof_heading":"See the detail.","proof_copy":"Illustrative materials, not a completed customer project.","close_heading":"Make room for better."}
+  "media": {"hero":"assets/room.jpg","portrait":"assets/detail.jpg","detail":"assets/detail.jpg","proof":"assets/proof.jpg","kind":"illustration","source":"Fixture photographs, photographed for the media contract and credited with a deliberately long source line"},
+  "visual": {"idea":"Warm brass, precise joints","world":"copper","layout":"split","headline":"Water, working beautifully.","intro":"Kitchen and bathroom plumbing.","craft_heading":"Care in every joint.","craft_copy":"A closer look at the materials.","proof_heading":"See the detail.","proof_copy":"Brass and copper fittings, chosen for the job.","close_heading":"Make room for better."}
 }

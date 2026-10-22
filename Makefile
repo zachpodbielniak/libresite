@@ -79,6 +79,10 @@ gate: all $(OUTDIR)/test-sameness $(OUTDIR)/test-compositions $(OUTDIR)/test-var
 	python3 tests/bar.py $(GATE_OUT)/bar --prepare --webdriver "$(WEBDRIVER_URL)"
 	bash tests/options.sh "$(WEBDRIVER_URL)" $(GATE_OUT)/bar
 	bash tests/gate.sh "$(WEBDRIVER_URL)" $(GATE_OUT)/bar
+	# The taste gate catches each gimmick on a page built to have them all.
+	mkdir -p $(GATE_OUT)/taste-bad && cp -r tests/fixtures/taste-bad/. $(GATE_OUT)/taste-bad/
+	! bash tests/gate.sh "$(WEBDRIVER_URL)" $(GATE_OUT)/taste-bad >/dev/null
+	jq -e '[.pages[] | (.rotated | length) > 0 and (.blobs | length) > 0 and (.loud | length) > 0 and (.stroked | length) > 0] | all' $(GATE_OUT)/taste-bad/gate.json >/dev/null
 # Live visual acceptance is separate from the hermetic fixture gate.
 .PHONY: visual-review
 visual-review:

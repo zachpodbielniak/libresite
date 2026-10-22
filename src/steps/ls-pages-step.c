@@ -783,6 +783,8 @@ accept_job(Job *job, LsComponents *components, JsonNode *plan, GError **error){
 		/* Each supplied photo shows once per page. */
 		ls_components_spread_photos(components, plan, node);
 		ls_visual_apply_page(json_node_get_object(plan), json_node_get_object(node));
+		/* And every page of a photo site shows one. */
+		ls_components_ensure_photo(components, plan, job->path, node);
 		if (!ls_components_check_page(components, plan, job->path, node, error))
 			return FALSE;
 		g_clear_pointer(&job->spec, json_node_unref);
@@ -1105,7 +1107,8 @@ add_file(JsonArray *files, const gchar *path, const gchar *content){
 
 /* Specifications, artwork and the composed site as one bundle. */
 static gchar *
-site_bundle(LsComponents *components, JsonNode *plan, GPtrArray *jobs, const gchar *base_url, GError **error){
+site_bundle(LsComponents *components, JsonNode *plan, GPtrArray *jobs, const gchar *base_url, gboolean themed,
+	GError **error){
 	g_autoptr(JsonObject) pages = json_object_new();
 	g_autoptr(JsonNode) composed = NULL;
 	g_autoptr(JsonNode) root = json_node_new(JSON_NODE_OBJECT);
@@ -1131,6 +1134,14 @@ site_bundle(LsComponents *components, JsonNode *plan, GPtrArray *jobs, const gch
 	composed = ls_json_parse(text, error);
 	if (composed == NULL)
 		return NULL;
+	/* A dealt site stays inside the calm systems; a theme is its own design. */
+	if (!themed) {
+		g_autoptr(GString) problems = g_string_new(NULL);
+		if (!ls_components_check_taste(components, plan, composed, problems)) {
+			g_set_error(error, LS_ERROR, LS_ERROR_INVALID, "The composed site breaks the taste rules:\n%s", problems->str);
+			return NULL;
+		}
+	}
 	bundle = json_node_get_object(composed);
 	files = json_object_get_array_member(bundle, "files");
 	/* What a visitor would notice, for an embedder to pass back as
@@ -1300,7 +1311,7 @@ pages_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *pro
 		g_autoptr(GError) local_error = NULL;
 		g_autoptr(LsContext) candidate = ls_context_new();
 		g_autoptr(GPtrArray) redo = NULL;
-		g_autofree gchar *bundle = site_bundle(components, plan, jobs, site_base_url(recipe, options), error);
+		g_autofree gchar *bundle = site_bundle(components, plan, jobs, site_base_url(recipe, options), recipe_themed(recipe), error);
 		Job *culprit;
 		if (bundle == NULL)
 			return FALSE;

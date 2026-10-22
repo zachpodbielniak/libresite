@@ -51,7 +51,7 @@
     {"href": "contact.html", "label": "Contact"}
   ],
   "action": {"href": "contact.html", "label": "Get a free estimate"},
-  "footer": {"note": "An illustrative business. No real customers are shown."},
+  "footer": {"note": "An example business. No real customers are shown."},
   "voice": "Friendly, plain and reassuring.",
   "art": [
     {"path": "assets/mark.svg", "brief": "A simple badge for {{name}}", "ratio": "1:1"},

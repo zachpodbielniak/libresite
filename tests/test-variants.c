@@ -195,6 +195,27 @@ test_render(void){
 	}
 }
 
+/* The catalog's taste block (docs/components.org, "Taste"): what the
+ * builder may deal. Without it everything may be. */
+static JsonObject *
+taste_block(LsComponents *components){
+	JsonObject *root = json_node_get_object(ls_components_get_catalog(components));
+	return json_object_has_member(root, "taste") ? json_object_get_object_member(root, "taste") : NULL;
+}
+
+static gboolean
+taste_in(JsonObject *taste, const gchar *list, const gchar *name){
+	JsonArray *names;
+	guint i;
+	if (taste == NULL || !json_object_has_member(taste, list))
+		return FALSE;
+	names = json_object_get_array_member(taste, list);
+	for (i = 0; i < json_array_get_length(names); i++)
+		if (g_strcmp0(json_array_get_string_element(names, i), name) == 0)
+			return TRUE;
+	return FALSE;
+}
+
 /* Chosen per seed: across sites the builder deals every variant of every
  * covered component, the extras included, and the model may name them. */
 static void
@@ -216,8 +237,10 @@ test_dealt(void){
 		GList *name;
 		for (name = names; name != NULL; name = name->next) {
 			g_autofree gchar *pair = g_strdup_printf("%s/%s", covered[i], (const gchar *)name->data);
-			if (!g_hash_table_contains(dealt, pair))
+			if (!g_hash_table_contains(dealt, pair) && !taste_in(taste_block(components), "variants", pair))
 				g_error("%s is never dealt", pair);
+			if (g_hash_table_contains(dealt, pair) && taste_in(taste_block(components), "variants", pair))
+				g_error("%s is a gimmick but dealt", pair);
 			g_assert_nonnull(strstr(reference, json_object_get_string_member(added, name->data)));
 		}
 	}

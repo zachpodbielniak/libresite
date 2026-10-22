@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
 #include "core/ls-visual.h"
 #include "core/ls-util.h"
+#include "core/ls-taste.h"
 #include <string.h>
 
 static JsonObject *
@@ -153,13 +154,32 @@ ls_visual_check_plan(JsonObject *plan, GError **error){
 				headings[i]);
 			return FALSE;
 		}
+		/* The headline states what the business does; it never asks. */
+		if (i == 0) {
+			g_autofree gchar *trimmed = g_strstrip(g_strdup(s));
+			if (g_str_has_suffix(trimmed, "?"))
+				return fail(error, "visual.headline is a question; state what the business does (and where, when a place is supplied)");
+		}
+		if (ls_taste_disclosure(s, FALSE) != NULL) {
+			g_set_error(error, LS_ERROR, LS_ERROR_INVALID,
+				"visual.%s talks about the site itself (\"%s\"); the footer note carries any disclosure",
+				headings[i], ls_taste_disclosure(s, FALSE));
+			return FALSE;
+		}
 	}
-	for (i = 0; i < G_N_ELEMENTS(copy); i++)
+	for (i = 0; i < G_N_ELEMENTS(copy); i++) {
 		if (!text_ok(v, copy[i], 180)) {
 			g_set_error(error, LS_ERROR, LS_ERROR_INVALID,
 				"visual.%s needs one nonempty sentence of at most 180 characters", copy[i]);
 			return FALSE;
 		}
+		if (ls_taste_disclosure(ls_string(v, copy[i]), FALSE) != NULL) {
+			g_set_error(error, LS_ERROR, LS_ERROR_INVALID,
+				"visual.%s talks about the site itself (\"%s\"); the footer note carries any disclosure",
+				copy[i], ls_taste_disclosure(ls_string(v, copy[i]), FALSE));
+			return FALSE;
+		}
+	}
 	return TRUE;
 }
 
