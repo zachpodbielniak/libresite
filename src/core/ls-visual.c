@@ -106,7 +106,7 @@ gboolean
 ls_visual_check_plan(JsonObject *plan, GError **error){
 	JsonObject *v = obj(plan, "visual");
 	const gchar *worlds[] = {"chalk", "copper", "forest", "electric", "ceramic", "oven", NULL};
-	const gchar *layouts[] = {"full", "split", "object", NULL};
+	const gchar *layouts[] = {"full", "split", "object", "right", "above", "scrim", NULL};
 	const gchar *headings[] = {"headline", "craft_heading", "proof_heading", "close_heading"};
 	const gchar *copy[] = {"intro", "craft_copy", "proof_copy"};
 	guint i;
@@ -124,7 +124,7 @@ ls_visual_check_plan(JsonObject *plan, GError **error){
 	if (ls_string(v, "world") == NULL || !g_strv_contains(worlds, ls_string(v, "world")))
 		return fail(error, "visual.world must be chalk, copper, forest, electric, ceramic or oven");
 	if (ls_string(v, "layout") == NULL || !g_strv_contains(layouts, ls_string(v, "layout")))
-		return fail(error, "visual.layout must be full, split or object");
+		return fail(error, "visual.layout must be full, split, object, right, above or scrim");
 	/* Full-height phone scenes need a deliberate portrait source. Otherwise
 	 * the general crop guard correctly mats a wide image, leaving a void.
 	 * The planner can choose split/object when no portrait was supplied. */
@@ -301,11 +301,21 @@ ls_visual_apply_page(JsonObject *plan, JsonObject *page){
 		json_array_add_object_element(sections, section);
 	}
 	/* Preserve the writer's services, answers, contact and anchors after
-	 * the three beats. Skip only its superseded home opening. */
+	 * the three beats. Skip only its superseded home opening, and any
+	 * further copy of a beat (a scene, or a material section under a
+	 * beat's heading), which would show the beat twice. */
 	for (i = start; i < json_array_get_length(old); i++)
 		{
-			JsonNode *copy_node = json_node_copy(json_array_get_element(old, i));
-			JsonObject *section = json_node_get_object(copy_node);
+			JsonNode *copy_node;
+			JsonObject *section, *given = JSON_NODE_HOLDS_OBJECT(json_array_get_element(old, i))
+				? json_array_get_object_element(old, i) : NULL;
+			const gchar *component = given != NULL ? ls_string(given, "component") : NULL;
+			const gchar *heading = obj(given, "content") != NULL ? ls_string(obj(given, "content"), "heading") : NULL;
+			if (g_strcmp0(component, "scene") == 0 || (g_strcmp0(component, "material") == 0 &&
+				(g_strcmp0(heading, ls_string(v, "craft_heading")) == 0 || g_strcmp0(heading, ls_string(v, "proof_heading")) == 0)))
+				continue;
+			copy_node = json_node_copy(json_array_get_element(old, i));
+			section = json_node_get_object(copy_node);
 			if (g_strcmp0(ls_string(section, "component"), "cta") == 0 && obj(section, "content") != NULL)
 				json_object_set_string_member(obj(section, "content"), "heading", ls_string(v, "close_heading"));
 			json_array_add_element(sections, copy_node);

@@ -22,6 +22,32 @@
 .scene--full .scene__intro { max-width: 48ch; margin-bottom: 1rem; }
 .scene--full .scene__credit { grid-area: 2 / 1; }
 .scene--full .scene__play { top: 1rem; bottom: auto; }
+/* Above: the statement leads at every width, the wide photograph follows. */
+.scene--above .scene__copy { order: -1; padding-bottom: clamp(1.25rem, 3cqi, 2.5rem); }
+.scene--above .scene__copy h1 { font-size: clamp(2.6rem, 8cqi, 7.5rem); max-width: 18ch; margin-top: .3em; }
+.scene--above .scene__media img { height: 46svh; min-height: 15rem; }
+/* Scrim: on phones a photograph over a solid dark panel; wider, the panel
+ * sits over the photograph's lower corner. */
+.scene--scrim .scene__copy { background: #14191c; color: #fff; --ink: #fff; --paper: #14191c; }
+.scene--scrim .scene__copy h1 { font-size: clamp(2.4rem, 5.6cqi, 5.25rem); max-width: 16ch; margin: 0 0 .3em; }
+.scene--scrim .scene__credit { grid-row: 3; }
+@media (min-width: 768px) {
+  .scene--right .scene__stage { grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); }
+  .scene--right .scene__media { order: 2; }
+  .scene--right .scene__copy { display: flex; flex-direction: column; justify-content: center; align-items: start; }
+  .scene--right .scene__media img { height: 78svh; }
+  .scene--above .scene__copy { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 0 3rem; align-items: end; }
+  .scene--above .scene__copy { padding-block: clamp(1rem, 2.5cqi, 2.25rem); }
+  .scene--above .scene__copy h1 { grid-column: 1; grid-row: 1 / span 3; font-size: clamp(2.6rem, 5.4cqi, 5.25rem); margin: 0; }
+  .scene--above .scene__intro, .scene--above .scene__copy > :is(.button,.kicker) { grid-column: 2; justify-self: start; }
+  .scene--above .scene__media img { height: 76svh; }
+  .scene--scrim .scene__media, .scene--scrim .scene__copy { grid-area: 1 / 1; }
+  .scene--scrim .scene__media img { height: 86svh; min-height: 34rem; }
+  .scene--scrim .scene__copy { position: relative; z-index: 1; align-self: end; justify-self: start; max-width: min(40rem, 62%);
+    margin: 0 0 clamp(1.5rem, 4cqi, 3.5rem) clamp(1rem, 4cqi, 3.5rem); padding: clamp(1.5rem, 3cqi, 2.75rem); }
+  .scene--scrim .scene__credit { grid-area: 2 / 1; }
+  .scene--scrim .scene__play { top: 1rem; bottom: auto; }
+}
 @media (min-width: 768px) {
   .scene--split .scene__stage { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .scene--split .scene__copy { display: flex; flex-direction: column; justify-content: center; align-items: start; }

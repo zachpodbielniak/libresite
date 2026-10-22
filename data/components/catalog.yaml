@@ -2132,6 +2132,9 @@ bar:
         full: A full-width environmental scene with copy on a protected solid field.
         split: Large portrait or craft image paired with a short display statement.
         object: A monumental isolated object or close detail on its own material stage.
+        right: The split mirrored; the statement on the left, a tall photograph on the right.
+        above: A large statement and its action across the top, a wide photograph beneath.
+        scrim: A full-bleed photograph with the statement on a solid dark panel over its lower corner; stacked on phones.
       slots:
         heading: {type: text, required: true, max: 52}
         kicker: {type: text, max: 100}
@@ -2191,6 +2194,8 @@ taste:
   extras: [statement, links, big-list]
   # Home headlines are statements of what the business does.
   angles: [plain, promise, craft, place, problem]
+  # The calm photo-led openings the seed deals a visual sequence (scene variants).
+  scenes: [split, right, above, scrim]
   openings: [hero/slab, hero/brutal, hero/kinetic, hero/arch, cover/flood, cover/tint, cover/stub, poster/fold, poster/front, manifesto/run, manifesto/tiles, manifesto/stepped]
   variants: [cards/polaroid, cards/overlap, gallery/polaroid, poster/stamped, cta/note, manifesto/outlined, steps/chapters, jobsheet/sheet]
   chroma: 0.16

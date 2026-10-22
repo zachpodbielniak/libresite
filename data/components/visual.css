@@ -41,4 +41,4 @@
   .visual-sequence .brand { flex: 1 1 0; min-width: 0; font-size: 1rem; overflow-wrap: anywhere; text-transform: none; }
   .visual-sequence .nav-toggle { flex: 0 0 auto; }
 }
-.visual-sequence .scene--full .scene__copy :is(h1,p) { color: #fff; }
+.visual-sequence :is(.scene--full,.scene--scrim) .scene__copy :is(h1,p) { color: #fff; }

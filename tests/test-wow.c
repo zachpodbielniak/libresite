@@ -269,7 +269,7 @@ test_gaps(void){
 
 /* A photo the opening leads with is not shown again further down: a later
  * section that repeats it takes a supplied photo the page has not shown,
- * and keeps it when there is none. */
+ * and a repeat with none left goes (item 24: no photo twice on a page). */
 static void
 test_photo_twice(void){
 	g_autoptr(LsComponents) components = library();
@@ -283,7 +283,6 @@ test_photo_twice(void){
 		"{'art':{'src':'assets/photos/patio.jpg','alt':'A sunny patio'}},"
 		"{'art':{'src':'assets/photos/lawn.jpg','alt':'A lawn with daisies'}}]}}]}");
 	g_autoptr(GHashTable) used = g_hash_table_new(g_str_hash, g_str_equal);
-	JsonArray *items;
 	const gchar *media;
 	g_assert_true(ls_components_spread_photos(components, plan, page));
 	media = json_object_get_string_member(object(object(section(page, 1), "content"), "art"), "src");
@@ -292,14 +291,10 @@ test_photo_twice(void){
 	g_assert_cmpstr(json_object_get_string_member(object(object(section(page, 1), "content"), "art"), "alt"), !=, "A sunny patio");
 	g_hash_table_add(used, "assets/photos/patio.jpg");
 	g_hash_table_add(used, (gpointer)media);
-	items = json_object_get_array_member(object(section(page, 2), "content"), "items");
-	/* Three photos, four places: the last repeat keeps its photo. */
-	g_assert_cmpstr(json_object_get_string_member(object(json_array_get_object_element(items, 0), "art"), "src"), !=,
-		"assets/photos/patio.jpg");
-	g_assert_false(g_hash_table_contains(used,
-		json_object_get_string_member(object(json_array_get_object_element(items, 0), "art"), "src")));
-	g_assert_cmpstr(json_object_get_string_member(object(json_array_get_object_element(items, 1), "art"), "src"), ==,
-		"assets/photos/lawn.jpg");
+	/* Three photos, four places: the gallery's first item takes the last
+	 * fresh photo and its second, a repeat, goes; a gallery needs two
+	 * items, so the photo-only gallery goes too. */
+	g_assert_cmpuint(json_array_get_length(json_object_get_array_member(json_node_get_object(page), "sections")), ==, 2);
 	g_assert_false(ls_components_spread_photos(components, plan, page));
 	{
 		g_autoptr(GError) error = NULL;

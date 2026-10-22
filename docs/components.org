@@ -1242,3 +1242,51 @@ The sameness limits (0.15 mean, 0.25 worst pair, order and mix) are
 reported, not enforced. Only clones fail: two of the ten sites more alike
 than 0.5. With the calm systems the ten sites score 0.141 structural, worst
 pair 0.219, inside the old limits anyway.
+
+* Calm, but not one template
+
+The taste rework left every photo-led home on one opening (photo left,
+headline right) and every site on two photos, so the same photo came back
+down the page. Taste rules are unchanged; this adds range inside them.
+
+** Openings dealt by the seed
+
+The taste block's =scenes= lists the calm photo-led openings a visual
+sequence may wear: =split= (photo left), =right= (photo right, words
+left), =above= (a large statement over a wide photo) and =scrim= (a
+full-bleed photo with the words on a solid dark panel over its lower
+corner; stacked on phones, so no text sits on the photo).
+=ls_components_suggest_scene()= picks one from the seed and
+=ls_components_apply_seed()= sets it as =visual.layout=: the seed, not the
+writer, decides. =full= and =object= stay for an explicit layout; =full=
+needs a portrait crop, so it is not dealt.
+
+=ls_components_choose_seed()= also weighs the scene: each earlier site
+wearing it costs a little, and the site just before (the last in
+=site.avoid=) costs a whole point, so an embedder that lists earlier sites
+in order never gets two neighbours with the same opening.
+
+** No photo twice on a page
+
+=ls_components_spread_photos()= runs after =ls_visual_apply_page()=, so the
+opening and craft photos count. Image slots claim photos in turn: the
+opening, then sections with words of their own, then photo-only sections
+(media, gallery, carousel, strip, figure, showcase, compare). A repeat
+takes a photo the page has not shown, preferring one no later slot asks
+for. With none left it goes: the item of a carousel or gallery, else an
+optional image; a section that cannot stand without it (a required image,
+too few items) goes too. A writer's further copy of a beat (a second scene,
+or a material section under a beat's heading) is dropped by
+=ls_visual_apply_page()=. Inner pages that need a photo take one the home
+sequence does not show, where there is one.
+
+=ls_components_check_taste()= fails a page that shows one supplied photo
+twice (a picture's phone crop counts when it is another photo).
+=ls_components_count_photos()= counts the distinct photos a built site
+shows; a site given four or more should show four. It is a measure, not a
+taste failure, so a small site is never refused for it.
+
+=tests/test-calm-openings.c= covers each rule, each seen failing first
+(on the epic head all eighteen sites opened =split=, and a two-photo home
+showed one photo four times). =tests/test-bar.c= renders all six scene
+layouts for the gate at 390, 768 and 1440.
