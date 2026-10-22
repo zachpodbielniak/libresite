@@ -40,7 +40,7 @@
   .scene--above .scene__copy { padding-block: clamp(1rem, 2.5cqi, 2.25rem); }
   .scene--above .scene__copy h1 { grid-column: 1; grid-row: 1 / span 3; font-size: clamp(2.6rem, 5.4cqi, 5.25rem); margin: 0; }
   .scene--above .scene__intro, .scene--above .scene__copy > :is(.button,.kicker) { grid-column: 2; justify-self: start; }
-  .scene--above .scene__media img { height: 62svh; }
+  .scene--above .scene__media img { height: 76svh; }
   .scene--scrim .scene__media, .scene--scrim .scene__copy { grid-area: 1 / 1; }
   .scene--scrim .scene__media img { height: 86svh; min-height: 34rem; }
   .scene--scrim .scene__copy { position: relative; z-index: 1; align-self: end; justify-self: start; max-width: min(40rem, 62%);
