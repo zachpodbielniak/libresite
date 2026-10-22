@@ -1628,7 +1628,7 @@ load_taste(LsComponents *self, JsonObject *root, GError **error){
 	guint l, i;
 	if (!json_object_has_member(root, "taste"))
 		return TRUE;
-	if (taste == NULL || !ls_object_keys(taste, "|looks|kits|directions|forms|extras|angles|openings|variants|chroma|", NULL) ||
+	if (taste == NULL || !ls_object_keys(taste, "|looks|kits|directions|forms|extras|angles|openings|variants|scenes|chroma|", NULL) ||
 		(looks = member_object(taste, "looks")) == NULL || (forms = member_object(taste, "forms")) == NULL ||
 		!JSON_NODE_HOLDS_VALUE(json_object_get_member(taste, "chroma")) ||
 		json_object_get_double_member(taste, "chroma") <= 0 || json_object_get_double_member(taste, "chroma") > 1)
@@ -1663,6 +1663,15 @@ load_taste(LsComponents *self, JsonObject *root, GError **error){
 	for (i = 0; i < json_array_get_length(member_array(taste, "variants")); i++)
 		if (!real_variant(self, json_array_get_string_element(member_array(taste, "variants"), i)))
 			return catalog_invalid(error, "taste", "variants are component/variant pairs"), FALSE;
+	/* scenes is optional; each names a scene variant. */
+	if (json_object_has_member(taste, "scenes") && (member_array(taste, "scenes") == NULL ||
+		json_array_get_length(member_array(taste, "scenes")) == 0))
+		return catalog_invalid(error, "taste", "scenes lists scene variants"), FALSE;
+	for (i = 0; member_array(taste, "scenes") != NULL && i < json_array_get_length(member_array(taste, "scenes")); i++) {
+		g_autofree gchar *pair = g_strconcat("scene/", json_array_get_string_element(member_array(taste, "scenes"), i), NULL);
+		if (!real_variant(self, pair))
+			return catalog_invalid(error, "taste", "scenes are scene variants"), FALSE;
+	}
 	{
 		JsonObject *families = member_object(self->forms, "families");
 		g_autoptr(GList) kinds = json_object_get_members(forms);
@@ -2714,6 +2723,13 @@ ls_components_apply_seed(LsComponents *self, JsonNode *plan_node, const gchar *s
 		if (json_object_has_member(type, "fonts"))
 			json_object_set_member(plan, "fonts", node_copy(json_object_get_member(type, "fonts")));
 	}
+	/* The seed, not the writer, picks the calm photo-led opening. */
+	{
+		JsonObject *visual = member_object(plan, "visual");
+		g_autofree gchar *scene = visual != NULL ? ls_components_suggest_scene(self, seed) : NULL;
+		if (scene != NULL)
+			json_object_set_string_member(visual, "layout", scene);
+	}
 	/* The visual sequence sets its world's colours first, so the calm
 	 * rules cover them too. */
 	ls_visual_apply_plan(plan);
@@ -2880,6 +2896,16 @@ ls_components_suggest_photo_opening(LsComponents *self, const gchar *seed){
 		json_list_has(member_array(composition_layout(self, composition), "avoid"), frame))
 		composition = deal_composition(self, seed, frame, "composition:frame");
 	return photo_opening(self, seed, composition, opening, frame);
+}
+
+gchar *
+ls_components_suggest_scene(LsComponents *self, const gchar *seed){
+	g_return_val_if_fail(LS_IS_COMPONENTS(self), NULL);
+	g_return_val_if_fail(seed != NULL, NULL);
+	if (self->taste == NULL || member_array(self->taste, "scenes") == NULL)
+		return NULL;
+	return g_strdup(json_array_get_string_element(member_array(self->taste, "scenes"),
+		seed_pick(seed, "scene", json_array_get_length(member_array(self->taste, "scenes")))));
 }
 
 static JsonObject *plan_photo(JsonObject *plan, const gchar *src);
@@ -5642,6 +5668,8 @@ ls_components_choose_seed(LsComponents *self, const gchar *seed, const gchar *se
 		JsonArray *home = member_array(dealt, "home");
 		const gchar *opening = home != NULL && json_array_get_length(home) > 0
 			? json_array_get_string_element(home, 0) : NULL;
+		g_autofree gchar *dealt_scene = photos ? ls_components_suggest_scene(self, candidate) : NULL;
+		g_autofree gchar *scene = dealt_scene != NULL ? g_strconcat("scene/", dealt_scene, NULL) : NULL;
 		gdouble worst = 0, worn = 0;
 		for (i = 0; i < json_array_get_length(avoid); i++) {
 			JsonNode *node = json_array_get_element(avoid, i);
@@ -5654,6 +5682,13 @@ ls_components_choose_seed(LsComponents *self, const gchar *seed, const gchar *se
 				JSON_NODE_HOLDS_VALUE(json_array_get_element(theirs, 0)) &&
 				g_strcmp0(json_array_get_string_element(theirs, 0), opening) == 0)
 				worn += LS_COMPONENTS_WORN_OPENING;
+			/* A site with a visual sequence opens on its dealt scene: each
+			 * earlier site wearing it costs the same, and the site just
+			 * before (the last listed) costs far more, so neighbours differ. */
+			if (scene != NULL && theirs != NULL && json_array_get_length(theirs) > 0 &&
+				JSON_NODE_HOLDS_VALUE(json_array_get_element(theirs, 0)) &&
+				g_strcmp0(json_array_get_string_element(theirs, 0), scene) == 0)
+				worn += i + 1 == json_array_get_length(avoid) ? 1 : LS_COMPONENTS_WORN_OPENING;
 		}
 		if (worst + worn < best_score) {
 			best_score = worst + worn;
@@ -6354,58 +6389,244 @@ plan_photo(JsonObject *plan, const gchar *src){
 	return NULL;
 }
 
-/* Walks @node in page order: every image slot showing a supplied photo the
- * page has shown already takes one it has not, while any are left. */
-static gboolean
-spread_node(JsonObject *plan, JsonNode *node, GHashTable *shown){
-	gboolean changed = FALSE;
-	if (node == NULL)
-		return FALSE;
-	if (JSON_NODE_HOLDS_ARRAY(node)) {
-		JsonArray *list = json_node_get_array(node);
-		guint i;
-		for (i = 0; i < json_array_get_length(list); i++)
-			changed |= spread_node(plan, json_array_get_element(list, i), shown);
-	} else if (JSON_NODE_HOLDS_OBJECT(node)) {
-		JsonObject *object = json_node_get_object(node);
-		const gchar *src = ls_string(object, "src");
-		g_autoptr(GList) members = NULL;
-		GList *member;
-		if (src != NULL && plan_photo(plan, src) != NULL) {
-			if (g_hash_table_contains(shown, src)) {
-				JsonArray *photos = member_array(plan, "photos");
-				guint i;
-				for (i = 0; i < json_array_get_length(photos); i++) {
-					JsonObject *photo = json_array_get_object_element(photos, i);
-					if (g_hash_table_contains(shown, ls_string(photo, "path")))
+/* One image slot of a page showing a supplied photo: the {src, alt}
+ * object, the section it sits in, the items element holding it (with its
+ * array) or else the section content member it is, and the order it
+ * claims a photo in. */
+typedef struct {
+	JsonObject *image;
+	guint section;
+	JsonArray *items;
+	JsonObject *item;
+	const gchar *member;
+	guint rank;
+	guint order;
+	gboolean dead;
+} PhotoSlot;
+
+/* Sections whose image is the whole point: they give up their photo
+ * first, and go when they cannot keep one. */
+static const gchar *const photo_only_components[] = {"media", "gallery", "carousel", "strip", "figure",
+	"showcase", "compare", NULL};
+
+static gint
+photo_slot_order(gconstpointer a, gconstpointer b){
+	const PhotoSlot *x = *(PhotoSlot *const *)a, *y = *(PhotoSlot *const *)b;
+	if (x->rank != y->rank)
+		return x->rank < y->rank ? -1 : 1;
+	return x->order < y->order ? -1 : x->order > y->order;
+}
+
+/* Gathers the photo slots of section @index's @content: its own image
+ * members and those of its items. A scene's phone crop of its own photo
+ * is the same picture, not a second slot. */
+static void
+collect_photo_slots(JsonObject *plan, JsonObject *content, guint index, guint rank, GPtrArray *slots){
+	g_autoptr(GList) members = json_object_get_members(content);
+	GList *m;
+	for (m = members; m != NULL; m = m->next) {
+		JsonNode *node = json_object_get_member(content, m->data);
+		if (JSON_NODE_HOLDS_OBJECT(node) && plan_photo(plan, ls_string(json_node_get_object(node), "src")) != NULL) {
+			PhotoSlot *slot;
+			if (g_str_equal(m->data, "portrait") && member_object(content, "art") != NULL &&
+				g_strcmp0(ls_string(json_node_get_object(node), "src"), ls_string(member_object(content, "art"), "src")) == 0)
+				continue;
+			slot = g_new0(PhotoSlot, 1);
+			slot->image = json_node_get_object(node);
+			slot->section = index;
+			slot->member = m->data;
+			slot->rank = rank;
+			slot->order = slots->len;
+			g_ptr_array_add(slots, slot);
+		} else if (JSON_NODE_HOLDS_ARRAY(node)) {
+			JsonArray *items = json_node_get_array(node);
+			guint i;
+			for (i = 0; i < json_array_get_length(items); i++) {
+				JsonNode *element = json_array_get_element(items, i);
+				g_autoptr(GList) fields = NULL;
+				GList *f;
+				if (!JSON_NODE_HOLDS_OBJECT(element))
+					continue;
+				fields = json_object_get_members(json_node_get_object(element));
+				for (f = fields; f != NULL; f = f->next) {
+					JsonNode *field = json_object_get_member(json_node_get_object(element), f->data);
+					PhotoSlot *slot;
+					if (!JSON_NODE_HOLDS_OBJECT(field) ||
+						plan_photo(plan, ls_string(json_node_get_object(field), "src")) == NULL)
 						continue;
-					json_object_set_string_member(object, "src", ls_string(photo, "path"));
-					json_object_set_string_member(object, "alt", ls_string(photo, "alt") != NULL ? ls_string(photo, "alt") : "");
-					changed = TRUE;
-					break;
+					slot = g_new0(PhotoSlot, 1);
+					slot->image = json_node_get_object(field);
+					slot->section = index;
+					slot->items = items;
+					slot->item = json_node_get_object(element);
+					slot->rank = rank;
+					slot->order = slots->len;
+					g_ptr_array_add(slots, slot);
 				}
 			}
-			g_hash_table_add(shown, g_strdup(ls_string(object, "src")));
-			return changed;
 		}
-		members = json_object_get_members(object);
-		for (member = members; member != NULL; member = member->next)
-			changed |= spread_node(plan, json_object_get_member(object, member->data), shown);
 	}
-	return changed;
+}
+
+/* Whether @content, after its repeats went, still has what @component
+ * needs: every required slot present and every items list at its
+ * minimum. */
+static gboolean
+section_stands(LsComponents *self, const gchar *component, const gchar *variant, JsonObject *content){
+	JsonObject *slots = member_object(member_object(self->components, component), "slots");
+	g_autoptr(GList) names = slots != NULL ? json_object_get_members(slots) : NULL;
+	GList *name;
+	for (name = names; name != NULL; name = name->next) {
+		JsonObject *slot = member_object(slots, name->data);
+		JsonNode *value = json_object_get_member(content, name->data);
+		if (json_object_has_member(slot, "required") && json_object_get_boolean_member(slot, "required") && value == NULL)
+			return FALSE;
+		if (g_strcmp0(ls_string(slot, "type"), "items") == 0 && value != NULL && JSON_NODE_HOLDS_ARRAY(value) &&
+			json_object_has_member(slot, "min_items") &&
+			json_array_get_length(json_node_get_array(value)) < (guint)json_object_get_int_member(slot, "min_items"))
+			return FALSE;
+	}
+	/* Split and banner heroes and split page headers show their picture. */
+	if (json_object_get_member(content, "art") == NULL && (g_strcmp0(variant, "split") == 0 ||
+		g_strcmp0(variant, "banner") == 0) && (g_strcmp0(component, "hero") == 0 || g_strcmp0(component, "page-header") == 0))
+		return FALSE;
+	return TRUE;
+}
+
+/* Where @route stands in @plan's pages (0 for the first or an unknown one). */
+static guint
+page_place(JsonObject *plan, const gchar *route){
+	JsonArray *pages = member_array(plan, "pages");
+	guint i;
+	for (i = 0; route != NULL && pages != NULL && i < json_array_get_length(pages); i++)
+		if (JSON_NODE_HOLDS_OBJECT(json_array_get_element(pages, i)) &&
+			g_strcmp0(ls_string(json_array_get_object_element(pages, i), "path"), route) == 0)
+			return i;
+	return 0;
 }
 
 gboolean
 ls_components_spread_photos(LsComponents *self, JsonNode *plan_node, JsonNode *page){
 	g_autoptr(GHashTable) shown = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+	g_autoptr(GHashTable) wanted = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+	g_autoptr(GHashTable) sequence = g_hash_table_new(g_str_hash, g_str_equal);
+	g_autoptr(GPtrArray) spares = g_ptr_array_new();
+	guint place;
+	g_autoptr(GPtrArray) slots = g_ptr_array_new_with_free_func(g_free);
+	g_autoptr(GArray) dropped = NULL;
 	JsonObject *plan;
+	JsonArray *photos, *sections;
+	gboolean changed = FALSE;
+	guint i, j;
 	g_return_val_if_fail(LS_IS_COMPONENTS(self), FALSE);
 	if (plan_node == NULL || !JSON_NODE_HOLDS_OBJECT(plan_node) || page == NULL || !JSON_NODE_HOLDS_OBJECT(page))
 		return FALSE;
 	plan = json_node_get_object(plan_node);
-	if (member_array(plan, "photos") == NULL || json_array_get_length(member_array(plan, "photos")) < 2)
+	photos = member_array(plan, "photos");
+	sections = member_array(json_node_get_object(page), "sections");
+	if (photos == NULL || json_array_get_length(photos) == 0 || sections == NULL)
 		return FALSE;
-	return spread_node(plan, json_object_get_member(json_node_get_object(page), "sections"), shown);
+	for (i = 0; i < json_array_get_length(sections); i++) {
+		JsonObject *section = JSON_NODE_HOLDS_OBJECT(json_array_get_element(sections, i))
+			? json_array_get_object_element(sections, i) : NULL;
+		JsonObject *content = section != NULL ? member_object(section, "content") : NULL;
+		const gchar *name = section != NULL ? ls_string(section, "component") : NULL;
+		if (content != NULL)
+			collect_photo_slots(plan, content, i, i == 0 ? 0 : in_list(photo_only_components, name) ? 2 : 1, slots);
+	}
+	g_ptr_array_sort(slots, photo_slot_order);
+	/* A page without the visual sequence's opening (an inner page) would
+	 * rather not repeat the sequence's photos either: it takes a spare
+	 * one while any is left, and keeps its own otherwise. */
+	{
+		JsonObject *media = member_object(plan, "media");
+		const gchar *roles[] = {"hero", "portrait", "detail", "proof"};
+		gboolean opening = FALSE;
+		for (i = 0; i < json_array_get_length(sections); i++)
+			opening |= JSON_NODE_HOLDS_OBJECT(json_array_get_element(sections, i)) &&
+				g_strcmp0(ls_string(json_array_get_object_element(sections, i), "component"), "scene") == 0;
+		for (i = 0; media != NULL && !opening && member_object(plan, "visual") != NULL && i < G_N_ELEMENTS(roles); i++)
+			if (ls_string(media, roles[i]) != NULL)
+				g_hash_table_add(sequence, (gpointer)ls_string(media, roles[i]));
+	}
+	/* The photos a repeat may take, outside the sequence, tried from the
+	 * page's place in the plan, so neighbouring inner pages start on
+	 * different ones. */
+	for (i = 0; i < json_array_get_length(photos); i++)
+		if (!g_hash_table_contains(sequence, ls_string(json_array_get_object_element(photos, i), "path")))
+			g_ptr_array_add(spares, json_array_get_object_element(photos, i));
+	place = page_place(plan, ls_string(json_node_get_object(page), "path"));
+	/* Claim in turn; a repeat takes a photo nobody has shown, one no later
+	 * slot asks for if there is one. */
+	for (i = 0; i < slots->len; i++)
+		g_hash_table_add(wanted, g_strdup(ls_string(((PhotoSlot *)g_ptr_array_index(slots, i))->image, "src")));
+	for (i = 0; i < slots->len; i++) {
+		PhotoSlot *slot = g_ptr_array_index(slots, i);
+		const gchar *src = ls_string(slot->image, "src");
+		JsonObject *fresh = NULL;
+		if (!g_hash_table_contains(shown, src) && !g_hash_table_contains(sequence, src)) {
+			g_hash_table_add(shown, g_strdup(src));
+			continue;
+		}
+		for (j = 0; j < spares->len; j++) {
+			JsonObject *photo = g_ptr_array_index(spares, (place + j) % spares->len);
+			const gchar *path = ls_string(photo, "path");
+			if (path == NULL || g_hash_table_contains(shown, path))
+				continue;
+			if (!g_hash_table_contains(wanted, path)) {
+				fresh = photo;
+				break;
+			}
+			if (fresh == NULL)
+				fresh = photo;
+		}
+		if (fresh == NULL && !g_hash_table_contains(shown, src)) {
+			g_hash_table_add(shown, g_strdup(src));
+			continue;
+		}
+		changed = TRUE;
+		if (fresh == NULL) {
+			slot->dead = TRUE;
+			continue;
+		}
+		json_object_set_string_member(slot->image, "src", ls_string(fresh, "path"));
+		json_object_set_string_member(slot->image, "alt", ls_string(fresh, "alt") != NULL ? ls_string(fresh, "alt") : "");
+		g_hash_table_add(shown, g_strdup(ls_string(fresh, "path")));
+	}
+	/* Repeats with no photo left go: their item, else the optional image.
+	 * A section that cannot stand without them goes as well. */
+	dropped = g_array_new(FALSE, TRUE, sizeof(gboolean));
+	g_array_set_size(dropped, json_array_get_length(sections));
+	for (i = 0; i < slots->len; i++) {
+		PhotoSlot *slot = g_ptr_array_index(slots, i);
+		if (!slot->dead)
+			continue;
+		if (slot->items != NULL) {
+			for (j = 0; j < json_array_get_length(slot->items); j++)
+				if (JSON_NODE_HOLDS_OBJECT(json_array_get_element(slot->items, j)) &&
+					json_array_get_object_element(slot->items, j) == slot->item) {
+					json_array_remove_element(slot->items, j);
+					break;
+				}
+		} else if (slot->member != NULL) {
+			json_object_remove_member(member_object(json_array_get_object_element(sections, slot->section), "content"),
+				slot->member);
+		}
+	}
+	for (i = 1; i < json_array_get_length(sections); i++) {
+		JsonObject *section = JSON_NODE_HOLDS_OBJECT(json_array_get_element(sections, i))
+			? json_array_get_object_element(sections, i) : NULL;
+		gboolean touched = FALSE;
+		for (j = 0; j < slots->len; j++)
+			touched |= ((PhotoSlot *)g_ptr_array_index(slots, j))->dead && ((PhotoSlot *)g_ptr_array_index(slots, j))->section == i;
+		if (touched && section != NULL && member_object(section, "content") != NULL &&
+			!section_stands(self, ls_string(section, "component"), ls_string(section, "variant"), member_object(section, "content")))
+			g_array_index(dropped, gboolean, i) = TRUE;
+	}
+	for (i = json_array_get_length(sections); i > 1; i--)
+		if (g_array_index(dropped, gboolean, i - 1))
+			json_array_remove_element(sections, i - 1);
+	return changed;
 }
 
 /* The file a page shows for @src: a sized photo's largest variant, otherwise
@@ -8136,8 +8357,22 @@ ls_components_ensure_photo(LsComponents *self, JsonNode *plan_node, const gchar 
 		json_array_get_length(sections) == 0 || json_array_get_length(sections) >= MAX_SECTIONS ||
 		shows_photo(plan, json_object_get_member(json_node_get_object(page), "sections")))
 		return FALSE;
-	/* The route picks the photo, so the inner pages of one site differ. */
-	photo = json_array_get_object_element(photos, g_str_hash(path) % json_array_get_length(photos));
+	/* The page's place in the plan picks the photo, so neighbouring inner
+	 * pages differ, from those the home page's visual sequence does not
+	 * already show. */
+	{
+		JsonObject *media = member_object(plan, "media");
+		g_autoptr(GPtrArray) spare = g_ptr_array_new();
+		guint i;
+		for (i = 0; i < json_array_get_length(photos); i++) {
+			const gchar *candidate = ls_string(json_array_get_object_element(photos, i), "path");
+			if (media == NULL || (g_strcmp0(candidate, ls_string(media, "hero")) != 0 &&
+				g_strcmp0(candidate, ls_string(media, "detail")) != 0 && g_strcmp0(candidate, ls_string(media, "proof")) != 0))
+				g_ptr_array_add(spare, json_array_get_object_element(photos, i));
+		}
+		photo = spare->len > 0 ? g_ptr_array_index(spare, page_place(plan, path) % spare->len)
+			: json_array_get_object_element(photos, page_place(plan, path) % json_array_get_length(photos));
+	}
 	art = json_object_new();
 	json_object_set_string_member(art, "src", ls_string(photo, "path"));
 	json_object_set_string_member(art, "alt", ls_string(photo, "alt") != NULL ? ls_string(photo, "alt") : "");
@@ -8203,6 +8438,65 @@ has_class(const gchar *html, const gchar *name){
 		if ((at[-1] == '"' || at[-1] == ' ') && (at[length] == '"' || at[length] == ' '))
 			return TRUE;
 	return FALSE;
+}
+
+/* The supplied photo whose path or sized variant is @name, or %NULL. */
+static const gchar *
+photo_named(JsonObject *plan, const gchar *name){
+	JsonArray *photos = member_array(plan, "photos");
+	guint i, j;
+	for (i = 0; photos != NULL && i < json_array_get_length(photos); i++) {
+		JsonObject *photo = json_array_get_object_element(photos, i);
+		JsonArray *sized = member_array(photo, "variants");
+		if (g_strcmp0(ls_string(photo, "path"), name) == 0)
+			return ls_string(photo, "path");
+		for (j = 0; sized != NULL && j < json_array_get_length(sized); j++)
+			if (g_strcmp0(ls_string(json_array_get_object_element(sized, j), "path"), name) == 0)
+				return ls_string(photo, "path");
+	}
+	return NULL;
+}
+
+/* The first URL of the @attribute (src or srcset) in the tag at @tag. */
+static gchar *
+tag_url(const gchar *tag, const gchar *attribute){
+	const gchar *close = strchr(tag, '>');
+	g_autofree gchar *needle = g_strdup_printf(" %s=\"", attribute);
+	const gchar *at = strstr(tag, needle);
+	if (at == NULL || close == NULL || at > close)
+		return NULL;
+	at += strlen(needle);
+	return g_strndup(at, strcspn(at, "\" ,"));
+}
+
+/* Counts each supplied photo @html shows into @page: an img once, and a
+ * phone source of its picture only when it shows another photo. */
+static void
+count_page_photos(JsonObject *plan, const gchar *html, GHashTable *page){
+	g_autoptr(GPtrArray) pending = g_ptr_array_new();
+	const gchar *p;
+	for (p = strchr(html, '<'); p != NULL; p = strchr(p + 1, '<')) {
+		gboolean source = g_str_has_prefix(p, "<source "), img = g_str_has_prefix(p, "<img ");
+		g_autofree gchar *url = source ? tag_url(p, "srcset") : img ? tag_url(p, "src") : NULL;
+		const gchar *photo = url != NULL ? photo_named(plan, url) : NULL;
+		guint i;
+		if (g_str_has_prefix(p, "<picture"))
+			g_ptr_array_set_size(pending, 0);
+		if (photo == NULL)
+			continue;
+		if (source) {
+			g_ptr_array_add(pending, (gpointer)photo);
+			continue;
+		}
+		g_hash_table_insert(page, (gpointer)photo, GUINT_TO_POINTER(GPOINTER_TO_UINT(g_hash_table_lookup(page, photo)) + 1));
+		for (i = 0; i < pending->len; i++)
+			if (g_strcmp0(g_ptr_array_index(pending, i), photo) != 0) {
+				const gchar *other = g_ptr_array_index(pending, i);
+				g_hash_table_insert(page, (gpointer)other, GUINT_TO_POINTER(GPOINTER_TO_UINT(g_hash_table_lookup(page, other)) + 1));
+				break;
+			}
+		g_ptr_array_set_size(pending, 0);
+	}
 }
 
 static void
@@ -8296,6 +8590,18 @@ taste_page(LsComponents *self, JsonObject *plan, const gchar *path, const gchar 
 		if (!found)
 			g_string_append_printf(problems, "%s: no photograph on the page\n", path);
 	}
+	/* No page shows a supplied photo twice. */
+	{
+		g_autoptr(GHashTable) page = g_hash_table_new(g_str_hash, g_str_equal);
+		GHashTableIter iter;
+		gpointer photo, count;
+		count_page_photos(plan, html, page);
+		g_hash_table_iter_init(&iter, page);
+		while (g_hash_table_iter_next(&iter, &photo, &count))
+			if (GPOINTER_TO_UINT(count) > 1)
+				g_string_append_printf(problems, "%s: shows the photo %s %u times; each photo once per page "
+					"(shown twice or more)\n", path, (const gchar *)photo, GPOINTER_TO_UINT(count));
+	}
 }
 
 /* The brightest channel of a #rrggbb colour, 0 to 1. */
@@ -8352,4 +8658,22 @@ ls_components_check_taste(LsComponents *self, JsonNode *plan_node, JsonNode *bun
 		}
 	}
 	return problems->len == before;
+}
+
+guint
+ls_components_count_photos(LsComponents *self, JsonNode *plan_node, JsonNode *bundle){
+	g_autoptr(GHashTable) shown = g_hash_table_new(g_str_hash, g_str_equal);
+	JsonArray *files;
+	guint i;
+	g_return_val_if_fail(LS_IS_COMPONENTS(self), 0);
+	if (plan_node == NULL || !JSON_NODE_HOLDS_OBJECT(plan_node) || bundle == NULL || !JSON_NODE_HOLDS_OBJECT(bundle))
+		return 0;
+	files = member_array(json_node_get_object(bundle), "files");
+	for (i = 0; files != NULL && i < json_array_get_length(files); i++) {
+		JsonObject *file = json_array_get_object_element(files, i);
+		const gchar *path = ls_string(file, "path"), *content = ls_string(file, "content");
+		if (path != NULL && content != NULL && ls_string(file, "encoding") == NULL && g_str_has_suffix(path, ".html"))
+			count_page_photos(json_node_get_object(plan_node), content, shown);
+	}
+	return g_hash_table_size(shown);
 }

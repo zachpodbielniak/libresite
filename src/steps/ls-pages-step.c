@@ -780,9 +780,10 @@ accept_job(Job *job, LsComponents *components, JsonNode *plan, GError **error){
 			ls_components_apply_extras(components, plan, node);
 			ls_components_apply_composition(components, plan, node);
 		}
-		/* Each supplied photo shows once per page. */
-		ls_components_spread_photos(components, plan, node);
 		ls_visual_apply_page(json_node_get_object(plan), json_node_get_object(node));
+		/* Each supplied photo shows at most once per page, the visual
+		 * sequence's photos included. */
+		ls_components_spread_photos(components, plan, node);
 		/* And every page of a photo site shows one. */
 		ls_components_ensure_photo(components, plan, job->path, node);
 		if (!ls_components_check_page(components, plan, job->path, node, error))

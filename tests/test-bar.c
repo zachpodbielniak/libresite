@@ -223,7 +223,7 @@ static void
 test_sequence(void){
 	g_autoptr(LsComponents) library = ls_components_new(NULL);
 	const gchar *worlds[] = {"chalk", "copper", "forest", "electric", "ceramic", "oven"};
-	const gchar *layouts[] = {"full", "split", "object"};
+	const gchar *layouts[] = {"full", "split", "object", "right", "above", "scrim"};
 	const gchar *routes[] = {"index", "work", "start", "journal", "visit"};
 	const gchar *output = g_getenv("BAR_OUTPUT");
 	guint w, l, i;
@@ -242,6 +242,8 @@ test_sequence(void){
 		json_object_set_string_member(media, "clip", "assets/film.webm");
 		json_object_set_string_member(media, "clip_portrait", "assets/phone.webm");
 		g_assert_true(ls_components_apply_seed(library, plan, "visual-sequence", "trades", FALSE));
+		/* The seed deals the layout; every one is rendered here. */
+		json_object_set_string_member(v, "layout", layouts[l]);
 		for (i = 0; i < G_N_ELEMENTS(routes); i++) {
 			g_autofree gchar *fixture = g_strdup_printf("tests/fixtures/composed/%s.json", routes[i]);
 			g_autofree gchar *route = g_strdup_printf("%s.html", routes[i]);

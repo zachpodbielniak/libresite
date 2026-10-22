@@ -273,15 +273,33 @@ gchar *ls_components_suggest_opening(LsComponents *self, const gchar *seed);
  */
 gchar *ls_components_suggest_photo_opening(LsComponents *self, const gchar *seed);
 /**
+ * ls_components_suggest_scene:
+ * @self: a component library
+ * @seed: stable text identifying the site
+ *
+ * The calm photo-led opening a site from @seed wears when it has a visual
+ * sequence: one of the taste block's scenes (split, right, above, scrim).
+ * ls_components_apply_seed() sets it as the plan's visual.layout, so the
+ * seed, not the writer, picks it.
+ * Returns: (transfer full) (nullable): a scene variant; %NULL for a
+ *   library without taste scenes
+ */
+gchar *ls_components_suggest_scene(LsComponents *self, const gchar *seed);
+/**
  * ls_components_spread_photos:
  * @self: a component library
  * @plan: (transfer none): a plan with its supplied photos
  * @page: (transfer none): a page specification, changed in place
  *
- * Shows each supplied photo once per page: a section that repeats a photo
- * already shown above it (often the one the opening leads with) takes a
- * supplied photo the page has not shown yet, with its alt text; with none
- * left, the repeat stays.
+ * Shows each supplied photo at most once per page. Image slots claim photos
+ * in turn: the opening first, then sections with words of their own, then
+ * photo-only sections (media, gallery, carousel and the like), each in page
+ * order. A slot repeating a photo already claimed takes a supplied photo
+ * the page has not shown yet, preferring one no later slot asks for, with
+ * its alt text. With none left the repeat goes: a carousel or gallery item
+ * is dropped, an optional image removed, and a section that cannot stand
+ * without its image (or its items) is dropped. Run it after
+ * ls_visual_apply_page(), which adds the opening and craft photos.
  * Returns: whether @page changed
  */
 gboolean ls_components_spread_photos(LsComponents *self, JsonNode *plan, JsonNode *page);
@@ -310,10 +328,24 @@ gboolean ls_components_ensure_photo(LsComponents *self, JsonNode *plan, const gc
  * "illustrative" in visible copy, a page headline that is a question, a
  * page of a photo site without a photograph, letter chips, a look value,
  * variant, motion kit or art direction outside the calm systems, and a
- * page or surface colour louder than the chroma limit.
+ * page or surface colour louder than the chroma limit, and a page that
+ * shows one supplied photo twice (a picture's phone crop counts when it is
+ * another photo).
  * Returns: whether the site is clean
  */
 gboolean ls_components_check_taste(LsComponents *self, JsonNode *plan, JsonNode *bundle, GString *problems);
+/**
+ * ls_components_count_photos:
+ * @self: a component library
+ * @plan: (transfer none): the plan the site was built from
+ * @bundle: (transfer none): the composed {"files": [...]} bundle
+ *
+ * Counts the distinct supplied photos a built site shows across its pages
+ * (a picture's phone crop counts when it is another photo). A site given
+ * four or more should show at least four; the showcase gate checks it.
+ * Returns: the number of distinct supplied photos shown
+ */
+guint ls_components_count_photos(LsComponents *self, JsonNode *plan, JsonNode *bundle);
 /**
  * ls_components_list_sectors:
  * @self: a component library
@@ -553,8 +585,12 @@ gdouble ls_components_signature_overlap(JsonObject *a, JsonObject *b);
  * Deals the structure, look and identity from @seed and from
  * %LS_COMPONENTS_DEALS - 1 derived seeds and keeps the deal whose highest
  * similarity to any fingerprint in @avoid, plus %LS_COMPONENTS_WORN_OPENING
- * for each one that opens the same way, is lowest. Without @avoid the
- * seed is returned unchanged, so existing sites keep their deal.
+ * for each one that opens the same way, is lowest. With @photos the
+ * scene ls_components_suggest_scene() deals counts too: the same for each
+ * earlier site opening on it, and a whole point when the last fingerprint
+ * in @avoid (the site just before) does, so neighbours open differently.
+ * Without @avoid the seed is returned unchanged, so existing sites keep
+ * their deal.
  * Returns: (transfer full): the seed to deal this site from
  */
 gchar *ls_components_choose_seed(LsComponents *self, const gchar *seed, const gchar *sector, JsonArray *avoid,
