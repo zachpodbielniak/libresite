@@ -180,8 +180,8 @@ test_steer(void){
 	for (i = 0; i < 12; i++) {
 		g_autofree gchar *seed = g_strdup_printf("market-%u\nA roofer in a small town, number %u.", i, i);
 		gdouble closest = 0, own = 0;
-		g_autofree gchar *chosen = ls_components_choose_seed(components, seed, "trades", steered, &closest);
-		g_autofree gchar *again = ls_components_choose_seed(components, seed, "trades", steered, NULL);
+		g_autofree gchar *chosen = ls_components_choose_seed(components, seed, "trades", steered, FALSE, &closest);
+		g_autofree gchar *again = ls_components_choose_seed(components, seed, "trades", steered, FALSE, NULL);
 		g_autoptr(JsonObject) fingerprint = dealt(components, chosen);
 		g_autoptr(JsonObject) original = dealt(components, seed);
 		g_assert_cmpstr(chosen, ==, again);

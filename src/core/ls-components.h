@@ -462,6 +462,14 @@ gboolean ls_components_check_signature(const gchar *css, GError **error);
  */
 #define LS_COMPONENTS_DEALS 64
 /**
+ * LS_COMPONENTS_WORN_OPENING:
+ *
+ * What ls_components_choose_seed() adds to a deal's score for each site to
+ * avoid that opens the same way, so openings spread across a market rather
+ * than repeating behind otherwise different sites.
+ */
+#define LS_COMPONENTS_WORN_OPENING 0.03
+/**
  * LS_COMPONENTS_SIGNATURE_TOO_CLOSE:
  *
  * The ls_components_signature_overlap() share at or above which two
@@ -509,16 +517,19 @@ gdouble ls_components_signature_overlap(JsonObject *a, JsonObject *b);
  * @seed: the site seed (recipe name and brief)
  * @sector: (nullable): the business sector for identity dealing
  * @avoid: (transfer none) (nullable): earlier sites' fingerprints
+ * @photos: whether the site has supplied photos, so it wears the opening
+ *   ls_components_suggest_photo_opening() deals
  * @closest: (out) (optional): the chosen deal's highest similarity to @avoid
  *
  * Deals the structure, look and identity from @seed and from
  * %LS_COMPONENTS_DEALS - 1 derived seeds and keeps the deal whose highest
- * similarity to any fingerprint in @avoid is lowest. Without @avoid the
+ * similarity to any fingerprint in @avoid, plus %LS_COMPONENTS_WORN_OPENING
+ * for each one that opens the same way, is lowest. Without @avoid the
  * seed is returned unchanged, so existing sites keep their deal.
  * Returns: (transfer full): the seed to deal this site from
  */
 gchar *ls_components_choose_seed(LsComponents *self, const gchar *seed, const gchar *sector, JsonArray *avoid,
-	gdouble *closest);
+	gboolean photos, gdouble *closest);
 /**
  * ls_components_compose:
  * @self: a component library

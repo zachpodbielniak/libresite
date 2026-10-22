@@ -71,6 +71,40 @@
 	}
 	function fit() {
 		atRest(fitAll);
+		atRest(fitFold);
+	}
+	/* The home headline and first action belong on the first screen: when a
+	 * tall header or picture pushes them below, the opening's picture gives
+	 * up the difference, down to 40% of the screen or a 0.28 strip. */
+	function fitFold() {
+		var title = document.querySelector("main h1"), opening = title && title.closest("main > *");
+		var pictures, action, round, over, img, box, height, next;
+		if (!opening) return;
+		pictures = Array.prototype.filter.call(opening.querySelectorAll("img"), function (each) {
+			[each, each.parentElement].forEach(function (b) { b.style.height = b.style.minHeight = b.style.maxHeight = b.style.aspectRatio = ""; });
+			return !/\.svg(\?|#|$)/.test(each.getAttribute("src") || "");
+		});
+		action = Array.prototype.filter.call(opening.querySelectorAll(".actions a.button"), function (link) {
+			return link.offsetHeight > 0;
+		})[0];
+		for (round = 0; round < 3; round++) {
+			over = Math.max(title.getBoundingClientRect().bottom, action ? action.getBoundingClientRect().bottom : 0) +
+				window.scrollY + 16 - window.innerHeight;
+			/* The tallest picture starting above the headline. */
+			img = pictures.filter(function (each) {
+				return each.offsetHeight > 0 && each.getBoundingClientRect().top < title.getBoundingClientRect().top;
+			}).sort(function (a, b) { return b.offsetHeight - a.offsetHeight; })[0];
+			if (over <= 0 || !img) return;
+			/* A picture laid over its box takes the box's height. */
+			box = getComputedStyle(img).position === "absolute" ? img.parentElement : img;
+			height = box.getBoundingClientRect().height;
+			next = Math.max(window.innerHeight * 0.4, box.getBoundingClientRect().width * 0.28, height - over);
+			if (next >= height - 1) return;
+			box.style.minHeight = "0";
+			box.style.maxHeight = "none";
+			box.style.aspectRatio = "auto";
+			box.style.height = next + "px";
+		}
 	}
 	function fitAll() {
 		large().forEach(function (element) {
@@ -93,6 +127,7 @@
 	var pending = false;
 	fit();
 	if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+	window.addEventListener("load", fit);
 	window.addEventListener("resize", function () {
 		if (pending) return;
 		pending = true;

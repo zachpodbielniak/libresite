@@ -41,6 +41,7 @@ struct _LsComponents {
 	JsonObject *pictures;	/* bold opening -> needs, shows, photo or hides; NULL without */
 	JsonObject *undealt;	/* look axis -> values a theme may wear but never dealt; NULL without */
 	JsonArray *photo_below;	/* openings whose picture sits below the first screen; NULL without */
+	JsonObject *frame_below;	/* frame -> openings whose headline it pushes below the first screen; NULL without */
 	JsonNode *network_catalog;
 	JsonObject *networks;	/* social network -> {label, hosts, path}; NULL without networks.yaml */
 	GPtrArray *order;
@@ -1613,7 +1614,7 @@ load_undealt(LsComponents *self, JsonObject *root, GError **error){
 	GList *axis;
 	if (!json_object_has_member(root, "wow"))
 		return TRUE;
-	if (wow == NULL || !ls_object_keys(wow, "|undealt|photo_below|", NULL) || undealt == NULL)
+	if (wow == NULL || !ls_object_keys(wow, "|undealt|photo_below|frame_below|", NULL) || undealt == NULL)
 		return catalog_invalid(error, "wow", "needs undealt, a map of look axes to values"), FALSE;
 	if (json_object_has_member(wow, "photo_below")) {
 		JsonArray *below = member_array(wow, "photo_below");
@@ -1624,6 +1625,23 @@ load_undealt(LsComponents *self, JsonObject *root, GError **error){
 		if (below == NULL)
 			return catalog_invalid(error, "photo_below", "lists home openings as component/variant"), FALSE;
 		self->photo_below = below;
+	}
+	if (json_object_has_member(wow, "frame_below")) {
+		JsonObject *frames = member_object(member_object(self->looks, "frame"), "values");
+		JsonObject *below = member_object(wow, "frame_below");
+		g_autoptr(GList) names = below != NULL ? json_object_get_members(below) : NULL;
+		GList *name;
+		gboolean valid = below != NULL;
+		for (name = names; valid && name != NULL; name = name->next) {
+			JsonArray *openings = member_array(below, name->data);
+			guint i;
+			valid = frames != NULL && json_object_has_member(frames, name->data) && openings != NULL;
+			for (i = 0; valid && i < json_array_get_length(openings); i++)
+				valid = is_dealt_opening(self, json_array_get_string_element(openings, i));
+		}
+		if (!valid)
+			return catalog_invalid(error, "frame_below", "maps frames to home openings as component/variant"), FALSE;
+		self->frame_below = below;
 	}
 	axes = json_object_get_members(undealt);
 	for (axis = axes; axis != NULL; axis = axis->next) {
@@ -1685,6 +1703,12 @@ ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 	for (i = 0; i < G_N_ELEMENTS(shared); i++) {
 		g_autofree gchar *text = load_resource(self, digest, shared[i], TRUE, error);
 		if (text == NULL)
+			return NULL;
+	}
+	/* Older sealed libraries keep their original photo treatment. */
+	{
+		g_autofree gchar *text = load_resource(self, digest, "supplied-photos.css", snapshot == NULL, error);
+		if (text == NULL && snapshot == NULL)
 			return NULL;
 	}
 	self->order = g_ptr_array_new_with_free_func(g_free);
@@ -2097,7 +2121,8 @@ ls_components_deal_structure(LsComponents *self, const gchar *seed){
 }
 
 static gdouble gene(JsonObject *structure, const gchar *name, gdouble fallback);
-static gchar *photo_opening(LsComponents *self, const gchar *seed, const gchar *composition, const gchar *opening);
+static gchar *photo_opening(LsComponents *self, const gchar *seed, const gchar *composition, const gchar *opening,
+	const gchar *frame);
 
 gboolean
 ls_components_apply_structure(LsComponents *self, JsonNode *plan_node, const gchar *seed, gboolean themed){
@@ -2149,7 +2174,7 @@ ls_components_apply_structure(LsComponents *self, JsonNode *plan_node, const gch
 		/* A site with supplied photos opens on one. */
 		if (member_array(plan, "photos") != NULL && json_array_get_length(member_array(plan, "photos")) > 0) {
 			g_autofree gchar *led = photo_opening(self, seed, ls_string(structure, "composition"),
-				ls_string(structure, "opening"));
+				ls_string(structure, "opening"), ls_string(look, "frame"));
 			if (led != NULL)
 				json_object_set_string_member(structure, "opening", led);
 		}
@@ -2483,24 +2508,38 @@ pair_needs_art(LsComponents *self, const gchar *pair){
 	return component != NULL && opening_needs_art(self, component, slash + 1) && !json_list_has(self->photo_below, pair);
 }
 
+/* Whether @pair leads with its picture and keeps its headline on the first
+ * screen under @frame. */
+static gboolean
+pair_leads(LsComponents *self, const gchar *pair, const gchar *frame){
+	return pair_needs_art(self, pair) &&
+		(frame == NULL || !json_list_has(member_array(self->frame_below, frame), pair));
+}
+
 /* The opening a site with supplied photos wears: @opening when its picture
  * leads it, else one of @composition's openings that a picture leads, else
- * one of every such home opening, picked from @seed. */
+ * one of every such home opening, picked from @seed. A composition with a
+ * single such opening would hand it to every photo site it is dealt, so
+ * it takes the whole set too. Openings whose headline @frame pushes below
+ * the first screen stand aside. */
 static gchar *
-photo_opening(LsComponents *self, const gchar *seed, const gchar *composition, const gchar *opening){
+photo_opening(LsComponents *self, const gchar *seed, const gchar *composition, const gchar *opening,
+	const gchar *frame){
 	JsonArray *fitting = member_array(composition_layout(self, composition), "openings");
 	JsonArray *openings = member_array(member_object(self->kinds, "home"), "openings");
 	g_autoptr(GPtrArray) led = g_ptr_array_new_with_free_func(g_free);
 	gboolean fallback;
 	guint i;
-	if (pair_needs_art(self, opening))
+	if (pair_leads(self, opening, frame))
 		return g_strdup(opening);
 	for (i = 0; fitting != NULL && i < json_array_get_length(fitting); i++)
-		if (pair_needs_art(self, json_array_get_string_element(fitting, i)))
+		if (pair_leads(self, json_array_get_string_element(fitting, i), frame))
 			g_ptr_array_add(led, g_strdup(json_array_get_string_element(fitting, i)));
-	fallback = led->len == 0;
-	/* None in the composition: the pool is every home opening a picture
-	 * leads, gathered whole before one is picked. */
+	fallback = led->len < 2;
+	if (fallback)
+		g_ptr_array_set_size(led, 0);
+	/* Fewer than two in the composition: the pool is every home opening a
+	 * picture leads, gathered whole before one is picked. */
 	for (i = 0; fallback && openings != NULL && i < json_array_get_length(openings); i++) {
 		const gchar *name = json_array_get_string_element(openings, i);
 		g_autoptr(GList) variants = NULL;
@@ -2510,7 +2549,7 @@ photo_opening(LsComponents *self, const gchar *seed, const gchar *composition, c
 		variants = json_object_get_members(member_object(member_object(self->components, name), "variants"));
 		for (variant = variants; variant != NULL; variant = variant->next) {
 			gchar *pair = g_strdup_printf("%s/%s", name, (const gchar *)variant->data);
-			if (pair_needs_art(self, pair))
+			if (pair_leads(self, pair, frame))
 				g_ptr_array_add(led, pair);
 			else
 				g_free(pair);
@@ -2536,7 +2575,7 @@ ls_components_suggest_photo_opening(LsComponents *self, const gchar *seed){
 	if (composition != NULL && frame != NULL &&
 		json_list_has(member_array(composition_layout(self, composition), "avoid"), frame))
 		composition = deal_composition(self, seed, frame, "composition:frame");
-	return photo_opening(self, seed, composition, opening);
+	return photo_opening(self, seed, composition, opening, frame);
 }
 
 static JsonObject *plan_photo(JsonObject *plan, const gchar *src);
@@ -5241,13 +5280,15 @@ ls_components_signature_overlap(JsonObject *a, JsonObject *b){
 
 /* The fingerprint a seed deals, before any model has chosen anything: the
  * home page is the dealt forms of its families and the dealt extra, or the
- * identity's home sequence for a library without section forms. */
+ * identity's home sequence for a library without section forms. A site
+ * with @photos opens on the photo-led opening it will wear. */
 static JsonObject *
-dealt_fingerprint(LsComponents *self, const gchar *seed, const gchar *sector){
+dealt_fingerprint(LsComponents *self, const gchar *seed, const gchar *sector, gboolean photos){
 	g_autoptr(JsonObject) look = ls_components_suggest_look(self, seed);
 	g_autoptr(JsonObject) structure = ls_components_deal_structure(self, seed);
 	g_autoptr(JsonObject) identity = ls_components_suggest_identity(self, seed, sector);
-	g_autofree gchar *opening = ls_components_suggest_opening(self, seed);
+	g_autofree gchar *opening = photos ? ls_components_suggest_photo_opening(self, seed)
+		: ls_components_suggest_opening(self, seed);
 	g_autoptr(JsonArray) home = json_array_new();
 	JsonObject *forms = member_object(structure, "forms");
 	JsonArray *extras = member_array(structure, "extras");
@@ -5265,9 +5306,9 @@ dealt_fingerprint(LsComponents *self, const gchar *seed, const gchar *sector){
 
 gchar *
 ls_components_choose_seed(LsComponents *self, const gchar *seed, const gchar *sector, JsonArray *avoid,
-	gdouble *closest){
+	gboolean photos, gdouble *closest){
 	g_autofree gchar *best = NULL;
-	gdouble best_score = 2;
+	gdouble best_score = 2, best_close = 0;
 	guint attempt, i;
 	g_return_val_if_fail(LS_IS_COMPONENTS(self), NULL);
 	g_return_val_if_fail(seed != NULL, NULL);
@@ -5277,21 +5318,32 @@ ls_components_choose_seed(LsComponents *self, const gchar *seed, const gchar *se
 		return g_strdup(seed);
 	for (attempt = 0; attempt < LS_COMPONENTS_DEALS; attempt++) {
 		g_autofree gchar *candidate = attempt == 0 ? g_strdup(seed) : g_strdup_printf("%s\n~%u", seed, attempt);
-		g_autoptr(JsonObject) dealt = dealt_fingerprint(self, candidate, sector);
-		gdouble worst = 0;
+		g_autoptr(JsonObject) dealt = dealt_fingerprint(self, candidate, sector, photos);
+		JsonArray *home = member_array(dealt, "home");
+		const gchar *opening = home != NULL && json_array_get_length(home) > 0
+			? json_array_get_string_element(home, 0) : NULL;
+		gdouble worst = 0, worn = 0;
 		for (i = 0; i < json_array_get_length(avoid); i++) {
 			JsonNode *node = json_array_get_element(avoid, i);
+			JsonArray *theirs = JSON_NODE_HOLDS_OBJECT(node) ? member_array(json_node_get_object(node), "home") : NULL;
 			if (JSON_NODE_HOLDS_OBJECT(node))
 				worst = MAX(worst, ls_components_similarity(dealt, json_node_get_object(node)));
+			/* The opening is the first thing a visitor sees, so one already
+			 * worn by several earlier sites costs a little for each. */
+			if (opening != NULL && theirs != NULL && json_array_get_length(theirs) > 0 &&
+				JSON_NODE_HOLDS_VALUE(json_array_get_element(theirs, 0)) &&
+				g_strcmp0(json_array_get_string_element(theirs, 0), opening) == 0)
+				worn += LS_COMPONENTS_WORN_OPENING;
 		}
-		if (worst < best_score) {
-			best_score = worst;
+		if (worst + worn < best_score) {
+			best_score = worst + worn;
+			best_close = worst;
 			g_free(best);
 			best = g_steal_pointer(&candidate);
 		}
 	}
 	if (closest != NULL)
-		*closest = best_score;
+		*closest = best_close;
 	return g_steal_pointer(&best);
 }
 
@@ -6542,6 +6594,7 @@ share_views(Render *render){
 }
 
 static gboolean few_words(const gchar *text);
+static guint count_words(const gchar *text);
 
 static void
 render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArray *toc, gboolean reading){
@@ -6645,7 +6698,7 @@ render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArra
 		json_object_set_string_member(view, "subtag", i == 0 ? "h2" : "h3");
 		/* Display sizes suit short headlines; long ones step down natively. */
 		json_object_set_boolean_member(view, "long_heading", ls_string(view, "heading") != NULL &&
-			g_utf8_strlen(ls_string(view, "heading"), -1) > 38);
+			(g_utf8_strlen(ls_string(view, "heading"), -1) > 38 || count_words(ls_string(view, "heading")) > 5));
 		json_object_set_boolean_member(view, "has_text", json_object_has_member(content, "heading") ||
 			json_object_has_member(content, "body"));
 		json_object_set_boolean_member(view, "has_caption", json_object_has_member(content, "caption") ||
@@ -6831,16 +6884,23 @@ append_link_views(JsonArray *out, JsonArray *links, const gchar *path, GHashTabl
 	}
 }
 
-/* At most three words: short enough to set in outline at display size. */
-static gboolean
-few_words(const gchar *text){
+/* Short words still take separate lines in a display heading. */
+static guint
+count_words(const gchar *text){
 	g_auto(GStrv) words = NULL;
 	guint i, count = 0;
 	if (text == NULL)
-		return FALSE;
+		return 0;
 	words = g_strsplit_set(text, " \t\n", -1);
 	for (i = 0; words[i] != NULL; i++)
 		count += words[i][0] != '\0';
+	return count;
+}
+
+/* At most three words: short enough to set in outline at display size. */
+static gboolean
+few_words(const gchar *text){
+	guint count = count_words(text);
 	return count > 0 && count <= 3;
 }
 
@@ -7588,6 +7648,8 @@ ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages
 		g_autofree gchar *file = g_strdup_printf("art-%s.css", structure_string(plan, "direction"));
 		g_string_append_printf(css, "\n/* art direction */\n@layer ls-look {\n%s}\n", file_text(self, file));
 	}
+	if (member_array(plan, "photos") != NULL && file_text(self, "supplied-photos.css") != NULL)
+		g_string_append_printf(css, "\n@layer ls-look {\n%s}\n", file_text(self, "supplied-photos.css"));
 	/* The motion kit leads the stock motion; reduced motion still stops it. */
 	if (site_kit(self, plan) != NULL) {
 		JsonObject *kit = motion_kit(self, site_kit(self, plan));
