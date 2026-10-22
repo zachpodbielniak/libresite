@@ -1192,7 +1192,7 @@ small set of calm systems a dealt site may wear:
 - =looks=: the allowed values of each look axis, its default first. No
   textures, backdrops, torn or waved edges, outline or gradient lettering,
   tilted or blob images, glass, chrome or knob buttons, circled navigation.
-- =kits= and =directions=: four calm motion kits, three art directions.
+- =kits= and =directions=: four calm motion kits, two art directions (framed and line art; the window direction draws an arch behind art).
 - =forms= and =extras=: the section forms per family and the home extras.
   No directory or glossary as a services list, no job sheet, no marquee.
 - =angles=: home headline angles that state what the business does (no

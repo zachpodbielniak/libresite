@@ -105,7 +105,7 @@ test_no_gimmicks_dealt(void){
 		{"header", "floating"}, {"header", "glass"}};
 	static const gchar *const banned_structure[][2] = {
 		{"kit", "spotlight"}, {"kit", "aurora"}, {"kit", "hinge"}, {"kit", "ticker"}, {"kit", "parallax"},
-		{"direction", "collage"}, {"direction", "stamp"}, {"direction", "duotone"}, {"direction", "torn"},
+		{"direction", "collage"}, {"direction", "stamp"}, {"direction", "window"}, {"direction", "duotone"}, {"direction", "torn"},
 		{"opening", "hero/brutal"}, {"opening", "cover/stub"}, {"opening", "cover/flood"},
 		{"opening", "manifesto/stepped"}, {"opening", "hero/kinetic"},
 		{"angle", "question"}, {"angle", "character"}};
@@ -128,6 +128,10 @@ test_no_gimmicks_dealt(void){
 		variants = json_object_get_object_member(structure, "variants");
 		g_assert_cmpstr(ls_string(variants, "cards"), !=, "polaroid");
 		g_assert_cmpstr(ls_string(variants, "gallery"), !=, "polaroid");
+		/* Nor a banned opening through the per-component variants. */
+		g_assert_cmpstr(ls_string(variants, "hero"), !=, "arch");
+		g_assert_cmpstr(ls_string(variants, "hero"), !=, "brutal");
+		g_assert_cmpstr(ls_string(variants, "cover"), !=, "stub");
 		forms = json_object_get_object_member(structure, "forms");
 		if (forms != NULL) {
 			g_assert_cmpstr(ls_string(forms, "offer"), !=, "directory");

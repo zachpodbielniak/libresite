@@ -2182,7 +2182,7 @@ taste:
     frame: [top, wide, center, split, rail]
     headpos: [top, side]
   kits: [cascade, still, curtain, wash]
-  directions: [framed, lineart, window]
+  directions: [framed, lineart]
   forms:
     offer: [services, cards, entries, big-list]
     process: [steps, features, columns, tabs]

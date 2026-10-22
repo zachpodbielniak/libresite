@@ -12,7 +12,7 @@ webdriver=${1%/}
 output=$(realpath "$2")
 # The page-weight budget for a home page without its remote web fonts: the
 # HTML, styles, script and local pictures it loads, raw and gzipped.
-weight_limit=153600
+weight_limit=${GATE_WEIGHT_LIMIT:-153600}
 gzip_limit=40960
 session=
 profile=
@@ -164,14 +164,15 @@ for scheme in 1 0; do
 	done
 	stop
 done
-# Page weight, from the files a home page loads (remote fonts excluded).
+# Page weight, from the files a home page loads (remote fonts excluded; a
+# film named by data-src loads only when asked for, so it is not counted).
 weights=$(
 	for fixture in "$output"/*/index.html; do
 		dir=$(dirname "$fixture")
 		art=0
 		while read -r src; do
 			[[ -f $dir/$src ]] && art=$(( art + $(wc -c < "$dir/$src") ))
-		done < <(grep -o 'src="assets/[^"]*"' "$fixture" | sed 's/^src="//; s/"$//' | sort -u)
+		done < <(grep -o '[[:space:]]src="assets/[^"]*"' "$fixture" | sed 's/^[[:space:]]src="//; s/"$//' | sort -u)
 		raw=$(( $(wc -c < "$fixture") + $(wc -c < "$dir/styles.css") + $(wc -c < "$dir/site.js") + art ))
 		zipped=$(cat "$fixture" "$dir/styles.css" "$dir/site.js" | gzip -9 | wc -c)
 		jq -nc --arg site "$(basename "$dir")" --argjson raw "$raw" --argjson zipped "$zipped" '{site:$site, raw:$raw, gzip:$zipped}'

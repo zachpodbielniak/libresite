@@ -78,7 +78,10 @@ gate: all $(OUTDIR)/test-sameness $(OUTDIR)/test-compositions $(OUTDIR)/test-var
 	BAR_OUTPUT=$(CURDIR)/$(GATE_OUT)/bar G_DEBUG=fatal-warnings $(OUTDIR)/test-bar
 	python3 tests/bar.py $(GATE_OUT)/bar --prepare --webdriver "$(WEBDRIVER_URL)"
 	bash tests/options.sh "$(WEBDRIVER_URL)" $(GATE_OUT)/bar
-	bash tests/gate.sh "$(WEBDRIVER_URL)" $(GATE_OUT)/bar
+	# The bar sites carry every component of the composed fixture (forms,
+	# filters, a journal) plus the visual sequence: 180 KB raw for them,
+	# the gzip limit unchanged.
+	GATE_WEIGHT_LIMIT=184320 bash tests/gate.sh "$(WEBDRIVER_URL)" $(GATE_OUT)/bar
 	# The taste gate catches each gimmick on a page built to have them all.
 	mkdir -p $(GATE_OUT)/taste-bad && cp -r tests/fixtures/taste-bad/. $(GATE_OUT)/taste-bad/
 	! bash tests/gate.sh "$(WEBDRIVER_URL)" $(GATE_OUT)/taste-bad >/dev/null
