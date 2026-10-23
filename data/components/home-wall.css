@@ -1,0 +1,43 @@
+/* Home composition: gallery wall. Each section after the opening hangs as a
+ * framed piece: a thin frame, a tinted mat and the content inside. Where
+ * the page column has room, pieces hang two to a row in uneven widths, the
+ * wide one swapping sides each row and the second of each pair hung lower;
+ * a piece alone on its row, or one that scrolls sideways, takes the row.
+ * Closing sections, scrolling bands and edge-to-edge runs hang unframed
+ * across the width. Each piece is a container, so its component lays out
+ * for the piece. */
+.page--kind-home.home-wall main {
+	display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--space-6) var(--space-7);
+	padding-inline: max(var(--gutter), (100% - var(--max-width)) / 2);
+	padding-block-end: var(--section-space);
+}
+.page--kind-home.home-wall main > * { flex: 1 1 100%; min-width: 0; }
+.page--kind-home.home-wall main > .block:first-child { margin-inline: calc(-1 * max(var(--gutter), (100% - var(--max-width)) / 2)); }
+.page--kind-home.home-wall main > .block:not(:first-child, .cta, .contact-card, .call, .form, .marquee, .sec-w-bleed) {
+	container-type: inline-size;
+	padding: clamp(0.6rem, 2cqi, 1.25rem);
+	background: var(--surface); border: calc(var(--border) * 2) solid var(--ink);
+}
+.page--kind-home.home-wall main > .block:not(:first-child, .cta, .contact-card, .call, .form, .marquee, .sec-w-bleed) > .wrap {
+	width: auto; margin: 0; padding: var(--space-6) clamp(var(--space-4), 5cqi, var(--space-6));
+	background: var(--paper); border: var(--border) solid var(--line);
+}
+.page--kind-home.home-wall main > .block:not(:first-child):is(.cta, .contact-card, .call, .form, .marquee, .sec-w-bleed) { padding-block: var(--space-6) 0; }
+@container (min-width: 60rem) {
+	.page--kind-home.home-wall main > .block:not(:first-child, .cta, .contact-card, .call, .form, .marquee, .sec-w-bleed):nth-child(4n + 2),
+	.page--kind-home.home-wall main > .block:not(:first-child, .cta, .contact-card, .call, .form, .marquee, .sec-w-bleed):nth-child(4n + 1) {
+		flex: 1 1 calc(58% - var(--space-7));
+	}
+	.page--kind-home.home-wall main > .block:not(:first-child, .cta, .contact-card, .call, .form, .marquee, .sec-w-bleed):nth-child(4n + 3),
+	.page--kind-home.home-wall main > .block:not(:first-child, .cta, .contact-card, .call, .form, .marquee, .sec-w-bleed):nth-child(4n) {
+		flex: 1 1 calc(42% - var(--space-7));
+	}
+	.page--kind-home.home-wall main > .block:not(:first-child, .cta, .contact-card, .call, .form, .marquee, .sec-w-bleed):nth-child(odd) {
+		margin-top: var(--space-8);
+	}
+	/* Pieces that scroll sideways hang across the row, so the pictures
+	 * waiting off to the side never sit under the next piece. */
+	.page--kind-home.home-wall main > .block:not(:first-child):is(.carousel, .strip, .gallery--strip, .gallery--filmstrip, .voices--ribbon, .jumpnav) {
+		flex-basis: 100%; margin-top: 0;
+	}
+}

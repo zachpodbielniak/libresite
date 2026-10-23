@@ -1,0 +1,35 @@
+/* Home composition: lead story. Where the page column has room, the first
+ * section after the opening leads in a wide column and the next three
+ * stack beside it as briefs under heavy rules; the opening, any later
+ * sections and the close run across. Each piece is a container, so its component lays out for its
+ * column. */
+.page--kind-home.home-lead main {
+	display: grid; align-items: start;
+	grid-template-columns: [full-start] minmax(var(--gutter), 1fr) [content-start] minmax(0, calc(var(--max-width) * 0.64)) [mid] minmax(0, calc(var(--max-width) * 0.36)) [content-end] minmax(var(--gutter), 1fr) [full-end];
+}
+.page--kind-home.home-lead main > * { grid-column: full-start / full-end; min-width: 0; }
+@container (min-width: 60rem) {
+	.page--kind-home.home-lead main > .block:not(:first-child, :nth-child(n+6), .cta, .contact-card, .call, .form, .links, .social, .share, .pager, .marquee, .sec-w-bleed) {
+		grid-column: mid / content-end; container-type: inline-size;
+		padding-block: 0 var(--space-6); padding-inline-start: var(--space-6);
+	}
+	.page--kind-home.home-lead main > .block:not(:first-child, :nth-child(n+6), .cta, .contact-card, .call, .form, .links, .social, .share, .pager, .marquee, .sec-w-bleed) > .wrap {
+		width: 100%; padding-top: var(--space-4); border-top: calc(var(--border) * 3) solid var(--ink);
+	}
+	.page--kind-home.home-lead main > .block:not(:first-child, :nth-child(2), :nth-child(n+6), .cta, .contact-card, .call, .form, .links, .social, .share, .pager, .marquee, .sec-w-bleed) .section-head :is(h2, .h2) { font-size: var(--step-2); }
+	.page--kind-home.home-lead main > .block:nth-child(2):not(.cta, .contact-card, .call, .form, .links, .social, .share, .pager, .marquee, .sec-w-bleed) {
+		grid-column: content-start / mid; grid-row: 2 / span 3;
+		padding-inline: 0 var(--space-6); border-inline-end: var(--border) solid var(--line-strong);
+	}
+	.page--kind-home.home-lead main > .block:nth-child(2):not(.cta, .contact-card, .call, .form, .links, .social, .share, .pager, .marquee, .sec-w-bleed) .section-head :is(h2, .h2) {
+		font-size: var(--step-5); line-height: 1.02;
+	}
+	.page--kind-home.home-lead main > .block:nth-child(n+6) { padding-top: var(--section-space); }
+	.page--kind-home.home-lead main > .block:nth-child(-n+5):is(.cta, .contact-card, .call, .form, .links, .social, .share, .pager) { margin-top: var(--section-space); }
+}
+/* A sideways ribbon of cards would run under the next column: stack it.
+ * The cell is its own container, so this asks the screen. */
+@media (min-width: 60rem) {
+	.page--kind-home.home-lead main > .block:not(:first-child, :nth-child(n+6), .cta, .contact-card, .call, .form, .links, .social, .share, .pager, .marquee, .sec-w-bleed).voices--ribbon .voices__list { flex-wrap: wrap; overflow-x: visible; }
+	.page--kind-home.home-lead main > .block:not(:first-child, :nth-child(n+6), .cta, .contact-card, .call, .form, .links, .social, .share, .pager, .marquee, .sec-w-bleed).voices--ribbon .voices__list > li { flex: 1 1 100%; }
+}

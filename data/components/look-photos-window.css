@@ -1,0 +1,2 @@
+/* photos/window: a fine paper-coloured line drawn just inside each photo's edge, like a window mount. */
+.look-photos-window main img:is([src$=".jpg"], [src$=".jpeg"], [src$=".png"], [src$=".webp"]):not(.brand img) { outline: max(1px, 0.09rem) solid color-mix(in srgb, var(--paper) 88%, transparent); outline-offset: calc(-1 * clamp(0.5rem, 2.2cqi, 1.1rem)); }

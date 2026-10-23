@@ -1,0 +1,15 @@
+<div class="wrap">
+{{#heading}}<div class="section-head">
+<{{htag}} id="{{id}}-h">{{{heading_html}}}</{{htag}}>
+{{#intro}}<div class="prose">{{{intro}}}</div>
+{{/intro}}</div>
+{{/heading}}<ol class="stairs__list" role="list">
+{{#items}}<li class="stairs__step">
+<span class="stairs__n" aria-hidden="true">{{n}}</span>
+<div class="stairs__text">
+<{{subtag}} class="stairs__title">{{title}}</{{subtag}}>
+{{#body}}<div class="prose">{{{body}}}</div>
+{{/body}}</div>
+</li>
+{{/items}}</ol>
+</div>

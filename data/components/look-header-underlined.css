@@ -1,0 +1,2 @@
+/* header/underlined: a thick accent rule under the header. */
+.look-header-underlined .site-header { border-bottom: calc(var(--border) * 3) solid var(--accent); }

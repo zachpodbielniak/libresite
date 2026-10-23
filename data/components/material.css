@@ -1,0 +1,18 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.material { padding: clamp(2rem, 7cqi, 7rem) 0; }
+.material__grid { display: grid; gap: clamp(1.5rem, 5cqi, 5rem); align-items: center; }
+.material figure { margin: 0; }
+.material img { width: 100%; height: 60svh; max-height: 48rem; min-height: 22rem; object-fit: cover; }
+.material--detail img { object-fit: contain; background: var(--surface); }
+.material figcaption { font-size: 1rem; padding: .75rem 1rem; color: var(--ink); }
+.material__copy { padding: 1.25rem; max-width: 42rem; }
+.material h2 { font-size: clamp(2.25rem, 5cqi, 5rem); line-height: 1.06; letter-spacing: -.035em; text-wrap: balance; }
+.material__facts { display: grid; gap: 1.5rem; padding-top: 2rem; border-top: 2px solid var(--accent); }
+.material__facts:empty { display: none; }
+.material__facts dd { margin: 0; font-size: 2rem; }
+.material__facts .material__source { font-size: 1rem; }
+@media (min-width: 768px) {
+  .material__grid { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); }
+  .material--proof .material__grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr); }
+  .material--proof figure { order: 2; }
+}

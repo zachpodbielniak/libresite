@@ -1,0 +1,10 @@
+/* Art direction: window. Drawn artwork is seen through an arched window:
+ * glazing bars split it into four panes, a frame runs round it and a sill
+ * sits under it (frame and sill where the drawing stands alone). */
+.art-window main img[src$=".svg"]:not(.brand img, .cover img, .poster__art) { --bar: clamp(0.25rem, 1.2%, 0.5rem); border-radius: 50% 50% 0 0 / 34% 34% 0 0;
+	-webkit-mask: linear-gradient(#000 0 0) 0 0 / calc(50% - var(--bar) / 2) calc(42% - var(--bar) / 2) no-repeat, linear-gradient(#000 0 0) 100% 0 / calc(50% - var(--bar) / 2) calc(42% - var(--bar) / 2) no-repeat, linear-gradient(#000 0 0) 0 100% / calc(50% - var(--bar) / 2) calc(58% - var(--bar) / 2) no-repeat, linear-gradient(#000 0 0) 100% 100% / calc(50% - var(--bar) / 2) calc(58% - var(--bar) / 2) no-repeat;
+	mask: linear-gradient(#000 0 0) 0 0 / calc(50% - var(--bar) / 2) calc(42% - var(--bar) / 2) no-repeat, linear-gradient(#000 0 0) 100% 0 / calc(50% - var(--bar) / 2) calc(42% - var(--bar) / 2) no-repeat, linear-gradient(#000 0 0) 0 100% / calc(50% - var(--bar) / 2) calc(58% - var(--bar) / 2) no-repeat, linear-gradient(#000 0 0) 100% 100% / calc(50% - var(--bar) / 2) calc(58% - var(--bar) / 2) no-repeat; }
+.art-window main :is(figure, picture, a, div, li):has(> img[src$=".svg"]:only-child:not(.cover img, .poster__art)) { position: relative; isolation: isolate; margin-block-end: 1.5rem; }
+.art-window main :is(figure, picture, a, div, li):has(> img[src$=".svg"]:only-child:not(.cover img, .poster__art))::before { content: ""; position: absolute; inset: calc(var(--border) * -6); z-index: -1; border-radius: 50% 50% 0 0 / 34% 34% 0 0; background: var(--line-strong); pointer-events: none; }
+.art-window main :is(figure, picture, a, div, li):has(> img[src$=".svg"]:only-child:not(.cover img, .poster__art))::after { content: ""; position: absolute; inset: auto -0.9rem -1.1rem; height: 0.6rem; border-radius: 0.2rem; background: var(--line-strong); pointer-events: none; }
+.art-window main { overflow-x: clip; }

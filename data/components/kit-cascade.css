@@ -1,0 +1,22 @@
+/* Motion kit: cascade. The opening's lines arrive one after another, list
+ * items cascade in as they scroll into view where the browser supports
+ * scroll-driven animation, and buttons fill with a sweep. */
+@media (prefers-reduced-motion: no-preference) {
+	.kit-cascade main > .block:first-child :is(.kicker, h1, .lede, .prose, .actions, figure, img) { animation: kit-cascade-in 640ms cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+	.kit-cascade main > .block:first-child :is(h1) { animation-delay: 90ms; }
+	.kit-cascade main > .block:first-child :is(.lede, .prose) { animation-delay: 180ms; }
+	.kit-cascade main > .block:first-child :is(.actions) { animation-delay: 270ms; }
+	.kit-cascade main > .block:first-child :is(figure, img) { animation-delay: 140ms; }
+	@supports (animation-timeline: view()) {
+		.kit-cascade main > .block:not(:first-child) :is(.card, .bento__tile, .features__item, .services__item, .steps__item, .numbers__item, .facts__item, .gallery__item, .strip__item, .links__item) {
+			animation: kit-cascade-in linear both; animation-timeline: view(); animation-range: entry 5% entry 60%;
+		}
+		.kit-cascade main :is(.card, .bento__tile, .features__item, .services__item, .steps__item, .numbers__item, .facts__item, .gallery__item, .strip__item, .links__item):nth-child(2) { animation-range: entry 12% entry 67%; }
+		.kit-cascade main :is(.card, .bento__tile, .features__item, .services__item, .steps__item, .numbers__item, .facts__item, .gallery__item, .strip__item, .links__item):nth-child(3) { animation-range: entry 19% entry 74%; }
+		.kit-cascade main :is(.card, .bento__tile, .features__item, .services__item, .steps__item, .numbers__item, .facts__item, .gallery__item, .strip__item, .links__item):nth-child(n+4) { animation-range: entry 26% entry 81%; }
+	}
+	.kit-cascade .button { background-image: linear-gradient(var(--accent-ink), var(--accent-ink)); background-size: 0% 100%; background-repeat: no-repeat; transition: background-size 260ms ease, color 260ms ease; }
+	.kit-cascade .button:not(.button--ghost):hover { background-size: 100% 100%; color: var(--accent); }
+	.kit-cascade :focus-visible { transition: outline-offset 160ms ease; outline-offset: 5px; }
+}
+@keyframes kit-cascade-in { from { opacity: 0; transform: translateY(1.1rem); } }

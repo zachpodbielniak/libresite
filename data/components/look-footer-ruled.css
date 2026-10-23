@@ -1,0 +1,3 @@
+/* footer/ruled: a heavy ink rule over the footer and its name set large. */
+.look-footer-ruled .site-footer { border-top: calc(var(--border) * 4) solid var(--ink); }
+.look-footer-ruled .site-footer .brand { font-size: var(--step-3); }

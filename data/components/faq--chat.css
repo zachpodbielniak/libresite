@@ -1,0 +1,7 @@
+/* faq/chat: each question is a speech bubble and its answer replies from
+ * the other side, as in a conversation. */
+.faq--chat .faq__list { display: grid; gap: var(--space-4); border: 0; }
+.faq--chat .faq__item { border: 0; }
+.faq--chat .faq__item summary { max-width: min(100%, 34rem); padding: var(--space-3) var(--space-5); background: var(--surface); border-radius: 1.25rem 1.25rem 1.25rem 0.25rem; }
+.faq--chat .faq__item .prose { max-width: min(100%, 34rem); margin: var(--space-3) 0 0 auto; padding: var(--space-4) var(--space-5); background: var(--ink); color: var(--paper); border-radius: 1.25rem 1.25rem 0.25rem 1.25rem; }
+.faq--chat .faq__item .prose a { color: inherit; }

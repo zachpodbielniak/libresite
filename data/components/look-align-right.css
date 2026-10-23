@@ -1,0 +1,6 @@
+/* align/right: section headings and intros set to the right where the
+ * column has room; phones keep them left. */
+@container (min-width: 48rem) {
+	.look-align-right .section-head, .look-align-right main h2[id$="-h"] { margin-left: auto; text-align: right; }
+	.look-align-right .section-head .prose { margin-left: auto; }
+}

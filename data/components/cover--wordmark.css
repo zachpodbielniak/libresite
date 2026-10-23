@@ -1,0 +1,24 @@
+/* cover/wordmark: the picture full width and tall, the headline set huge
+ * across its foot on a band of the page colour that bites up into it.
+ * Rebuilt from scratch after docs/inspiration.org, openings 9 and 25. */
+/* The opening shapes its own picture; photo looks and art directions that
+ * reshape pictures elsewhere stand aside here. */
+.block.cover--wordmark.cover--wordmark .cover__art img { border: 0; border-radius: 0; padding: 0; background: none; box-shadow: none; clip-path: none; -webkit-mask: none; mask: none; transform: none; }
+.cover--wordmark .cover__art img { width: 100%; height: clamp(18rem, 64cqi, min(80vh, 50rem)); max-height: none; object-fit: cover; }
+.cover--wordmark .cover__art + .cover__text { position: relative; margin-top: calc(-1 * clamp(2.6rem, 9cqi, 8rem)); padding-top: 0; }
+.cover--wordmark .cover__text > .wrap > .kicker,
+.cover--wordmark .cover__title { width: fit-content; max-width: 100%; background: var(--paper); }
+.cover--wordmark .cover__text > .wrap > .kicker { margin: 0; padding: var(--space-2) var(--space-3) 0 0; }
+.cover--wordmark .cover__title {
+	margin: 0 0 0.2em; padding: 0.08em 0.22em 0 0; font-size: clamp(3rem, 12cqi, min(12rem, var(--max-width) * 0.12)); font-weight: 800;
+	line-height: 0.9; letter-spacing: -0.045em; text-transform: lowercase;
+}
+.cover--wordmark .cover__title--long { font-size: clamp(2.3rem, 6.8cqi, min(6.5rem, var(--max-width) * 0.068)); text-transform: none; letter-spacing: -0.03em; }
+.cover--wordmark .cover__title .em { color: var(--accent-text); font-style: normal; }
+.cover--wordmark .cover__text { padding-bottom: var(--space-6); }
+@container (min-width: 56rem) {
+	.cover--wordmark .cover__text > .wrap { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 0 var(--space-7); align-items: end; }
+	.cover--wordmark .cover__text > .wrap > :is(.kicker, .cover__title) { grid-column: 1 / -1; }
+	.cover--wordmark .cover__lede { margin: 0; }
+	.cover--wordmark .cover__text > .wrap > .actions { margin: 0; justify-content: flex-end; }
+}

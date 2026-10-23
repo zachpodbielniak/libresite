@@ -1,0 +1,8 @@
+/* gallery/polaroid: prints in thick paper frames, captions on the frame,
+ * each turned a little. */
+.gallery--polaroid .gallery__list { gap: var(--space-6); padding: var(--space-3); }
+.gallery--polaroid .gallery__item { padding: var(--space-3) var(--space-3) var(--space-5); background: var(--paper); border: var(--border) solid var(--line); box-shadow: 0 0.6rem 1.2rem -0.8rem color-mix(in srgb, var(--ink) 50%, transparent); transform: rotate(-1.5deg); }
+.gallery--polaroid .gallery__list > li:nth-child(even) .gallery__item { transform: rotate(1.25deg); }
+.gallery--polaroid .gallery__list > li:nth-child(3n) .gallery__item { transform: rotate(-0.5deg); }
+.gallery--polaroid .gallery__item img { border-radius: 0; }
+.block.gallery--polaroid { overflow-x: clip; }

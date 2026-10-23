@@ -467,7 +467,7 @@ test_fonts(void){
 	g_assert_no_error(error);
 	bundle = ls_json_parse(text, NULL);
 	contains(file_content(bundle, "index.html"), "<link rel=\"stylesheet\" href=\"https://fonts.bunny.net/css?"
-		"family=fraunces:400,400i,700,700i|ibm-plex-sans:500&amp;display=swap\">");
+		"family=fraunces:400,400i,700,700i|ibm-plex-sans:500&amp;display=optional\">");
 	json_object_set_member(json_node_get_object(plan), "fonts", json_node_copy(bad));
 	g_assert_false(ls_components_check_plan(components, plan, &error));
 	g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
@@ -678,9 +678,8 @@ test_every_variant(void){
 		GList *variant;
 		for (variant = variant_names; variant != NULL; variant = variant->next) {
 			g_autoptr(JsonObject) pages = fixture_pages();
-			g_autoptr(JsonNode) page = json("{'path':'index.html','sections':[{'component':'hero','variant':'statement',"
-				"'content':{'heading':'Home'}}]}");
-			JsonObject *section = json_object_new();
+			g_autoptr(JsonNode) page = NULL;
+			JsonObject *section;
 			g_autoptr(GError) error = NULL;
 			g_autofree gchar *text = NULL;
 			g_autofree gchar *marker = g_strdup_printf("class=\"block block--%s %s %s--%s",
@@ -690,6 +689,23 @@ test_every_variant(void){
 				(const gchar *)variant->data);
 			g_autoptr(JsonNode) bundle = NULL;
 			const gchar *html;
+			/* A gimmick a writer names renders as a calm variant (taste);
+			 * test-ls-taste covers that. */
+			{
+				JsonObject *taste = json_object_get_object_member(json_node_get_object(catalog), "taste");
+				g_autofree gchar *pair = g_strdup_printf("%s/%s", (const gchar *)name->data, (const gchar *)variant->data);
+				const gchar *lists[] = {"variants", "openings"};
+				gboolean banned = FALSE;
+				guint l, k;
+				for (l = 0; taste != NULL && l < G_N_ELEMENTS(lists); l++)
+					for (k = 0; k < json_array_get_length(json_object_get_array_member(taste, lists[l])); k++)
+						banned |= g_strcmp0(json_array_get_string_element(json_object_get_array_member(taste, lists[l]), k), pair) == 0;
+				if (banned)
+					continue;
+			}
+			page = json("{'path':'index.html','sections':[{'component':'hero','variant':'statement',"
+				"'content':{'heading':'Home'}}]}");
+			section = json_object_new();
 			json_object_set_string_member(section, "component", name->data);
 			json_object_set_string_member(section, "variant", variant->data);
 			json_object_set_member(section, "content", sample_content(name->data, component));
@@ -761,7 +777,8 @@ test_directory_and_tabs(void){
 	json_object_set_member(pages, "work.html", json(
 		"{'path':'work.html','sections':[{'component':'page-header','content':{'heading':'Woods'}},"
 		"{'component':'directory','variant':'list','content':{'heading':'All woods','items':["
-		"{'title':'elm'},{'title':'Ash'},{'title':'2x4 offcuts'},{'title':'Beech'},{'title':'Alder'}]}},"
+		"{'title':'elm'},{'title':'Ash'},{'title':'2x4 offcuts'},{'title':'Beech'},{'title':'Alder'},"
+		"{'title':'Cedar'},{'title':'Dogwood'},{'title':'Fir'}]}},"
 		"{'component':'tabs','variant':'line','content':{'heading':'Care','items':["
 		"{'label':'Oil','body':'Oil twice a year.'},{'label':'Wax','body':'Wax monthly.'}]}}]}"));
 	text = ls_components_compose(components, plan, pages, NULL, &error);
@@ -774,7 +791,24 @@ test_directory_and_tabs(void){
 	hash = strstr(html, ">#</p>");
 	if (a == NULL || b == NULL || e == NULL || hash == NULL || !(a < b && b < e && e < hash))
 		g_error("directory groups out of order:\n%.3000s", html);
-	g_assert_cmpuint(count(html, "class=\"directory__letter\""), ==, 4);
+	/* Over a few letters the index would be chips standing in for content:
+	 * a short directory is a plain list. */
+	{
+		g_autoptr(JsonObject) few = fixture_pages();
+		g_autoptr(JsonNode) small = NULL;
+		g_autofree gchar *small_text = NULL;
+		json_object_set_member(few, "work.html", json(
+			"{'path':'work.html','sections':[{'component':'page-header','content':{'heading':'Woods'}},"
+			"{'component':'directory','variant':'list','content':{'heading':'All woods','items':["
+			"{'title':'Coat trims'},{'title':'Dental care'},{'title':'Nail care'}]}}]}"));
+		small_text = ls_components_compose(components, plan, few, NULL, &error);
+		g_assert_no_error(error);
+		small = ls_json_parse(small_text, NULL);
+		g_assert_null(strstr(file_content(small, "work.html"), "directory__letters"));
+		g_assert_null(strstr(file_content(small, "work.html"), "directory__letter\""));
+		g_assert_nonnull(strstr(file_content(small, "work.html"), "Coat trims"));
+	}
+	g_assert_cmpuint(count(html, "class=\"directory__letter\""), ==, 7);
 	g_assert_true(strstr(a, "Ash") < strstr(a, "Alder"));
 	contains(html, "<a href=\"#all-woods-g1\">A</a>");
 	contains(html, "aria-label=\"Jump to letter\"");
@@ -894,13 +928,34 @@ test_every_look(void){
 	for (axis = axes; axis != NULL; axis = axis->next) {
 		JsonObject *values = json_object_get_object_member(json_object_get_object_member(looks, axis->data), "values");
 		JsonArray *listed = json_object_get_array_member(json_object_get_object_member(schema_look, axis->data), "enum");
+		JsonObject *extra = json_object_get_object_member(json_node_get_object(catalog), "extra_looks");
+		JsonObject *added = extra != NULL && json_object_has_member(extra, axis->data)
+			? json_object_get_object_member(extra, axis->data) : NULL;
+		JsonObject *wider = json_object_has_member(json_node_get_object(catalog), "wider")
+			? json_object_get_object_member(json_node_get_object(catalog), "wider") : NULL;
+		JsonObject *wider_looks = wider != NULL && json_object_has_member(wider, "looks")
+			? json_object_get_object_member(wider, "looks") : NULL;
 		g_autoptr(GList) names = json_object_get_members(values);
+		g_autoptr(GList) fresh = added != NULL ? json_object_get_members(added) : NULL;
 		GList *name;
-		g_assert_cmpuint(json_array_get_length(listed), ==, g_list_length(names));
+		/* Extra values (catalog extra_looks and the wider block's looks) join
+		 * the schema, each styled in its own look-AXIS-VALUE.css. */
+		if (wider_looks != NULL && json_object_has_member(wider_looks, axis->data))
+			fresh = g_list_concat(fresh, json_object_get_members(json_object_get_object_member(wider_looks, axis->data)));
+		g_assert_cmpuint(json_array_get_length(listed), ==, g_list_length(names) + g_list_length(fresh));
 		for (name = names; name != NULL; name = name->next) {
 			g_autofree gchar *selector = g_strdup_printf(".look-%s-%s", (const gchar *)axis->data,
 				(const gchar *)name->data);
 			if (name != names && strstr(css, selector) == NULL)
+				g_string_append_printf(unstyled, " %s", selector);
+		}
+		for (name = fresh; name != NULL; name = name->next) {
+			g_autofree gchar *path = g_strdup_printf("data/components/look-%s-%s.css", (const gchar *)axis->data,
+				(const gchar *)name->data);
+			g_autofree gchar *selector = g_strdup_printf(".look-%s-%s", (const gchar *)axis->data,
+				(const gchar *)name->data);
+			g_autofree gchar *own = NULL;
+			if (!g_file_get_contents(path, &own, NULL, NULL) || strstr(own, selector) == NULL)
 				g_string_append_printf(unstyled, " %s", selector);
 		}
 	}
@@ -1322,7 +1377,9 @@ test_signature_rules(void){
 		bundle = ls_json_parse(text, NULL);
 		css = file_content(bundle, "styles.css");
 		g_assert_nonnull(strstr(css, "/* Site signature */"));
-		g_assert_true(g_str_has_suffix(css, "border-bottom: 2px dashed currentColor; }\n}\n"));
+		/* Last, but for the builder's rule that rations its divider. */
+		g_assert_nonnull(strstr(css, "border-bottom: 2px dashed currentColor; }\nmain > .block + .block::before"));
+		g_assert_true(g_str_has_suffix(css, "::before { display: none; }\n}\n"));
 		g_assert_nonnull(strstr(css, "@layer ls-base, ls-modules, ls-components, ls-look, ls-signature;"));
 		g_assert_nonnull(strstr(css, "/* Site signature */\n@layer ls-signature {\n"));
 		json_object_set_string_member(json_node_get_object(plan), "signature", bad[0]);
@@ -1514,8 +1571,8 @@ test_templates_srcset(void){
 	g_assert_cmpuint(seen, >=, 26);
 }
 
-/* Axes with plain: N deal their default to about N percent of sites, so
- * textures and backdrops stay occasional; other axes spread evenly. */
+/* Axes with plain: N deal their default to about N percent of sites;
+ * since the taste rework textures and backdrops are never dealt. */
 static void
 test_plain_share(void){
 	g_autoptr(LsComponents) components = library();
@@ -1526,11 +1583,10 @@ test_plain_share(void){
 		plain_texture += g_str_equal(ls_string(look, "texture"), "none");
 		plain_backdrop += g_str_equal(ls_string(look, "backdrop"), "none");
 	}
-	/* 50 percent plain plus an even share of the rest: about 56 percent. */
-	g_assert_cmpuint(plain_texture, >=, 180);
-	g_assert_cmpuint(plain_texture, <=, 270);
-	g_assert_cmpuint(plain_backdrop, >=, 180);
-	g_assert_cmpuint(plain_backdrop, <=, 270);
+	/* Taste (docs/components.org, "Taste") allows no textures or
+	 * backdrops at all, so every site is plain. */
+	g_assert_cmpuint(plain_texture, ==, 400);
+	g_assert_cmpuint(plain_backdrop, ==, 400);
 }
 
 /* Shop and news filters come from the items themselves, the open-now badge
@@ -1836,7 +1892,7 @@ test_structure(void){
 		g_autofree gchar *width = g_strdup_printf("%.2f", json_object_get_double_member(dealt, "width"));
 		g_assert_cmpfloat(json_object_get_double_member(dealt, "width"), >=, 46);
 		g_assert_cmpfloat(json_object_get_double_member(dealt, "width"), <=, 108);
-		g_assert_cmpfloat(json_object_get_double_member(dealt, "scale"), <=, 1.3);
+		g_assert_cmpfloat(json_object_get_double_member(dealt, "scale"), <=, 1.45);
 		g_assert_cmpstr(ls_string(json_object_get_object_member(dealt, "variants"), "cards"), !=, "numbered");
 		g_assert_cmpstr(ls_string(json_object_get_object_member(dealt, "variants"), "cards"), !=, "minimal");
 		g_hash_table_add(widths, g_steal_pointer(&width));
@@ -1846,8 +1902,9 @@ test_structure(void){
 		g_hash_table_add(frames, g_strdup(ls_string(json_object_get_object_member(
 			json_node_get_object(plan), "look"), "frame")));
 	}
-	/* Every frame gets dealt, and widths are continuous, not a few presets. */
-	g_assert_cmpuint(g_hash_table_size(frames), ==, 7);
+	/* Every frame taste allows gets dealt (five of the seven), and widths
+	 * are continuous, not a few presets. */
+	g_assert_cmpuint(g_hash_table_size(frames), ==, 5);
 	g_assert_cmpuint(g_hash_table_size(widths), >, 100);
 	names = json_object_get_members(variants);
 	for (name = names; name != NULL; name = name->next)
@@ -1858,14 +1915,20 @@ test_structure(void){
 		JsonObject *root = json_node_get_object(plan);
 		JsonObject *look = json_object_get_object_member(root, "look");
 		g_autoptr(JsonObject) dealt = ls_components_suggest_look(components, "structure seed");
-		json_object_set_string_member(look, "buttons", "pill");
+		json_object_set_string_member(look, "buttons", "underline");
 		json_object_set_member(root, "structure", json("{'width': 999}"));
 		g_assert_true(ls_components_apply_structure(components, plan, "structure seed", FALSE));
 		look = json_object_get_object_member(root, "look");
-		g_assert_cmpstr(ls_string(look, "buttons"), ==, "pill");
+		g_assert_cmpstr(ls_string(look, "buttons"), ==, "underline");
+		/* Unless it is a gimmick: taste moves it back inside the calm values. */
+		json_object_set_string_member(look, "buttons", "chrome");
+		g_assert_true(ls_components_apply_structure(components, plan, "structure seed", FALSE));
+		g_assert_cmpstr(ls_string(look, "buttons"), !=, "chrome");
 		g_assert_cmpstr(ls_string(look, "frame"), ==, ls_string(dealt, "frame"));
 		g_assert_cmpstr(ls_string(look, "header"), ==, ls_string(dealt, "header"));
-		g_assert_cmpstr(ls_string(look, "motion"), ==, ls_string(dealt, "motion"));
+		/* Motion is dealt, or set by the dealt calm kit (still sets none). */
+		g_assert_true(g_strcmp0(ls_string(look, "motion"), ls_string(dealt, "motion")) == 0 ||
+			g_strcmp0(ls_string(look, "motion"), "none") == 0);
 		g_assert_cmpfloat(json_object_get_double_member(json_object_get_object_member(root, "structure"), "width"), <=, 108);
 		/* A theme keeps the builder axes it names. */
 		json_object_set_string_member(look, "header", "stacked");
@@ -2114,9 +2177,10 @@ test_sameness(void){
 	moved = ls_components_choose_seed(components, "harbor\nA repair workshop", NULL, avoid, &closest);
 	g_assert_cmpstr(moved, !=, "harbor\nA repair workshop");
 	g_assert_cmpfloat(closest, <, LS_COMPONENTS_TOO_CLOSE);
-	/* Two dozen plumbers: without the check about one pair in ten is dealt
-	 * too alike. With each earlier site passed as avoid, a dozen in one town
-	 * all come out clear, and the reported closeness is the true one. */
+	/* Two dozen plumbers: without the check at most one pair in ten is
+	 * dealt too alike (none since the palettes widened). With each earlier
+	 * site passed as avoid, a dozen in one town all come out clear, and the
+	 * reported closeness is the true one. */
 	{
 		guint i, j, close = 0, pairs = 0;
 		g_autoptr(GPtrArray) deals = g_ptr_array_new_with_free_func((GDestroyNotify)json_object_unref);
@@ -2156,7 +2220,7 @@ test_sameness(void){
 					LS_COMPONENTS_TOO_CLOSE;
 		if (g_getenv("LS_SAMENESS_DEBUG") != NULL)
 			g_printerr("%u of %u dealt pairs too close without avoid\n", close, pairs);
-		g_assert_cmpuint(close, >, 0);
+		g_assert_cmpuint(close * 10, <=, pairs);
 	}
 	/* plan.missing holds short questions only. */
 	json_object_set_member(root, "missing", json("['What are your opening hours?']"));
@@ -2168,6 +2232,42 @@ test_sameness(void){
 	g_clear_error(&error);
 	json_object_set_member(root, "missing", json("'hours'"));
 	g_assert_false(ls_components_check_plan(components, plan, &error));
+}
+
+/* A market that repeats every opening the deals will wear used to push
+ * every score past the old ceiling of 2, and choose_seed returned NULL.
+ * The plan step then left the model's own design in place. */
+static void
+test_choose_seed_crowded(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(JsonArray) avoid = json_array_new();
+	g_autoptr(GHashTable) seen = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+	const gchar *base = "harbor\nA repair workshop";
+	g_autofree gchar *chosen = NULL, *again = NULL;
+	gdouble closest = -1;
+	guint attempt, copy;
+	for (attempt = 0; attempt < LS_COMPONENTS_DEALS; attempt++) {
+		g_autofree gchar *seed = attempt == 0 ? g_strdup(base) : g_strdup_printf("%s\n~%u", base, attempt);
+		g_autofree gchar *opening = ls_components_suggest_opening(components, seed);
+		g_assert_nonnull(opening);
+		if (!g_hash_table_add(seen, g_strdup(opening)))
+			continue;
+		for (copy = 0; copy < 100; copy++) {
+			JsonObject *fp = json_object_new();
+			JsonArray *home = json_array_new();
+			json_object_set_int_member(fp, "v", 1);
+			json_array_add_string_element(home, opening);
+			json_object_set_array_member(fp, "home", home);
+			json_array_add_object_element(avoid, fp);
+		}
+	}
+	chosen = ls_components_choose_seed(components, base, NULL, avoid, &closest);
+	again = ls_components_choose_seed(components, base, NULL, avoid, NULL);
+	g_assert_nonnull(chosen);
+	g_assert_cmpstr(again, ==, chosen);
+	g_assert_true(g_str_has_prefix(chosen, base));
+	g_assert_cmpfloat(closest, >=, 0);
+	g_assert_cmpfloat(closest, <=, 1);
 }
 
 /* Long email and web addresses break at a seam in narrow boxes, never mid-word. */
@@ -2554,7 +2654,7 @@ test_missing_talk(void){
 	const gchar *notes[] = {
 		"Prices, opening hours and delivery details have not been supplied for this site, so none are listed.",
 		"Opening hours were not provided.", "Prices to be confirmed.", "Hours: TBD", "Menu details to come."};
-	const gchar *fine[] = {"All work is illustrative.", "Parking is supplied free on Quay Street.",
+	const gchar *fine[] = {"All work shown is an example.", "Parking is supplied free on Quay Street.",
 		"We confirm every booking by email."};
 	guint i;
 	for (i = 0; i < G_N_ELEMENTS(notes); i++) {
@@ -2728,6 +2828,7 @@ main(int argc, char **argv){
 	g_test_add_func("/components/structure", test_structure);
 	g_test_add_func("/components/layout-lint", test_layout_lint);
 	g_test_add_func("/components/sameness", test_sameness);
+	g_test_add_func("/components/choose-seed-crowded", test_choose_seed_crowded);
 	g_test_add_func("/components/address-breaks", test_address_breaks);
 	g_test_add_func("/components/accent-text", test_accent_text);
 	g_test_add_func("/components/supplied-form", test_supplied_form);

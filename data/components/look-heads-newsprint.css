@@ -1,0 +1,2 @@
+/* heads/newsprint: section headings between a heavy rule above and a hairline below, across the column, like a newspaper section. */
+.look-heads-newsprint main h2[id$="-h"] { padding-block: 0.32em 0.34em; border-top: max(4px, 0.13em) solid var(--ink); border-bottom: var(--border) solid var(--ink); }

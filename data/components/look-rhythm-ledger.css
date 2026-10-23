@@ -1,0 +1,16 @@
+/* rhythm/ledger: the column is ruled down both sides like a ledger, with a double rule across it between sections. */
+.look-rhythm-ledger main > .block:not(.block--bleed, .sec-w-bleed) {
+	--ls-col: min(100% - 2 * var(--gutter), var(--max-width)); --ls-edge: max(calc(var(--gutter) * 0.45), calc((100% - var(--ls-col)) / 2 - 2.25rem));
+}
+.look-rhythm-ledger main > :where(.block:not(.block--bleed, .sec-w-bleed)) {
+	background: linear-gradient(var(--line-strong), var(--line-strong)) left var(--ls-edge) top 0 / 1px 100% no-repeat,
+		linear-gradient(var(--line-strong), var(--line-strong)) right var(--ls-edge) top 0 / 1px 100% no-repeat;
+}
+.look-rhythm-ledger main > :where(.block + .block:not(.block--bleed, .sec-w-bleed)) {
+	background: linear-gradient(var(--line-strong), var(--line-strong)) center top / calc(100% - 2 * var(--ls-edge)) 1px no-repeat,
+		linear-gradient(var(--line-strong), var(--line-strong)) center top 4px / calc(100% - 2 * var(--ls-edge)) 1px no-repeat,
+		linear-gradient(var(--line-strong), var(--line-strong)) left var(--ls-edge) top 0 / 1px 100% no-repeat,
+		linear-gradient(var(--line-strong), var(--line-strong)) right var(--ls-edge) top 0 / 1px 100% no-repeat;
+}
+.look-rhythm-ledger main > .block + .block { padding-top: calc(var(--section-space) * 0.6); }
+@media (min-width: 64rem) { .look-rhythm-ledger.look-frame-offset main > .block { --ls-col: min(100% - 2 * var(--gutter), var(--max-width) + var(--ls-offset)); } }

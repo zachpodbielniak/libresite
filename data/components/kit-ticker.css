@@ -1,0 +1,16 @@
+/* Motion kit: ticker. A decorative band of the business's name runs above
+ * the footer, figures count up as they come into view (kit-ticker.js), and
+ * buttons press in. Without motion the band is not shown at all. */
+.kit-marquee { display: none; }
+@media (prefers-reduced-motion: no-preference) {
+	.kit-ticker .kit-marquee { display: block; overflow: hidden; padding-block: var(--space-4); border-block: var(--border) solid var(--line); background: var(--surface); }
+	.kit-ticker .kit-marquee__track { display: flex; width: max-content; gap: var(--space-7); animation: kit-ticker-run 48s linear infinite; }
+	.kit-ticker .kit-marquee__track span { flex: 0 0 auto; font-family: var(--font-display); font-weight: var(--heading-weight); font-size: var(--step-3); text-transform: var(--heading-case); color: var(--muted); }
+	.kit-ticker .kit-marquee__track span::after { content: "\2726"; margin-left: var(--space-7); color: var(--accent-text); }
+	.kit-ticker .button { transition: transform 120ms ease, box-shadow 120ms ease; }
+	.kit-ticker .button:hover { transform: translateY(1px) scale(0.98); }
+	.kit-ticker :focus-visible { transition: outline-offset 140ms ease; outline-offset: 4px; }
+	.kit-ticker main > .block:first-child h1 { animation: kit-ticker-in 520ms ease-out both; }
+}
+@keyframes kit-ticker-run { to { transform: translateX(-50%); } }
+@keyframes kit-ticker-in { from { opacity: 0; transform: scale(0.98); } }

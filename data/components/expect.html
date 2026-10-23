@@ -1,0 +1,13 @@
+<div class="wrap">
+{{#heading}}<div class="section-head">
+<{{htag}} id="{{id}}-h">{{{heading_html}}}</{{htag}}>
+{{#intro}}<div class="prose">{{{intro}}}</div>
+{{/intro}}</div>
+{{/heading}}<ul class="expect__grid" role="list">
+{{#items}}<li class="expect__card">
+<span class="expect__n" aria-hidden="true">{{n2}}</span>
+<{{subtag}} class="expect__title">{{title}}</{{subtag}}>
+<div class="expect__body prose">{{{body}}}</div>
+</li>
+{{/items}}</ul>
+</div>

@@ -1,0 +1,5 @@
+/* header/offset: the bar as a square ink-outlined card with a hard offset shadow. */
+/* Low specificity: frames that own the header (side panels, masthead
+ * rules, centred padding) keep their own say. */
+:where(.look-header-offset) .site-header { border-bottom: 0; padding-block: var(--space-3) var(--space-4); background: transparent; }
+:where(.look-header-offset) .site-header__inner { padding-inline: var(--space-4); background: var(--paper); border: var(--border-strong) solid var(--ink); border-radius: 0; box-shadow: 0.375rem 0.375rem 0 var(--ink); }

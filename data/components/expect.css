@@ -1,0 +1,26 @@
+/* expect: practical answers as dark fact cards headed by a large number,
+ * for what customers are shy to ask; a dotted corner on each. Rebuilt from
+ * scratch after docs/inspiration.org, sections 4. */
+.expect__grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr)); gap: var(--space-4); margin: 0; padding: 0; list-style: none; }
+.expect__card {
+	--paper: var(--ls-ink); --ink: var(--ls-paper); --surface: color-mix(in srgb, var(--ls-paper) 10%, var(--ls-ink));
+	--muted: var(--ls-paper); --accent: var(--ls-paper); --accent-ink: var(--ls-ink); --accent-text: var(--ls-paper);
+	--line: color-mix(in srgb, var(--ls-paper) 30%, var(--ls-ink)); --line-strong: var(--ls-paper); --focus: var(--ls-paper);
+	background: var(--ls-ink); color: var(--ls-paper);
+	position: relative; display: flex; flex-direction: column; gap: var(--space-2);
+	padding: clamp(var(--space-5), 4cqi, var(--space-6)); border-radius: max(var(--radius), 0.75rem);
+}
+.expect__card::after {
+	content: ""; position: absolute; top: var(--space-4); right: var(--space-4); width: 4.5rem; height: 3rem; opacity: 0.5;
+	background: radial-gradient(circle, var(--ls-accent) 1.5px, transparent 2px) 0 0 / 0.6rem 0.6rem;
+}
+.expect__n { font-family: var(--font-display); font-size: var(--step-5); font-weight: 900; line-height: 1; color: var(--ls-accent); }
+.expect__title { margin: var(--space-3) 0 0; font-size: var(--step-2); line-height: 1.15; }
+.expect--accent .expect__card {
+	--paper: var(--ls-accent); --ink: var(--ls-accent-ink); --surface: color-mix(in srgb, var(--ls-accent-ink) 12%, var(--ls-accent));
+	--muted: var(--ls-accent-ink); --accent: var(--ls-accent-ink); --accent-ink: var(--ls-accent); --accent-text: var(--ls-accent-ink);
+	--line: color-mix(in srgb, var(--ls-accent-ink) 35%, var(--ls-accent)); --line-strong: var(--ls-accent-ink); --focus: var(--ls-accent-ink);
+	background: var(--ls-accent); color: var(--ls-accent-ink);
+}
+.expect--accent .expect__card::after { background-image: radial-gradient(circle, var(--ls-accent-ink) 1.5px, transparent 2px); }
+.expect--accent .expect__n { color: var(--ls-accent-ink); }

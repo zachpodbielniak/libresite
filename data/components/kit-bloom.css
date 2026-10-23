@@ -1,0 +1,16 @@
+/* Motion kit: bloom. The opening comes into focus from a soft blur on
+ * arrival, sections and cards sharpen as they scroll into view where the
+ * browser supports scroll-driven animation, and cards and buttons glow in
+ * the accent under the pointer. */
+@media (prefers-reduced-motion: no-preference) {
+	.kit-bloom main > .block:first-child > * { animation: kit-bloom-focus 1300ms cubic-bezier(0.2, 0.6, 0.2, 1) both; }
+	@supports (animation-timeline: view()) {
+		.kit-bloom main > .block:not(:first-child) :is(.section-head, .card, .bento__tile, .features__item, .services__item, .gallery__item, .strip__item) { animation: kit-bloom-focus linear both; animation-timeline: view(); animation-range: entry 0% entry 60%; }
+	}
+	.kit-bloom main :is(.card, .bento__tile, .features__item, .services__item, .gallery__item, .strip__item) { transition: box-shadow 320ms ease; }
+	.kit-bloom main :is(.card, .bento__tile, .features__item, .services__item, .gallery__item, .strip__item):hover { box-shadow: 0 0 0 var(--border) var(--accent), 0 0.8rem 2.4rem -0.9rem var(--accent); }
+	.kit-bloom .button { transition: box-shadow 260ms ease; }
+	.kit-bloom .button:hover { box-shadow: 0 0 1.4rem -0.2rem color-mix(in srgb, var(--accent) 75%, transparent); }
+	.kit-bloom :focus-visible { transition: outline-offset 260ms ease; outline-offset: 6px; }
+}
+@keyframes kit-bloom-focus { from { opacity: 0; filter: blur(14px); } }

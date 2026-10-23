@@ -1,0 +1,2 @@
+/* lettering/marker: a broad accent highlighter stroke runs under every line of the page headline. */
+.look-lettering-marker main h1 { text-decoration: underline color-mix(in srgb, var(--accent) 34%, transparent); text-decoration-thickness: 0.3em; text-underline-offset: -0.2em; text-decoration-skip-ink: none; }

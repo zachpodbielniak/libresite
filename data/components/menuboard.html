@@ -1,0 +1,16 @@
+<div class="wrap">
+{{#heading}}<div class="section-head">
+<{{htag}} id="{{id}}-h">{{{heading_html}}}</{{htag}}>
+{{#intro}}<div class="prose">{{{intro}}}</div>
+{{/intro}}</div>
+{{/heading}}<ol class="menuboard__list" role="list">
+{{#items}}<li class="menuboard__row">
+<span class="menuboard__n" aria-hidden="true">{{n2}}</span>
+<div class="menuboard__main">
+<{{subtag}} class="menuboard__title">{{#link}}<a href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{title}}</a>{{/link}}{{^link}}{{title}}{{/link}}</{{subtag}}>
+{{#body}}<div class="menuboard__body prose">{{{body}}}</div>
+{{/body}}</div>
+<span class="menuboard__arrow" aria-hidden="true"></span>
+</li>
+{{/items}}</ol>
+</div>

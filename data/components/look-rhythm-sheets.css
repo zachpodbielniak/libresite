@@ -1,0 +1,5 @@
+/* rhythm/sheets: every section a rounded paper sheet laid on a surface-coloured page. */
+.look-rhythm-sheets main { padding-block: 0.75rem; background: var(--surface); }
+.look-rhythm-sheets main > .block { --ls-sheet: clamp(0.5rem, 1.6cqi, 1.25rem); margin-inline: var(--ls-sheet); padding-block: calc(var(--section-space) * 0.75); border-radius: clamp(0.75rem, 2cqi, 1.75rem); box-shadow: inset 0 0 0 1px var(--line); overflow: clip; }
+.look-rhythm-sheets main > :where(.block) { background: var(--paper); }
+.look-rhythm-sheets main > .block + .block { margin-top: var(--ls-sheet); }

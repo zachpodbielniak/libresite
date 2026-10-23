@@ -15,7 +15,8 @@
       "type": "string"
     },
     "tagline": {
-      "type": "string"
+      "type": "string",
+      "maxLength": 160
     },
     "lang": {
       "type": "string"
@@ -302,6 +303,87 @@
       "type": "object",
       "additionalProperties": {
         "type": "string"
+      }
+    },
+    "visual": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "idea",
+        "world",
+        "layout",
+        "headline",
+        "intro",
+        "craft_heading",
+        "craft_copy",
+        "proof_heading",
+        "proof_copy",
+        "close_heading"
+      ],
+      "properties": {
+        "idea": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "world": {
+          "type": "string",
+          "enum": [
+            "chalk",
+            "copper",
+            "forest",
+            "electric",
+            "ceramic",
+            "oven"
+          ],
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "layout": {
+          "type": "string",
+          "enum": [
+            "full",
+            "split",
+            "object"
+          ],
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "headline": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 52
+        },
+        "intro": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 180
+        },
+        "craft_heading": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 52
+        },
+        "craft_copy": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 180
+        },
+        "proof_heading": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 52
+        },
+        "proof_copy": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 180
+        },
+        "close_heading": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 52
+        }
       }
     }
   },

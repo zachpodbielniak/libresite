@@ -1,0 +1,15 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* Supplied photo colour */
+/* Cover treatments may tint drawn artwork, but a customer's photographs
+ * keep their colour. An authored monochrome photo look remains deliberate.
+ * The look layer leads the cover's component layer without !important. */
+body:not(.look-photos-mono, .look-photos-duotone) main img[src*="assets/photos/"] {
+	filter: none;
+	mix-blend-mode: normal;
+}
+/* A signature may decorate this label, but must not erase its opaque
+ * backing over a photograph or replace the locally paired text colour. */
+.cover .cover__text .kicker {
+	background: var(--paper) !important;
+	color: var(--ink) !important;
+}

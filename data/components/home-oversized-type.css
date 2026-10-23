@@ -1,0 +1,10 @@
+/* Home composition: oversized type. Section headings are set very large
+ * against the page column; site.js still shrinks a word that cannot fit. */
+.page--kind-home.home-oversized-type main > .block:not(:first-child) .section-head { max-width: min(100%, 60rem); }
+.page--kind-home.home-oversized-type main > .block:not(:first-child) .section-head :is(h2, .h2) {
+	font-size: clamp(var(--step-4), 7cqi, var(--step-7)); line-height: 0.98; letter-spacing: -0.025em;
+	max-width: 16ch; text-wrap: balance;
+}
+.page--kind-home.home-oversized-type main > .block:not(:first-child) > .wrap > :is(h2, .h2) {
+	font-size: clamp(var(--step-4), 7cqi, var(--step-7)); line-height: 0.98; letter-spacing: -0.025em;
+}

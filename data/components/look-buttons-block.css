@@ -1,0 +1,2 @@
+/* buttons/block: square, heavy, spaced capitals. */
+.look-buttons-block .button { border-radius: 0; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 800; padding-inline: 1.6em; }

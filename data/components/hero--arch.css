@@ -1,0 +1,24 @@
+/* hero/arch: a centred headline on the page colour, the picture rising
+ * from the section's foot in a tall arch over a soft disc of the surface.
+ * Rebuilt from scratch after docs/inspiration.org, openings 16. */
+/* The opening shapes its own picture; photo looks and art directions that
+ * reshape pictures elsewhere stand aside here. */
+.block.hero--arch.hero--arch .hero__art img { border: 0; border-radius: 0; padding: 0; background: none; box-shadow: none; clip-path: none; -webkit-mask: none; mask: none; transform: none; }
+.block.hero--arch { padding-bottom: 0; overflow-x: clip; }
+.hero--arch .hero__inner { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.hero--arch .hero__text { max-width: 52rem; }
+.hero--arch .hero__title { max-width: 16ch; margin-inline: auto; font-size: clamp(2.6rem, 8.5cqi, min(7.5rem, var(--max-width) * 0.085)); line-height: 0.95; letter-spacing: -0.03em; }
+.hero--arch .hero__title--long { max-width: 22ch; font-size: clamp(2.1rem, 5.4cqi, min(4.6rem, var(--max-width) * 0.054)); }
+.hero--arch .hero__title .em { color: var(--accent-text); font-style: italic; }
+.hero--arch .hero__lede { margin-inline: auto; }
+.hero--arch .actions { justify-content: center; }
+.hero--arch .hero__art { position: relative; width: min(100%, 36rem); margin: var(--space-7) auto 0; }
+.hero--arch .hero__art::before {
+	content: ""; position: absolute; z-index: -1; left: 50%; bottom: 0; width: 170%; aspect-ratio: 1;
+	border-radius: 50%; background: var(--surface); transform: translate(-50%, 55%);
+}
+.block.hero--arch.hero--arch .hero__art img {
+	width: 100%; height: clamp(18rem, 78cqi, 34rem); max-height: none; object-fit: cover;
+	border-radius: 999rem 999rem 0 0; border: var(--border-strong) solid var(--ink); border-bottom: 0;
+}
+.hero--arch .hero__inner { isolation: isolate; }

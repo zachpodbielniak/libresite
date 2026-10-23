@@ -1,0 +1,25 @@
+/* Home composition: gazette. On wide screens the whole home sits in the
+ * page column like a newspaper page: the opening over a double rule, then
+ * the sections run down two columns with a rule between them, each story
+ * under a heavy rule, and the close across the foot. Each story is a
+ * container, so its component lays out for the column. */
+@media (min-width: 72rem) {
+	.page--kind-home.home-gazette main {
+		columns: 2; column-gap: var(--space-8); column-rule: var(--border) solid var(--line-strong);
+		padding-inline: max(var(--gutter), (100% - var(--max-width)) / 2); padding-block-end: var(--section-space);
+	}
+	.page--kind-home.home-gazette main > * { column-span: all; }
+	.page--kind-home.home-gazette main > .block:first-child { margin-bottom: var(--space-6); border-bottom: calc(var(--border) * 4) double var(--ink); }
+	.page--kind-home.home-gazette main > .block:first-child > .wrap { width: 100%; }
+	.page--kind-home.home-gazette main > .block:not(:first-child, .cta, .contact-card, .call, .form, .links, .social, .share, .pager, .marquee, .sec-w-bleed) {
+		column-span: none; container-type: inline-size; break-inside: avoid;
+		padding-block: var(--space-4) var(--space-7);
+		border-top: calc(var(--border) * 3) solid var(--ink);
+	}
+	.page--kind-home.home-gazette main > .block:not(:first-child, .cta, .contact-card, .call, .form, .links, .social, .share, .pager, .marquee, .sec-w-bleed) > .wrap { width: 100%; }
+	.page--kind-home.home-gazette main > .block:not(:first-child, .cta, .contact-card, .call, .form, .links, .social, .share, .pager, .marquee, .sec-w-bleed) .section-head { margin-bottom: var(--space-5); }
+	.page--kind-home.home-gazette main > .block:is(.cta, .contact-card, .call, .form, .links, .social, .share, .pager) { margin-top: var(--space-5); }
+	/* A sideways ribbon of cards would run under the next column: stack it. */
+	.page--kind-home.home-gazette main > .block:not(:first-child, .cta, .contact-card, .call, .form, .links, .social, .share, .pager, .marquee, .sec-w-bleed).voices--ribbon .voices__list { flex-wrap: wrap; overflow-x: visible; }
+	.page--kind-home.home-gazette main > .block:not(:first-child, .cta, .contact-card, .call, .form, .links, .social, .share, .pager, .marquee, .sec-w-bleed).voices--ribbon .voices__list > li { flex: 1 1 100%; }
+}

@@ -1,0 +1,4 @@
+/* nav/tabs: links as tabs; the current page on a tinted tab with rounded top corners and an accent base. */
+.look-nav-tabs .site-nav a:not(.button) { padding-inline: 0.9em; border-bottom: 3px solid transparent; border-radius: max(var(--radius), 0.5rem) max(var(--radius), 0.5rem) 0 0; }
+.look-nav-tabs .site-nav a:not(.button):hover { border-bottom-color: var(--line-strong); background: color-mix(in srgb, var(--surface) 55%, transparent); }
+.look-nav-tabs .site-nav a[aria-current="page"], .look-nav-tabs .site-nav__group.is-section > a { border-bottom-color: var(--accent); background: var(--surface); color: var(--ink); }

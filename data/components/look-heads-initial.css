@@ -1,0 +1,2 @@
+/* heads/initial: the first letter of each section heading set larger and heavier in the accent. */
+.look-heads-initial main h2[id$="-h"]::first-letter { font-size: 1.5em; font-weight: 800; line-height: 0.9; color: var(--accent-text); }

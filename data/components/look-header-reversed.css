@@ -1,0 +1,4 @@
+/* header/reversed: navigation on the left, the wordmark on the right. */
+/* Centred and masthead frames stack the header; side panels own it. */
+.look-header-reversed:not(.look-frame-center, .look-frame-masthead) .site-header__inner { flex-direction: row-reverse; }
+@media (min-width: 64rem) { .look-header-reversed:is(.look-frame-rail, .look-frame-split) .site-header__inner { flex-direction: column; } }

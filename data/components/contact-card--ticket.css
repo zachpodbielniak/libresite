@@ -1,0 +1,6 @@
+/* contact-card/ticket: the details on a ticket with notched sides and a
+ * dashed tear line under the title. */
+.contact-card--ticket .contact-card__box { max-width: 48rem; padding: var(--space-6); background: var(--surface); border-radius: var(--radius);
+	-webkit-mask: radial-gradient(circle 0.9rem at 0 4.5rem, transparent 98%, #000) left / 51% 100% no-repeat, radial-gradient(circle 0.9rem at 100% 4.5rem, transparent 98%, #000) right / 51% 100% no-repeat;
+	mask: radial-gradient(circle 0.9rem at 0 4.5rem, transparent 98%, #000) left / 51% 100% no-repeat, radial-gradient(circle 0.9rem at 100% 4.5rem, transparent 98%, #000) right / 51% 100% no-repeat; }
+.contact-card--ticket .contact-card__title { padding-bottom: var(--space-4); border-bottom: calc(var(--border) * 2) dashed var(--line-strong); }

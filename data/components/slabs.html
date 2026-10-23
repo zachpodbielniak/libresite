@@ -1,0 +1,13 @@
+<div class="wrap">
+{{#heading}}<div class="section-head">
+<{{htag}} id="{{id}}-h">{{{heading_html}}}</{{htag}}>
+{{#intro}}<div class="prose">{{{intro}}}</div>
+{{/intro}}</div>
+{{/heading}}<ol class="slabs__list" role="list">
+{{#items}}<li class="slabs__item">
+<span class="slabs__n" aria-hidden="true">{{n2}}</span>
+<{{subtag}} class="slabs__title">{{#link}}<a href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{title}}</a>{{/link}}{{^link}}{{title}}{{/link}}</{{subtag}}>
+{{#body}}<div class="slabs__body prose">{{{body}}}</div>
+{{/body}}</li>
+{{/items}}</ol>
+</div>

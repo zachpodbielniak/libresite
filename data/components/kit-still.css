@@ -1,0 +1,11 @@
+/* Motion kit: still. Only the opening's heading settles on arrival; links,
+ * buttons and focus rings answer with small, crisp movements. */
+@media (prefers-reduced-motion: no-preference) {
+	.kit-still main > .block:first-child h1 { animation: kit-still-in 420ms ease-out both; }
+	.kit-still main .prose a { text-underline-offset: 0.15em; transition: text-underline-offset 140ms ease; }
+	.kit-still main .prose a:hover { text-underline-offset: 0.3em; }
+	.kit-still .button { transition: transform 140ms ease; }
+	.kit-still .button:hover { transform: translateY(-1px); }
+	.kit-still :focus-visible { transition: outline-offset 120ms ease; outline-offset: 4px; }
+}
+@keyframes kit-still-in { from { opacity: 0; } }

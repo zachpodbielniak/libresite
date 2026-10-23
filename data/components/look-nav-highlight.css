@@ -1,0 +1,6 @@
+/* nav/highlight: the current page underscored by a broad highlighter stroke in the accent. */
+/* The stroke sits low, under the letters' bodies, so text keeps its own
+ * contrast even where the accent is close to the text colour. */
+.look-nav-highlight .site-nav a:not(.button) { padding-inline: 0.25em; border-bottom-color: transparent; background: no-repeat 0 0 / 100% 100%; }
+.look-nav-highlight .site-nav a:not(.button):hover { border-bottom-color: transparent; background-image: linear-gradient(transparent 64%, color-mix(in srgb, var(--accent) 22%, transparent) 64% 84%, transparent 84%); }
+.look-nav-highlight .site-nav a[aria-current="page"], .look-nav-highlight .site-nav__group.is-section > a { border-bottom-color: transparent; background-image: linear-gradient(transparent 64%, color-mix(in srgb, var(--accent) 50%, transparent) 64% 84%, transparent 84%); }

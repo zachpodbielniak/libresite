@@ -1,0 +1,5 @@
+/* panels/folded: surface cards with the top corner turned down, like a dog-eared page. */
+.look-panels-folded :is(.features--boxed .features__item, .cards--bordered .card, .pricing__tier, .bento__tile, .split__panel, .voices__item, .services--grid .services__item, .locations--cards .locations__item, .contact-card--card .contact-card__box, .facts--grid .facts__item, .team--cards .team__person, .entries--cards .entries__item, .steps--grid .steps__item, .links--cards .links__item a, .quote--boxed .quote__figure, .menu--board .menu__section, .cta--card .cta__inner, .form--card .form__inner, .location--card .location__inner, .hours--grid .hours__row, .faq--boxed .faq__item, .details--bordered .details__item) {
+	background: linear-gradient(225deg, transparent 50%, color-mix(in srgb, var(--ink) 22%, var(--surface)) 50%) 100% 0 / 1.8rem 1.8rem no-repeat, linear-gradient(225deg, transparent 1.27rem, var(--surface) 1.27rem);
+	border: 0; border-radius: 0; box-shadow: none;
+}

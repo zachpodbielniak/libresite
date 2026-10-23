@@ -1,0 +1,6 @@
+/* rhythm/stacked: each section slides up over the one before with rounded top corners and a soft shadow, alternating paper and surface. */
+.look-rhythm-stacked main > .block + .block { margin-top: calc(var(--section-space) * -0.35); padding-top: calc(var(--section-space) * 0.8); border-radius: clamp(1.25rem, 4cqi, 2.75rem) clamp(1.25rem, 4cqi, 2.75rem) 0 0; box-shadow: 0 -0.7rem 1.6rem -1rem color-mix(in srgb, #000 30%, transparent); }
+.look-rhythm-stacked main > :where(.block + .block) { background: var(--paper); }
+.look-rhythm-stacked main > :where(.block + .block:nth-of-type(even)) { --surface: var(--ls-paper); background: var(--ls-surface); }
+/* Sections with little padding of their own end at their content: nothing slides over them. */
+.look-rhythm-stacked main > .block:is(.cover, .marquee, .notice, .figure, .jumpnav, .block--bleed, .sec-pad-tight) + .block { margin-top: 0; }

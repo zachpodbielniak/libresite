@@ -1,0 +1,17 @@
+/* poster/fold: the headline so large it runs past the first screen, the
+ * words and buttons small in the corner above it; it dares you to scroll.
+ * Rebuilt from scratch after docs/inspiration.org, openings 3. */
+.block.poster--fold { padding-block: var(--space-6) var(--section-space); }
+.poster--fold .poster__inner { display: flex; flex-direction: column; }
+.poster--fold .poster__foot { order: -1; margin: 0 0 clamp(var(--space-6), 6cqi, var(--space-8)); gap: var(--space-4); }
+.poster--fold .poster__kicker { order: -2; margin-bottom: var(--space-3); }
+.poster--fold .poster__lede { max-width: 30em; font-size: var(--step-0); }
+.poster--fold .poster__title {
+	font-size: clamp(4.25rem, 21cqi, min(24rem, var(--max-width) * 0.24)); font-weight: 900;
+	line-height: 0.8; letter-spacing: -0.055em; overflow-wrap: normal;
+}
+.poster--fold .poster__title .em { color: var(--accent-text); font-style: normal; }
+@container (min-width: 56rem) {
+	.poster--fold .poster__foot { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); }
+	.poster--fold .poster__foot .actions { margin: 0; }
+}

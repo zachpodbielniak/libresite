@@ -1,0 +1,4 @@
+/* header/slim: a compact bar under a heavy ink rule along the top of the page, with a small name. */
+:where(.look-header-slim) .site-header { border-top: calc(var(--border-strong) * 2) solid var(--ink); border-bottom-color: var(--line-strong); }
+:where(.look-header-slim) .site-header__inner { padding-block: var(--space-1); column-gap: var(--space-4); }
+:where(.look-header-slim .site-header) .brand { font-size: var(--step-0); font-weight: 800; }

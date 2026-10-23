@@ -6,7 +6,8 @@
 
 /* Fixed copies of the site colors. Inverted areas swap the working tokens
  * locally, so every component inside them keeps readable pairs. */
-:root { --ls-paper: var(--paper); --ls-ink: var(--ink); --ls-surface: var(--surface); --ls-accent: var(--accent); --ls-accent-ink: var(--accent-ink); }
+:root { --ls-paper: var(--paper); --ls-ink: var(--ink); --ls-surface: var(--surface); --ls-accent: var(--accent); --ls-accent-ink: var(--accent-ink);
+	--ls-accent-surface: var(--accent-surface, color-mix(in srgb, var(--ls-accent-ink) 12%, var(--ls-accent))); }
 
 /* Header. */
 .look-header-centered .site-header__inner { flex-direction: column; justify-content: center; padding-block: var(--space-4); }
@@ -183,10 +184,15 @@ main > .block:first-child:not(.cover--full, .cover--split) img:is([src$=".jpg"],
 /* Lettering. */
 .look-lettering-dropcap main :is(.block--text, .block--article, .block--story, .block--lead):first-of-type .prose > p:first-of-type::first-letter { float: left; margin: 0.08em 0.12em 0 0; font-family: var(--font-display); font-size: 3.4em; font-weight: var(--heading-weight); line-height: 0.82; color: var(--accent-text); }
 .look-lettering-smallcaps :is(.kicker, .site-nav a, th, .card__meta, .site-footer nav a) { font-variant-caps: all-small-caps; letter-spacing: 0.06em; }
-.look-lettering-gradient main h1 { background: linear-gradient(100deg, var(--ink) 30%, var(--accent-text)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-@supports not ((background-clip: text) or (-webkit-background-clip: text)) { .look-lettering-gradient main h1 { color: var(--ink); background: none; } }
-.look-lettering-outline main h1 { color: transparent; -webkit-text-stroke: max(1px, 0.025em) var(--ink); }
-@supports not (-webkit-text-stroke: 1px black) { .look-lettering-outline main h1 { color: var(--ink); } }
+/* Not on a heading set over a picture: the fill clipped to the letters would
+ * wipe out the band of page colour it sits on. */
+.look-lettering-gradient main h1:not(.cover h1, .poster--backdrop h1, .hero--banner h1) { background: linear-gradient(100deg, var(--ink) 30%, var(--accent-text)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+@supports not ((background-clip: text) or (-webkit-background-clip: text)) { .look-lettering-gradient main h1:not(.cover h1, .poster--backdrop h1, .hero--banner h1) { color: var(--ink); background: none; } }
+/* Outline lettering only on a main heading of three words or fewer, and only
+ * where the column is wide: a longer heading or a phone keeps it filled. */
+@container (min-width: 40rem) {
+	@supports (-webkit-text-stroke: 1px black) { .look-lettering-outline.h1-short main h1 { color: transparent; -webkit-text-stroke: max(1px, 0.025em) var(--ink); } }
+}
 
 /* Links in running text. */
 .look-links-thick main .prose a { text-decoration-color: var(--accent); text-decoration-thickness: 0.18em; text-underline-offset: 0.2em; }
@@ -242,7 +248,8 @@ body .split--contrast .split__panel:last-child { background: var(--accent); colo
 .look-images-rounded main img { border-radius: clamp(0.75rem, 2cqi, 1.5rem); }
 /* A cover is edge to edge and a framed media figure has its own mount: one frame, never two. */
 .look-images-framed main img:not(.cover img, .media--framed img, .brand img) { padding: clamp(0.35rem, 1cqi, 0.75rem); border: var(--border) solid var(--line-strong); border-radius: 0; background: var(--paper); }
-.look-images-print main img { filter: grayscale(1) contrast(1.15); }
+/* Artwork only: a customer's photos keep their colour. */
+.look-images-print main img[src$=".svg"] { filter: grayscale(1) contrast(1.15); }
 .look-images-shadow main img { border-radius: var(--radius); box-shadow: 0.6rem 0.6rem 0 var(--accent); }
 .look-images-shadow main :is(.bento__art, .strip__item img) { box-shadow: none; }
 
@@ -273,8 +280,11 @@ body .split--contrast .split__panel:last-child { background: var(--accent); colo
 .look-emphasis-italic .em { font-style: italic; font-weight: calc(var(--heading-weight) - 100); letter-spacing: 0; }
 .look-emphasis-highlight .em { background: linear-gradient(transparent 55%, color-mix(in srgb, var(--accent) 45%, transparent) 55% 92%, transparent 92%); padding-inline: 0.06em; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
 .look-emphasis-underline .em { text-decoration: underline wavy var(--accent); text-decoration-thickness: 0.05em; text-underline-offset: 0.06em; text-decoration-skip-ink: none; }
-.look-emphasis-outline .em { color: transparent; -webkit-text-stroke: max(1px, 0.03em) currentColor; }
-@supports not (-webkit-text-stroke: 1px black) { .look-emphasis-outline .em { color: var(--accent-text); } }
+/* Outlined emphasis is filled on phones, where thin strokes break up. */
+.look-emphasis-outline .em { color: var(--accent-text); }
+@container (min-width: 40rem) {
+	@supports (-webkit-text-stroke: 1px black) { .look-emphasis-outline .em { color: transparent; -webkit-text-stroke: max(1px, 0.03em) currentColor; } }
+}
 .look-emphasis-block .em { display: inline-block; padding: 0 0.12em; background: var(--accent); color: var(--accent-ink); transform: rotate(-1.5deg); line-height: 1.05; margin-block: 0.06em; }
 
 /* Ornament between sections. */
@@ -362,6 +372,9 @@ body main .page-header--index .kicker::before { content: none !important; }
 }
 /* center: a narrow journal column under a centered header. */
 .look-frame-center { --max-width: min(var(--frame-width), 46rem); }
+/* A split opening leaves the journal column: beside the words in 46rem its
+ * photo shrinks to a stamp. */
+.look-frame-center main > .hero--split:first-child { --max-width: min(var(--frame-width), 80rem); }
 .look-frame-center .site-header__inner { flex-direction: column; justify-content: center; text-align: center; padding-block: var(--space-5); }
 .look-frame-center .site-nav { justify-content: center; }
 .look-frame-center .site-header__tagline { display: block; margin: 0; font-size: var(--step--1); color: var(--muted); }
@@ -374,6 +387,11 @@ body main .page-header--index .kicker::before { content: none !important; }
 .look-frame-masthead .brand img { display: none; }
 .look-frame-masthead .site-header__tagline { display: block; margin: 0; padding-block: var(--space-2); width: 100%; text-align: center; font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); border-block: var(--border) solid var(--line-strong); }
 .look-frame-masthead .site-nav { justify-content: center; }
+/* A page that opens on a photograph keeps the nameplate but gives the
+ * photograph and its headline the first screen. */
+.look-frame-masthead:has(main > .cover:first-child) .site-header__inner { gap: var(--space-2); padding-block: var(--space-4) var(--space-2); }
+.look-frame-masthead:has(main > .cover:first-child) .brand { font-size: clamp(2rem, 5vw, 4rem); }
+.look-frame-masthead:has(main > .cover:first-child) .site-header__tagline { padding-block: var(--space-1); }
 
 /* Headings wrap between words, never with an inserted hyphen. site.js
  * shrinks a heading whose longest word is wider than its column. */
@@ -409,8 +427,10 @@ main > .block.sec-pad-tight + .block { padding-top: calc(var(--section-space) * 
  * keeps its contrast. */
 main > .block.sec-tone { padding-block: var(--section-space); }
 main > .block.sec-tone + .block { padding-top: var(--section-space); }
-main > .block.sec-tone.sec-tone-tint { --paper: var(--ls-surface); background: var(--ls-surface); }
-main > .block.sec-tone.sec-tone-ink, main .notice--banner .notice__box, main .hours--board > .wrap > .hours__list {
+/* A section that paints its own accent band keeps it: a dealt tint or ink
+ * would repaint the band under text coloured for the accent. */
+main > .block.sec-tone.sec-tone-tint:not(.cta--band, .statement--band, .marquee--accent, .contact-card--band) { --paper: var(--ls-surface); background: var(--ls-surface); }
+main > .block.sec-tone.sec-tone-ink:not(.cta--band, .statement--band, .marquee--accent, .contact-card--band), main .notice--banner .notice__box, main .hours--board > .wrap > .hours__list {
 	--paper: var(--ls-ink); --ink: var(--ls-paper); --surface: color-mix(in srgb, var(--ls-paper) 10%, var(--ls-ink));
 	--muted: var(--ls-paper); --accent: var(--ls-paper); --accent-ink: var(--ls-ink); --accent-text: var(--ls-paper);
 	--line: color-mix(in srgb, var(--ls-paper) 30%, var(--ls-ink)); --line-strong: var(--ls-paper); --focus: var(--ls-paper); --field: var(--ls-ink); --danger: var(--ls-paper);
@@ -421,7 +441,7 @@ main > .block.sec-tone.sec-tone-ink, main .notice--banner .notice__box, main .ho
  * even when a plan restyle colours their text with var(--accent). */
 main > .block.sec-tone.sec-tone-accent, main .block:is(.cta--band, .statement--band, .marquee--accent, .contact-card--band), main .media--flush .media__text, main .cta--sidebar .cta__text, main .facts--ribbon .facts__list,
 main .offer__stub, main .notice--accent .notice__box, main .split--contrast .split__panel:last-child {
-	--paper: var(--ls-accent); --ink: var(--ls-accent-ink); --surface: color-mix(in srgb, var(--ls-accent-ink) 12%, var(--ls-accent));
+	--paper: var(--ls-accent); --ink: var(--ls-accent-ink); --surface: var(--ls-accent-surface);
 	--muted: var(--ls-accent-ink); --accent: var(--ls-accent-ink); --accent-ink: var(--ls-accent); --accent-text: var(--ls-accent-ink);
 	--line: color-mix(in srgb, var(--ls-accent-ink) 35%, var(--ls-accent)); --line-strong: var(--ls-accent-ink); --focus: var(--ls-accent-ink); --field: var(--ls-accent); --danger: var(--ls-accent-ink);
 	background: var(--ls-accent); color: var(--ls-accent-ink);

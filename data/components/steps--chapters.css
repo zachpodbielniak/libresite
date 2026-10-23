@@ -1,0 +1,7 @@
+/* steps/chapters: each step is a chapter, its number set huge in outline
+ * beside the words, between rules. */
+.steps--chapters .steps__list { gap: 0; border-top: var(--border) solid var(--line-strong); }
+.steps--chapters .steps__item { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-2) var(--space-6); padding-block: var(--space-6); border-bottom: var(--border) solid var(--line-strong); }
+.steps--chapters .steps__n { width: auto; height: auto; margin: 0; background: none; border-radius: 0; place-items: start; font-size: var(--step-6); line-height: 0.9; color: var(--ink); }
+@supports (-webkit-text-stroke: 1px black) { .steps--chapters .steps__n { color: transparent; -webkit-text-stroke: max(1px, 0.025em) var(--ink); } }
+@container (min-width: 48rem) { .steps--chapters .steps__item { grid-template-columns: minmax(0, 8rem) minmax(0, 1fr); } .steps--chapters .steps__n { grid-row: 1 / span 2; } .steps--chapters .steps__item > :not(.steps__n) { grid-column: 2; } }

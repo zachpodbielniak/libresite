@@ -1,0 +1,32 @@
+/* slabs: offers as wide stacked slabs, each numbered, its name set large
+ * beside its words; turning slabs change ground from the surface to the
+ * ink to the accent. Rebuilt from scratch after docs/inspiration.org,
+ * sections 14. */
+.slabs__list { display: grid; gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
+.slabs__item {
+	display: grid; gap: var(--space-2) var(--space-6); padding: clamp(var(--space-5), 5cqi, var(--space-7));
+	background: var(--surface); border-radius: max(var(--radius), 0.5rem);
+}
+.slabs__n { font-family: var(--font-display); font-size: var(--step-4); font-weight: 800; line-height: 1; color: var(--accent-text); font-variant-numeric: tabular-nums; }
+.slabs__title { margin: 0; font-size: var(--step-4); line-height: 1.02; letter-spacing: -0.02em; }
+.slabs__title a { text-decoration: none; }
+.slabs__title a:hover { text-decoration: underline; color: inherit; }
+.slabs__body { align-self: end; }
+.slabs--turning .slabs__item:nth-child(3n + 2) {
+	--paper: var(--ls-ink); --ink: var(--ls-paper); --surface: color-mix(in srgb, var(--ls-paper) 10%, var(--ls-ink));
+	--muted: var(--ls-paper); --accent: var(--ls-paper); --accent-ink: var(--ls-ink); --accent-text: var(--ls-paper);
+	--line: color-mix(in srgb, var(--ls-paper) 30%, var(--ls-ink)); --line-strong: var(--ls-paper); --focus: var(--ls-paper);
+	background: var(--ls-ink); color: var(--ls-paper);
+}
+.slabs--turning .slabs__item:nth-child(3n) {
+	--paper: var(--ls-accent); --ink: var(--ls-accent-ink); --surface: color-mix(in srgb, var(--ls-accent-ink) 12%, var(--ls-accent));
+	--muted: var(--ls-accent-ink); --accent: var(--ls-accent-ink); --accent-ink: var(--ls-accent); --accent-text: var(--ls-accent-ink);
+	--line: color-mix(in srgb, var(--ls-accent-ink) 35%, var(--ls-accent)); --line-strong: var(--ls-accent-ink); --focus: var(--ls-accent-ink);
+	background: var(--ls-accent); color: var(--ls-accent-ink);
+}
+.slabs--ruled .slabs__item { padding-inline: 0; background: none; border-radius: 0; border-top: calc(var(--border-strong) * 2) solid var(--ink); }
+.slabs--ruled .slabs__title { font-size: var(--step-5); }
+@container (min-width: 48rem) {
+	.slabs__item { grid-template-columns: 5.5rem minmax(0, 1.1fr) minmax(0, 1fr); align-items: start; }
+	.slabs__n { font-size: var(--step-5); }
+}

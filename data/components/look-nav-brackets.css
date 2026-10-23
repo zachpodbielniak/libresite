@@ -1,0 +1,9 @@
+/* nav/brackets: links in monospace; the current page held in accent square brackets. */
+.look-nav-brackets .site-nav a:not(.button) { gap: 0.3em; border-bottom-color: transparent; font-family: var(--font-mono); font-size: var(--step--1); font-weight: 500; letter-spacing: 0.02em; }
+.look-nav-brackets .site-nav a:not(.button)::before { content: "[" / ""; color: transparent; }
+.look-nav-brackets .site-nav a:not(.button)::after { content: "]" / ""; color: transparent; }
+.look-nav-brackets .site-nav a:not(.button):hover { border-bottom-color: transparent; }
+.look-nav-brackets .site-nav a:not(.button):hover::before, .look-nav-brackets .site-nav a:not(.button):hover::after { color: var(--muted); }
+.look-nav-brackets .site-nav a[aria-current="page"]::before, .look-nav-brackets .site-nav a[aria-current="page"]::after,
+.look-nav-brackets .site-nav__group.is-section > a::before, .look-nav-brackets .site-nav__group.is-section > a::after { color: var(--accent-text); font-weight: 700; }
+.look-nav-brackets .site-nav a[aria-current="page"], .look-nav-brackets .site-nav__group.is-section > a { border-bottom-color: transparent; }

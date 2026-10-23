@@ -1,0 +1,17 @@
+/* Home composition: zigzag. Where the page column has room, sections after
+ * the opening step from one side to the other, each marked by an accent
+ * rule on its leading edge. */
+@container (min-width: 64rem) {
+	.page--kind-home.home-zigzag main > .block:not(:first-child, .marquee, .sec-w-bleed) > .wrap {
+		width: min(100% - 2 * var(--gutter), var(--max-width) * 0.8);
+		border-inline-start: calc(var(--border) * 4) solid var(--accent); padding-inline-start: var(--space-6);
+	}
+	.page--kind-home.home-zigzag main > .block:not(:first-child, .marquee, .sec-w-bleed):nth-child(even) > .wrap {
+		margin-inline: var(--gutter) auto;
+	}
+	.page--kind-home.home-zigzag main > .block:not(:first-child, .marquee, .sec-w-bleed):nth-child(odd) > .wrap {
+		margin-inline: auto var(--gutter);
+		border-inline-start: 0; border-inline-end: calc(var(--border) * 4) solid var(--accent);
+		padding-inline: 0 var(--space-6);
+	}
+}

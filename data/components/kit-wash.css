@@ -1,0 +1,21 @@
+/* Motion kit: wash. The opening arrives under a wash of the accent that
+ * fades back to its own colours while its heading darkens from the accent
+ * to ink, sections wash in as they scroll into view where the browser
+ * supports scroll-driven animation, and cards, buttons and links take on
+ * colour under the pointer. */
+@media (prefers-reduced-motion: no-preference) {
+	.kit-wash main > .block:first-child { animation: kit-wash-fade 1800ms ease-out both; }
+	.kit-wash main > .block:first-child h1 { animation: kit-wash-ink 1800ms ease-out both; }
+	@supports (animation-timeline: view()) {
+		.kit-wash main > .block:not(:first-child) { animation: kit-wash-fade linear both; animation-timeline: view(); animation-range: entry 0% cover 45%; }
+	}
+	.kit-wash main :is(.card, .bento__tile, .features__item, .services__item, .gallery__item, .strip__item) { transition: background-color 300ms ease; }
+	.kit-wash main :is(.card, .bento__tile, .features__item, .services__item, .gallery__item, .strip__item):hover { background-color: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+	.kit-wash .button { transition: box-shadow 260ms ease; }
+	.kit-wash .button:hover { box-shadow: inset 0 0 0 100vmax color-mix(in srgb, var(--ink) 14%, transparent); }
+	.kit-wash main .prose a { transition: color 220ms ease; }
+	.kit-wash main .prose a:hover { color: var(--ink); }
+	.kit-wash :focus-visible { transition: outline-offset 240ms ease; outline-offset: 5px; }
+}
+@keyframes kit-wash-fade { from { background-color: color-mix(in srgb, var(--accent) 28%, var(--paper)); } }
+@keyframes kit-wash-ink { from { color: var(--accent-text); } }

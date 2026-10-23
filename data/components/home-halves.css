@@ -1,0 +1,33 @@
+/* Home composition: halves. Where the page column has room, each section
+ * with a heading is split in two: the heading on a tinted half that runs to
+ * the screen edge, the content on the other, changing side from one
+ * section to the next. */
+@container (min-width: 60rem) {
+	.page--kind-home.home-halves main > .block:not(:first-child, .marquee, .sec-tone, .sec-w-narrow, .sec-w-bleed):has(> .wrap > .section-head) {
+		--ls-half: calc((100cqi - min(100cqi - 2 * var(--gutter), var(--max-width))) / 2 + min(100cqi - 2 * var(--gutter), var(--max-width)) * 0.36);
+		padding-block: var(--section-space);
+		background: linear-gradient(90deg, var(--ls-surface) var(--ls-half), transparent var(--ls-half));
+	}
+	.page--kind-home.home-halves main > .block:not(:first-child, .marquee, .sec-tone, .sec-w-narrow, .sec-w-bleed):has(> .wrap > .section-head) > .wrap {
+		display: grid; grid-template-columns: minmax(0, 36fr) minmax(0, 64fr); align-items: start;
+	}
+	.page--kind-home.home-halves main > .block:not(:first-child, .marquee, .sec-tone, .sec-w-narrow, .sec-w-bleed):has(> .wrap > .section-head) > .wrap > .section-head {
+		--paper: var(--ls-surface);
+		grid-column: 1; grid-row: 1 / span 12; margin: 0; padding-inline-end: var(--space-6);
+	}
+	.page--kind-home.home-halves main > .block:not(:first-child, .marquee, .sec-tone, .sec-w-narrow, .sec-w-bleed):has(> .wrap > .section-head) > .wrap > :not(.section-head) {
+		grid-column: 2; padding-inline-start: var(--space-7);
+	}
+	.page--kind-home.home-halves main > .block:not(:first-child, .marquee, .sec-tone, .sec-w-narrow, .sec-w-bleed):has(> .wrap > .section-head):nth-child(odd) {
+		background: linear-gradient(270deg, var(--ls-surface) var(--ls-half), transparent var(--ls-half));
+	}
+	.page--kind-home.home-halves main > .block:not(:first-child, .marquee, .sec-tone, .sec-w-narrow, .sec-w-bleed):has(> .wrap > .section-head):nth-child(odd) > .wrap {
+		grid-template-columns: minmax(0, 64fr) minmax(0, 36fr);
+	}
+	.page--kind-home.home-halves main > .block:not(:first-child, .marquee, .sec-tone, .sec-w-narrow, .sec-w-bleed):has(> .wrap > .section-head):nth-child(odd) > .wrap > .section-head {
+		grid-column: 2; padding-inline: var(--space-6) 0;
+	}
+	.page--kind-home.home-halves main > .block:not(:first-child, .marquee, .sec-tone, .sec-w-narrow, .sec-w-bleed):has(> .wrap > .section-head):nth-child(odd) > .wrap > :not(.section-head) {
+		grid-column: 1; padding-inline: 0 var(--space-7);
+	}
+}

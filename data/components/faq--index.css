@@ -1,0 +1,5 @@
+/* faq/index: questions as a grid of short cards, each opened by an accent
+ * bar, answers unfolding inside. */
+.faq--index .faq__list { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); max-width: none; border: 0; }
+@container (min-width: 48rem) { .faq--index .faq__list { grid-template-columns: repeat(auto-fit, minmax(min(100%, calc(18rem * var(--grid-scale, 1))), 1fr)); align-items: start; } }
+.faq--index .faq__item { padding-inline: var(--space-4); border: var(--border) solid var(--line); border-top: calc(var(--border) * 4) solid var(--accent); }

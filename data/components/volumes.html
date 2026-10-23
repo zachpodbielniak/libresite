@@ -1,0 +1,19 @@
+<div class="wrap">
+{{#heading}}<div class="section-head">
+<{{htag}} id="{{id}}-h">{{{heading_html}}}</{{htag}}>
+{{#intro}}<div class="prose">{{{intro}}}</div>
+{{/intro}}</div>
+{{/heading}}<ol class="volumes__index" role="list">
+{{#items}}<li><a href="#{{id}}-v{{n}}"><span class="volumes__in" aria-hidden="true">{{n2}}</span><span>{{title}}</span></a></li>
+{{/items}}</ol>
+<div class="volumes__list">
+{{#items}}<div class="volumes__chapter" id="{{id}}-v{{n}}">
+<span class="volumes__n" aria-hidden="true">{{n2}}</span>
+<{{subtag}} class="volumes__title">{{title}}</{{subtag}}>
+<div class="volumes__text">
+{{#body}}<div class="prose">{{{body}}}</div>
+{{/body}}{{#link}}<p class="volumes__more"><a href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{label}}</a></p>
+{{/link}}</div>
+</div>
+{{/items}}</div>
+</div>

@@ -1,0 +1,4 @@
+/* footer/legend: the footer drawn as an outlined box on the page colour, the name set into its top edge. */
+.look-footer-legend .site-footer { border-top: 0; background: var(--paper); padding-top: calc(var(--space-7) + 1rem); }
+.look-footer-legend .site-footer__inner { padding: var(--space-5); border: var(--border-strong) solid var(--line-strong); border-radius: var(--radius); }
+.look-footer-legend .site-footer .brand { display: flex; width: fit-content; max-width: 100%; margin: calc(-1 * var(--space-5) - max(22px, 0.6em) - var(--border-strong) / 2) 0 var(--space-3) calc(-1 * var(--space-2)); padding-inline: var(--space-2); line-height: 1.2; background: var(--paper); }

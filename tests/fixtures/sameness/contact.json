@@ -1,0 +1,18 @@
+{
+  "path": "contact.html",
+  "sections": [
+    {"component": "page-header", "variant": "plain", "content": {
+      "heading": "Contact",
+      "lede": "Tell {{name}} about your job and we will reply with next steps."
+    }},
+    {"component": "contact-card", "variant": "card", "id": "reach", "content": {
+      "heading": "Ask for an estimate",
+      "body": "Send a short description of the {{trade}} job and when we can visit.",
+      "items": [{"label": "Email", "value": "hello@example.com", "link": {"href": "mailto:hello@example.com", "label": "hello@example.com"}}]
+    }},
+    {"component": "faq", "variant": "list", "id": "before", "content": {
+      "heading": "Before you write",
+      "items": [{"question": "What should I include?", "answer": "What needs doing, where it is and any photos you have."}]
+    }}
+  ]
+}

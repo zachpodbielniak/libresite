@@ -1,0 +1,44 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+.visual-sequence { background: var(--paper); }
+.visual-sequence::before, .visual-sequence::after,
+.visual-sequence main > .block::before, .visual-sequence main > .block::after { display: none !important; }
+.visual-sequence main > .block { transform: none; animation: none; opacity: 1; margin-inline: 0; width: 100%; max-width: none; }
+.visual-sequence main > .scene, .visual-sequence main > .material { --paper: inherit; --ink: inherit; --surface: inherit; }
+.visual-sequence :is(.scene,.material) :is(h1,h2) { color: var(--ink); background: none; -webkit-text-fill-color: currentColor; -webkit-text-stroke: 0; transform: none; font-weight: 600; text-align: start; text-transform: none; }
+.visual-sequence :is(.scene,.material) img { filter: none; clip-path: none; border-radius: 0; transform: none; animation: none; }
+.visual-sequence :is(.scene,.material) img.is-matted { object-fit: cover !important; }
+.visual-sequence .scene--object img.is-matted, .visual-sequence .material--detail img.is-matted { object-fit: contain !important; }
+.visual-sequence .kicker { color: var(--ink); font-size: 1rem; letter-spacing: .04em; }
+.visual-sequence :is(a,button) { transition: background-color 180ms ease, color 180ms ease; }
+.visual-sequence :is(a,button):focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
+.visual-sequence .button { min-height: 44px; border-radius: 0; box-shadow: none; }
+.visual-sequence .button:hover { transform: none; filter: brightness(.95); }
+.visual-sequence .scene .button { background: var(--accent); color: var(--accent-ink); }
+@media (prefers-reduced-motion: reduce) { .visual-sequence * { transition: none !important; animation: none !important; scroll-behavior: auto !important; } }
+
+.visual-sequence main { display: block; padding: 0; }
+.visual-sequence main > .scene, .visual-sequence main > .material { border: 0; border-radius: 0; box-shadow: none; overflow: visible; }
+.visual-sequence main > .scene { padding: 0; }
+.visual-sequence .site-header { position: relative; inset: auto; margin: 0; border-radius: 0; background: var(--paper); color: var(--ink); box-shadow: none; }
+.visual-sequence .site-header__inner { max-width: none; padding-inline: clamp(1.25rem, 3cqi, 3rem); }
+.visual-sequence .brand { font-size: 1.25rem; letter-spacing: -.02em; min-height: 44px; }
+.visual-sequence :is(.scene,.material) :is(h1,h2) { text-shadow: none; font-style: normal; }
+.visual-sequence :is(.scene,.material) :is(h1,h2)::before, .visual-sequence :is(.scene,.material) :is(h1,h2)::after { display: none; }
+
+.visual-sequence :is(.scene,.material) :is(h1,h2) { font-weight: 400; }
+.visual-sequence :is(.scene,.material) :is(figure,picture,img) { border: 0; box-shadow: none; border-radius: 0; padding: 0; }
+.visual-sequence .brand { font-family: var(--font-body); }
+.visual-sequence .button { clip-path: none; border: 1px solid currentColor; font-family: var(--font-body); }
+.visual-sequence .button::before, .visual-sequence .button::after { display: none; }
+
+/* The sequence owns its reviewed image frame; legacy opening caps apply
+ * only to the older compositions. */
+.visual-sequence main > .scene img { max-height: none !important; }
+
+/* Reserve the menu's space even when the business name needs two lines. */
+@media (max-width: 767px) {
+  .visual-sequence .site-header__inner { column-gap: .75rem; }
+  .visual-sequence .brand { flex: 1 1 0; min-width: 0; font-size: 1rem; overflow-wrap: anywhere; text-transform: none; }
+  .visual-sequence .nav-toggle { flex: 0 0 auto; }
+}
+.visual-sequence :is(.scene--full,.scene--scrim) .scene__copy :is(h1,p) { color: #fff; }

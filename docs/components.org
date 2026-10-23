@@ -545,3 +545,748 @@ plans. They test layout, not a model's choice of content or design.
 Set =BRAND_LAYOUT_URL= to the served fixture directory when running against
 HTTP instead of local files. Serve the fixture artwork at the site's root
 asset path as on a normal site; the layout measurements are the same.
+
+* Measuring sameness
+
+Two different businesses should never get sibling sites. =tests/test-sameness.c= measures how far the builder guarantees that, so every change to variety has a number to move.
+
+It builds ten invented home-services briefs (=tests/fixtures/sameness/briefs.json=: plumber, roofer, heating and cooling, electrician, landscaper, cleaner, pest control, painter, garage doors, pool service) through the real =plan= and =pages= steps, all in the trades sector. The model is a fixture that answers every business the same way: one plan, one opening, one section order and the same words with only the name, trade and three services swapped in. That is the convergence live runs showed (see [[*Identities][identities]]), and it means whatever still differs between the ten sites is what the builder decides; anything left to the model counts as the same. No model is called.
+
+Each pair of sites is scored from 0 (nothing shared) to 1 (the same design) on what was actually built and rendered:
+
+| Part | Weight | Measure |
+|------+--------+---------|
+| look | 25% | share of the fingerprint's look axes with the same value |
+| order | 20% | the home page's rendered sections in order (opening as component/variant): twice the longest common run over both lengths |
+| mix | 20% | rendered components across all pages (Jaccard), averaged with rendered component variants (Jaccard) |
+| palette | 20% | paper, ink, surface and accent: 1 for the same colour, 0 from 0.35 apart in unit RGB |
+| type | 15% | the same display family (0.6) and body family (0.4) |
+
+The gate: the mean over all 45 pairs must be at most 0.35, and no pair may reach 0.55, a little under =LS_COMPONENTS_TOO_CLOSE=. =/sameness/rebuild= checks that one brief built twice renders byte for byte the same, so the score is the builder's and not chance.
+
+=make tests= reports the score every run and marks =/sameness/briefs= as incomplete (TAP =TODO=) while the sites are over the gate; =make sameness= enforces it and fails. The epic's last child turns the gate on in =make tests=.
+
+The screenshot half needs a browser. =tests/sameness.sh= opens each home page in headless Firefox with reduced motion (so entrances are at rest), takes a full-page screenshot at 390 and 1440 px, squashes it to a 48 by 192 grey grid so pages of different lengths compare section by section, and scores every pair by normalised cross-correlation, clamped to 0 to 1. A pair's overall score is 85% structural and 15% screens. It fails when the overall mean is over 0.35 or the screens alone average over 0.6 at either width, and writes =screens.json= and the screenshots next to the sites. It needs Firefox, geckodriver, =jq=, =curl=, =zip= and ImageMagick (Fedora: =firefox=, =jq=, =curl=, =zip=, =ImageMagick=; geckodriver from Mozilla's releases).
+
+#+begin_src sh
+make sameness                       # structural gate only
+geckodriver --port 4444 &
+make sameness WEBDRIVER_URL=http://localhost:4444
+# or, without the gate stopping the browser half:
+SAMENESS_OUTPUT="$PWD/build/sameness" build/release/test-sameness
+bash tests/sameness.sh http://localhost:4444 build/sameness
+#+end_src
+
+Score on 2026-10-20, before the variety work:
+
+| Measure | Score | Limit |
+|---------+-------+-------|
+| structural mean | 0.842 | 0.35 |
+| structural worst pair | 0.873 (pest control and pool service) | 0.55 |
+| look | 0.70 | |
+| order | 1.00 | |
+| mix | 0.59 | |
+| palette | 1.00 | |
+| type | 1.00 | |
+| screens at 390 | 0.829 | 0.6 |
+| screens at 1440 | 0.898 | 0.6 |
+| overall mean | 0.845 | 0.35 |
+| overall worst pair | 0.885 | |
+| library fingerprint similarity, for comparison | 0.890 | |
+
+What the builder already deals (frame, header, rhythm, footer, motion, the structure genes and component variants) moves the look and the mix; nothing else differs, because the opening, the home section order, the palette and the type all come from the model. Side by side the ten home pages are one page with the names changed: the same split hero and house drawing, the same services, steps, questions and closing band. The fixture site is evidence for what the builder guarantees, not for what a live model would choose.
+
+* The seed decides
+
+Suggestions were not enough: a model given a dealt look, palette, type and opening still answers with its favourite, so ten businesses got one site. The builder now applies the seeded design itself and the model writes the words and art inside it. This supersedes the parts of [[*Look and overrides][look and overrides]], [[*Identities][identities]] and the opening rotation above that say the plan may keep or change a suggestion.
+
+- The plan step calls =ls_components_apply_seed()= on every answer, with the same seed and sector as before (so =site.avoid= re-dealing still applies). It runs =ls_components_apply_structure()=, then, without a theme, sets every look axis to =ls_components_suggest_look()= except the retired flourishes (still plain for the signature layer), the seven colour tokens to the dealt palette and, when the plan names web fonts, the font and heading tokens and =fonts= to the dealt type pairing. A plan with no web fonts (an order that forbids remote fonts) keeps its own installed stacks. A theme keeps its whole design, as before.
+- The home opening is part of the structure: =ls_components_deal_structure()= adds =structure.opening= (component/variant, the same deal as =suggested_opening=), and plan checks accept only a dealable opening there. When the home page's answer arrives, =ls_components_apply_opening()= rewrites its opening section (a hero, cover, poster or manifesto) as that component and variant, carrying the kicker, heading, lede, actions and picture; a manifesto states the lede sentence by sentence. A cover or split hero without a picture borrows the plan's first artwork other than the mark. If the dealt opening cannot hold the words (a heading too long for a poster, one sentence for a manifesto, no artwork at all), or would hide the writer's picture (a minimal hero, a type or stamped poster, a manifesto), the next opening in catalog order that can is used, and every candidate must pass the page check. A custom opening, a home page that does not start with an opening component, and plans without =structure.opening= are left alone.
+- The prompts say so: the plan copies =suggested_look=, the palette and type as given, and the home writer opens with =structure.opening=.
+- So the house default can no longer reach a site through its colours: a plan that falls back on cream and rust costs no retry, because its colours are replaced. =ls_components_check_identity()= still guards plans without web fonts.
+- Link previews take the page's first picture whatever its attribute order, so a poster's photograph (whose image tag carries a class first) is used as the preview again.
+
+=tests/test-seed.c= checks that every non-flourish axis is the seed's, that the same seed gives byte-identical plans, that colours and type follow the identity (and stacks stay without web fonts), that themes are kept, that all fifteen dealable openings are reachable from one writer's answer with its words and pass the page check, the fallbacks, and that the ten sameness briefs get ten different skeletons.
+
+** Sameness after the seed decides
+
+The screenshot half of [[*Measuring sameness][measuring sameness]] was misread at first: this ImageMagick reports its NCC metric as a distance (0 for the same image), so the screen numbers recorded there were dissimilarity, not likeness. =tests/sameness.sh= now uses structural similarity (SSIM) on the 64 by 256 grey grids, works out from one shape compared with itself whether the installed ImageMagick reports SSIM or its distance, and fails over 0.2 for the screens at either width. The scores below are both measured that way on 2026-10-20, before on the child 1 code and after on this change.
+
+| Measure | Before | After | Limit |
+|---------+--------+-------+-------|
+| structural mean | 0.842 | 0.447 | 0.35 |
+| structural worst pair | 0.873 | 0.751 (plumbing and cleaning) | 0.55 |
+| look | 0.70 | 0.25 | |
+| order | 1.00 | 0.82 | |
+| mix | 0.59 | 0.46 | |
+| palette | 1.00 | 0.40 | |
+| type | 1.00 | 0.31 | |
+| screens at 390 | 0.250 | 0.142 | 0.2 |
+| screens at 1440 | 0.436 | 0.249 | 0.2 |
+| overall mean | 0.767 | 0.409 | 0.35 |
+| overall worst pair | 0.801 | 0.686 | |
+| library fingerprint similarity | 0.890 | 0.389 | |
+
+What is left: the home sections after the opening still come in the model's order (order 0.82), and the trades sector has only a few palettes and type pairings, so two of the ten can still share both (the worst pair). Those are the next children's: home compositions and section order, then the type and colour range.
+
+* Home compositions
+
+A dealt opening and look still left every home page one run of sections in the order the model wrote them. The catalog now has home compositions: whole home layouts the builder deals, so two home pages differ in their arrangement and not only in their colours. The block is =compositions= at the end of =catalog.yaml=; it is optional, so an archived library without it loads and renders as before.
+
+| Composition | Openings | What it does |
+|-------------+----------+--------------|
+| split | split hero, split cover, overlapping hero | words beside a picture, then an even run of sections |
+| full-bleed | full cover, banner hero, backdrop poster | wide frame and alternating bands; more air; headings centred over the full width |
+| editorial | type poster, statement or minimal hero, stacked manifesto | the narrow journal frame; each section opens under a heavy rule with a running number |
+| bento | centred or split hero, framed cover | after the opening, sections are tiles, two to a row where the column has room; a tile alone grows across |
+| oversized-type | type or stamped poster, stacked or outlined manifesto | section headings set very large against the column |
+| side-rail | statement, split or minimal hero, stamped poster | a sticky contents column of the home sections beside them on wide screens |
+| stacked-cards | centred hero, framed cover, numbered manifesto | each section after the opening is its own raised card |
+| zigzag | overlapping or banner hero, split cover, outlined manifesto | where the column has room, sections step from side to side, each with an accent rule on its leading edge |
+
+- Dealing: =ls_components_deal_structure()= adds =structure.composition=, picked from the seed among the compositions that do not =avoid= the frame the same seed deals (bento, stacked cards and zigzag avoid the journal frame; the side rail also avoids the rail and split frames, which already put a column beside the content). The dealt opening, and the plan prompt's =suggested_opening=, is then one of the composition's =openings=, so the two always agree. A theme whose own frame the composition avoids gets another composition. Plan checks accept only a catalog composition. The fingerprint counts the composition as one more look axis.
+- Look: without a theme, =ls_components_apply_structure()= sets the builder axes a composition names (for example the editorial frame and alignment); =ls_components_apply_seed()= no longer redeals builder axes, so those stay. The existing rule that keeps side and hanging headings out of narrow columns still runs after.
+- Section order: when the home page's answer arrives, after its opening, =ls_components_apply_composition()= orders the sections after the opening. Each component has a role in =compositions.roles= (offer, process, proof, story, practical or close; anything unlisted reads as story), each composition orders the first five its own way, and the close role (calls to action, contact cards, call buttons, forms, links, social and sharing) always ends the page. Sections of one role keep an order picked from the site name and the composition, and two sections of one component are kept apart where another of their role can sit between them. Content is never added or removed; the plan prompt now tells the model the builder orders the home sections, so each must read well in any order.
+- Styles: a composition with =css: true= has =home-NAME.css=, emitted in the components layer only for the site it was dealt to, scoped to =.page--kind-home.home-NAME=; the home page's body carries =home-NAME=. Tiles and cards are inline-size containers, so the components inside lay out for the tile, not the page. A side-rail home renders through the reading pages' contents column (=page-grid=), and like reading pages takes no per-section bands.
+- A poster's title was sized only by the page column, so in a narrow content column (the journal frame, a narrow dealt width) a long word broke across lines where no script shrank it. Its size is now also capped by the dealt content width.
+
+=tests/test-compositions.c= checks that there are at least eight, that 400 seeds deal all of them, each with one of its own openings (the same one the prompt suggests), never with a frame it avoids and with its look set, and that plans still pass their checks; that a theme's frame re-deals the composition; that one six-role home comes out in eight different orders with the opening first and the call to action last; that repeated components are kept apart; and that each composition renders its body class, its styles only where dealt, the side rail's contents column, and eight different home pages. Set =COMPOSITIONS_OUTPUT= and run =tests/compositions.sh= to open each at 390 and 1440 px, with and without =site.js=, and fail on any page that scrolls sideways or any heading that splits a word across lines:
+
+#+begin_src sh
+COMPOSITIONS_OUTPUT="$PWD/build/compositions" build/release/test-compositions
+bash tests/compositions.sh "$WEBDRIVER_URL" build/compositions
+#+end_src
+
+On 2026-10-20 all eight passed at both widths with and without scripts (32 page loads), and so did the ten sameness sites; before the poster fix, the editorial cleaning site failed it at 1440 with its heading split. The fixture sites test layout, not a model's choices.
+
+** Sameness with home compositions
+
+Measured as in [[*Sameness after the seed decides][the previous section]] (=tests/sameness.sh= now also waits a moment after fonts load, so =site.js= has fitted large headings before the screenshot):
+
+| Measure | Seed decides | Compositions | Limit |
+|---------+--------------+--------------+-------|
+| structural mean | 0.447 | 0.427 | 0.35 |
+| structural worst pair | 0.751 | 0.712 | 0.55 |
+| look | 0.25 | 0.25 | |
+| order | 0.82 | 0.71 | |
+| mix | 0.46 | 0.47 | |
+| palette | 0.40 | 0.40 | |
+| type | 0.31 | 0.31 | |
+| screens at 390 | 0.142 | 0.142 | 0.2 |
+| screens at 1440 | 0.249 | 0.259 | 0.2 |
+| overall mean | 0.409 | 0.393 | 0.35 |
+| overall worst pair | 0.686 | 0.616 | |
+
+The fixture home has only three sections between its opening and its call to action, all of different roles, so the order part can only move so far: a composition can swap them but has nothing else to arrange. Ten sites drew six of the eight compositions (three full-bleed). The squashed screenshot grid does not tell a tiled or carded home much from a plain one, so the screens barely moved; the rendered pages do differ (see the browser check above). Colour and type range are the next child's.
+
+* Motion
+
+The stock =motion= look (rise, reveal, lift) gave every moving site the same three gestures. Motion kits widen that: each unthemed site is dealt one kit, a small set of CSS-first movements with its own character, applied to every page. The block is =motion_kits= at the end of =catalog.yaml=, optional so archived libraries load as before.
+
+| Kit | What moves | Weight |
+|-----+------------+--------|
+| cascade | the opening's lines arrive one after another; list items cascade in as they scroll into view (staggered by position); buttons fill with a sweep | 2.3 KB |
+| parallax | the opening heading settles in from the side; the opening picture drifts slower than the page; section headings slide in; pictures float; link underlines grow | 2.0 KB |
+| aurora | soft drawn shapes (an SVG mask over the accent, 9 percent) drift behind the opening; the opening fades up; cards float under the pointer | 2.0 KB |
+| ticker | a decorative band of the business's name runs above the footer; figures count up; buttons press in | 1.4 KB + 1.7 KB script |
+| spotlight | the opening and then each section settle into place; figures count up; cards tilt toward the pointer | 1.1 KB + the same script |
+| still | only the opening heading settles; links, buttons and focus rings answer with small movements | 0.7 KB |
+
+- Dealing: =ls_components_deal_structure()= adds =structure.kit= from the seed, the plan check accepts only a catalog kit, and the fingerprint counts it as one more look axis. Without a theme, =ls_components_apply_structure()= sets the builder axes a kit names: every kit has its own entrance and hover, so each sets the stock =motion= to =none= and two entrances never stack; on unthemed sites the kits replace the stock motion. A themed site gets no kit; its theme's motion stands.
+- Rendering: every page's body carries =kit-NAME=, and =kit-NAME.css= is emitted in the look layer after =look.css=. A kit naming a =script= adds the shared =motion-SCRIPT.js= to =site.js= (only =counters= so far). =marquee: true= adds =<div class="kit-marquee" aria-hidden="true">= with the site name above the footer.
+- Reduced motion means none. Every animation, transition and transform a kit adds sits inside =@media (prefers-reduced-motion: no-preference)=; the marquee band is hidden outside it, and the aurora backdrop is drawn only inside it. The counter script returns at once for reduced motion, without =IntersectionObserver=, or without scripts, and the page keeps the supplied text; while it counts, the figure's exact text is its accessible name, and at the end the text is put back exactly. Small counts and years are never counted. Scroll-driven parts sit under =@supports (animation-timeline: ...)=; every kit also has a load-time movement, so each moves in browsers without scroll timelines.
+- Characterful hover and focus: each kit has its own hover and widens or eases the focus ring's offset. Focus rings keep the library's colour and width.
+- Weight: each kit's styles are at most 4 KB and its script at most 2 KB, checked by =/motion/files=; =/motion/render= checks that a kit adds at most 6 KB to the styles and script of a site, its class is on every page, its files come only with the dealt kit, and the marquee band appears only for marquee kits.
+
+=tests/test-motion.c= also checks that 300 seeds deal all six kits deterministically with their look set, that themes get none, and that a bad kit name fails the plan check. =/motion/files= is the reduced-motion lint: with comments, =@keyframes= and no-preference blocks removed, a kit's CSS may not mention =animation=, =transition=, =transform= or =scroll-behavior=. With =MOTION_OUTPUT= set, the fixture site is written once per kit for the browser check:
+
+#+begin_src sh
+MOTION_OUTPUT="$PWD/build/motion" build/release/test-motion
+bash tests/motion.sh "$WEBDRIVER_URL" build/motion
+#+end_src
+
+=tests/motion.sh= opens each kit at 390 and 1440 px in two passes. With reduced motion, after scrolling through the page, =document.getAnimations()= must be empty, the marquee band hidden and the figures their supplied text; without it, something must animate, the figures must end on their supplied text and no page may scroll sideways. On 2026-10-20 all 24 loads passed in headless Firefox (1 to 6 animations per kit with motion, none with reduced motion), and a figure sampled mid-count read 821 on its way to 1,240 with 1,240 as its accessible name. Firefox ran no scroll-driven parts, which are behind a preference there; they were not checked in another browser.
+
+The sameness score barely moves (structural 0.427 to 0.426, overall 0.393 to 0.392, screens 0.142 and 0.262): the plans, home pages and still screenshots it compares do not show motion. The fingerprint counts the kit in place of the stock motion it replaces, since every kit sets that to none. The ten briefs drew five of the six kits. The home composition browser check still passes with the kits in place.
+
+* Type and colour range
+
+With the seed deciding the palette and type (see [[*The seed decides][the seed decides]]), the range of those choices became the limit: a trades site drew from six palettes and three type pairings, so ten trades sites shared colours and type often. Two changes widen it.
+
+- Curated pairings: =data/components/pairings.yaml= adds 34 font pairings (=pairings=) to the typefaces of =identities.yaml=, in the same shape (summary, sector =fits=, the seven type tokens, up to three Bunny Fonts families). They join the typefaces at load and are checked with them: a valid plan with each pairing over a palette, no house default (no Fraunces), no repeated names. Every sector now has at least eight pairings and trades has 22; the library has 49 in all. The pairings range from poster capitals (Bebas Neue, Big Shoulders Display, Oswald), slabs (Roboto Slab, Bitter, Arvo, Rokkitt, Alfa Slab One, Sanchez) and grotesques with character (Bricolage Grotesque, Syne, Unbounded, Familjen Grotesk) to book and editorial serifs (Libre Baskerville, EB Garamond, Spectral, Literata, Bodoni Moda, Gloock, Instrument Serif, Young Serif). An archived library without the file keeps its own typefaces.
+- Generated palettes: =palette_generator= at the end of =catalog.yaml= sets =share= (70): that percent of sites get a palette built from their seed by =ls_components_suggest_identity()= instead of a curated one that fits their sector. The generator picks a mode by weight (light 50, dark 25, tinted 25), a base hue anywhere on the wheel and an accent hue at one of the =harmonies= offsets (complementary, split either side, triadic, analogous, on either side), and builds the seven colours in OKLCH, pulling chroma in until each fits sRGB. The contrast guard then steps ink and muted away from the paper until each reads at 4.6:1 on both paper and surface, gives the accent whichever of white, ink and paper reads best on it and steps the accent's lightness until that reaches 4.6:1, and turns the accent a third of the wheel if the result is the house default. The palette is named =generated-= and eight hex digits of the seed hash, with a one-line summary (mode, paper and accent hue names, harmony) for the plan prompt. Plans still pass the plan contrast checks and plan repair afterwards; the guard's 4.6 leaves room for rounding to =#rrggbb=. Without the block only curated palettes are dealt.
+
+=tests/test-type-colour.c= checks that the library has at least 40 pairings with eight per sector and loads only families named first in a stack; that over 1600 seeds across all sectors 60 to 80 percent of palettes are generated, every one deterministic, unique, AA on all five text pairs, its plan valid and its own identity, at least 15 percent dark and half light, with accents in all twelve 30-degree hue bands; and that the ten sameness briefs get ten different palettes and at least seven different pairings.
+
+** Sameness with the wider range
+
+Measured as before on 2026-10-20:
+
+| Measure | Motion kits | Type and colour | Limit |
+|---------+-------------+-----------------+-------|
+| structural mean | 0.426 | 0.359 | 0.35 |
+| structural worst pair | 0.712 | 0.532 | 0.55 |
+| look | 0.25 | 0.25 | |
+| order | 0.71 | 0.71 | |
+| mix | 0.47 | 0.47 | |
+| palette | 0.40 | 0.25 | |
+| type | 0.31 | 0.07 | |
+| screens at 390 | 0.142 | 0.178 | 0.2 |
+| screens at 1440 | 0.262 | 0.329 | 0.2 |
+| overall mean | 0.392 | 0.343 | 0.35 |
+| overall worst pair | 0.616 | 0.488 | |
+
+The structural pair limit now holds, and the overall mean is under its limit; the structural mean is just over. The screen likeness rose, most at 1440: with dark and tinted pages in the set, more pages share large dark or tinted areas in the same places, which the squashed grey grid scores as alike even though the colours differ (a light and a dark page are both "flat field with a dark band"). The ten home pages are visibly different in colour and type now; what still repeats is the fixture's own section run and artwork, which the remaining children (component variants and art direction) address.
+
+* Component variants
+
+The components a home-services site leans on most (services, reviews, the process, questions, the call to action, contact and the gallery) were where sites looked most alike. Reviews (=voices=) had only two looks. =extra_variants= at the end of =catalog.yaml= adds two new looks to each of the seven, so each now has at least four:
+
+| Component | New variants | All variants |
+|-----------+--------------+--------------|
+| services | ledger (heavy rules, large running numbers, two to a row), tiles (solid tiles alternating surface and ink) | 7 |
+| voices (reviews) | stack (the first quote large under an oversized quotation mark, the rest beside a rule), ribbon (quote cards in a sideways-scrolling, snapping row) | 4 |
+| steps (process) | path (numbered stops on a dashed route), chapters (huge outlined numbers between rules) | 8 |
+| faq | chat (questions as speech bubbles, answers replying from the other side), index (a grid of short cards opened by an accent bar) | 9 |
+| cta | stripe (a box framed by diagonal accent stripes), note (a pinned, slightly turned note with tape) | 12 |
+| contact-card | ticket (notched sides and a dashed tear line), postcard (words left, details on ruled lines right, a stamp box) | 7 |
+| gallery | polaroid (thick paper frames, each turned a little), filmstrip (a dark sideways-scrolling band edged with sprocket holes) | 10 |
+
+- Each extra variant restyles its component's existing markup and has its own file, =NAME--VARIANT.css=, so no component's files change. At load the variants join their components (=ls_components_new_from_snapshot()= refuses a repeated name, a missing description or file, and components that keep the model's variant). From then on they are ordinary variants: the model-facing reference lists them, page checks accept them, and =ls_components_deal_structure()= deals them per seed with the rest, including in the per-site family of three that sections draw from.
+- Their styles are emitted in the components layer only when a page renders that variant, so a site carries only the looks it shows. They colour only with the site's tokens, so every contrast pair the plan checks still holds, and move nothing.
+- Layout follows the library's rules: zero-floor grid tracks, container queries on the section, and turned pieces (note, polaroid) clipped at the section so they never widen the page.
+
+=tests/test-variants.c= checks that each of the seven has at least three variants with the extras, every extra is new, described, under 2 KB, coloured only by tokens and still; that a page naming each one passes the page check and renders its class with its styles and without the other extras' styles; and that across 400 seeds the builder deals every extra variant, which the reference also describes. With =VARIANTS_OUTPUT= it writes one site per variant, which =tests/compositions.sh= checks like the home compositions:
+
+#+begin_src sh
+VARIANTS_OUTPUT="$PWD/build/variants" build/release/test-variants
+bash tests/compositions.sh "$WEBDRIVER_URL" build/variants
+#+end_src
+
+On 2026-10-20 all fourteen passed at 390 and 1440 px with and without scripts (56 loads): no page scrolled sideways and no heading split a word. Looking at the screenshots caught one fault the measurements could not: the stripe call to action painted its stripes over its own box, because the box is the section's wrap; the stacking context now sits on the section.
+
+The sameness score moves a little (structural 0.359 to 0.356, overall 0.343 to 0.340, worst pair 0.479; screens 0.179 and 0.320): the fixture home uses services, steps, questions and a call to action, so only the share of variants the ten sites have in common can change, and the mix part went from 0.47 to 0.46.
+
+* Art direction
+
+The drawing style (=art=) and the image treatment (=images=) were dealt independently, so a site could pair cut-paper drawings with a woodcut frame, and most sites' artwork still read as one house style: a flat drawing in a plain box. Art directions make the artwork's look one dealt decision. The block is =art_directions= at the end of =catalog.yaml=, optional so archived libraries load as before.
+
+| Direction | Drawing style | Images | How the site shows drawn artwork |
+|-----------+---------------+--------+-----------------------------------|
+| duotone | flat or woodcut | plain | drained to grey with the accent screened over it: the accent for darks, white for lights |
+| cutout | cut paper or flat | plain | cut into an arch, a slant or a rounded shape in turn down the page, over an offset accent block |
+| framed | woodcut, line or open | framed | a double frame with a mat and a soft shadow, captions in small capitals |
+| collage | cut paper or open | taped | pinned over a turned paper scrap, turned the other way on alternate sections |
+| lineart | line or blueprint | plain | inside a fine ink outline with accent corner marks |
+
+- Dealing: =ls_components_deal_structure()= adds =structure.direction= from the seed; plan checks accept only a catalog direction; the fingerprint counts it as a look axis. Without a theme, =ls_components_apply_seed()= then picks the drawing style and image treatment from the direction's lists, by seed; a themed site gets no direction and keeps its theme's look.
+- The artist is told: each artwork job's TASK carries =direction=, the direction's =brief= (for example, keep the subject centred with margin so a cut never crops it), beside the existing =style=, so artwork is drawn for the way it will be shown. =ls_components_get_direction_brief()= returns it.
+- Styles: every page's body carries =art-NAME=, and =art-NAME.css= is emitted in the look layer after =look.css=. It styles only drawn artwork (=img[src$=".svg"]=), never the brand mark, so supplied photographs keep their own treatment (the =photos= axis, natural by default for the customer's own people, animals, food and place). It colours only with tokens and moves nothing; turned and offset pieces are clipped at the page column.
+
+=tests/test-art-direction.c= checks the five directions the issue names exist and that 300 seeds deal all of them deterministically, each choosing style and treatment from its lists and none setting photos, with valid plans; that themes get none and an unknown name fails the plan check; that each stylesheet is at most 3 KB, targets only SVG artwork, colours only with tokens and moves nothing; that the direction's class is on every page and only its own styles ship; and, through the real plan and pages steps with a recording model, that every artwork prompt carries the direction's brief. With =ART_OUTPUT= it writes one site per direction for =tests/compositions.sh=, which on 2026-10-20 passed all five at 390 and 1440 px with and without scripts (20 loads).
+
+The sameness score stays where it was (structural 0.357, overall 0.341, worst pair 0.475; screens 0.178 and 0.320): the direction adds an axis that differs between sites but narrows two others it now chooses together, and the squashed grey screenshots barely see a frame or a cut. The ten briefs drew all five directions.
+
+* Variety gate
+
+The sameness gate from [[*Measuring sameness][measuring sameness]] is now part of =make tests=. At this point =/sameness/briefs= failed when the ten sites averaged more than 0.35 alike or any two reached 0.55. [[*Sameness is a soft guard][Sameness is a soft guard]] is the rule that stands: those limits are reported, and only a pair over 0.5 fails. =make sameness= still runs it alone. =make gate WEBDRIVER_URL=...= runs the whole gate in a browser (headless Firefox through geckodriver): it renders the ten sameness sites and the composition, variant, art direction and motion fixtures, runs =tests/compositions.sh= on the compositions, variants and art directions, =tests/motion.sh= on the motion kits, =tests/sameness.sh= with the compositions as its calibration, and =tests/gate.sh= on the ten sites. It took about four and a half minutes on 2026-10-20.
+
+#+begin_src sh
+geckodriver --port 4444 &
+make gate WEBDRIVER_URL=http://localhost:4444
+#+end_src
+
+Written thresholds:
+
+| Check | Where | Limit |
+|-------+-------+-------|
+| structural sameness, mean of 45 pairs | =make tests= | at most 0.35 |
+| structural sameness, worst pair | =make tests= | under 0.55 |
+| overall sameness (85% structural, 15% screens) | =tests/sameness.sh= | at most 0.35 |
+| screen likeness at 390 and 1440 | =tests/sameness.sh= | at most the likeness of one site's eight home compositions at that width |
+| text contrast, light and dark scheme, 390 and 1440 | =tests/gate.sh= | every text element at WCAG AA against the first opaque background behind it (3:1 for large text) |
+| motion with reduced motion, 390 and 1440 | =tests/gate.sh= | no CSS animation and nothing lasting 1 ms or more, after scrolling the page |
+| page weight of a home page (HTML, styles, script, local pictures; remote fonts excluded) | =tests/gate.sh=, =/gate/sites= | 150 KB raw, 40 KB gzipped |
+| what the variety work adds to styles and script | =/gate/sites= | 16 KB |
+| plan colour pairs, 60 dealt sites | =/gate/sites= | AA on all five pairs |
+
+- The screen limit was a fixed 0.2. It is now calibrated each run: =tests/sameness.sh= takes a third argument, a directory of screenshots of one site in its eight home compositions (=tests/compositions.sh= writes them), and the limit at each width is how alike those eight look to the same measure. The fixed limit sat below what the squashed grey grid can tell apart for light pages: eight plainly different layouts of one site scored 0.349 at 390 and 0.373 at 1440. The rule is now that ten different businesses must look less alike than one business laid out eight ways. Without the third argument the old fixed limit applies.
+- The base reduced-motion rule shortens transitions to 0.01 ms rather than removing them, so a layout change at phone width can start one that nobody can see; =tests/gate.sh= counts any CSS animation and anything lasting 1 ms or more. An animation injected into a page as a test was stopped by that rule as well.
+- =tests/gate.sh= skips text over a picture or gradient (24 elements of 1418 on 2026-10-20) and requires more than 20 checked elements per page. A page with grey text injected at 1.67:1 failed it as it should.
+- To bring the structural score under its limit, four home compositions now order their roles differently (full-bleed, bento, oversized type and side rail), so all six orders of offers, process and questions occur across the eight compositions instead of questions coming third on almost every site; =/compositions/order= still requires eight different orders.
+
+** Before and after
+
+Measured on 2026-10-20 with the same ten briefs and the convergent fixture model: before is the epic's base, after is this branch.
+
+| Measure | Before | After | Limit |
+|---------+--------+-------+-------|
+| structural mean | 0.842 | 0.339 | 0.35 |
+| structural worst pair | 0.873 | 0.539 | 0.55 |
+| look | 0.70 | 0.25 | |
+| home section order | 1.00 | 0.62 | |
+| component mix | 0.59 | 0.46 | |
+| palette | 1.00 | 0.25 | |
+| type | 1.00 | 0.07 | |
+| screens at 390 | 0.250 | 0.173 | 0.349 |
+| screens at 1440 | 0.434 | 0.324 | 0.373 |
+| overall mean | 0.767 | 0.325 | 0.35 |
+| overall worst pair | 0.801 | 0.475 | |
+| library fingerprint similarity | 0.890 | 0.322 | |
+| largest home page | 97 KB, 21 KB gzipped | 105 KB, 23 KB gzipped | 150 KB, 40 KB |
+
+The before sites fail the gate; the after sites pass every check above: 1418 text elements at AA in both schemes, no motion with reduced motion and no page scrolling sideways at either width. The margins are narrow: the structural mean is 0.011 under its limit and the worst pair 0.011 under its. All of this measures what the builder guarantees with a model that answers every business alike. It is not evidence of live generation quality; a person still looks at every delivered site.
+
+* Content angles
+
+The sameness fixture answers every business with "Dependable X for your home" over one house drawing, so it cannot show whether real headlines and artwork vary. On 2026-10-20 four of its briefs (plumbing, roofing, cleaning and pool service) were built once with the real model (Claude Code, default model) on the epic before this change, with home, services and contact pages, and their home pages screenshotted at 1440 and 390 px.
+
+What the real run showed:
+
+- Headlines differed and were specific to each business: "Plumbing that respects an older home", "A roof that holds when the weather turns", "A clear home by the end of the day", "Pool care that stays clear all season". Two of the four used the same "X that Y" shape.
+- Artwork subjects differed: an old pipe joint before and after repair with a cutaway of an older house, an exploded roof cross-section and a roofline, a tidy room at dusk and a kit of cleaning tools, a pool seen from above and a pump-and-filter diagram. Only the roofer drew a house, which suits the trade.
+- Where it converged: the plan wrote the drawing style into its art briefs ("Blueprint-style", "blueprint drawing") on two sites that were dealt cut-paper artwork, so the artist got two styles at once. And nothing tied the headline angle or the artwork's subject to the site, so their variety was the model's luck.
+
+So the seed now steers them too. =content_angles= at the end of =catalog.yaml= lists eight headline angles (promise, problem, place, craft, time, question, plain, character) and eight art subjects (tool, material, detail, process, result, pattern, setting, diagram), each a sentence for the writer.
+
+- =ls_components_deal_structure()= records =structure.angle= and =structure.subject= from the seed, the same picks =ls_components_suggest_angles()= returns; the plan check accepts only catalog values. =ls_components_get_angle_description()= gives the writer's sentence for a name.
+- The plan prompt's TASK carries =headline_angle= and =art_subject=; the home page writer's TASK carries =headline_angle= from the plan's structure; every artwork job but the mark carries =subject=.
+- The prompts say so, and close the convergence the run showed: art briefs describe subject, composition and colours but never a drawing style, because the builder sets it as =look.art= and the artist's style wins over any style a brief names; the home heading follows its angle and never a stock line such as "Dependable X for your home"; and no artwork is the stock outline of a house with a pitched roof and a door.
+
+=tests/test-content-angles.c= builds the ten fixture briefs through the real plan and pages steps with a writer that takes its home heading from whatever angle it is told (=tests/fixtures/sameness/headlines.json=), and fails unless the ten get at least six headline patterns and at least six art subjects. The same build with a writer that ignores the angle gives one pattern, the case the test exists to catch. On 2026-10-20: seven patterns, six subjects. It also checks the deal is stable and that the plan check refuses an unknown angle.
+
+The prompt changes were made after the one live run the budget allowed, so their effect on a live model is not yet measured. The before screenshots are the fixture sites, the after ones the live run:
+
+| Site | Fixture (before) | Live model |
+|------+------------------+------------|
+| plumbing | [[file:images/variety/before-fernhill-plumbing-1440.jpg][1440]], [[file:images/variety/before-fernhill-plumbing-390.jpg][390]] | [[file:images/variety/real-fernhill-plumbing-1440.jpg][1440]], [[file:images/variety/real-fernhill-plumbing-390.jpg][390]] |
+| roofing | [[file:images/variety/before-ridgeback-roofing-1440.jpg][1440]], [[file:images/variety/before-ridgeback-roofing-390.jpg][390]] | [[file:images/variety/real-ridgeback-roofing-1440.jpg][1440]], [[file:images/variety/real-ridgeback-roofing-390.jpg][390]] |
+| cleaning | [[file:images/variety/before-clearday-cleaning-1440.jpg][1440]], [[file:images/variety/before-clearday-cleaning-390.jpg][390]] | [[file:images/variety/real-clearday-cleaning-1440.jpg][1440]], [[file:images/variety/real-clearday-cleaning-390.jpg][390]] |
+| pool service | [[file:images/variety/before-bluewell-pools-1440.jpg][1440]], [[file:images/variety/before-bluewell-pools-390.jpg][390]] | [[file:images/variety/real-bluewell-pools-1440.jpg][1440]], [[file:images/variety/real-bluewell-pools-390.jpg][390]] |
+
+Three of the four live sites drew the zigzag composition (about a one-in-eighteen chance for four sites and eight compositions); two opened with an outlined manifesto, whose stroke-only lines are hard to read at that size.
+
+* Outline lettering
+
+Stroke-only text (colour transparent, an ink stroke) is striking on a two- or three-word headline across a wide screen and hard to read anywhere else: the live run in [[*Content angles][content angles]] opened two sites with outlined manifesto lines of six to eight words, and the fixture roofing site set "Dependable roofing for your home" in outline lettering. Outline now applies only where it reads.
+
+- The builder marks short text: a page's body carries =h1-short= when its first section's heading has at most three words, and every item with a =text= field gets =short_text= on the same rule (the manifesto renders it as =manifesto__line--short=).
+- =look-lettering-outline= outlines the main heading only on =h1-short= pages, and =manifesto/outlined= outlines only short lines after the first; both only inside =@container (min-width: 40rem)= and where the browser supports text strokes. Everything else is filled: outlined manifesto lines that are long, or on a phone, are set light in the ink, the first line stays in the accent. Outlined emphasis (=look-emphasis-outline=, themes only) is filled on phones the same way.
+- =tests/test-outline.c= checks the marks for short and long headings and lines, that the stylesheets outline only through them, and that every stroke-only rule in =look.css= and =manifesto.css= sits inside the wide-column query. =tests/gate.sh= now fails on any stroke-only text of more than three words, or any on a screen narrower than 640 px, whatever is behind it; it used to skip such text as having no colour to measure.
+
+On 2026-10-20 the gate found 24 such elements on the pre-fix pages (the fixture roofing heading and the two live manifesto openings at both widths and schemes) and none after recomposing the four live sites from their archived plans and pages with this library. The step-number outline in =steps/chapters= is decorative and hidden from assistive technology, and stays.
+
+* Section forms and extras
+
+Ben: "33% is far too common." The gate's limits are now an average of at most 0.20, no pair over 0.35, and home section order and component mix each averaging at most 0.35. The ten fixture sites all carried the writer's services, steps, questions and call to action, in that set on every page, so order and mix stayed high whatever the look. Five changes bring them down; the words stay the writer's throughout.
+
+- Section forms (=section_forms= at the end of =catalog.yaml=): four families of interchangeable components, and each site is dealt one form per family: offers as services, cards, bento, entries or big-list; process as steps, features, tabs or columns; questions as FAQ, details or a glossary; a page's closing call as a call to action, a statement (its heading as the line, its first action as the link) or a list of its links. =ls_components_apply_forms()= rewrites each section of a family into the site's form, on every page, carrying the heading, intro and each item's title, body and link through the field names in the block; a form whose result fails the page check, or that has no place for some of the section's content, gives way to the next in the family, and the writer's own component is the last resort. A form change never drops content: every word, link and setting of the section, counted, must come through (a call with words and two actions never becomes a one-link statement; links with words beside each stay links; rich words a plain list cannot set keep their form). The page check sees only shape, so this count is the only guard against such a loss. Only a page's last section is its closing call, and the home composition keeps it last.
+- Extras: a site may get one extra home section built only from its own words, picked by seed for 90 percent of sites: a marquee of its first offers' names, its tagline as a statement, links to its interior pages with their descriptions, or the same pages as an oversized big-list index. =ls_components_apply_extras()= leaves out an extra the site has no words for, one the page already has, or one the page check refuses. Sections that need facts the order must supply (team, guarantees, financing, certifications, service areas, video) are never invented; a writer can still use them when the facts are there.
+- More look values (=extra_looks=), each in its own =look-AXIS-VALUE.css= and emitted only for the site that wears it: alignment right and staggered; navigation boxed, dotted, bold and barred; footer in the accent, centred and ruled; airy rhythm; headings underlined, dashed and boxed; buttons soft, block and arrowed; panels as paper, stacked and dashed; headers underlined and roomy; lettering wide and italic; pictures in a blob and tilted. Lettering is now plain on 20 percent of sites (was 50) and the colour scheme fixed on 50 (was 70); the full-bleed and editorial compositions no longer pin rhythm, alignment and heading position, and five compositions gained an opening.
+- Palettes: the generator has two more modes, vivid (a strong colour field with dark ink and a darker accent) and deep (a saturated dark paper), weighted light 28, dark 16, tinted 24, vivid 16, deep 16, and generates 80 percent of palettes (was 70); papers spread wider within each mode and ink and muted text carry a little of the base hue. Every pair still passes the same AA guard.
+- =tests/test-forms.c= checks each family has at least two forms, all dealt across 300 seeds; that a section takes its form with the writer's words and passes the page check, converts once and falls back; that extras come only from the site's words and pass the page check; and that no two of the ten fixture businesses share opening, composition, palette and type pairing, nor composition, home sequence and dealt variants.
+
+** Mobile by default
+
+Ben: "all of these need to be mobile responsive by default." =tests/test-options.c= composes one site per option: every component with all its variants (extras included; one site per variant where a component may appear once a page), every home opening, home composition, motion kit, art direction, extra look value, font pairing, curated palette and 24 generated ones, 219 sites in all. =tests/options.sh= opens each at 390, 768 and 1440 px and fails on sideways scroll; text clipped by an ancestor or overflowing its own box; text overlapping other text (line by line, a quarter of the smaller line, fixed and sticky pieces excepted); reading text of eight words or more under 16 px; tap targets under 44 px (buttons, summaries, form controls, header navigation); text over a picture with no solid backing (pictures faded to a third or less count as background); and, with motion allowed on a phone, any animation of a property other than paint (transform, opacity, filters, masks, colour). =make gate= runs both.
+
+The first run found 1,116 navigation links and 391 small buttons under 44 px wide or tall, real overlaps where the compare slider's two captions met, reading text at 13.6 px in eight components, and the ticker kit's headline animating letter spacing (which moves layout). Fixes: navigation links are at least 44 by 44 px and small buttons 44 px tall; the compare captions take at most half the width each; notes, descriptions, schedules, specifications and service areas are at least 16 px; plans may no longer set body text under 1rem (=base_size= now 1 to 1.375); the ticker's headline fades and scales instead. Several first findings were the checker's own mistakes and were fixed in the checker: answers inside closed =<details>=, wrapped inline text measured as one box, an element's own solid background, and the visually hidden tab labels. On 2026-10-20 all 876 page loads (219 sites at three widths, and each at 390 with motion) passed, in about 13 minutes.
+
+** Before and after
+
+The ten fixture sites, and an estimate over 40 invented businesses (ten trades, four of each) built the same way, before and after:
+
+| Measure | Ten before | Ten after | Forty before | Forty after | Limit |
+|---------+------------+-----------+--------------+-------------+-------|
+| structural mean | 0.339 | 0.181 | 0.382 | 0.196 | 0.20 |
+| worst pair | 0.539 | 0.322 | 0.680 | 0.534 | 0.35 |
+| look | 0.25 | 0.18 | 0.28 | 0.19 | |
+| home section order | 0.62 | 0.25 | 0.65 | 0.26 | 0.35 |
+| component mix | 0.46 | 0.20 | 0.46 | 0.21 | 0.35 |
+| palette | 0.25 | 0.18 | 0.40 | 0.22 | |
+| type | 0.07 | 0.07 | 0.07 | 0.07 | |
+
+The ten pass every limit; with screenshots the overall score is 0.191 (limit 0.20) and the worst pair 0.33 (limit 0.35), and =make gate= passed with contrast, reduced motion and page weight unchanged. Over forty, the average is under 0.20 but the worst of 780 pairs is 0.534: with independent deals, a few pairs still land close (here two businesses dealt near-identical light palettes, the same opening and three of four section forms, though different compositions and type). Steering each new site away from earlier ones in the same market (=site.avoid=) is the tool for that tail.
+
+* Sameness under a tenth
+
+Ben: "we should do 20+ options if we can." The aim was an average under 0.10, no pair over 0.25. The floor is arithmetic: a choice with k options, dealt evenly, matches between two sites about 1/k of the time, so a part can only fall under 0.10 if every choice in it has ten or more real options, more where one option is dealt more often than the rest.
+
+** Option counts and floors
+
+Counted on 2026-10-20 before this change, with the floor each count implies on its own (1/k for even deals; the share of the plain value squared where an axis deals it to a fixed share of sites):
+
+- Look axes: header 8 (0.13), navigation 8 (0.13), headings 9 (0.11), buttons 10 (0.10), panels 11 (0.09), footer 7 (0.14), rhythm 5 (0.20), lettering 7, plain on 20 percent (0.12), photos 6, natural on 40 percent (0.19), alignment 4 (0.25), heading position 4, top forced on narrow columns and five compositions (about 0.4), frame 7 (0.14), images and art 8 and 7 but narrowed by the art direction's lists (about 0.2), colour scheme 2, fixed on 50 percent (0.50). Texture, ornament, emphasis, labels, backdrops, edges and link marks are the retired flourishes: plain on every unthemed site and left out of the score, so widening them changes nothing a visitor sees, and they stay as they are.
+- Home compositions 8 (0.13), openings 15, through four per composition (0.07), motion kits 6 (0.17), art directions 5 (0.20).
+- Section forms: offers 5, process 4, questions 3, closing calls 3, extras 4.
+- Palettes: 21 curated and a generator with 5 modes, the hue anywhere on the wheel; type: 49 pairings.
+
+Plan per part: look and mix by widening their pools and steering; order by reading it as component and variant, as the item asks ("sections every trade needs must vary by variant and position, not just presence"); palette by widening the generator; type was already near zero.
+
+** What changed
+
+- *Steering.* A site built with =site.avoid= now weighs =LS_COMPONENTS_DEALS= (64) deals, its own seed and derived ones, and keeps the one whose highest similarity to any avoided site is lowest (it used to stop at the first under 0.6). The dealt fingerprint's home is the dealt section forms and extra, as the pages will have them. The sameness test builds its ten sites as one market, each avoiding those before it.
+- *The wider block* at the end of =catalog.yaml= joins new entries to their pools when the library loads: looks to their axes (=look-AXIS-VALUE.css=), openings to the home opening components (=COMPONENT--VARIANT.css=, dealt through the compositions that list them), layouts, kits and directions to theirs, forms and their fields to the section form families, modes to the palette generator. Each name must be new; =ls_components_get_catalog()= gives the catalog as loaded, and the tests that read pools now read that.
+- *New options*, each its own file, each passing the phone gate at 390, 768 and 1440: header 8 to 20, navigation 8 to 20, headings 9 to 20, buttons 10 to 20, panels 11 to 20, footer 7 to 20, rhythm 5 to 12, photos 6 to 12, lettering 7 to 12; home compositions 8 to 20; openings 15 to 21; motion kits 6 to 12; art directions 5 to 12; section forms gain directory (offers), split (process) and facts (questions).
+- *Palettes.* A sixth mode, earth: muted mid-tone papers such as clay, sage and stone with a deep accent. Two sites in three now take an ink that is a shade of the accent's hue (navy, forest, oxblood, umber on light papers; a pale tint on dark ones); it was near-black or near-white on every site and the largest single part of palette likeness. Every pair still passes the same AA guard.
+- *An opening fix.* When the dealt opening could not take the writer's words or picture, the builder fell back through the catalog in a fixed order, so a picture-led opening sent 22 of 40 businesses to the same poster. It now falls back to one of the composition's own openings, then any other, each entered at a point the site's structure picks.
+- *A bug found on the way*: the stamped poster's tilted title reached its kicker in a wide frame (fixed in =poster.css=).
+
+=tests/test-wider.c= checks each pool's width as loaded, that every wider value is dealt, that the catalog refuses a wider entry reusing a name or naming a block, family or mode that does not exist, and that a market of twelve built with =site.avoid= spreads further than the same seeds alone (0.163 against 0.209 library similarity).
+
+** Before and after
+
+The ten fixture sites, and the estimate over 40 invented businesses built the same way without steering between them:
+
+| Measure | Ten before | Ten after | Forty before | Forty after |
+|---------+------------+-----------+--------------+-------------|
+| structural mean | 0.181 | 0.096 | 0.196 | 0.120 |
+| worst pair | 0.322 | 0.178 | 0.534 | 0.302 |
+| look | 0.18 | 0.13 | 0.19 | 0.15 |
+| home order, component and variant | | 0.06 | | 0.09 |
+| home order, component only (old reading) | 0.25 | 0.23 | 0.26 | 0.23 |
+| component mix | 0.20 | 0.19 | 0.21 | 0.19 |
+| palette | 0.18 | 0.07 | 0.22 | 0.10 |
+| type | 0.07 | 0.00 | 0.07 | 0.03 |
+
+Read with the old order reading, the ten average 0.130.
+
+** Where it stops
+
+Two parts stay over 0.10, and the numbers say why.
+
+- *Look, 0.13.* Of the eighteen scored axes, six carry most of what is left: colour scheme 0.53 (two values, fixed on half of sites), heading position 0.36, images 0.29, alignment 0.22, frame 0.18, photos 0.16. Scheme alone adds 0.029 to the mean, and scheme, heading position, alignment, frame and photos together about 0.08, before any other axis matches. Under 0.10 the other thirteen axes would need to average under 0.03, about 35 even values each. Those six are short for design reasons: a site is light or dark; headings sit beside the content only where the column is wide; supplied photos of the customer's people stay natural.
+- *Component mix, 0.19.* Half of it is which components a site uses at all. Every site has a page header on each interior page and a contact card on its contact page, two of about eight components, which puts that half at 0.13 or more however wide the other pools grow; the four opening components add more. Even counting those two by variant only, the mix is 0.12 (0.13 over forty).
+
+Pushing either under 0.10 would mean fake options, making supplied photos and dark mode a coin toss, or a measure that ignores sections every site needs. That choice is Ben's.
+
+The gate's limits are now an average of at most 0.15 (with screenshots the ten score 0.124, structurally 0.096), no pair over 0.25 (worst 0.208 with screenshots), home order at most 0.15 and component mix at most 0.25.
+
+* Bold openings and forms
+
+Ben, on the ten fixture sites: "None of these give me a wow factor ... These are all boring." Variety alone was not enough. This change rebuilds the boring parts from the survey in [[file:inspiration.org][inspiration]]: twelve striking home openings, eight standout section forms, and bolder defaults. Every piece is written from scratch in this library; nothing is copied from a surveyed template, so =docs/credits.org= is not needed yet. The block is =bold= at the end of =catalog.yaml=.
+
+** Openings
+
+Each is a new variant of a home opening component, restyling its own markup in =COMPONENT--VARIANT.css=, emitted only on the site that wears it.
+
+| Opening | What it does | Survey |
+|---------+--------------+--------|
+| cover/flood | the whole first screen in the accent, the headline in huge capitals, the picture knocked back to a dark print beneath | openings 1 |
+| cover/wordmark | the picture full width, the headline huge across its foot on a band of the page colour that bites into it | openings 9, 25 |
+| cover/halves | half the screen a flat accent block with a heavy headline, the other half the picture at full height | openings 12 |
+| cover/tint | the picture washed in the accent, the words printed on it in the accent's ink | openings 13 |
+| cover/stub | the picture full-bleed, the words on a notched ticket stub pinned in its corner | openings 24 |
+| cover/cinema | the picture as a wide cinema screen between ink bars, the headline as a spaced title card (the frame suits a video later) | openings 26 |
+| hero/arch | a centred headline, the picture rising from the section's foot in a tall arch | openings 16 |
+| hero/brutal | headline, words, buttons and picture as heavy-framed tiles with hard offset shadows | openings 33 |
+| hero/kinetic | a very large headline rising out of a mask, its emphasis swept in the accent, the picture settling from a slight zoom, a drift on scroll where scroll timelines exist | openings 11, motion 11 |
+| hero/breakout | the words on an ink block, the picture breaking out above its top edge, a drawn arrow at the first button | openings 15 |
+| poster/fold | the headline so large it runs past the first screen, the words and buttons small above it | openings 3 |
+| manifesto/stepped | the lines in large capitals, each stepped further in, every second one in the accent, beside a slowly turning seal | openings 11, 40 |
+
+- =bold.deal_in= adds three of them to the openings of each of the twenty home compositions, chosen to suit its frame (picture-led covers for full-bleed, banded and slant; type-led openings for editorial, gazette and register), so about four sites in ten open with one (=/bold/dealt= requires at least 35 percent over 2,000 seeds).
+- =bold.pictures= says what each does with a picture (needs, shows or hides), replacing the fixed list in the builder for these openings. A page whose writer put a picture in the opening never takes one that hides it.
+- Each opening shapes its own picture: the photo looks and art directions that reshape pictures elsewhere (a blob, a cut corner, a mat) stand aside inside it, so a full-bleed opening is never cut into a blob.
+- Everything that moves is still for reduced motion; on phones only transforms, clip paths and colours animate.
+
+** Supplied photos lead
+
+Ben asked for "real photography slots instead of the house drawing". When the order supplies photos, the home opening shows one: any opening that shows a picture takes the first landscape photo (else the first photo), with its alt text, in place of a drawn artwork, including when the writer already opened as dealt. A photo the writer chose stays. Without photos nothing changes; drawn artwork still fills the slot.
+
+** Section forms
+
+Eight new components join the section form families (=bold.forms=, =bold.fields=) and the composition roles (=bold.roles=), so the builder deals them like the others and carries the writer's titles, bodies and links into them. Each has two variants.
+
+| Form | Family | What it does |
+|------+--------+--------------|
+| slabs | offer | wide numbered slabs, the name large beside its words; turning (surface, ink, accent) or ruled |
+| menuboard | offer | ruled menu-board rows: number, large name, words, a round arrow; the row follows its link and tints under the pointer; rows or on an ink board |
+| volumes | offer | a numbered index, then each offer as a chapter under a huge light title |
+| jobsheet | process | a printed job sheet turned on a dark panel: boxed numbers, ruled rows, drawn ticks; white sheet or carbon copy |
+| progress | process | steps down a line that fills in the accent as the visitor scrolls (full and lit without scroll timelines or with reduced motion); one side or alternating |
+| stairs | process | a flight of bands stepping in, a huge number on each leading edge |
+| expect | practical | dark fact cards headed by a large number, a dotted corner on each |
+| broadsheet | practical | questions set huge and light on hairline rows, answers in a narrow column |
+
+The library now has 82 components (74 before).
+
+** Bolder defaults
+
+- Larger display type: the =scale= structure gene runs from 1 to 1.45 (was 0.85 to 1.3), so the largest headings on wide screens are up to 45 percent over the plan's own scale and never under it. Phones keep their sizes.
+- Confident colour: =bold.weights= moves the generated palette modes toward bold colour fields and deep grounds (light 14, dark 14, tinted 18, vivid 26, deep 22, earth 18), so 43 percent of generated palettes are vivid or deep (was 27); accents are more saturated (chroma 0.14 to 0.22, was 0.12 to 0.2). The AA guard is unchanged.
+- Richer motion: the kinetic, breakout and stepped openings and the progress form bring their own motion on top of the site's kit.
+
+=tests/test-bold.c= checks that every opening and form joins the library, family and role; that all are dealt and the openings open at least 35 percent of sites; that a supplied photo leads an opening ahead of a drawing, the drawing stays without photos, and a picture-hiding opening gives way to a writer's photo; that each opening takes the writer's words, passes the page check and ships its styles only where worn; that a section of each family becomes each form and passes the page check; the scale range; and the share of bold and deep palettes. The option sites of [[*Mobile by default][mobile by default]] now include every bold opening and form, so =make gate= renders each at 390, 768 and 1440.
+
+** Before and after
+
+The ten fixture sites, measured on 2026-10-20 before and after this change (the fixture still answers every business alike, with one drawing and no photos, so it measures what the builder decides, not the wow of a real run):
+
+| Measure | Before | After | Limit |
+|---------+--------+-------+-------|
+| overall sameness | 0.124 | 0.102 | 0.15 |
+| worst pair | 0.208 | 0.185 | 0.25 |
+| structural mean | 0.096 | 0.087 | |
+| home order | 0.06 | 0.04 | 0.15 |
+| component mix | 0.19 | 0.16 | 0.25 |
+| largest home page | 105 KB, 23 KB gzipped | 112 KB, 25 KB gzipped | 150 KB, 40 KB |
+
+=make gate= passed: 1,420 option page loads at 390, 768 and 1440 with no problems (every bold opening and form among them), 1,412 text elements at AA in light and dark, no motion with reduced motion and no page scrolling sideways. Two faults it found on the way were fixed: the kinetic headline split words in the editorial column (big type in the bold openings is now capped by the column width, like the stock poster), and a mixed muted colour in dark blocks that the contrast check cannot read (dark blocks now use the plain light colour, as the stock ones do).
+
+* The wow pass
+
+The fixture sites answer every business alike, so the wow is judged on real runs. On 2026-10-20 six briefs went through one real-model run each (=claude-code=, the recipes' own plan, pages and art prompts): two plumbers, two roofers and two landscapers, all invented, each supplied four licensed stock photos (StockSnap, CC0). Each home was shot at 390 and 1440 and judged the way a picky designer would: would the owner believe a designer made this for them alone?
+
+** The five weakest things
+
+1. *Bland, photo-less openings.* Half the sites opened on type alone or on a drawing although the owner had sent photos: the opening is dealt before the photos were known, and some openings set their picture under the words, below the first screen. Photos are now known before the deal, and a site with photos is dealt an opening its picture leads on the first screen (every cover, the split, backdrop and breakout heroes): one of its composition's, else, when the composition offers none, one picked from every such home opening. The arch and the banner raise their picture below the words, so photo sites skip them (=wow.photo_below= in =catalog.yaml=). The plan prompt suggests the same opening.
+2. *Customers' photos drained of colour.* Black-and-white and two-tone photo treatments, and the printed-ink artwork treatment, turned a customer's own photos grey. They are no longer dealt (=wow.undealt=; a theme may still wear them), the printed-ink filter touches drawn artwork only, and gradient lettering no longer clips away the band of page colour a cover's headline sits on over its photo.
+3. *Screens of nothing.* Slow paces on airy density put up to 11 rem between sections, a screenful at 1440. Section space now tops out at 8 rem.
+4. *A signature divider fencing every section.* The site's own divider drew between every pair of sections and added a section's worth of space of its own. It now punctuates every third gap in its own small space.
+5. *The same photo twice.* The opening's photo came back in the next section or the gallery. Each supplied photo now shows once per page while unused ones are left.
+
+Recomposing the six from the second run's recorded answers showed two more, both fixed: a split opening in the narrow journal frame shrank its photo to a stamp (it now leaves the 46 rem column), and a banner's photo fell below the first screen (now skipped, as above).
+
+=tests/test-wow.c= holds all of these: 300 photo sites open on a supplied photo with at least ten openings among them and the prompt agrees; 3000 dealt looks never drain photos; the gap and divider limits; no photo twice; the split breaks out of the journal column.
+
+** Before and after
+
+Before: the first real run on the epic before this change. After: the same six briefs rerun for real with the fixes as they stood, then recomposed with the finished library from that run's recorded answers (no third model run), first screen only.
+
+- 1440: [[file:images/wow/before-1440.jpg][before]], [[file:images/wow/after-1440.jpg][after]]
+- 390: [[file:images/wow/before-390.jpg][before]], [[file:images/wow/after-390.jpg][after]]
+
+Every home now opens on the owner's own photo at 1440, in colour. What is still weak: one plumber's photo is black and white at the source (photo choice, not the builder); on a phone the split opening shows its words before its photo; the headlines are the writer's and vary well, but the openings over a busy photo depend on its calm areas.
+
+* Mobile findings
+
+A read-only mobile check of the epic (twenty real-model sites, every page at 390 and 1440 in a browser) found six faults. Each is fixed and each is now a check in =make gate= at 390 (2x screen) and 1440 (1x screen): =tests/test-mobile.c= holds the fixes and writes eight photo sites (four photos each, two of them portrait, the first site dealt the spotlight motion kit), and =tests/mobile.sh= opens every page of those sites plus the home page of every option site and the ten sameness sites.
+
+1. *Headings squeezed to 6 px.* The heading fitter measured while the spotlight kit's entrance held a section at 97 percent scale; a padded box then read as wider than its column whatever the font size, and the fitter shrank its title, prices and address to its 30 percent floor. The fitter now lifts every running animation off while it measures and puts it back, and never goes below 16 px (or the text's own size, if smaller); past that a long word wraps. Gate: text under 11.5 px, or squeezed by the fitter below 16 px.
+2. *White words on a pale panel.* A dealt tint or ink tone repainted a section that paints its own accent band (statement, call to action, accent marquee, contact band), leaving the band's white text on the tint. Those sections keep their band. The warning red is also checked against the surface it marks, not just the paper. The new gate check found one more: panels on an accent band (question cards, a statement box) were the accent lightened toward its white text, 3.8:1 on a mid accent; the builder now writes an accent panel colour that keeps AA, moving the other way when it must. Gate: AA contrast for every text, at rest, and again with each band tone (tint, ink, accent) laid over every section; the contrast check now reads mixed colours (=color(srgb ...)=) as well as =rgb()=.
+3. *Soft desktop photos.* =sizes= guessed a third of the screen for photos that span it. The site script now sets each photo's =sizes= to the width its box needs (for a covering photo, the side its shape needs). Gate: a photo served with under 0.8 of the pixels its box needs at the screen's density, when a larger file exists.
+4. *Small tap targets.* Breadcrumbs, contents links, links that stand alone (a whole list item, contact detail, item title, or a paragraph that is only a link, now marked =link-line= by the rich-text renderer), the notice link, footer links and the label of a checkbox are at least 44 px. Links inside running text keep the line. Gate: any link, button, summary or field outside running text under 44 x 44 (a checkbox is measured by its label, a card's stretched link by its card).
+5. *Fonts swapping in late.* Web fonts now load with =display=optional= and each family's Latin files (at most eight) are preloaded from the head with the stylesheet, so a font that misses the first paint waits for the next page instead of moving the header. Gate: a font stylesheet without optional display, or a family without a preload.
+6. *Portrait photos cut to a strip.* A covering photo its box would crop to under 40 percent of itself is shown whole on a mat (=is-matted=) instead. Gate: a photo cropped to under 40 percent.
+
+Each check was proved against the old code: the old fitter squeezes the outline contact card's title to 8 px in the gate's own photo site and squeezed at least 36 headings, prices and addresses on the three real spotlight sites (none with the new fitter); the old band rule leaves the statement at 1.2:1; =display=swap= without preloads, the old photo sizes and crops, and the old tap sizes are each reported.
+
+* The showcase
+
+Eighteen invented businesses across eighteen trades and moods (HVAC, electrician, dog groomer, bakery, barber, auto shop, dentist, yoga studio, landscaper, roofer, pest control, cleaning, painter, florist, tattoo shop, food truck, accountant, wedding photographer), each with two or three CC0 stock photographs (=docs/credits.org=), built with the real model in turn, each steering away from those before it (=site.avoid=). The sites and their contact sheets are kept privately; the photographs are not in this repository. Looking at the sheets found what follows; each fix is held in =tests/test-showcase.c= and, for the browser, =tests/showcase.sh= in =make gate=.
+
+1. *The same opening over and over.* Five of seventeen sites opened on the same card pinned over a photograph (=cover/stub=). A site with photos swaps its dealt opening for one its picture leads; a composition whose only such opening was the stub (=register=) handed it to every photo site it was dealt. And the steering compared the opening dealt before the swap, so it never saw the repeat. Now a composition with fewer than two photo-led openings deals from the whole set, =ls_components_choose_photo_seed()= weighs the opening the site will wear, and each avoided site that opens the same way adds =LS_COMPONENTS_WORN_OPENING= (0.03) to a deal's score. Test: over 400 photo seeds no opening takes more than 12 percent; eighteen photo sites built in turn never open the same way three times (four times before). The recomposed showcase opens thirteen ways over seventeen sites, none more than twice; the stub once.
+2. *Headlines below the first screen.* At 1440 by 900, five of seventeen home headlines or their first button sat below the first screen, and one (a cinema cover under the masthead) showed no headline at all: covers size their picture from the screen height without counting the header above or the words below. The site script now shortens the opening's picture by the difference, never under 40 percent of the screen or to a strip (0.28 of its width), after fonts and pictures load. A masthead nameplate tightens on a page that opens on a photo cover. The cinema cover's title card is wider (two lines, not three) with shorter ink bars, and photo sites under a masthead skip it (=wow.frame_below= in =catalog.yaml=). Gate: the home headline on the first screen of a 900 px window at 390, 768 and 1440 for every photo cover under the masthead, the cinema cover in its own frame (all failed at 1440 before). On the recomposed showcase every headline is on the first screen at both widths; five first buttons still land just under it on desktop.
+3. *Drained photos.* A cover's treatment greyed or tinted the owner's photographs. Supplied photographs keep their colour in every cover unless the look asks for mono or duotone, and a cover's label keeps its opaque backing over a photo. Gate: photo filters and label contrast at three widths.
+4. *Long headlines at display size.* A headline of many short words took one word per line at display size; more than five words now steps down like a long headline, and the page prompt asks for a 3 to 8 word headline and a lede of at most 24 words, leaving explanation to later sections.
+
+Not changed: two photographs are grey at the source (one black and white), and services pages carry no photographs, so they read plainer than the homes.
+* Asset-first visual sequences
+
+This work is not release-approved. The new =scene= and =material= components
+are an opt-in path for supplied media. Plans without =media= retain the seeded
+variety pipeline. Integration still requires six successful live generations
+and an approved comparison against the visual references.
+
+** Contract and ordering
+
+=site.media= selects =hero=, =portrait= and =detail= from =site.photos= before
+composition; optional =proof= names a related photo. =kind= is =project=,
+=stock= or =illustration=; =source= records provenance. Only project media
+with a proof image may carry up to three =facts=, each with =value=, =label=
+and =source=. Paths and facts come from the order, never the model.
+
+The planner writes =visual=: an internal =idea=, =world=, =layout=,
+=headline=, =intro=, =craft_heading=, =craft_copy=, =proof_heading=,
+=proof_copy= and =close_heading=. Headings have at most eight words and 52
+characters; body fields have at most 180 characters. The builder renders
+outcome, craft and optional proof before the remaining home sections.
+
+The six material directions are chalk, copper, forest, electric, ceramic and
+oven; openings are full, split and object. The sequence owns its composition
+and interaction styles instead of inheriting a motion kit or signature layer.
+Reference patterns were independently implemented; no reference-site code or
+artwork is included. Stock imagery remains labelled, not customer-project proof.
+
+** Motion media
+
+Optional =clip= and =clip_portrait= are seeded local MP4/WebM binaries under
+=assets/=, at most 2 MiB each. Container signatures are checked; decoding is
+left to the browser. This is not a transcoding or full codec validator.
+The still loads first; no film bytes are requested until Play film is pressed.
+Reduced motion and low-data preference retain the still. Pause, offscreen and
+hidden-document pause, and failed-playback fallback use native browser APIs.
+Video and picture share a frame, independent of wrapped source credits.
+Essential copy remains on a solid field outside the moving image.
+
+** Verification and release acceptance
+
+=tests/test-bar.c= checks media references/provenance, unsupported proof facts,
+heading limits, all eighteen world/layout combinations and clip bounds.
+=tests/bar.py= checks media at 390, 768 and 1440: zero initial film requests,
+phone source selection, reduced motion/low data, play/pause, failure fallback,
+frame alignment, heading lines, layout shift and separate code/poster budgets.
+This browser gate uses =ffmpeg= and =ffprobe= (Fedora =ffmpeg-free=) alongside
+the existing Firefox WebDriver. The gate does not install packages.
+
+=make visual-review VISUAL_REVIEW_DIR=...= is a separate release check.
+The directory supplies =provenance.json= with exactly six distinct records
+(=slug= and =fresh_run=true=). Under =captures/SLUG/=, each site supplies
+=390-first.jpg=, =390-scroll-1.jpg= through =390-scroll-3.jpg=,
+=390-scroll.webm=, and the same five files with the =1440-= prefix.
+
+=review.json= is keyed by =SLUG/WIDTH=. Each entry has =approved=,
+=reference=, =judgment= and =sha256=. The digest covers each filename in the
+order above, encoded as UTF-8, followed by its raw bytes. A changed capture
+invalidates its approval. Failed generation, recorded substitutes, missing or
+undecodable captures, absent judgments and negative comparisons fail the gate.
+Fixture checks cannot approve visual quality. Run =make test= and =make gate=
+as well; this review does not replace them.
+
+The original six-brief attempt succeeded for three briefs. A continuation
+ran three fresh batches with a smaller model: four, six and six sites completed.
+Two failures exposed native chalk/oven palettes that tripped the existing
+house-default guard after every retry. Their accents are now slate and cocoa;
+the guard itself is unchanged. All six worlds pass both identity and plan checks.
+
+Retry errors identify the actual visual field and its bound. Word counting
+ignores repeated whitespace; the tagline's 160-character bound is in both
+schema and prompt. A full opening requires a supplied portrait crop with
+width/height at most 1.2; otherwise the planner must choose split or object.
+This preserves the general crop guard instead of hiding its empty mats with
+aggressive cropping. Credits occupy their own grid row even when long, and
+long business names leave room for the phone menu.
+
+The native media tests live in =tests/test-bar.c=. Full-suite, browser-gate and comparative
+visual acceptance are separate requirements. Comparative acceptance has not passed, so shipping the sequence is not a claim that the reference standard is met.
+
+The continuation's final six-site set still fails comparative visual acceptance
+at both phone and desktop widths. Openings collapse into two dominant structures;
+subsequent beats repeat alternating photo/text panels. Stock subjects cannot
+supply attributable project proof, distinctive object art or craft footage. Full
+openings also need subject-aware text placement: the opaque copy field can hide
+the useful part of a photograph. Generic service descriptions remain common.
+The native tests and the media browser checks do not establish the reference
+standard. Comparative visual acceptance has not passed. Further work needs
+coherent licensed asset sets, a richer narrative layout system and another
+explicitly authorized live-generation allowance. =make tests= covers the native
+contract; =make gate= and =make visual-review= stay separate.
+
+The draft became the base on 2026-10-21 (Ben, 12:58: "libresite is much
+better"); the taste rework below carries it into the epic.
+
+* Taste
+
+Ben, 2026-10-21, on the eighteen-site showcase: "These look stupid." Variety
+had become gimmicks: tilted cards, outline headlines, decorative circles,
+loud cyan and purple grounds, question headlines, "illustrative business"
+in body copy, and inner pages that were empty coloured boxes with letter
+chips. The sameness score rewarded being different, not being good.
+
+** What the builder deals
+
+The catalog's =taste= block (appended at the end of =catalog.yaml=) is the
+small set of calm systems a dealt site may wear:
+
+- =looks=: the allowed values of each look axis, its default first. No
+  textures, backdrops, torn or waved edges, outline or gradient lettering,
+  tilted or blob images, glass, chrome or knob buttons, circled navigation.
+- =kits= and =directions=: four calm motion kits, two art directions (framed and line art; the window direction draws an arch behind art).
+- =forms= and =extras=: the section forms per family and the home extras.
+  No directory or glossary as a services list, no job sheet, no marquee.
+- =angles=: home headline angles that state what the business does (no
+  question, no "character" voice).
+- =openings= and =variants=: never dealt, and rendered as the component's
+  first calm variant when a writer names one.
+- =chroma=: the page and surface colours of a light ground are calmed to
+  this chroma; a neon accent (chroma over 0.35, HSL lightness over 0.45) is
+  toned down, and ink, muted and accent-ink text are moved until AA passes.
+
+Other values stay in the library for themes and explicit options only.
+Inside these systems a site still varies by layout, type pairing and the
+visual sequence's material world.
+
+** Words
+
+Visible copy never says "illustrative". Talk of stock photographs, visual
+references, an invented business or a demo site belongs only in =footer.note=, in other
+words ("Example business. Stock photography."). The plan and page checks
+refuse anything else, so the model retries with the reason. Stock or drawn
+media in the visual sequence carry no caption; only a real project's
+source is credited beside its photo. Each page's first heading, and the
+visual headline, is a statement: a question is refused.
+
+** Photos on every page
+
+A page of a photo site that shows no supplied photo gets one: a full-width
+photo section after its opening, the photo picked from the route
+(=ls_components_ensure_photo()=). A directory shows its letter index only
+over six letters or more; under that it is a plain list.
+
+** Checks
+
+- =ls_components_check_taste()= checks the composed site: the word
+  "illustrative", disclosure outside the footer, question headlines, pages
+  without a photo, letter chips, look values, kits, directions and variants
+  outside the calm systems, and loud page colours. The pages step fails a
+  dealt (unthemed) site that breaks any of them.
+- The browser gate (=tests/gate.sh=) fails tilted boxes, any outline
+  lettering, big empty round shapes and neon bands at 390 and 1440, and
+  proves it on =tests/fixtures/taste-bad=, a page built to have all four.
+- =tests/test-ls-taste.c= covers each rule, each seen failing first.
+
+** Sameness is a soft guard
+
+The sameness limits (0.15 mean, 0.25 worst pair, order and mix) are
+reported, not enforced. Only clones fail: two of the ten sites more alike
+than 0.5. With the calm systems the ten sites score 0.141 structural, worst
+pair 0.219, inside the old limits anyway.
+
+* Calm, but not one template
+
+The taste rework left every photo-led home on one opening (photo left,
+headline right) and every site on two photos, so the same photo came back
+down the page. Taste rules are unchanged; this adds range inside them.
+
+** Openings dealt by the seed
+
+The taste block's =scenes= lists the calm photo-led openings a visual
+sequence may wear: =split= (photo left), =right= (photo right, words
+left), =above= (a large statement over a wide photo) and =scrim= (a
+full-bleed photo with the words on a solid dark panel over its lower
+corner; stacked on phones, so no text sits on the photo).
+=ls_components_suggest_scene()= picks one from the seed and
+=ls_components_apply_seed()= sets it as =visual.layout=: the seed, not the
+writer, decides. =full= and =object= stay for an explicit layout; =full=
+needs a portrait crop, so it is not dealt.
+
+=ls_components_choose_photo_seed()= also weighs the scene: each earlier site
+wearing it costs a little, and the site just before (the last in
+=site.avoid=) costs a whole point, so an embedder that lists earlier sites
+in order never gets two neighbours with the same opening.
+
+** No photo twice on a page
+
+=ls_components_spread_photos()= runs after =ls_visual_apply_page()=, so the
+opening and craft photos count. Image slots claim photos in turn: the
+opening, then sections with words of their own, then photo-only sections
+(media, gallery, carousel, strip, figure, showcase, compare). A repeat
+takes a photo the page has not shown, preferring one no later slot asks
+for. With none left it goes: the item of a carousel or gallery, else an
+optional image; a section that cannot stand without it (a required image,
+too few items) goes too. A writer's further copy of a beat (a second scene,
+or a material section under a beat's heading) is dropped by
+=ls_visual_apply_page()=. Inner pages that need a photo take one the home
+sequence does not show, where there is one.
+
+=ls_components_check_taste()= fails a page that shows one supplied photo
+twice (a picture's phone crop counts when it is another photo).
+=ls_components_count_photos()= counts the distinct photos a built site
+shows; a site given four or more should show four. It is a measure, not a
+taste failure, so a small site is never refused for it.
+
+=tests/test-calm-openings.c= covers each rule, each seen failing first
+(on the epic head all eighteen sites opened =split=, and a two-photo home
+showed one photo four times). =tests/test-bar.c= renders all six scene
+layouts for the gate at 390, 768 and 1440.

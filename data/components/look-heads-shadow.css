@@ -1,0 +1,3 @@
+/* heads/shadow: heavy section headings with a hard offset shadow in the accent, like a painted sign. */
+.look-heads-shadow main h2[id$="-h"] { font-weight: 800; text-shadow: 0.07em 0.07em 0 color-mix(in srgb, var(--accent) 80%, var(--paper)); }
+.look-heads-shadow main h2[id$="-h"] .em { text-shadow: 0.07em 0.07em 0 color-mix(in srgb, var(--ink) 30%, var(--paper)); }

@@ -1,0 +1,44 @@
+#+title: Showcase photograph credits
+
+* Private eighteen-site showcase
+
+The showcase uses StockSnap photographs under [[https://creativecommons.org/publicdomain/zero/1.0/][CC0 1.0]]. The [[https://stocksnap.io/license][source licence page]] was checked on 2026-10-21. Photographs remain in the private demonstration artifacts; none are embedded in this repository. All businesses in the demonstration are invented. Stock images are illustrative and are not claimed as the businesses' premises, staff, customers or completed work.
+
+| Photo | Source | Licence |
+|-------+--------+---------|
+| 01 | [[https://stocksnap.io/photo/farmhouse-kitchen-QSX4WH8BDB][Farmhouse Kitchen]] | CC0 1.0 |
+| 02 | [[https://stocksnap.io/photo/kitchen-sink-VO57T4JVJU][Kitchen Sink]] | CC0 1.0 |
+| 03 | [[https://stocksnap.io/photo/electrician-electricity-QJ55PI34SY][Electrician Electricity]] | CC0 1.0 |
+| 04 | [[https://stocksnap.io/photo/electrician-electricity-3A5FXM89OG][Electrician Electricity]] | CC0 1.0 |
+| 05 | [[https://stocksnap.io/photo/barbershop-brush-GZP9ZEQPFL][Barbershop Brush]] | CC0 1.0 |
+| 06 | [[https://stocksnap.io/photo/barber-razor-06HGN8LMUX][Barber Razor]] | CC0 1.0 |
+| 07 | [[https://stocksnap.io/photo/beetle-buggy-A0737DFF83][Beetle Buggy]] | CC0 1.0 |
+| 08 | [[https://stocksnap.io/photo/car-garage-D3AFE4D6F8][Car Garage]] | CC0 1.0 |
+| 09 | [[https://stocksnap.io/photo/chair-dentist-3J10QN5PTS][Chair Dentist]] | CC0 1.0 |
+| 10 | [[https://stocksnap.io/photo/toothbrush-toothpaste-UD9953XS1H][Toothbrush Toothpaste]] | CC0 1.0 |
+| 11 | [[https://stocksnap.io/photo/woman-yoga-NK0FIGBQJM][Woman Yoga]] | CC0 1.0 |
+| 12 | [[https://stocksnap.io/photo/woman-yoga-O5USQD0F3M][Woman Yoga]] | CC0 1.0 |
+| 13 | [[https://stocksnap.io/photo/patio-furniture-ZIU3AC46X4][Patio Furniture]] | CC0 1.0 |
+| 14 | [[https://stocksnap.io/photo/house-flower-8PWC0BDZAF][House Flower]] | CC0 1.0 |
+| 15 | [[https://stocksnap.io/photo/house-roof-KJMQM11A8G][House Roof]] | CC0 1.0 |
+| 16 | [[https://stocksnap.io/photo/roof-shingle-RIUJONCXNY][Roof Shingle]] | CC0 1.0 |
+| 17 | [[https://stocksnap.io/photo/house-home-ADCFZ4QLNO][House Home]] | CC0 1.0 |
+| 18 | [[https://stocksnap.io/photo/house-exterior-N35ZUD3GPW][House Exterior]] | CC0 1.0 |
+| 19 | [[https://stocksnap.io/photo/room-interior-WKMVXACB6C][Room Interior]] | CC0 1.0 |
+| 20 | [[https://stocksnap.io/photo/house-interior-HTE9LOGFC1][House Interior]] | CC0 1.0 |
+| 21 | [[https://stocksnap.io/photo/paint-brush-SWYKOWL4WP][Paint Brush]] | CC0 1.0 |
+| 22 | [[https://stocksnap.io/photo/paint-brushes-0PMM9M97E1][Paint Brushes]] | CC0 1.0 |
+| 23 | [[https://stocksnap.io/photo/flowers-bouquet-CNEX3ZDN3G][Flowers Bouquet]] | CC0 1.0 |
+| 24 | [[https://stocksnap.io/photo/flowers-bouquet-SHXKTYF3C9][Flowers Bouquet]] | CC0 1.0 |
+| 25 | [[https://stocksnap.io/photo/street-food-34QDSDEHXG][Street Food]] | CC0 1.0 |
+| 26 | [[https://stocksnap.io/photo/food-eat-RXWC2PDCQQ][Food Eat]] | CC0 1.0 |
+| 27 | [[https://stocksnap.io/photo/writing-drawing-8Y0EDX4VP9][Writing Drawing]] | CC0 1.0 |
+| 28 | [[https://stocksnap.io/photo/office-work-13UNSPJHCZ][Office Work]] | CC0 1.0 |
+| 29 | [[https://stocksnap.io/photo/dog-pet-4T0BQID9GS][Dog Pet]] | CC0 1.0 |
+| 30 | [[https://stocksnap.io/photo/dog-pug-2N0WSXKY4L][Dog Pug]] | CC0 1.0 |
+| 31 | [[https://stocksnap.io/photo/bread-baguette-9J9OUZYDZ3][Bread Baguette]] | CC0 1.0 |
+| 32 | [[https://stocksnap.io/photo/bagels-bread-GI73BADLXF][Bagels Bread]] | CC0 1.0 |
+| 33 | [[https://stocksnap.io/photo/artist-tattoo-SSTCSTBF7R][Artist Tattoo]] | CC0 1.0 |
+| 34 | [[https://stocksnap.io/photo/tattoo-ink-6D408625FE][Tattoo Ink]] | CC0 1.0 |
+| 35 | [[https://stocksnap.io/photo/wedding-bride-GI154PSYGF][Wedding Bride]] | CC0 1.0 |
+| 36 | [[https://stocksnap.io/photo/wedding-couple-YJHZWANTEG][Wedding Couple]] | CC0 1.0 |

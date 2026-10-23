@@ -202,6 +202,31 @@ Supplied podbay module snippets and stylesheets ([[file:components.org::*Podbay 
 | =ls_components_describe(self)= | full | Model-facing component reference |
 | =ls_components_suggest_look(self, seed)= | full | Stable per-site starting look: axis name to value |
 | =ls_components_suggest_opening(self, seed)= | full, nullable | Stable per-site home opening as component/variant |
+| =ls_components_get_catalog(self)= | none | Catalog root after extra and wider entries are joined |
+| =ls_components_apply_seed(self, plan, seed, sector, themed)= | — | Deal look, colour, type and opening onto a plan; =sector= nullable |
+| =ls_components_apply_opening(self, plan, path, page)= | — | Rewrite the home opening into the dealt component |
+| =ls_components_apply_composition(self, plan, page)= | — | Order home sections by the dealt composition |
+| =ls_components_apply_forms(self, plan, path, page)= | — | Rewrite section families into the dealt forms without dropping words |
+| =ls_components_apply_extras(self, plan, page)= | — | Add dealt home extras built from the site's own words |
+| =ls_components_get_direction_brief(self, name)= | none, nullable | What the artist is told for an art direction |
+| =ls_components_suggest_angles(self, seed)= | full | Dealt headline angle and art subject |
+| =ls_components_get_angle_description(self, group, name)= | none, nullable | Writer note for a headline or subject angle |
+| =ls_components_suggest_photo_opening(self, seed)= | full, nullable | Home opening a site with supplied photos wears |
+| =ls_components_suggest_scene(self, seed)= | full, nullable | Calm photo-led scene variant; NULL without taste scenes |
+| =ls_components_spread_photos(self, plan, page)= | — | Show each supplied photo at most once on the page |
+| =ls_components_ensure_photo(self, plan, path, page)= | — | Give a photo-less page of a photo site one photograph |
+| =ls_components_check_taste(self, plan, bundle, problems)= | — | Calm-system, disclosure and question-headline checks |
+| =ls_components_count_photos(self, plan, bundle)= | — | Supplied photographs a composed bundle shows |
+| =ls_components_choose_seed(self, seed, sector, avoid, closest)= | full | Least-alike deal against =avoid=; =sector= and =closest= nullable. Same signature as before the photo flag |
+| =ls_components_choose_photo_seed(self, seed, sector, avoid, closest)= | full | =choose_seed= for a site with photos: weighs the photo opening and the dealt scene |
+| =ls_taste_disclosure(text, footer)= | none, nullable | Phrase of self-talk in visible copy, or NULL |
+| =ls_taste_chroma(hex)= | — | How coloured a =#rrggbb= value is, 0 to 1 |
+| =ls_taste_calm(hex, limit)=, =ls_taste_mix(hex, toward, amount)= | full | Pull a colour toward grey, or toward another colour |
+| =ls_visual_check_media(owner, error)= | — | Optional media block; a missing owner or member is valid |
+| =ls_visual_check_plan(plan, error)= | — | Visual sequence contract; a missing plan is valid |
+| =ls_visual_check_assets(owner, context, error)= | — | Media plus seeded clip bytes; =context= nullable |
+| =ls_visual_apply_plan(plan)=, =ls_visual_apply_page(plan, page)= | — | Paint a valid visual sequence onto the plan and home page |
+| =ls_visual_view(plan, view, index)= | — | Project credit, film paths and proof facts for one beat |
 | =ls_components_list_themes(self)= | full | Theme names |
 | =ls_components_list_sectors(self)= | full | Sector names identities are dealt by |
 | =ls_components_get_look_description(self, axis, value)= | none | Catalog description of a look value, as prompts quote it; nullable |

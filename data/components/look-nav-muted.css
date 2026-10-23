@@ -1,0 +1,4 @@
+/* nav/muted: quiet links in the muted colour; the current page in ink and heavy. */
+.look-nav-muted .site-nav a:not(.button) { color: var(--muted); border-bottom-color: transparent; }
+.look-nav-muted .site-nav a:not(.button):hover { color: var(--ink); border-bottom-color: transparent; }
+.look-nav-muted .site-nav a[aria-current="page"], .look-nav-muted .site-nav__group.is-section > a { color: var(--ink); font-weight: 800; border-bottom-color: transparent; }

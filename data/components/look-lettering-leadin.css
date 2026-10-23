@@ -1,0 +1,2 @@
+/* lettering/leadin: the first line of reading text opens in spaced small capitals, like a book chapter. */
+.look-lettering-leadin main :is(.block--text, .block--article, .block--story, .block--lead):first-of-type .prose > p:first-of-type::first-line { font-variant-caps: all-small-caps; letter-spacing: 0.06em; font-weight: 600; }

@@ -367,9 +367,22 @@ test_parallel(void){
 	/* Each writer sees its own brief, the page's required literals and the catalog. */
 	g_assert_nonnull(strstr(g_ptr_array_index(prompts_for(fixture.provider, "start.html"), 0), "Nothing is sent."));
 	g_assert_nonnull(strstr(g_ptr_array_index(prompts_for(fixture.provider, "work.html"), 0), "COMPONENTS"));
-	/* Every artwork is drawn in the site's art style. */
-	g_assert_nonnull(strstr(g_ptr_array_index(prompts_for(fixture.provider, "assets/bench.svg"), 0),
-		"\"style\":\"Bold carved marks"));
+	/* Every artwork is drawn in the art style the builder dealt the site. */
+	{
+		g_autoptr(GError) local = NULL;
+		g_autoptr(LsComponents) components = ls_components_new(&local);
+		g_autoptr(JsonNode) plan = ls_json_parse(artifact_text(fixture.context, "site/plan.json"), NULL);
+		const gchar *art = ls_string(json_object_get_object_member(json_node_get_object(plan), "look"), "art");
+		g_autofree gchar *style = g_strdup_printf("\"style\":\"%.20s",
+			ls_components_get_look_description(components, "art", art));
+		g_assert_no_error(local);
+		/* "open" leaves the style to the artist, so no style is sent. */
+		if (g_strcmp0(art, "open") == 0)
+			g_assert_null(strstr(strstr(g_ptr_array_index(prompts_for(fixture.provider, "assets/bench.svg"), 0), "TASK (JSON)"),
+				"\"style\":\""));
+		else
+			g_assert_nonnull(strstr(g_ptr_array_index(prompts_for(fixture.provider, "assets/bench.svg"), 0), style));
+	}
 	g_assert_null(strstr(g_ptr_array_index(prompts_for(fixture.provider, "work.html"), 0), "Local form"));
 	fixture_teardown(&fixture);
 }
@@ -426,7 +439,15 @@ test_sameness_run(void){
 	fp = json_node_get_object(fingerprint);
 	g_assert_cmpint(json_object_get_int_member(fp, "v"), ==, 1);
 	g_assert_cmpuint(json_array_get_length(json_object_get_array_member(fp, "signature")), >, 0);
-	g_assert_cmpstr(json_array_get_string_element(json_object_get_array_member(fp, "home"), 0), ==, "hero/split");
+	/* The home page opens as the builder dealt it, not as the writer wrote it. */
+	{
+		g_autoptr(JsonNode) home = ls_json_parse(artifact_text(first.context, "site/pages/index.json"), NULL);
+		JsonObject *opening = json_array_get_object_element(
+			json_object_get_array_member(json_node_get_object(home), "sections"), 0);
+		g_autofree gchar *dealt = g_strdup_printf("%s/%s", ls_string(opening, "component"), ls_string(opening, "variant"));
+		g_assert_cmpstr(json_array_get_string_element(json_object_get_array_member(fp, "home"), 0), ==, dealt);
+		g_assert_cmpstr(dealt, !=, "hero/split");
+	}
 	/* The same order, now asked to avoid the first site. The fake answers a
 	 * fixed plan whatever it is dealt, so compare only what the builder dealt:
 	 * the layout and genes, not the fixture's own colours, type and home. */
@@ -692,8 +713,9 @@ test_plan_options(void){
 	}
 }
 
-/* A plan that falls back on the house default is sent back with the reason,
- * and the sector option deals an identity that fits it. */
+/* The sector option deals an identity that fits it, and the builder applies
+ * it: a plan that falls back on the house default costs no retry, because
+ * its colours are replaced by the dealt palette. */
 static void
 test_plan_identity(void){
 	Fixture fixture;
@@ -711,16 +733,20 @@ test_plan_identity(void){
 	fixture.provider->default_plan = TRUE;
 	run_plan(&fixture);
 	prompts = prompts_for(fixture.provider, "plan");
-	g_assert_cmpuint(prompts->len, ==, 2);
-	g_assert_nonnull(strstr(g_ptr_array_index(prompts, 1), "house default"));
-	/* The prompt carries exactly the identity the library deals for this site. */
+	g_assert_cmpuint(prompts->len, ==, 1);
+	/* The prompt carries exactly the identity the library deals for this
+	 * site, and the stored plan wears it. */
 	{
 		JsonObject *root = ls_recipe_get_root(fixture.recipe);
 		g_autofree gchar *seed = g_strconcat(ls_string(root, "name"), "\n",
 			ls_string(json_object_get_object_member(root, "site"), "brief"), NULL);
 		g_autoptr(JsonObject) identity = ls_components_suggest_identity(components, seed, "food");
+		JsonObject *palette = json_object_get_object_member(json_object_get_object_member(identity, "palette"), "tokens");
+		g_autoptr(JsonNode) plan = ls_json_parse(artifact_text(fixture.context, "site/plan.json"), NULL);
 		wanted = g_strdup_printf("\"suggested_palette\":{\"summary\":\"%s\"",
 			ls_string(json_object_get_object_member(identity, "palette"), "summary"));
+		g_assert_cmpstr(ls_string(json_object_get_object_member(json_node_get_object(plan), "tokens"), "accent"), ==,
+			ls_string(palette, "accent"));
 	}
 	task = strstr(g_ptr_array_index(prompts, 0), "TASK (JSON)");
 	g_assert_nonnull(task);
@@ -1107,16 +1133,20 @@ build_with_photo(GBytes *png){
 	return context;
 }
 
-/* Every <img> tag in @html that shows @src. */
+/* Every <img> tag in @html that shows @src, whatever its attribute order
+ * (the dealt opening may be a poster, whose image carries a class first). */
 static GPtrArray *
 img_tags(const gchar *html, const gchar *src){
-	g_autofree gchar *needle = g_strdup_printf("<img src=\"%s\"", src);
+	g_autofree gchar *needle = g_strdup_printf(" src=\"%s\"", src);
 	GPtrArray *tags = g_ptr_array_new_with_free_func(g_free);
 	const gchar *at = html;
-	while ((at = strstr(at, needle)) != NULL) {
+	while ((at = strstr(at, "<img ")) != NULL) {
 		const gchar *end = strchr(at, '>');
+		g_autofree gchar *tag = NULL;
 		g_assert_nonnull(end);
-		g_ptr_array_add(tags, g_strndup(at, (gsize)(end - at + 1)));
+		tag = g_strndup(at, (gsize)(end - at + 1));
+		if (strstr(tag, needle) != NULL)
+			g_ptr_array_add(tags, g_steal_pointer(&tag));
 		at = end;
 	}
 	return tags;

@@ -1,0 +1,7 @@
+/* voices/stack: the first quote is set large under an oversized quotation
+ * mark; the rest follow smaller beside a rule. */
+.voices--stack .voices__item { background: transparent; padding: 0 0 0 var(--space-5); border-left: calc(var(--border) * 3) solid var(--accent); border-radius: 0; }
+.voices--stack .voices__list > li:first-child .voices__item { padding: 0; border: 0; }
+.voices--stack .voices__list > li:first-child .voices__item::before { content: "\201C"; display: block; height: 0.6em; font-family: var(--font-display); font-size: var(--step-7); line-height: 1; color: var(--accent-text); }
+.voices--stack .voices__list > li:first-child blockquote { font-family: var(--font-display); font-size: var(--step-3); line-height: 1.2; }
+.voices--stack .voices__list > li:first-child blockquote p::before, .voices--stack .voices__list > li:first-child blockquote p::after { content: none; }

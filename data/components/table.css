@@ -5,4 +5,4 @@
 .table__grid th { font-family: var(--font-display); font-weight: 700; border-bottom: var(--border-strong) solid var(--ink); }
 .table--striped .table__grid tbody tr:nth-child(odd) { background: var(--surface); }
 .table--striped .table__grid td:first-child, .table--striped .table__grid th:first-child { padding-left: var(--space-3); }
-.table__note { margin-top: var(--space-3); font-size: var(--step--1); color: var(--muted); }
+.table__note { margin-top: var(--space-3); font-size: max(1rem, var(--step--1)); color: var(--muted); }

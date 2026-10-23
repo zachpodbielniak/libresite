@@ -1,0 +1,32 @@
+/* cover/cinema: the picture as a wide cinema screen between ink bars, the
+ * headline below it in spaced capitals like a title card. The screen keeps
+ * any picture (or, later, a video) at one wide ratio. Rebuilt from scratch
+ * after docs/inspiration.org, openings 26. */
+/* The opening shapes its own picture; photo looks and art directions that
+ * reshape pictures elsewhere stand aside here. */
+.block.cover--cinema.cover--cinema .cover__art img { border: 0; border-radius: 0; padding: 0; background: none; box-shadow: none; clip-path: none; -webkit-mask: none; mask: none; transform: none; }
+.cover--cinema {
+	--paper: var(--ls-ink); --ink: var(--ls-paper); --surface: color-mix(in srgb, var(--ls-paper) 10%, var(--ls-ink));
+	--muted: var(--ls-paper); --accent: var(--ls-paper); --accent-ink: var(--ls-ink); --accent-text: var(--ls-paper);
+	--line: color-mix(in srgb, var(--ls-paper) 30%, var(--ls-ink)); --line-strong: var(--ls-paper); --focus: var(--ls-paper);
+	background: var(--ls-ink); color: var(--ls-paper);
+}
+.block.cover--cinema { padding-block: clamp(var(--space-4), 3cqi, var(--space-6)) var(--space-7); }
+.cover--cinema .cover__art { width: min(100% - 2 * var(--gutter), 96rem); margin-inline: auto; }
+.cover--cinema .cover__art img { width: 100%; height: auto; aspect-ratio: 16 / 9; max-height: none; object-fit: cover; }
+.cover--cinema .cover__text { padding-block: var(--space-4) 0; text-align: center; }
+.cover--cinema .cover__text > .wrap > .kicker { display: flex; justify-content: center; align-items: center; gap: var(--space-3); color: var(--ink); letter-spacing: 0.3em; }
+.cover--cinema .cover__text > .wrap > .kicker::before, .cover--cinema .cover__text > .wrap > .kicker::after {
+	content: ""; flex: 0 1 4rem; height: var(--border-strong); background: var(--ls-accent);
+}
+.cover--cinema .cover__title {
+	max-width: 26ch; margin-inline: auto; font-size: clamp(2rem, 6cqi, min(5.5rem, var(--max-width) * 0.06)); font-weight: 700;
+	line-height: 1.02; letter-spacing: 0.08em; text-transform: uppercase;
+}
+.cover--cinema .cover__title--long { max-width: 26ch; font-size: clamp(1.7rem, 3.8cqi, min(3.4rem, var(--max-width) * 0.038)); letter-spacing: 0.05em; }
+.cover--cinema .cover__lede { max-width: 38em; margin-inline: auto; }
+.cover--cinema .actions { justify-content: center; }
+.cover--cinema .cover__text a:not(.button):hover { color: inherit; }
+@container (min-width: 48rem) {
+	.cover--cinema .cover__art img { aspect-ratio: 21 / 9; }
+}

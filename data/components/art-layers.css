@@ -1,0 +1,8 @@
+/* Art direction: layers. Drawn artwork lies on a stack of offset sheets,
+ * each tinted a little deeper in the accent and edged with a fine line,
+ * stepping back up and to the left. */
+.art-layers main img[src$=".svg"]:not(.brand img, .cover img, .poster__art) { --step: clamp(0.4rem, 1.6cqi, 0.7rem); margin: calc(var(--step) * 2) 0 0 calc(var(--step) * 2); width: calc(100% - var(--step) * 2);
+	box-shadow: 0 0 0 var(--border) var(--line-strong),
+		calc(var(--step) * -1) calc(var(--step) * -1) 0 0 color-mix(in srgb, var(--accent) 22%, var(--paper)), calc(var(--step) * -1) calc(var(--step) * -1) 0 var(--border) var(--line-strong),
+		calc(var(--step) * -2) calc(var(--step) * -2) 0 0 color-mix(in srgb, var(--accent) 48%, var(--paper)), calc(var(--step) * -2) calc(var(--step) * -2) 0 var(--border) var(--line-strong); }
+.art-layers main { overflow-x: clip; }

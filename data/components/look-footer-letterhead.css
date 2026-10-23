@@ -1,0 +1,4 @@
+/* footer/letterhead: the name centred across the footer between double rules, in spaced small capitals. */
+.look-footer-letterhead .site-footer { border-top: 0; background: var(--paper); }
+.look-footer-letterhead .site-footer__inner { grid-template-columns: minmax(0, 1fr); }
+.look-footer-letterhead .site-footer .brand { display: flex; flex-wrap: wrap; justify-content: center; margin: 0 0 var(--space-5); padding-block: var(--space-3); border-block: 4px double var(--line-strong); text-align: center; font-variant-caps: all-small-caps; letter-spacing: 0.18em; }

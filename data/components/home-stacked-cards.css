@@ -1,0 +1,15 @@
+/* Home composition: stacked cards. Each section after the opening is its
+ * own raised card inside the page column, stacked down the page; each card
+ * is a container, so its component lays out for the card. Scrolling bands
+ * and edge-to-edge runs stay outside the cards. */
+.page--kind-home.home-stacked-cards main > .block:not(:first-child, .marquee, .sec-w-bleed) {
+	container-type: inline-size;
+	width: min(100% - 2 * var(--gutter), var(--max-width)); margin: var(--space-6) auto 0;
+	padding-block: var(--space-7);
+	background: var(--surface); border: var(--border) solid var(--line); border-radius: max(var(--radius), 1rem);
+	box-shadow: 0 1.2rem 2.4rem -1.6rem color-mix(in srgb, var(--ink) 45%, transparent);
+}
+.page--kind-home.home-stacked-cards main > .block:last-child { margin-bottom: var(--section-space); }
+.page--kind-home.home-stacked-cards main > .block:not(:first-child, .marquee, .sec-w-bleed) > .wrap {
+	width: min(100% - 2 * var(--space-6), var(--max-width));
+}

@@ -1,0 +1,13 @@
+/* Motion kit: spotlight. Sections settle into place as they scroll in
+ * where the browser supports it, the opening settles on arrival, figures
+ * count up (kit-spotlight.js), and cards tilt toward the pointer. */
+@media (prefers-reduced-motion: no-preference) {
+	.kit-spotlight main > .block:first-child > * { animation: kit-spotlight-settle 700ms cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+	@supports (animation-timeline: view()) {
+		.kit-spotlight main > .block:not(:first-child) > .wrap { animation: kit-spotlight-settle linear both; animation-timeline: view(); animation-range: entry 0% entry 50%; }
+	}
+	.kit-spotlight main :is(.card, .bento__tile, .features__item, .services__item, .gallery__item) { transition: transform 220ms ease, border-color 220ms ease; }
+	.kit-spotlight main :is(.card, .bento__tile, .features__item, .services__item, .gallery__item):hover { transform: rotate(-0.6deg) translateY(-3px); border-color: var(--accent); }
+	.kit-spotlight :focus-visible { transition: outline-offset 180ms ease; outline-offset: 6px; }
+}
+@keyframes kit-spotlight-settle { from { opacity: 0; transform: scale(0.97); } }

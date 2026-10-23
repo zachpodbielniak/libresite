@@ -1,0 +1,3 @@
+/* rhythm/fade: the page tone drifts from paper to surface and back, section by section, with no hard edge. */
+.look-rhythm-fade main > :where(.block) { background: linear-gradient(var(--paper) 10%, var(--surface)); }
+.look-rhythm-fade main > :where(.block:nth-of-type(even)) { background: linear-gradient(var(--surface), var(--paper) 90%); }

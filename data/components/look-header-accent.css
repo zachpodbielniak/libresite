@@ -1,0 +1,9 @@
+/* header/accent: the whole bar painted in the accent, with accent-ink text. */
+/* The working tokens swap inside the bar, so links, the menu button and the
+ * action keep readable pairs on the accent. */
+.look-header-accent .site-header {
+	--ink: var(--ls-accent-ink); --paper: var(--ls-accent); --surface: var(--ls-accent); --muted: var(--ls-accent-ink);
+	--accent: var(--ls-accent-ink); --accent-ink: var(--ls-accent); --accent-text: var(--ls-accent-ink);
+	--line: color-mix(in srgb, var(--ls-accent-ink) 35%, var(--ls-accent)); --line-strong: var(--ls-accent-ink); --focus: var(--ls-accent-ink);
+	background: var(--ls-accent); color: var(--ls-accent-ink); border-bottom: 0;
+}
