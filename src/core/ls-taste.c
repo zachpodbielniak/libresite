@@ -17,7 +17,8 @@ ls_taste_disclosure(const gchar *text, gboolean footer){
 	static const gchar *const anywhere[] = {"illustrative", NULL};
 	static const gchar *const outside_footer[] = {"stock photo*", "stock image*", "stock picture*",
 		"visual reference*", "mood reference*", "invented business", "fictional business", "fictitious business",
-		"not a real business", "does not represent a real", "example business", "sample business", NULL};
+		"not a real business", "does not represent a real", "example business", "sample business",
+		"fictional demo", "demo site", "demo business", "demo website", NULL};
 	const gchar *const *lists[2];
 	g_autofree gchar *lower = NULL;
 	guint l, i;

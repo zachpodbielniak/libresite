@@ -13,7 +13,7 @@ G_BEGIN_DECLS
  *
  * Finds talk about the site itself in visible copy: the word "illustrative"
  * anywhere, and outside the footer any line about stock photographs,
- * visual references or an invented business.
+ * visual references, an invented business or a demo site.
  *
  * Returns: (nullable) (transfer none): the matched phrase, or %NULL
  */
