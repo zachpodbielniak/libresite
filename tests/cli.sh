@@ -289,7 +289,13 @@ test ! -e "$test_dir/retry"
 # Send a real signal while the CLI's worker is waiting for its subprocess.
 "$binary" --timeout 0 -r "$test_dir/failure.yaml" -o "$test_dir/cancel" > "$test_dir/cancel.log" 2>&1 &
 run_pid=$!
-sleep 0.2
+# Wait for the run to start (checkpoint zero) rather than a fixed delay, so a
+# loaded machine cannot deliver the signal before the CLI handles it.
+for ((poll = 0; poll < 100; poll++))
+do
+	[[ -f "$test_dir/cancel.libresite-work/checkpoint.json" ]] && break
+	sleep 0.1
+done
 kill -TERM "$run_pid"
 run_status=0
 wait "$run_pid" || run_status=$?
