@@ -1210,7 +1210,7 @@ visual sequence's material world.
 ** Words
 
 Visible copy never says "illustrative". Talk of stock photographs, visual
-references or an invented business belongs only in =footer.note=, in other
+references, an invented business or a demo site belongs only in =footer.note=, in other
 words ("Example business. Stock photography."). The plan and page checks
 refuse anything else, so the model retries with the reason. Stock or drawn
 media in the visual sequence carry no caption; only a real project's

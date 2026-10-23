@@ -41,6 +41,10 @@ test_disclosure_words(void){
 	g_assert_nonnull(ls_taste_disclosure("These photographs are stock imagery used as visual references.", FALSE));
 	g_assert_nonnull(ls_taste_disclosure("Each photograph is a stock photo, not our work.", FALSE));
 	g_assert_nonnull(ls_taste_disclosure("This is an invented business.", FALSE));
+	/* The old example hero's own words. */
+	g_assert_nonnull(ls_taste_disclosure("This is a fictional demo; nothing here is real.", FALSE));
+	g_assert_nonnull(ls_taste_disclosure("This demo site shows what a plumber's page can be.", FALSE));
+	g_assert_null(ls_taste_disclosure("Fictional demo. Stock photography (CC0).", TRUE));
 	/* The footer may disclose, in other words. */
 	g_assert_null(ls_taste_disclosure("Example business. Photos: StockSnap, CC0.", TRUE));
 	g_assert_null(ls_taste_disclosure("An invented business; stock photography.", TRUE));
