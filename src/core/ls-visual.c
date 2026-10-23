@@ -45,7 +45,7 @@ ls_visual_check_media(JsonObject *owner, GError **error){
 	const gchar *kinds[] = {"project", "stock", "illustration", NULL};
 	JsonArray *facts;
 	guint i;
-	if (!json_object_has_member(owner, "media"))
+	if (owner == NULL || !json_object_has_member(owner, "media"))
 		return TRUE;
 	if (m == NULL || !ls_object_keys(m, "|hero|portrait|detail|proof|clip|clip_portrait|kind|source|facts|", NULL) ||
 		!text_ok(m, "source", 300) || ls_string(m, "kind") == NULL || !g_strv_contains(kinds, ls_string(m, "kind")))
@@ -110,6 +110,8 @@ ls_visual_check_plan(JsonObject *plan, GError **error){
 	const gchar *headings[] = {"headline", "craft_heading", "proof_heading", "close_heading"};
 	const gchar *copy[] = {"intro", "craft_copy", "proof_copy"};
 	guint i;
+	if (plan == NULL)
+		return TRUE;
 	if (!ls_visual_check_media(plan, error))
 		return FALSE;
 	if (!json_object_has_member(plan, "visual"))

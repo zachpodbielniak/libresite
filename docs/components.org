@@ -789,7 +789,7 @@ The sameness score stays where it was (structural 0.357, overall 0.341, worst pa
 
 * Variety gate
 
-The sameness gate from [[*Measuring sameness][measuring sameness]] is now part of =make tests=: =/sameness/briefs= fails when the ten sites average more than 0.35 alike or any two reach 0.55, instead of being marked incomplete. =make sameness= still runs it alone. =make gate WEBDRIVER_URL=...= runs the whole gate in a browser (headless Firefox through geckodriver): it renders the ten sameness sites and the composition, variant, art direction and motion fixtures, runs =tests/compositions.sh= on the compositions, variants and art directions, =tests/motion.sh= on the motion kits, =tests/sameness.sh= with the compositions as its calibration, and =tests/gate.sh= on the ten sites. It took about four and a half minutes on 2026-10-20.
+The sameness gate from [[*Measuring sameness][measuring sameness]] is now part of =make tests=. At this point =/sameness/briefs= failed when the ten sites averaged more than 0.35 alike or any two reached 0.55. [[*Sameness is a soft guard][Sameness is a soft guard]] is the rule that stands: those limits are reported, and only a pair over 0.5 fails. =make sameness= still runs it alone. =make gate WEBDRIVER_URL=...= runs the whole gate in a browser (headless Firefox through geckodriver): it renders the ten sameness sites and the composition, variant, art direction and motion fixtures, runs =tests/compositions.sh= on the compositions, variants and art directions, =tests/motion.sh= on the motion kits, =tests/sameness.sh= with the compositions as its calibration, and =tests/gate.sh= on the ten sites. It took about four and a half minutes on 2026-10-20.
 
 #+begin_src sh
 geckodriver --port 4444 &
@@ -1076,7 +1076,7 @@ Each check was proved against the old code: the old fitter squeezes the outline 
 
 Eighteen invented businesses across eighteen trades and moods (HVAC, electrician, dog groomer, bakery, barber, auto shop, dentist, yoga studio, landscaper, roofer, pest control, cleaning, painter, florist, tattoo shop, food truck, accountant, wedding photographer), each with two or three CC0 stock photographs (=docs/credits.org=), built with the real model in turn, each steering away from those before it (=site.avoid=). The sites and their contact sheets are kept privately; the photographs are not in this repository. Looking at the sheets found what follows; each fix is held in =tests/test-showcase.c= and, for the browser, =tests/showcase.sh= in =make gate=.
 
-1. *The same opening over and over.* Five of seventeen sites opened on the same card pinned over a photograph (=cover/stub=). A site with photos swaps its dealt opening for one its picture leads; a composition whose only such opening was the stub (=register=) handed it to every photo site it was dealt. And the steering compared the opening dealt before the swap, so it never saw the repeat. Now a composition with fewer than two photo-led openings deals from the whole set, =ls_components_choose_seed()= takes whether the site has photos and weighs the opening the site will wear, and each avoided site that opens the same way adds =LS_COMPONENTS_WORN_OPENING= (0.03) to a deal's score. Test: over 400 photo seeds no opening takes more than 12 percent; eighteen photo sites built in turn never open the same way three times (four times before). The recomposed showcase opens thirteen ways over seventeen sites, none more than twice; the stub once.
+1. *The same opening over and over.* Five of seventeen sites opened on the same card pinned over a photograph (=cover/stub=). A site with photos swaps its dealt opening for one its picture leads; a composition whose only such opening was the stub (=register=) handed it to every photo site it was dealt. And the steering compared the opening dealt before the swap, so it never saw the repeat. Now a composition with fewer than two photo-led openings deals from the whole set, =ls_components_choose_photo_seed()= weighs the opening the site will wear, and each avoided site that opens the same way adds =LS_COMPONENTS_WORN_OPENING= (0.03) to a deal's score. Test: over 400 photo seeds no opening takes more than 12 percent; eighteen photo sites built in turn never open the same way three times (four times before). The recomposed showcase opens thirteen ways over seventeen sites, none more than twice; the stub once.
 2. *Headlines below the first screen.* At 1440 by 900, five of seventeen home headlines or their first button sat below the first screen, and one (a cinema cover under the masthead) showed no headline at all: covers size their picture from the screen height without counting the header above or the words below. The site script now shortens the opening's picture by the difference, never under 40 percent of the screen or to a strip (0.28 of its width), after fonts and pictures load. A masthead nameplate tightens on a page that opens on a photo cover. The cinema cover's title card is wider (two lines, not three) with shorter ink bars, and photo sites under a masthead skip it (=wow.frame_below= in =catalog.yaml=). Gate: the home headline on the first screen of a 900 px window at 390, 768 and 1440 for every photo cover under the masthead, the cinema cover in its own frame (all failed at 1440 before). On the recomposed showcase every headline is on the first screen at both widths; five first buttons still land just under it on desktop.
 3. *Drained photos.* A cover's treatment greyed or tinted the owner's photographs. Supplied photographs keep their colour in every cover unless the look asks for mono or duotone, and a cover's label keeps its opaque backing over a photo. Gate: photo filters and label contrast at three widths.
 4. *Long headlines at display size.* A headline of many short words took one word per line at display size; more than five words now steps down like a long headline, and the page prompt asks for a 3 to 8 word headline and a lede of at most 24 words, leaving explanation to later sections.
@@ -1158,8 +1158,8 @@ This preserves the general crop guard instead of hiding its empty mats with
 aggressive cropping. Credits occupy their own grid row even when long, and
 long business names leave room for the phone menu.
 
-Eleven focused native tests pass. Full-suite, browser-gate and comparative
-visual acceptance are separate requirements; this draft is not release-approved.
+The native media tests live in =tests/test-bar.c=. Full-suite, browser-gate and comparative
+visual acceptance are separate requirements. Comparative acceptance has not passed, so shipping the sequence is not a claim that the reference standard is met.
 
 The continuation's final six-site set still fails comparative visual acceptance
 at both phone and desktop widths. Openings collapse into two dominant structures;
@@ -1167,11 +1167,11 @@ subsequent beats repeat alternating photo/text panels. Stock subjects cannot
 supply attributable project proof, distinctive object art or craft footage. Full
 openings also need subject-aware text placement: the opaque copy field can hide
 the useful part of a photograph. Generic service descriptions remain common.
-The eleven focused native tests and 142 media browser checks pass, but these do
-not establish the reference standard. The draft remains unmerged; the full suite,
-full gate and final install verification are not claimed. Further work needs
+The native tests and the media browser checks do not establish the reference
+standard. Comparative visual acceptance has not passed. Further work needs
 coherent licensed asset sets, a richer narrative layout system and another
-explicitly authorized live-generation allowance.
+explicitly authorized live-generation allowance. =make tests= covers the native
+contract; =make gate= and =make visual-review= stay separate.
 
 The draft became the base on 2026-10-21 (Ben, 12:58: "libresite is much
 better"); the taste rework below carries it into the epic.
@@ -1261,7 +1261,7 @@ corner; stacked on phones, so no text sits on the photo).
 writer, decides. =full= and =object= stay for an explicit layout; =full=
 needs a portrait crop, so it is not dealt.
 
-=ls_components_choose_seed()= also weighs the scene: each earlier site
+=ls_components_choose_photo_seed()= also weighs the scene: each earlier site
 wearing it costs a little, and the site just before (the last in
 =site.avoid=) costs a whole point, so an embedder that lists earlier sites
 in order never gets two neighbours with the same opening.

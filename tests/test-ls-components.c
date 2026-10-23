@@ -2134,7 +2134,7 @@ test_sameness(void){
 	}
 	g_assert_cmpfloat(ls_components_similarity(mine, other), <, 0.3);
 	/* No avoid list keeps the seed; an avoid list holding the deal itself moves it. */
-	same = ls_components_choose_seed(components, "harbor\nA repair workshop", NULL, NULL, FALSE, &closest);
+	same = ls_components_choose_seed(components, "harbor\nA repair workshop", NULL, NULL, &closest);
 	g_assert_cmpstr(same, ==, "harbor\nA repair workshop");
 	g_assert_cmpfloat(closest, ==, 0);
 	{
@@ -2174,7 +2174,7 @@ test_sameness(void){
 		g_assert_cmpfloat(ls_components_similarity(json_array_get_object_element(avoid, 0),
 			json_array_get_object_element(avoid, 0)), >, 0.99);
 	}
-	moved = ls_components_choose_seed(components, "harbor\nA repair workshop", NULL, avoid, FALSE, &closest);
+	moved = ls_components_choose_seed(components, "harbor\nA repair workshop", NULL, avoid, &closest);
 	g_assert_cmpstr(moved, !=, "harbor\nA repair workshop");
 	g_assert_cmpfloat(closest, <, LS_COMPONENTS_TOO_CLOSE);
 	/* Two dozen plumbers: without the check at most one pair in ten is
@@ -2188,7 +2188,7 @@ test_sameness(void){
 		for (i = 0; i < 36; i++) {
 			g_autofree gchar *base = g_strdup_printf("plumber %u\nA local plumbing firm", i % 24);
 			g_autofree gchar *seed = i < 24 ? g_strdup(base)
-				: ls_components_choose_seed(components, base, "trades", town, FALSE, &closest);
+				: ls_components_choose_seed(components, base, "trades", town, &closest);
 			g_autoptr(JsonNode) deal = load("plan.json");
 			g_autoptr(JsonObject) identity = ls_components_suggest_identity(components, seed, "trades");
 			JsonObject *tokens = json_object_get_object_member(json_node_get_object(deal), "tokens");
@@ -2232,6 +2232,42 @@ test_sameness(void){
 	g_clear_error(&error);
 	json_object_set_member(root, "missing", json("'hours'"));
 	g_assert_false(ls_components_check_plan(components, plan, &error));
+}
+
+/* A market that repeats every opening the deals will wear used to push
+ * every score past the old ceiling of 2, and choose_seed returned NULL.
+ * The plan step then left the model's own design in place. */
+static void
+test_choose_seed_crowded(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(JsonArray) avoid = json_array_new();
+	g_autoptr(GHashTable) seen = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+	const gchar *base = "harbor\nA repair workshop";
+	g_autofree gchar *chosen = NULL, *again = NULL;
+	gdouble closest = -1;
+	guint attempt, copy;
+	for (attempt = 0; attempt < LS_COMPONENTS_DEALS; attempt++) {
+		g_autofree gchar *seed = attempt == 0 ? g_strdup(base) : g_strdup_printf("%s\n~%u", base, attempt);
+		g_autofree gchar *opening = ls_components_suggest_opening(components, seed);
+		g_assert_nonnull(opening);
+		if (!g_hash_table_add(seen, g_strdup(opening)))
+			continue;
+		for (copy = 0; copy < 100; copy++) {
+			JsonObject *fp = json_object_new();
+			JsonArray *home = json_array_new();
+			json_object_set_int_member(fp, "v", 1);
+			json_array_add_string_element(home, opening);
+			json_object_set_array_member(fp, "home", home);
+			json_array_add_object_element(avoid, fp);
+		}
+	}
+	chosen = ls_components_choose_seed(components, base, NULL, avoid, &closest);
+	again = ls_components_choose_seed(components, base, NULL, avoid, NULL);
+	g_assert_nonnull(chosen);
+	g_assert_cmpstr(again, ==, chosen);
+	g_assert_true(g_str_has_prefix(chosen, base));
+	g_assert_cmpfloat(closest, >=, 0);
+	g_assert_cmpfloat(closest, <=, 1);
 }
 
 /* Long email and web addresses break at a seam in narrow boxes, never mid-word. */
@@ -2792,6 +2828,7 @@ main(int argc, char **argv){
 	g_test_add_func("/components/structure", test_structure);
 	g_test_add_func("/components/layout-lint", test_layout_lint);
 	g_test_add_func("/components/sameness", test_sameness);
+	g_test_add_func("/components/choose-seed-crowded", test_choose_seed_crowded);
 	g_test_add_func("/components/address-breaks", test_address_breaks);
 	g_test_add_func("/components/accent-text", test_accent_text);
 	g_test_add_func("/components/supplied-form", test_supplied_form);

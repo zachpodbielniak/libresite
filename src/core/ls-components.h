@@ -578,23 +578,38 @@ gdouble ls_components_signature_overlap(JsonObject *a, JsonObject *b);
  * @seed: the site seed (recipe name and brief)
  * @sector: (nullable): the business sector for identity dealing
  * @avoid: (transfer none) (nullable): earlier sites' fingerprints
- * @photos: whether the site has supplied photos, so it wears the opening
- *   ls_components_suggest_photo_opening() deals
  * @closest: (out) (optional): the chosen deal's highest similarity to @avoid
  *
  * Deals the structure, look and identity from @seed and from
  * %LS_COMPONENTS_DEALS - 1 derived seeds and keeps the deal whose highest
  * similarity to any fingerprint in @avoid, plus %LS_COMPONENTS_WORN_OPENING
- * for each one that opens the same way, is lowest. With @photos the
- * scene ls_components_suggest_scene() deals counts too: the same for each
- * earlier site opening on it, and a whole point when the last fingerprint
- * in @avoid (the site just before) does, so neighbours open differently.
+ * for each one that opens the same way, is lowest. There is no score
+ * ceiling: a crowded avoid list still returns that least-alike deal.
  * Without @avoid the seed is returned unchanged, so existing sites keep
- * their deal.
+ * their deal. A site with supplied photos uses
+ * ls_components_choose_photo_seed(), which weighs the opening and scene
+ * that site will actually wear.
  * Returns: (transfer full): the seed to deal this site from
  */
 gchar *ls_components_choose_seed(LsComponents *self, const gchar *seed, const gchar *sector, JsonArray *avoid,
-	gboolean photos, gdouble *closest);
+	gdouble *closest);
+/**
+ * ls_components_choose_photo_seed:
+ * @self: a component library
+ * @seed: the site seed (recipe name and brief)
+ * @sector: (nullable): the business sector for identity dealing
+ * @avoid: (transfer none) (nullable): earlier sites' fingerprints
+ * @closest: (out) (optional): the chosen deal's highest similarity to @avoid
+ *
+ * ls_components_choose_seed() for a site with supplied photos. The opening
+ * it weighs is the one ls_components_suggest_photo_opening() deals, and the
+ * scene ls_components_suggest_scene() deals counts too: the same for each
+ * earlier site opening on it, and a whole point when the last fingerprint
+ * in @avoid (the site just before) does, so neighbours open differently.
+ * Returns: (transfer full): the seed to deal this site from
+ */
+gchar *ls_components_choose_photo_seed(LsComponents *self, const gchar *seed, const gchar *sector, JsonArray *avoid,
+	gdouble *closest);
 /**
  * ls_components_compose:
  * @self: a component library

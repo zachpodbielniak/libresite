@@ -5650,11 +5650,15 @@ dealt_fingerprint(LsComponents *self, const gchar *seed, const gchar *sector, gb
 		forms != NULL ? home : member_array(member_object(identity, "home"), "sections"));
 }
 
-gchar *
-ls_components_choose_seed(LsComponents *self, const gchar *seed, const gchar *sector, JsonArray *avoid,
+/* The deal itself. @photos selects the opening and scene a site with
+ * supplied photographs will wear; the public wrappers fix that flag so the
+ * original ls_components_choose_seed() signature stays stable. */
+static gchar *
+choose_seed(LsComponents *self, const gchar *seed, const gchar *sector, JsonArray *avoid,
 	gboolean photos, gdouble *closest){
 	g_autofree gchar *best = NULL;
-	gdouble best_score = 2, best_close = 0;
+	gdouble best_score = 0, best_close = 0;
+	gboolean have = FALSE;
 	guint attempt, i;
 	g_return_val_if_fail(LS_IS_COMPONENTS(self), NULL);
 	g_return_val_if_fail(seed != NULL, NULL);
@@ -5690,16 +5694,32 @@ ls_components_choose_seed(LsComponents *self, const gchar *seed, const gchar *se
 				g_strcmp0(json_array_get_string_element(theirs, 0), scene) == 0)
 				worn += i + 1 == json_array_get_length(avoid) ? 1 : LS_COMPONENTS_WORN_OPENING;
 		}
-		if (worst + worn < best_score) {
+		/* Keep the lowest even when worn openings push every deal past 1.
+		 * A fixed ceiling of 2 returned NULL once a market was crowded,
+		 * and the plan step then skipped the deal. */
+		if (!have || worst + worn < best_score) {
+			have = TRUE;
 			best_score = worst + worn;
 			best_close = worst;
-			g_free(best);
+			g_clear_pointer(&best, g_free);
 			best = g_steal_pointer(&candidate);
 		}
 	}
 	if (closest != NULL)
 		*closest = best_close;
 	return g_steal_pointer(&best);
+}
+
+gchar *
+ls_components_choose_seed(LsComponents *self, const gchar *seed, const gchar *sector, JsonArray *avoid,
+	gdouble *closest){
+	return choose_seed(self, seed, sector, avoid, FALSE, closest);
+}
+
+gchar *
+ls_components_choose_photo_seed(LsComponents *self, const gchar *seed, const gchar *sector, JsonArray *avoid,
+	gdouble *closest){
+	return choose_seed(self, seed, sector, avoid, TRUE, closest);
 }
 
 gboolean

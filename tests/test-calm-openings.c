@@ -161,7 +161,7 @@ test_no_two_in_a_row(void){
 	guint i;
 	for (i = 0; i < 18; i++) {
 		g_autofree gchar *seed = g_strdup_printf("showcase business %u", i);
-		g_autofree gchar *chosen = ls_components_choose_seed(library, seed, "trades", avoid, TRUE, NULL);
+		g_autofree gchar *chosen = ls_components_choose_photo_seed(library, seed, "trades", avoid, NULL);
 		g_autofree gchar *scene = ls_components_suggest_scene(library, chosen);
 		g_autofree gchar *opening = g_strconcat("scene/", scene, NULL);
 		JsonObject *fingerprint = json_object_new();

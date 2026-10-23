@@ -14,6 +14,8 @@
 #include "core/ls-qa.h"
 #include "core/ls-template.h"
 #include "core/ls-components.h"
+#include "core/ls-taste.h"
+#include "core/ls-visual.h"
 #include "core/ls-edit.h"
 #include "core/ls-images.h"
 #include "core/ls-module.h"

@@ -78,6 +78,18 @@ test_reject_untrusted(void){
 	}
 }
 
+/* A recipe with no site object used to crash the plan step's media check. */
+static void
+test_absent_media(void){
+	g_autoptr(GError) error = NULL;
+	g_assert_true(ls_visual_check_media(NULL, &error));
+	g_assert_no_error(error);
+	g_assert_true(ls_visual_check_plan(NULL, &error));
+	g_assert_no_error(error);
+	g_assert_true(ls_visual_check_assets(NULL, NULL, &error));
+	g_assert_no_error(error);
+}
+
 static void
 test_headline_budget(void){
 	g_autoptr(LsComponents) library = ls_components_new(NULL);
@@ -285,6 +297,7 @@ test_sequence(void){
 int
 main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
+	g_test_add_func("/bar/absent-media", test_absent_media);
 	g_test_add_func("/bar/asset-contract", test_contract);
 	g_test_add_func("/bar/world-identity", test_world_identity);
 	g_test_add_func("/bar/full-portrait-contract", test_full_portrait_contract);

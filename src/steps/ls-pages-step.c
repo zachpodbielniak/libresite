@@ -156,10 +156,12 @@ plan_seed(LsComponents *components, LsRecipe *recipe, JsonObject *config, gdoubl
 	const gchar *name = ls_string(root, "name");
 	const gchar *brief = ls_string(member_object_of(root, "site"), "brief");
 	JsonArray *photos = member_array_of(member_object_of(root, "site"), "photos");
+	JsonArray *avoid = member_array_of(member_object_of(root, "site"), "avoid");
 	g_autofree gchar *seed = g_strconcat(name != NULL ? name : "", "\n", brief != NULL ? brief : "", NULL);
-	return ls_components_choose_seed(components, seed, plan_sector(config),
-		member_array_of(member_object_of(root, "site"), "avoid"), photos != NULL && json_array_get_length(photos) > 0,
-		closest);
+	/* Photo sites wear a different opening, so steering has to see that one. */
+	if (photos != NULL && json_array_get_length(photos) > 0)
+		return ls_components_choose_photo_seed(components, seed, plan_sector(config), avoid, closest);
+	return ls_components_choose_seed(components, seed, plan_sector(config), avoid, closest);
 }
 
 /* The identity dealt to this site: stable for its recipe name and brief. */

@@ -85,7 +85,7 @@ test_photo_steering(void){
 	g_assert_no_error(error);
 	for (s = 0; s < 18; s++) {
 		g_autofree gchar *seed = g_strdup_printf("showcase-%u\nA business %u.", s, s);
-		g_autofree gchar *chosen = ls_components_choose_seed(components, seed, "trades", avoid, TRUE, NULL);
+		g_autofree gchar *chosen = ls_components_choose_photo_seed(components, seed, "trades", avoid, NULL);
 		g_autoptr(JsonNode) plan = photo_plan(components, chosen);
 		JsonObject *fp = ls_components_fingerprint(components, plan, NULL);
 		JsonArray *home = json_array_new();
