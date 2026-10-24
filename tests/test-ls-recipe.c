@@ -53,6 +53,33 @@ contact_invalid(void){
 	}
 }
 
+/* A caller's booking page is checked where the recipe is read: a same-site
+ * path or an https:// address, nothing else. */
+static void
+booking_recipe(void){
+	const gchar *valid[] = {"{href: /book}", "{href: 'https://book.example.com/harbor'}"};
+	const gchar *invalid[] = {"{}", "{href: //evil.example}", "{href: 'javascript:alert(1)'}", "{href: /book, label: Go}",
+		"{href: 'http://example.com/book'}", "/book", "{href: '/a b'}"};
+	guint i;
+	for (i = 0; i < G_N_ELEMENTS(valid); i++) {
+		g_autofree gchar *text = g_strdup_printf("version: 1\nname: test\nsite: {brief: hi, booking: %s}\n"
+			"pipeline: {steps: [{id: a, type: frontend}]}", valid[i]);
+		g_autoptr(GError) error = NULL;
+		g_autoptr(LsRecipe) recipe = ls_recipe_new(text, &error);
+		g_assert_no_error(error);
+		g_assert_nonnull(recipe);
+	}
+	for (i = 0; i < G_N_ELEMENTS(invalid); i++) {
+		g_autofree gchar *text = g_strdup_printf("version: 1\nname: test\nsite: {brief: hi, booking: %s}\n"
+			"pipeline: {steps: [{id: a, type: frontend}]}", invalid[i]);
+		g_autoptr(GError) error = NULL;
+		g_autoptr(LsRecipe) recipe = ls_recipe_new(text, &error);
+		g_assert_null(recipe);
+		g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+		g_assert_nonnull(strstr(error->message, "site.booking"));
+	}
+}
+
 /* A caller's footer credit is checked where the recipe is read. */
 static void
 credit_recipe(void){
@@ -198,6 +225,7 @@ main(int argc, char **argv){
 	g_test_add_func("/recipe/contact-valid", contact_valid);
 	g_test_add_func("/recipe/contact-invalid", contact_invalid);
 	g_test_add_func("/recipe/credit", credit_recipe);
+	g_test_add_func("/recipe/booking", booking_recipe);
 	g_test_add_func("/recipe/modules-valid", modules_valid);
 	g_test_add_func("/recipe/modules-invalid", modules_invalid);
 	return g_test_run();

@@ -800,13 +800,20 @@ test_directory_and_tabs(void){
 		json_object_set_member(few, "work.html", json(
 			"{'path':'work.html','sections':[{'component':'page-header','content':{'heading':'Woods'}},"
 			"{'component':'directory','variant':'list','content':{'heading':'All woods','items':["
-			"{'title':'Coat trims'},{'title':'Dental care'},{'title':'Nail care'}]}}]}"));
+			"{'title':'Nail care'},{'title':'Coat trims'},{'title':'Dental care'}]}}]}"));
 		small_text = ls_components_compose(components, plan, few, NULL, &error);
 		g_assert_no_error(error);
 		small = ls_json_parse(small_text, NULL);
 		g_assert_null(strstr(file_content(small, "work.html"), "directory__letters"));
 		g_assert_null(strstr(file_content(small, "work.html"), "directory__letter\""));
 		g_assert_nonnull(strstr(file_content(small, "work.html"), "Coat trims"));
+		/* One list in the writer's order, not a ruled group per letter, and
+		 * a group without a letter spans the row instead of sitting in the
+		 * letter's narrow column. */
+		g_assert_cmpuint(count(file_content(small, "work.html"), "class=\"directory__group\""), ==, 1);
+		g_assert_true(strstr(file_content(small, "work.html"), "Nail care") <
+			strstr(file_content(small, "work.html"), "Coat trims"));
+		contains(file_content(small, "styles.css"), ".directory--list .directory__items:first-child { grid-column: 1 / -1; }");
 	}
 	g_assert_cmpuint(count(html, "class=\"directory__letter\""), ==, 7);
 	g_assert_true(strstr(a, "Ash") < strstr(a, "Alder"));
@@ -2452,6 +2459,56 @@ occurrences(const gchar *text, const gchar *needle){
 	return n;
 }
 
+/* A supplied booking page puts "Book online" in the action bar on every page,
+ * beside the call and quote actions, and alone when neither is supplied. The
+ * label is an interface string a plan may replace; an invalid booking is
+ * refused like any other supplied fact. */
+static void
+test_booking_action(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(JsonNode) plan = load("plan.json");
+	g_autoptr(JsonObject) pages = fixture_pages();
+	g_autoptr(GError) error = NULL;
+	g_autoptr(JsonNode) bundle = NULL;
+	g_autofree gchar *every = NULL;
+	const gchar *home;
+	JsonObject *root = json_node_get_object(plan);
+	json_object_set_member(root, "booking", json("{'href':'/book'}"));
+	g_assert_true(ls_components_check_plan(components, plan, &error));
+	g_assert_no_error(error);
+	bundle = compose_bundle(components, plan, pages);
+	home = file_content(bundle, "index.html");
+	contains(home, "<nav class=\"action-bar\" aria-label=\"Get in touch\">");
+	contains(home, "<a class=\"button action-bar__book\" href=\"/book\">Book online</a>");
+	lacks(home, "action-bar__call");
+	every = all_pages(bundle);
+	g_assert_cmpuint(occurrences(every, "action-bar__book"), >=, 2);
+	g_clear_pointer(&every, g_free);
+	g_clear_pointer(&bundle, json_node_unref);
+	/* With a phone and a live form the three share the bar: call, book, quote. */
+	json_object_set_member(root, "contact", json("{'phone':'+1 (555) 014-2270'}"));
+	json_object_set_member(root, "form", json(
+		"{'action':'/api/v1/sites/harbor/enquiries','fields':[{'name':'email','label':'Email','type':'email','required':true}]}"));
+	json_object_set_member(root, "ui", json("{'book':'Book a visit'}"));
+	bundle = compose_bundle(components, plan, pages);
+	home = file_content(bundle, "index.html");
+	contains(home, "action-bar__call");
+	contains(home, "<a class=\"button action-bar__book\" href=\"/book\">Book a visit</a>");
+	contains(home, "action-bar__quote");
+	g_assert_true(strstr(home, "action-bar__call") < strstr(home, "action-bar__book"));
+	g_assert_true(strstr(home, "action-bar__book") < strstr(home, "action-bar__quote"));
+	g_clear_pointer(&bundle, json_node_unref);
+	/* Only the supplied href, nothing else. */
+	json_object_set_member(root, "booking", json("{'href':'javascript:alert(1)'}"));
+	g_assert_false(ls_components_check_plan(components, plan, &error));
+	g_assert_nonnull(strstr(error->message, "booking"));
+	g_clear_error(&error);
+	json_object_remove_member(root, "booking");
+	bundle = compose_bundle(components, plan, pages);
+	every = all_pages(bundle);
+	lacks(every, "action-bar__book");
+}
+
 /* A supplied phone becomes a click-to-call link that stays in reach on every
  * page, and a quote action leads to the live form. After a send the visitor
  * stays on the page: each live form carries a hidden confirmation panel,
@@ -2496,6 +2553,9 @@ test_contact_actions(void){
 	contains(home, "<nav class=\"action-bar\" aria-label=\"Get in touch\">");
 	contains(home, "<a class=\"button action-bar__call\" href=\"tel:+15550142270\">");
 	contains(home, "<span class=\"action-bar__number\">+1 (555) 014-2270</span>");
+	/* On a phone each action is as wide as its words, so the number does not
+	 * break across lines; the two stack when they do not fit side by side. */
+	contains(file_content(bundle, "styles.css"), ".action-bar .button { flex: 1 1 auto; justify-content: center; text-align: center; }");
 	contains(home, "<a class=\"button button--ghost action-bar__quote\" href=\"start.html#repair-request\">Request a quote</a>");
 	/* The bar sits in the page column, after the content, so it is in reach without covering the footer. */
 	g_assert_true(strstr(home, "action-bar") < strstr(home, "</main>"));
@@ -2833,6 +2893,7 @@ main(int argc, char **argv){
 	g_test_add_func("/components/accent-text", test_accent_text);
 	g_test_add_func("/components/supplied-form", test_supplied_form);
 	g_test_add_func("/components/contact-actions", test_contact_actions);
+	g_test_add_func("/components/booking-action", test_booking_action);
 	g_test_add_func("/components/footer-credit", test_footer_credit);
 	g_test_add_func("/components/missing-talk", test_missing_talk);
 	return g_test_run();

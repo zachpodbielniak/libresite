@@ -3,7 +3,7 @@
 #+authors: Ben Doty
 #+categories: libresite, editing, operations
 #+created: 2026-09-30T21:00:00-04:00
-#+updated: 2026-10-03T12:00:00-04:00
+#+updated: 2026-10-24T16:10:00-04:00
 #+version: 0.1.0
 
 * Change this thing
@@ -31,7 +31,7 @@ Before any model call:
 
 Before writing anything:
 
-- builder-owned plan members (=structure=, =photos=, =social=, =form=, =contact=, =signature=, =missing=) cannot be replaced; the signature changes only through its own field and passes the same checks as when it was written;
+- builder-owned plan members (=structure=, =photos=, =social=, =form=, =contact=, =modules=, =credit=, =booking=, =signature=, =missing=) cannot be replaced; the signature changes only through its own field and passes the same checks as when it was written; the booking address is not shown to the model;
 - an edit cannot add artwork, since that would need drawing; it reuses planned art and the site's photos;
 - removed routes leave the plan, and every new route needs its complete specification;
 - the merged plan is repaired and checked, and every page, changed or not, is checked against it, so a removed page cannot leave a dead link;

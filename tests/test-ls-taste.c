@@ -404,6 +404,40 @@ test_stock_caption(void){
 	g_assert_null(strstr(bundle_file(bundle, "index.html"), "scene__credit"));
 }
 
+static gboolean
+listed(JsonArray *names, const gchar *name){
+	guint i;
+	for (i = 0; names != NULL && i < json_array_get_length(names); i++)
+		if (g_strcmp0(json_array_get_string_element(names, i), name) == 0)
+			return TRUE;
+	return FALSE;
+}
+
+/* The site check refuses any page that wears a gimmick variant, so the
+ * builder must never deal one as the opening either, whether the order
+ * names a sector or not (an embedder may know only the business's words). */
+static void
+test_dealt_opening_passes_taste(void){
+	g_autoptr(LsComponents) library = ls_components_new(NULL);
+	JsonObject *catalog = json_node_get_object(ls_components_get_catalog(library));
+	JsonObject *taste = json_object_get_object_member(catalog, "taste");
+	g_auto(GStrv) sectors = ls_components_list_sectors(library);
+	guint n = g_strv_length(sectors), s, k;
+	for (k = 0; k <= n; k++) {
+		const gchar *sector = k < n ? sectors[k] : NULL;
+		for (s = 0; s < 160; s++) {
+			g_autofree gchar *seed = g_strdup_printf("opening-%s-%u", sector != NULL ? sector : "none", s);
+			g_autoptr(JsonNode) plan = s % 2 == 0 ? photo_plan() : read_json("tests/fixtures/composed/plan.json");
+			const gchar *opening;
+			g_assert_true(ls_components_apply_seed(library, plan, seed, sector, FALSE));
+			opening = ls_string(json_object_get_object_member(json_node_get_object(plan), "structure"), "opening");
+			if (listed(json_object_get_array_member(taste, "openings"), opening) ||
+				listed(json_object_get_array_member(taste, "variants"), opening))
+				g_error("seed %s (sector %s) dealt the gimmick opening %s", seed, sector != NULL ? sector : "none", opening);
+		}
+	}
+}
+
 int
 main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
@@ -411,6 +445,7 @@ main(int argc, char **argv){
 	g_test_add_func("/taste/illustrative-copy-fails", test_illustrative_copy_fails);
 	g_test_add_func("/taste/question-headline-fails", test_question_headline_fails);
 	g_test_add_func("/taste/no-gimmicks-dealt", test_no_gimmicks_dealt);
+	g_test_add_func("/taste/dealt-opening-passes-taste", test_dealt_opening_passes_taste);
 	g_test_add_func("/taste/calm-palette", test_calm_palette);
 	g_test_add_func("/taste/photo-every-page", test_photo_every_page);
 	g_test_add_func("/taste/site-check", test_site_check);

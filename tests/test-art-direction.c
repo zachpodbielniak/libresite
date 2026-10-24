@@ -159,6 +159,11 @@ test_files(void){
 				g_error("%s styles images other than drawn artwork: %s", path, lines[l]);
 			if (strstr(lines[l], "mask") == NULL && (strstr(lines[l], "#") != NULL || strstr(lines[l], "rgb(") != NULL))
 				g_error("%s colours outside the site's tokens: %s", path, lines[l]);
+			/* A frame drawn outside the art stays off covers: their art
+			 * meets the screen's edge, so it would scroll the page sideways. */
+			if ((strstr(lines[l], "inset: -") != NULL || strstr(lines[l], "outline-offset") != NULL) &&
+				strstr(lines[l], ".cover img") == NULL && strstr(lines[l], ".cover__art") == NULL)
+				g_error("%s draws outside cover art: %s", path, lines[l]);
 		}
 	}
 	g_assert_null(ls_components_get_direction_brief(components, "watercolour"));

@@ -423,7 +423,7 @@ validate_site(JsonObject *site, GError **error){
 	guint i;
 	if (!ls_object_keys(site,
 		"|brief|audience|style|stack|frontend|backend|database|requirements|pages|offers|contact|brand|copy_lock|languages|"
-		"photos|media|social|avoid|form|modules|credit|",
+		"photos|media|social|avoid|form|modules|credit|booking|",
 		error))
 		return FALSE;
 	if (!json_object_has_member(site, "brief")) {
@@ -464,6 +464,15 @@ validate_site(JsonObject *site, GError **error){
 				g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID,
 					"site.credit needs {text, url}: text one line of 1 to 80 characters and url an https:// "
 					"address without spaces, quotes or angle brackets");
+				return FALSE;
+			}
+		} else if (g_str_equal(key, "booking")) {
+			/* Where the "Book online" action leads: a host's booking page. */
+			JsonNode *node = json_object_get_member(site, key);
+			if (!JSON_NODE_HOLDS_OBJECT(node) || !ls_booking_valid(json_node_get_object(node))) {
+				g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID,
+					"site.booking needs {href}: a same-site path such as /book or an https:// address, "
+					"without spaces, quotes, angle brackets, ? or #");
 				return FALSE;
 			}
 		} else if (g_str_equal(key, "copy_lock")) {

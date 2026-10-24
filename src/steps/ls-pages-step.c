@@ -548,6 +548,10 @@ plan_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *prom
 				json_object_remove_member(root, "media");
 				if (media != NULL)
 					json_object_set_member(root, "media", json_node_copy(media));
+				/* A visual sequence plays the order's media; with none
+				 * supplied, one the model wrote has nothing to show. */
+				else
+					json_object_remove_member(root, "visual");
 			}
 			ls_components_apply_seed(components, plan, seed, plan_sector(config), theme != NULL);
 		}
@@ -603,6 +607,19 @@ plan_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *prom
 				json_object_set_string_member(copy, "text", ls_string(credit, "text"));
 				json_object_set_string_member(copy, "url", ls_string(credit, "url"));
 				json_object_set_object_member(root, "credit", copy);
+			}
+		}
+		/* And the caller's booking page: a "Book online" action on every page. */
+		if (plan != NULL && JSON_NODE_HOLDS_OBJECT(plan)) {
+			JsonObject *root = json_node_get_object(plan);
+			JsonObject *site = member_object_of(ls_recipe_get_root(recipe), "site");
+			JsonObject *booking = site != NULL ? member_object_of(site, "booking") : NULL;
+			if (json_object_has_member(root, "booking"))
+				json_object_remove_member(root, "booking");
+			if (booking != NULL) {
+				JsonObject *copy = json_object_new();
+				json_object_set_string_member(copy, "href", ls_string(booking, "href"));
+				json_object_set_object_member(root, "booking", copy);
 			}
 		}
 		/* And the business phone and email the builder links: a call action
@@ -956,9 +973,12 @@ page_prompt(LsPrompts *prompts, LsRecipe *recipe, JsonObject *config, const gcha
 	}
 	ls_images_strip_variants(json_node_get_object(plan_copy));
 	ls_module_strip_markup(json_node_get_object(plan_copy));
-	/* The footer credit is drawn by the builder; writers never repeat it. */
+	/* The footer credit and the booking address are drawn by the builder;
+	 * writers never see them, so a page cannot repeat or rewrite either. */
 	if (json_object_has_member(json_node_get_object(plan_copy), "credit"))
 		json_object_remove_member(json_node_get_object(plan_copy), "credit");
+	if (json_object_has_member(json_node_get_object(plan_copy), "booking"))
+		json_object_remove_member(json_node_get_object(plan_copy), "booking");
 	pages = json_object_get_array_member(json_node_get_object(plan_copy), "pages");
 	for (i = 0; i < json_array_get_length(pages); i++) {
 		JsonObject *page = json_array_get_object_element(pages, i);

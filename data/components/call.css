@@ -19,10 +19,11 @@
 .action-bar__inner { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-2); }
 .action-bar .button { min-height: 2.75rem; }
 .action-bar__number { font-variant-numeric: tabular-nums; }
-/* On a narrow column both actions share the bar; the number stays readable. */
+/* On a narrow column each action is as wide as its words, so the number
+ * stays on one line; the actions stack when they do not fit side by side. */
 @container (max-width: 40rem) {
 	.action-bar__inner { justify-content: stretch; }
-	.action-bar .button { flex: 1 1 10rem; justify-content: center; text-align: center; }
+	.action-bar .button { flex: 1 1 auto; justify-content: center; text-align: center; }
 }
 /* A focused control is never hidden under the bar. */
 html:has(.action-bar) { scroll-padding-bottom: 5rem; }

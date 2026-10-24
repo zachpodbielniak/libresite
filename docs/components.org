@@ -342,6 +342,10 @@ The plan step writes the supplied phone and email into the plan as =contact= aft
 
 Without a phone the site has no =tel:= link from the builder, no call button and no call section, and nothing is put in their place.
 
+** Book online
+
+A host that takes bookings for the business passes where they happen as =site.booking: {href}=: a same-site path such as =/book=, or an https:// address, under the same rules as a supplied form's =action= (=ls_booking_valid()=). The plan step copies it into the plan as =booking=, replacing anything the model wrote, and every page's action bar then carries a "Book online" button (the =book= interface string) between the call button and the quote action, as a solid button like the call. A site with a booking page and neither a phone nor a form still gets the bar, holding only that button. No model is shown the address, and an edit cannot change it. Without =site.booking= nothing is drawn.
+
 Icons come from Simple Icons 16.33.0 (CC0 1.0). Brand marks remain their owners' trademarks and link only to the business's own profiles. LinkedIn has no Simple Icons mark, so it and unrecognised hosts use the builder's own link glyph. A library archived before =networks.yaml= existed still loads, with the link glyph for every profile.
 
 * Confirmation after sending
@@ -454,7 +458,7 @@ Within an item, every declared field the model left out is set explicitly empty,
 
 * Plan contract
 
-Required: =name=, =tokens=, =nav=, =pages=, =art= (may be empty). The schema also requires =character= (see [[*Identities][identities]]). Optional: =tagline=, =lang=, =missing= (see [[*Missing facts][missing facts]]), =fonts=, =brand=, =action=, =footer=, =voice=, =css= and =ui= (interface strings for a non-English site). The builder writes =photos=, =social=, =form=, =contact=, =modules= and =credit= from the order (see [[*Call and quote actions][call and quote actions]]); a model answer never sets them.
+Required: =name=, =tokens=, =nav=, =pages=, =art= (may be empty). The schema also requires =character= (see [[*Identities][identities]]). Optional: =tagline=, =lang=, =missing= (see [[*Missing facts][missing facts]]), =fonts=, =brand=, =action=, =footer=, =voice=, =css= and =ui= (interface strings for a non-English site). The builder writes =photos=, =social=, =form=, =contact=, =modules=, =booking= and =credit= from the order (see [[*Call and quote actions][call and quote actions]]); a model answer never sets them.
 
 - Tokens: seven =#rrggbb= colors with WCAG AA text pairs (ink and muted on paper and surface, accent_ink on accent, all 4.5:1), three font stacks of installed or generic families, and numeric scale, spacing, border, radius and heading settings within documented ranges.
 - Fonts: up to three open-source families served by Bunny Fonts; the builder writes the stylesheet URL. Omit them when a brief forbids remote fonts.
@@ -777,7 +781,7 @@ The drawing style (=art=) and the image treatment (=images=) were dealt independ
 | cutout | cut paper or flat | plain | cut into an arch, a slant or a rounded shape in turn down the page, over an offset accent block |
 | framed | woodcut, line or open | framed | a double frame with a mat and a soft shadow, captions in small capitals |
 | collage | cut paper or open | taped | pinned over a turned paper scrap, turned the other way on alternate sections |
-| lineart | line or blueprint | plain | inside a fine ink outline with accent corner marks |
+| lineart | line or blueprint | plain | inside a fine ink outline with accent corner marks; cover art, which meets the screen edge, unframed |
 
 - Dealing: =ls_components_deal_structure()= adds =structure.direction= from the seed; plan checks accept only a catalog direction; the fingerprint counts it as a look axis. Without a theme, =ls_components_apply_seed()= then picks the drawing style and image treatment from the direction's lists, by seed; a themed site gets no direction and keeps its theme's look.
 - The artist is told: each artwork job's TASK carries =direction=, the direction's =brief= (for example, keep the subject centred with margin so a cut never crops it), beside the existing =style=, so artwork is drawn for the way it will be shown. =ls_components_get_direction_brief()= returns it.
@@ -1101,7 +1105,10 @@ The planner writes =visual=: an internal =idea=, =world=, =layout=,
 =headline=, =intro=, =craft_heading=, =craft_copy=, =proof_heading=,
 =proof_copy= and =close_heading=. Headings have at most eight words and 52
 characters; body fields have at most 180 characters. The builder renders
-outcome, craft and optional proof before the remaining home sections.
+outcome, craft and optional proof before the remaining home sections. An
+order without =site.media= has no sequence: a =visual= the planner writes
+anyway is dropped by the builder before the plan is checked, rather than
+failing the plan, since one model can make that slip on every try.
 
 The six material directions are chalk, copper, forest, electric, ceramic and
 oven; openings are full, split and object. The sequence owns its composition
@@ -1198,7 +1205,10 @@ small set of calm systems a dealt site may wear:
 - =angles=: home headline angles that state what the business does (no
   question, no "character" voice).
 - =openings= and =variants=: never dealt, and rendered as the component's
-  first calm variant when a writer names one.
+  first calm variant when a writer names one. A pair on either list never
+  opens a dealt site: the suggested opening and the applied one both skip
+  it, since the site check refuses a gimmick variant on any page and the
+  whole build would fail.
 - =chroma=: the page and surface colours of a light ground are calmed to
   this chroma; a neon accent (chroma over 0.35, HSL lightness over 0.45) is
   toned down, and ink, muted and accent-ink text are moved until AA passes.
@@ -1222,7 +1232,8 @@ visual headline, is a statement: a question is refused.
 A page of a photo site that shows no supplied photo gets one: a full-width
 photo section after its opening, the photo picked from the route
 (=ls_components_ensure_photo()=). A directory shows its letter index only
-over six letters or more; under that it is a plain list.
+over six letters or more; under that it is one plain list in the
+writer's order, spanning the row.
 
 ** Checks
 
