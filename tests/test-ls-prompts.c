@@ -84,6 +84,24 @@ test_avoid_kept_out(void){
 	g_assert_null(strstr(text, "#fafafa"));
 }
 
+/* site.booking is the builder's link. A model is told the brief, not the address. */
+static void
+test_booking_kept_out(void){
+	g_autoptr(GError) error = NULL;
+	g_autoptr(LsPrompts) prompts = ls_prompts_new_from_yaml(catalog, &error);
+	g_autoptr(LsRecipe) site = ls_recipe_new(
+		"version: 1\nname: t\nsite: {brief: A studio site, style: editorial, "
+		"booking: {href: 'https://book.example/harbor'}}\n"
+		"pipeline:\n  steps:\n    - {id: plan, type: plan}\n", &error);
+	g_autofree gchar *text = NULL;
+	g_assert_no_error(error);
+	text = ls_prompts_render_spec(prompts, site, first_step(site), "plan", NULL, "{}", &error);
+	g_assert_no_error(error);
+	g_assert_nonnull(strstr(text, "A studio site"));
+	g_assert_null(strstr(text, "book.example"));
+	g_assert_null(strstr(text, "booking"));
+}
+
 static void
 test_render_errors(void){
 	g_autoptr(GError) error = NULL;
@@ -134,6 +152,7 @@ main(int argc, char **argv){
 	g_test_add_func("/prompts/spec-system", test_spec_system);
 	g_test_add_func("/prompts/render-spec", test_render_spec);
 	g_test_add_func("/prompts/avoid-kept-out", test_avoid_kept_out);
+	g_test_add_func("/prompts/booking-kept-out", test_booking_kept_out);
 	g_test_add_func("/prompts/render-errors", test_render_errors);
 	g_test_add_func("/prompts/embedded", test_embedded);
 	return g_test_run();

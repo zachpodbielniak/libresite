@@ -129,6 +129,7 @@ ls_prompts_get_spec_system(LsPrompts *self){
 /* SITE DATA for a prompt: the order's site facts, minus site.avoid, which
  * is builder input (earlier sites' fingerprints) that no model needs to read,
  * minus site.credit, the caller's footer line the builder draws itself,
+ * minus site.booking, the address the Book online action leads to,
  * and with each supplied podbay module reduced to its id and title: the
  * builder draws its markup and styles. */
 static gchar *
@@ -139,7 +140,8 @@ site_data_json(JsonObject *site){
 	GList *member;
 	for (member = members; member != NULL; member = member->next) {
 		JsonNode *value = json_object_get_member(site, member->data);
-		if (g_str_equal(member->data, "avoid") || g_str_equal(member->data, "credit"))
+		if (g_str_equal(member->data, "avoid") || g_str_equal(member->data, "credit") ||
+			g_str_equal(member->data, "booking"))
 			continue;
 		if (g_str_equal(member->data, "modules") && JSON_NODE_HOLDS_ARRAY(value)) {
 			JsonArray *named = json_array_new();

@@ -383,6 +383,50 @@ test_edit_credit(void){
 	site_teardown(&site);
 }
 
+/* A supplied booking page survives an edit. The model is not shown the
+ * address, and an answer that tries to replace it is refused. */
+static void
+test_edit_booking(void){
+	Site site;
+	g_autoptr(GError) error = NULL;
+	g_autofree gchar *with_booking = NULL, *work = NULL, *index = NULL, *page = NULL;
+	g_auto(GStrv) parts = g_strsplit(recipe_text, "style: editorial}", 2);
+	const gchar *task;
+	with_booking = g_strjoin("style: editorial, booking: {href: 'https://book.example/harbor'}}",
+		parts[0], parts[1], NULL);
+	site_setup_recipe(&site, with_booking);
+	g_ptr_array_add(site.provider->answers, g_strdup("{\"summary\": \"x\", \"plan\": {\"booking\": "
+		"{\"href\": \"/elsewhere\"}}, \"pages\": []}"));
+	g_ptr_array_add(site.provider->answers, g_strdup("{\"summary\": \"x\", \"plan\": {\"booking\": "
+		"{\"href\": \"/elsewhere\"}}, \"pages\": []}"));
+	g_assert_false(apply(&site, "Change the booking page", NULL, NULL, &error));
+	g_assert_error(error, LS_ERROR, LS_ERROR_VALIDATION);
+	g_assert_nonnull(strstr(error->message, "plan.booking"));
+	task = strstr(site.provider->last_prompt, "TASK (JSON)");
+	g_assert_nonnull(task);
+	g_assert_null(strstr(task, "book.example"));
+	g_clear_error(&error);
+	g_ptr_array_set_size(site.provider->answers, 0);
+	site.provider->edit_calls = 0;
+	work = work_with_heading("Lately on the bench");
+	{
+		g_autofree gchar *answer = g_strdup_printf("{\"summary\": \"Rename the work heading\", \"pages\": [%s]}", work);
+		g_ptr_array_add(site.provider->answers, g_steal_pointer(&answer));
+	}
+	g_assert_true(apply(&site, "Rename the work heading", NULL, NULL, &error));
+	g_assert_no_error(error);
+	page = read_file(site.site, "work.html");
+	g_assert_nonnull(strstr(page, "Lately on the bench"));
+	g_assert_nonnull(strstr(page, "action-bar__book\" href=\"https://book.example/harbor\""));
+	index = read_file(site.site, "index.html");
+	g_assert_nonnull(strstr(index, "https://book.example/harbor"));
+	g_assert_null(strstr(index, "/elsewhere"));
+	task = strstr(site.provider->last_prompt, "TASK (JSON)");
+	g_assert_nonnull(task);
+	g_assert_null(strstr(task, "book.example"));
+	site_teardown(&site);
+}
+
 /* A damaged record is an error, never mistaken for an unchanged site. */
 static void
 test_edit_bad_record(void){
@@ -637,6 +681,7 @@ main(int argc, char **argv){
 	g_test_add_func("/edit/unchanged", test_edit_unchanged);
 	g_test_add_func("/edit/bad-record", test_edit_bad_record);
 	g_test_add_func("/edit/credit", test_edit_credit);
+	g_test_add_func("/edit/booking", test_edit_booking);
 	g_test_add_func("/edit/contact", test_edit_contact);
 	g_test_add_func("/edit/modules", test_edit_modules);
 	g_test_add_func("/edit/refuses-drift", test_edit_refuses_drift);

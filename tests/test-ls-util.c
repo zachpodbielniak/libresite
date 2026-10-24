@@ -70,11 +70,34 @@ credits(void){
 	g_assert_false(ls_credit_valid(NULL));
 }
 
+/* A booking page is exactly {href}: a same-site path or an https:// address. */
+static void
+bookings(void){
+	const gchar *good[] = {"{\"href\": \"/book\"}", "{\"href\": \"https://book.example/harbor\"}"};
+	const gchar *bad[] = {"{}", "{\"href\": \"\"}", "{\"href\": \"//evil.example\"}",
+		"{\"href\": \"javascript:alert(1)\"}", "{\"href\": \"http://example.com/book\"}",
+		"{\"href\": \"/book\", \"label\": \"Go\"}", "{\"href\": \"/a b\"}", "{\"href\": \"/book?when=now\"}"};
+	guint i;
+	for (i = 0; i < G_N_ELEMENTS(good); i++) {
+		g_autoptr(JsonNode) node = ls_json_parse(good[i], NULL);
+		if (!ls_booking_valid(json_node_get_object(node)))
+			g_error("'%s' was refused", good[i]);
+	}
+	for (i = 0; i < G_N_ELEMENTS(bad); i++) {
+		g_autoptr(JsonNode) node = ls_json_parse(bad[i], NULL);
+		g_assert_nonnull(node);
+		if (ls_booking_valid(json_node_get_object(node)))
+			g_error("'%s' was accepted", bad[i]);
+	}
+	g_assert_false(ls_booking_valid(NULL));
+}
+
 int
 main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
 	g_test_add_func("/util/phone-numbers", phone_numbers);
 	g_test_add_func("/util/email-addresses", email_addresses);
 	g_test_add_func("/util/credits", credits);
+	g_test_add_func("/util/booking", bookings);
 	return g_test_run();
 }

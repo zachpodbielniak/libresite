@@ -973,9 +973,12 @@ page_prompt(LsPrompts *prompts, LsRecipe *recipe, JsonObject *config, const gcha
 	}
 	ls_images_strip_variants(json_node_get_object(plan_copy));
 	ls_module_strip_markup(json_node_get_object(plan_copy));
-	/* The footer credit is drawn by the builder; writers never repeat it. */
+	/* The footer credit and the booking address are drawn by the builder;
+	 * writers never see them, so a page cannot repeat or rewrite either. */
 	if (json_object_has_member(json_node_get_object(plan_copy), "credit"))
 		json_object_remove_member(json_node_get_object(plan_copy), "credit");
+	if (json_object_has_member(json_node_get_object(plan_copy), "booking"))
+		json_object_remove_member(json_node_get_object(plan_copy), "booking");
 	pages = json_object_get_array_member(json_node_get_object(plan_copy), "pages");
 	for (i = 0; i < json_array_get_length(pages); i++) {
 		JsonObject *page = json_array_get_object_element(pages, i);

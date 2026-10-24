@@ -20,7 +20,7 @@
 .action-bar .button { min-height: 2.75rem; }
 .action-bar__number { font-variant-numeric: tabular-nums; }
 /* On a narrow column each action is as wide as its words, so the number
- * stays on one line; the two stack when they do not fit side by side. */
+ * stays on one line; the actions stack when they do not fit side by side. */
 @container (max-width: 40rem) {
 	.action-bar__inner { justify-content: stretch; }
 	.action-bar .button { flex: 1 1 auto; justify-content: center; text-align: center; }

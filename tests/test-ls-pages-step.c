@@ -968,6 +968,8 @@ test_plan_booking(void){
 	booking = json_object_get_object_member(json_node_get_object(plan), "booking");
 	g_assert_nonnull(booking);
 	g_assert_cmpstr(json_object_get_string_member(booking, "href"), ==, "/book");
+	/* The planner is not shown the address it must not invent or repeat. */
+	g_assert_null(strstr(g_ptr_array_index(prompts_for(provider, "plan"), 0), "\"href\":\"/book\""));
 	{
 		g_autoptr(LsStep) pages = g_object_new(LS_TYPE_PAGES_STEP, NULL);
 		const gchar *home;
@@ -976,6 +978,8 @@ test_plan_booking(void){
 		g_assert_no_error(error);
 		home = ls_artifact_get_content(ls_context_lookup(context, "index.html"));
 		g_assert_nonnull(strstr(home, "<a class=\"button action-bar__book\" href=\"/book\">Book online</a>"));
+		/* Page writers see the plan without the address the button uses. */
+		g_assert_null(strstr(g_ptr_array_index(prompts_for(provider, "index.html"), 0), "\"href\":\"/book\""));
 	}
 	g_object_unref(provider);
 }

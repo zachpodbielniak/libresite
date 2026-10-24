@@ -319,10 +319,10 @@ site_base_url(GHashTable *files){
 }
 
 /* Plan members the builder owns: dealt layout, supplied photos, profiles, form,
- * contact, podbay modules and the caller's footer credit, the separately
- * written signature layer and the order's missing facts. */
+ * contact, podbay modules, the caller's footer credit and booking page, the
+ * separately written signature layer and the order's missing facts. */
 static const gchar *const builder_members[] = {"structure", "photos", "social", "form", "contact", "modules", "credit",
-	"signature", "missing", NULL};
+	"booking", "signature", "missing", NULL};
 
 typedef struct {
 	gchar *summary;
@@ -697,6 +697,8 @@ ls_editor_apply(LsEditor *self, const gchar *project, const gchar *request, gcha
 		g_autoptr(GList) names = json_object_get_members(old_pages);
 		GList *name;
 		json_object_remove_member(json_node_get_object(shown), "structure");
+		/* The booking address is the builder's link; an edit is not shown it. */
+		json_object_remove_member(json_node_get_object(shown), "booking");
 		ls_images_strip_variants(json_node_get_object(shown));
 		ls_module_strip_markup(json_node_get_object(shown));
 		json_object_set_string_member(task, "request", request);

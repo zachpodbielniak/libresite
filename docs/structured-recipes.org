@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, reference, integration
 #+created: 2026-09-10T17:00:00-04:00
-#+updated: 2026-10-03T12:00:00-04:00
+#+updated: 2026-10-24T16:10:00-04:00
 #+version: 0.1.0
 
 * Workflow
@@ -36,13 +36,15 @@ A structured site requires all six fields below. =offers: []=, =contact: {}= and
 
 A form may also carry the optional =credit=, a caller's footer line, exactly as a recipe does: ={"text": "Built with Lightsite", "url": "https://lightsite.app"}=, text one line of 1 to 80 characters and url an https:// address. Every page footer shows it and edits keep it; see [[file:components.org::*Footer credit][footer credit]].
 
+A form may also carry the optional =booking=, the page the Book online action leads to, exactly as a recipe does: ={"href": "/book"}= or an https:// address under the same rules as a form action. The builder draws the button, edits keep the address, and models are not shown it; see [[file:components.org::*Book online][book online]].
+
 Page paths are local URL paths starting with =/=, including directory routes such as =/services/=. Traversal segments, repeated slashes, whitespace/control characters, backslashes, percent escapes, query strings and fragments are rejected. Paths are routing requirements, not guaranteed output filenames; static directory paths can map to =services/index.html= while backend applications can dispatch routes. Use native =validate= artifact checks for exact file requirements.
 
 Language tags use a 2..8 ASCII-letter first subtag followed by optional 1..8 ASCII alphanumeric subtags, for example =en=, =fr-CA= or =zh-Hant=. Case-only duplicates fail. This is a practical syntax check, not registry validation or complete BCP 47 support. Contact and offer values remain supplied text: parsing does not prove an address exists, a URL responds, a logo is available or a payment service works. Price and phone fields must be strings, including when all their characters are digits.
 
 * Copy, brand and language behavior
 
-Every generation stage receives the structured site intact as task data. The bundled prompt contract requires every page and language, preserves offer identities and supplied contact facts, applies explicit brand choices ahead of style defaults, and forbids invented missing business facts. Copy locks must appear as exact visible text, escaped appropriately for the target markup, without paraphrasing or translation. A lock retains its supplied language even on translated pages. Conflicts must be recorded in generated review documentation.
+Every generation stage receives the structured site as task data. The builder keeps =site.avoid=, =site.credit= and =site.booking= out of those prompts, and draws the credit and the booking button itself. The bundled prompt contract requires every page and language, preserves offer identities and supplied contact facts, applies explicit brand choices ahead of style defaults, and forbids invented missing business facts. Copy locks must appear as exact visible text, escaped appropriately for the target markup, without paraphrasing or translation. A lock retains its supplied language even on translated pages. Conflicts must be recorded in generated review documentation.
 
 Recipe validation and YAML round-trip tests prove input structure and preservation, not model compliance. Native artifact checks can assert literal source text at known paths but do not establish rendered-text equality, complete translations or functioning contacts. Generated review documentation must carry the per-page/offer/contact/brand/copy/language checklist. Browser and content review remain necessary for those output guarantees. Replacement prompt catalogs must preserve this contract themselves.
 
