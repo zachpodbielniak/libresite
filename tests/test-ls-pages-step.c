@@ -19,6 +19,7 @@ typedef struct {
 	gboolean bad_plan;		/* first plan answer fails contrast */
 	gboolean drop_note;		/* first start.html answer lacks its literal */
 	gboolean default_plan;	/* first plan answer uses the house default colors */
+	gboolean stray_visual;	/* the plan answer carries a visual sequence with no media supplied */
 	gint bad_signature;		/* invalid signature answers to give first */
 	gboolean block;			/* wait for cancellation */
 	const gchar *photo;		/* a supplied photo swapped in for the bench drawing on index and journal */
@@ -87,6 +88,12 @@ fake_generate(LsProvider *provider, JsonObject *settings, const gchar *system,
 			memcpy(swap, "#c8c0b0", 7);
 			memcpy(home, "\"path\": \"indey.html\"", 21);
 			self->bad_plan = FALSE;
+		}
+		if (self->stray_visual) {
+			gchar *rest = g_strdup(strchr(answer, '{') + 1);
+			g_free(answer);
+			answer = g_strconcat("{\"visual\": {\"idea\": \"a pipe joint\", \"world\": \"copper\", \"layout\": \"split\"}, ", rest, NULL);
+			g_free(rest);
 		}
 		if (self->default_plan) {
 			/* Warm cream paper with a rust accent, still at AA contrast. */
@@ -1211,6 +1218,34 @@ test_phone_images(void){
 	g_assert_cmpstr(first, ==, second);
 }
 
+/* A visual sequence needs supplied media. When the order supplied none, a
+ * visual the model wrote anyway is dropped by the builder instead of failing
+ * the plan: three tries of one model can all make that slip. */
+static void
+test_plan_unbacked_visual(void){
+	g_autoptr(GError) error = NULL;
+	g_autofree gchar *text = photo_recipe();
+	g_autoptr(LsPrompts) prompts = ls_prompts_new(NULL, &error);
+	g_autoptr(LsRecipe) recipe = NULL;
+	g_autoptr(LsContext) context = NULL;
+	g_autoptr(LsStep) step = g_object_new(LS_TYPE_PLAN_STEP, NULL);
+	g_autoptr(JsonNode) plan = NULL;
+	FakeProvider *provider = g_object_new(fake_provider_get_type(), NULL);
+	g_assert_no_error(error);
+	recipe = ls_recipe_new(text, &error);
+	g_assert_no_error(error);
+	context = ls_recipe_create_context(recipe, &error);
+	g_assert_no_error(error);
+	provider->stray_visual = TRUE;
+	g_assert_true(ls_step_execute(step, recipe, json_array_get_object_element(ls_recipe_get_steps(recipe), 0),
+		prompts, context, LS_PROVIDER(provider), NULL, &error));
+	g_assert_no_error(error);
+	g_assert_cmpint(provider->calls, ==, 1);
+	plan = ls_json_parse(ls_artifact_get_content(ls_context_lookup(context, "site/plan.json")), NULL);
+	g_assert_false(json_object_has_member(json_node_get_object(plan), "visual"));
+	g_object_unref(provider);
+}
+
 int
 main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
@@ -1220,6 +1255,7 @@ main(int argc, char **argv){
 	g_test_add_func("/pages/plan-identity", test_plan_identity);
 	g_test_add_func("/pages/plan-photos", test_plan_photos);
 	g_test_add_func("/pages/plan-social", test_plan_social);
+	g_test_add_func("/pages/plan-unbacked-visual", test_plan_unbacked_visual);
 	g_test_add_func("/pages/phone-images", test_phone_images);
 	g_test_add_func("/pages/plan-contact", test_plan_contact);
 	g_test_add_func("/pages/plan-modules", test_plan_modules);

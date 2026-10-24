@@ -1101,7 +1101,10 @@ The planner writes =visual=: an internal =idea=, =world=, =layout=,
 =headline=, =intro=, =craft_heading=, =craft_copy=, =proof_heading=,
 =proof_copy= and =close_heading=. Headings have at most eight words and 52
 characters; body fields have at most 180 characters. The builder renders
-outcome, craft and optional proof before the remaining home sections.
+outcome, craft and optional proof before the remaining home sections. An
+order without =site.media= has no sequence: a =visual= the planner writes
+anyway is dropped by the builder before the plan is checked, rather than
+failing the plan, since one model can make that slip on every try.
 
 The six material directions are chalk, copper, forest, electric, ceramic and
 oven; openings are full, split and object. The sequence owns its composition

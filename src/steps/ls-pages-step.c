@@ -548,6 +548,10 @@ plan_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *prom
 				json_object_remove_member(root, "media");
 				if (media != NULL)
 					json_object_set_member(root, "media", json_node_copy(media));
+				/* A visual sequence plays the order's media; with none
+				 * supplied, one the model wrote has nothing to show. */
+				else
+					json_object_remove_member(root, "visual");
 			}
 			ls_components_apply_seed(components, plan, seed, plan_sector(config), theme != NULL);
 		}
