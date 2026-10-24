@@ -342,6 +342,10 @@ The plan step writes the supplied phone and email into the plan as =contact= aft
 
 Without a phone the site has no =tel:= link from the builder, no call button and no call section, and nothing is put in their place.
 
+** Book online
+
+A host that takes bookings for the business passes where they happen as =site.booking: {href}=: a same-site path such as =/book=, or an https:// address, under the same rules as a supplied form's =action= (=ls_booking_valid()=). The plan step copies it into the plan as =booking=, replacing anything the model wrote, and every page's action bar then carries a "Book online" button (the =book= interface string) between the call button and the quote action, as a solid button like the call. A site with a booking page and neither a phone nor a form still gets the bar, holding only that button. No model is shown the address, and an edit cannot change it. Without =site.booking= nothing is drawn.
+
 Icons come from Simple Icons 16.33.0 (CC0 1.0). Brand marks remain their owners' trademarks and link only to the business's own profiles. LinkedIn has no Simple Icons mark, so it and unrecognised hosts use the builder's own link glyph. A library archived before =networks.yaml= existed still loads, with the link glyph for every profile.
 
 * Confirmation after sending
@@ -454,7 +458,7 @@ Within an item, every declared field the model left out is set explicitly empty,
 
 * Plan contract
 
-Required: =name=, =tokens=, =nav=, =pages=, =art= (may be empty). The schema also requires =character= (see [[*Identities][identities]]). Optional: =tagline=, =lang=, =missing= (see [[*Missing facts][missing facts]]), =fonts=, =brand=, =action=, =footer=, =voice=, =css= and =ui= (interface strings for a non-English site). The builder writes =photos=, =social=, =form=, =contact=, =modules= and =credit= from the order (see [[*Call and quote actions][call and quote actions]]); a model answer never sets them.
+Required: =name=, =tokens=, =nav=, =pages=, =art= (may be empty). The schema also requires =character= (see [[*Identities][identities]]). Optional: =tagline=, =lang=, =missing= (see [[*Missing facts][missing facts]]), =fonts=, =brand=, =action=, =footer=, =voice=, =css= and =ui= (interface strings for a non-English site). The builder writes =photos=, =social=, =form=, =contact=, =modules=, =booking= and =credit= from the order (see [[*Call and quote actions][call and quote actions]]); a model answer never sets them.
 
 - Tokens: seven =#rrggbb= colors with WCAG AA text pairs (ink and muted on paper and surface, accent_ink on accent, all 4.5:1), three font stacks of installed or generic families, and numeric scale, spacing, border, radius and heading settings within documented ranges.
 - Fonts: up to three open-source families served by Bunny Fonts; the builder writes the stylesheet URL. Omit them when a brief forbids remote fonts.

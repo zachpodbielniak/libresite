@@ -356,6 +356,11 @@ ls_form_action_valid(const gchar *action){
 	return action[0] == '/' && action[1] != '/' && strstr(action, "..") == NULL &&
 		strspn(action, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/_.-") == strlen(action);
 }
+/* {href}: a same-site path or https:// address, as a form action is. */
+gboolean
+ls_booking_valid(JsonObject *booking){
+	return booking != NULL && ls_object_keys(booking, "|href|", NULL) && ls_form_action_valid(ls_string(booking, "href"));
+}
 gchar *
 ls_json_encode(JsonNode *node){
 	g_autoptr(JsonGenerator) generator = json_generator_new();

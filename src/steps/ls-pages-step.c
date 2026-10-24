@@ -609,6 +609,19 @@ plan_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *prom
 				json_object_set_object_member(root, "credit", copy);
 			}
 		}
+		/* And the caller's booking page: a "Book online" action on every page. */
+		if (plan != NULL && JSON_NODE_HOLDS_OBJECT(plan)) {
+			JsonObject *root = json_node_get_object(plan);
+			JsonObject *site = member_object_of(ls_recipe_get_root(recipe), "site");
+			JsonObject *booking = site != NULL ? member_object_of(site, "booking") : NULL;
+			if (json_object_has_member(root, "booking"))
+				json_object_remove_member(root, "booking");
+			if (booking != NULL) {
+				JsonObject *copy = json_object_new();
+				json_object_set_string_member(copy, "href", ls_string(booking, "href"));
+				json_object_set_object_member(root, "booking", copy);
+			}
+		}
 		/* And the business phone and email the builder links: a call action
 		 * on every page and in the confirmation after a send. Nothing when none
 		 * was given. */

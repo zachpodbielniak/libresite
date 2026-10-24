@@ -3849,14 +3849,14 @@ static const gchar *const ui_keys[] = {"skip", "menu", "nav", "footer_nav", "con
 	"count_one", "count_many", "required", "reset", "preview", "download", "error_required",
 	"error_invalid", "error_summary", "breadcrumb", "pager", "previous", "next", "letters", "scroll",
 	"checklist_yes", "checklist_no", "close", "ingredients", "method", "social", "share", "copy_link", "copied",
-	"sending", "sent", "send_failed", "call", "quote", "quick_actions", "send_another"};
+	"sending", "sent", "send_failed", "call", "quote", "quick_actions", "send_another", "book"};
 static const gchar *const ui_defaults[] = {"Skip to content", "Menu", "Primary", "Footer", "Contents",
 	"Filter entries", "{n} entry shown", "{n} entries shown", "required", "Clear", "Preview",
 	"Download text file", "Fill in this field.", "Check this entry.", "{n} fields need attention.",
 	"Breadcrumb", "More pages", "Previous", "Next", "Jump to letter", "Scrollable list", "Included",
 	"Not included", "Close", "Ingredients", "Method", "Follow us", "Share this page", "Copy link", "Link copied",
 	"Sending your message.", "Thank you. Your message was sent.", "Your message was not sent. Please try again.",
-	"Call", "Request a quote", "Get in touch", "Send another message"};
+	"Call", "Request a quote", "Get in touch", "Send another message", "Book online"};
 static const gchar *const art_ratios[] = {"16:9", "4:3", "3:2", "1:1", "3:4", "2:1", "3:1", "21:9", NULL};
 
 static gdouble
@@ -4573,7 +4573,7 @@ check_plan_into(Problems *problems, LsComponents *self, JsonNode *node){
 		return;
 	}
 	if (!ls_object_keys(plan, "|name|tagline|lang|character|missing|tokens|fonts|brand|nav|action|footer|voice|look|"
-		"art|photos|media|visual|social|form|contact|modules|credit|pages|css|restyle|ui|structure|signature|", NULL))
+		"art|photos|media|visual|social|form|contact|modules|credit|booking|pages|css|restyle|ui|structure|signature|", NULL))
 		problem(problems, "unknown top-level key; allowed: name, tagline, lang, character, missing, tokens, fonts, "
 			"brand, nav, action, footer, voice, look, art, photos, pages, css, restyle, ui");
 	check_missing(problems, plan);
@@ -4590,6 +4590,9 @@ check_plan_into(Problems *problems, LsComponents *self, JsonNode *node){
 	/* credit is the caller's footer line, copied by the builder from site.credit. */
 	if (json_object_has_member(plan, "credit") && !ls_credit_valid(member_object(plan, "credit")))
 		problem(problems, "credit must be the supplied {text, url}: one line of up to 80 characters and an https:// address");
+	/* booking is the caller's page for the "Book online" action, copied from site.booking. */
+	if (json_object_has_member(plan, "booking") && !ls_booking_valid(member_object(plan, "booking")))
+		problem(problems, "booking must be the supplied {href}: a same-site path such as /book or an https:// address");
 	check_structure(problems, self, plan);
 	check_look(problems, self, plan);
 	check_restyle(problems, self, plan);
@@ -6393,6 +6396,7 @@ typedef struct {
 	const gchar *wordmark;
 	const gchar *base;		/* normalized https:// site address, or NULL */
 	const gchar *quote;		/* the live form on its page, for the quote action, or NULL */
+	const gchar *book;		/* the supplied booking page, for the book action, or NULL */
 	GHashTable *modules;		/* supplied podbay module ids drawn anywhere */
 } Render;
 
@@ -7693,16 +7697,22 @@ render_page(Render *render, const gchar *path, const gchar *title, const gchar *
 		JsonObject *action = link_view(member_object(plan, "action"), TRUE);
 		json_object_set_object_member(view, "action", action);
 	}
-	/* The supplied phone and the live form stay in reach on every page. */
+	/* The supplied phone, booking page and live form stay in reach on every page. */
 	{
 		JsonObject *call = call_view(plan);
 		gboolean quote = render->quote != NULL;
-		if (call != NULL || quote) {
+		if (call != NULL || quote || render->book != NULL) {
 			JsonObject *bar = json_object_new();
 			json_object_set_string_member(bar, "label", ui_text(render, "quick_actions"));
 			json_object_set_string_member(bar, "call_label", ui_text(render, "call"));
 			if (call != NULL)
 				json_object_set_object_member(bar, "call", call);
+			if (render->book != NULL) {
+				JsonObject *link = json_object_new();
+				json_object_set_string_member(link, "href", render->book);
+				json_object_set_string_member(link, "label", ui_text(render, "book"));
+				json_object_set_object_member(bar, "book", link);
+			}
 			if (quote) {
 				JsonObject *link = json_object_new();
 				json_object_set_string_member(link, "href", render->quote);
@@ -8138,7 +8148,7 @@ quote_href(JsonObject *plan, JsonObject *pages){
 gchar *
 ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages, const gchar *base_url, GError **error){
 	Problems problems = {g_ptr_array_new_with_free_func(g_free)};
-	Render render = {self, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+	Render render = {self, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 	g_autoptr(JsonObject) ui = json_object_new();
 	g_autoptr(GHashTable) used = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 	g_autoptr(GHashTable) modules = g_hash_table_new(g_str_hash, g_str_equal);
@@ -8189,6 +8199,9 @@ ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages
 	render.modules = modules;
 	render.base = base;
 	render.quote = quote;
+	/* A supplied booking page offers the book action that leads to it. */
+	if (ls_booking_valid(member_object(plan, "booking")))
+		render.book = ls_string(member_object(plan, "booking"), "href");
 	if (base != NULL) {
 		sitemap = g_string_new("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
 			"<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n");

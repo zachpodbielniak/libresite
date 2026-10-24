@@ -72,6 +72,16 @@ gboolean ls_credit_valid(JsonObject *credit);
  * Returns: whether @action is a form action the builder draws
  */
 gboolean ls_form_action_valid(const gchar *action);
+/**
+ * ls_booking_valid:
+ * @booking: (nullable): a caller's online booking page, as supplied
+ *
+ * A booking page is exactly {href}: where the "Book online" action leads, a
+ * same-site path or an https:// address under the rules of
+ * ls_form_action_valid().
+ * Returns: whether @booking is a booking page the builder links
+ */
+gboolean ls_booking_valid(JsonObject *booking);
 gchar *ls_json_encode(JsonNode *node);
 /* Strict JSON boundary: rejects duplicate members, NUL escapes and deep trees. */
 JsonNode *ls_json_parse(const gchar *text, GError **error);
