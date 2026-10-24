@@ -2503,6 +2503,9 @@ test_contact_actions(void){
 	contains(home, "<nav class=\"action-bar\" aria-label=\"Get in touch\">");
 	contains(home, "<a class=\"button action-bar__call\" href=\"tel:+15550142270\">");
 	contains(home, "<span class=\"action-bar__number\">+1 (555) 014-2270</span>");
+	/* On a phone each action is as wide as its words, so the number does not
+	 * break across lines; the two stack when they do not fit side by side. */
+	contains(file_content(bundle, "styles.css"), ".action-bar .button { flex: 1 1 auto; justify-content: center; text-align: center; }");
 	contains(home, "<a class=\"button button--ghost action-bar__quote\" href=\"start.html#repair-request\">Request a quote</a>");
 	/* The bar sits in the page column, after the content, so it is in reach without covering the footer. */
 	g_assert_true(strstr(home, "action-bar") < strstr(home, "</main>"));
