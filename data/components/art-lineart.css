@@ -1,7 +1,8 @@
 /* Art direction: line art. Drawn artwork sits inside a fine offset outline
- * with accent corner marks, like a plate in a field guide. */
+ * with accent corner marks, like a plate in a field guide. Cover art meets
+ * the screen's edge, so it goes unframed rather than scroll the page sideways. */
 .art-lineart main :is(figure, picture, a, div, li):has(> img[src$=".svg"]) { position: relative; }
-.art-lineart main :is(figure, picture, a, div, li):has(> img[src$=".svg"])::before { content: ""; position: absolute; inset: -0.4rem; border: calc(var(--border) * 2) solid var(--accent); pointer-events: none;
+.art-lineart main :is(figure, picture, a, div, li):has(> img[src$=".svg"]:not(.cover img))::before { content: ""; position: absolute; inset: -0.4rem; border: calc(var(--border) * 2) solid var(--accent); pointer-events: none;
 	-webkit-mask: conic-gradient(at 1.2rem 1.2rem, transparent 75%, #000 0) 0 0 / calc(100% - 1.2rem) calc(100% - 1.2rem);
 	mask: conic-gradient(at 1.2rem 1.2rem, transparent 75%, #000 0) 0 0 / calc(100% - 1.2rem) calc(100% - 1.2rem); }
-.art-lineart main img[src$=".svg"]:not(.brand img) { outline: var(--border) solid var(--ink); outline-offset: 0.4rem; border-radius: 0; }
+.art-lineart main img[src$=".svg"]:not(.brand img, .cover img) { outline: var(--border) solid var(--ink); outline-offset: 0.4rem; border-radius: 0; }
