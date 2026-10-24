@@ -777,7 +777,7 @@ The drawing style (=art=) and the image treatment (=images=) were dealt independ
 | cutout | cut paper or flat | plain | cut into an arch, a slant or a rounded shape in turn down the page, over an offset accent block |
 | framed | woodcut, line or open | framed | a double frame with a mat and a soft shadow, captions in small capitals |
 | collage | cut paper or open | taped | pinned over a turned paper scrap, turned the other way on alternate sections |
-| lineart | line or blueprint | plain | inside a fine ink outline with accent corner marks |
+| lineart | line or blueprint | plain | inside a fine ink outline with accent corner marks; cover art, which meets the screen edge, unframed |
 
 - Dealing: =ls_components_deal_structure()= adds =structure.direction= from the seed; plan checks accept only a catalog direction; the fingerprint counts it as a look axis. Without a theme, =ls_components_apply_seed()= then picks the drawing style and image treatment from the direction's lists, by seed; a themed site gets no direction and keeps its theme's look.
 - The artist is told: each artwork job's TASK carries =direction=, the direction's =brief= (for example, keep the subject centred with margin so a cut never crops it), beside the existing =style=, so artwork is drawn for the way it will be shown. =ls_components_get_direction_brief()= returns it.
