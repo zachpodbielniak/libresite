@@ -1198,7 +1198,10 @@ small set of calm systems a dealt site may wear:
 - =angles=: home headline angles that state what the business does (no
   question, no "character" voice).
 - =openings= and =variants=: never dealt, and rendered as the component's
-  first calm variant when a writer names one.
+  first calm variant when a writer names one. A pair on either list never
+  opens a dealt site: the suggested opening and the applied one both skip
+  it, since the site check refuses a gimmick variant on any page and the
+  whole build would fail.
 - =chroma=: the page and surface colours of a light ground are calmed to
   this chroma; a neon accent (chroma over 0.35, HSL lightness over 0.45) is
   toned down, and ink, muted and accent-ink text are moved until AA passes.
@@ -1222,7 +1225,8 @@ visual headline, is a statement: a question is refused.
 A page of a photo site that shows no supplied photo gets one: a full-width
 photo section after its opening, the photo picked from the route
 (=ls_components_ensure_photo()=). A directory shows its letter index only
-over six letters or more; under that it is a plain list.
+over six letters or more; under that it is one plain list in the
+writer's order, spanning the row.
 
 ** Checks
 

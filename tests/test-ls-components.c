@@ -800,13 +800,20 @@ test_directory_and_tabs(void){
 		json_object_set_member(few, "work.html", json(
 			"{'path':'work.html','sections':[{'component':'page-header','content':{'heading':'Woods'}},"
 			"{'component':'directory','variant':'list','content':{'heading':'All woods','items':["
-			"{'title':'Coat trims'},{'title':'Dental care'},{'title':'Nail care'}]}}]}"));
+			"{'title':'Nail care'},{'title':'Coat trims'},{'title':'Dental care'}]}}]}"));
 		small_text = ls_components_compose(components, plan, few, NULL, &error);
 		g_assert_no_error(error);
 		small = ls_json_parse(small_text, NULL);
 		g_assert_null(strstr(file_content(small, "work.html"), "directory__letters"));
 		g_assert_null(strstr(file_content(small, "work.html"), "directory__letter\""));
 		g_assert_nonnull(strstr(file_content(small, "work.html"), "Coat trims"));
+		/* One list in the writer's order, not a ruled group per letter, and
+		 * a group without a letter spans the row instead of sitting in the
+		 * letter's narrow column. */
+		g_assert_cmpuint(count(file_content(small, "work.html"), "class=\"directory__group\""), ==, 1);
+		g_assert_true(strstr(file_content(small, "work.html"), "Nail care") <
+			strstr(file_content(small, "work.html"), "Coat trims"));
+		contains(file_content(small, "styles.css"), ".directory--list .directory__items:first-child { grid-column: 1 / -1; }");
 	}
 	g_assert_cmpuint(count(html, "class=\"directory__letter\""), ==, 7);
 	g_assert_true(strstr(a, "Ash") < strstr(a, "Alder"));
