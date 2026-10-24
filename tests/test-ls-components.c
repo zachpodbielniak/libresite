@@ -2459,6 +2459,56 @@ occurrences(const gchar *text, const gchar *needle){
 	return n;
 }
 
+/* A supplied booking page puts "Book online" in the action bar on every page,
+ * beside the call and quote actions, and alone when neither is supplied. The
+ * label is an interface string a plan may replace; an invalid booking is
+ * refused like any other supplied fact. */
+static void
+test_booking_action(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(JsonNode) plan = load("plan.json");
+	g_autoptr(JsonObject) pages = fixture_pages();
+	g_autoptr(GError) error = NULL;
+	g_autoptr(JsonNode) bundle = NULL;
+	g_autofree gchar *every = NULL;
+	const gchar *home;
+	JsonObject *root = json_node_get_object(plan);
+	json_object_set_member(root, "booking", json("{'href':'/book'}"));
+	g_assert_true(ls_components_check_plan(components, plan, &error));
+	g_assert_no_error(error);
+	bundle = compose_bundle(components, plan, pages);
+	home = file_content(bundle, "index.html");
+	contains(home, "<nav class=\"action-bar\" aria-label=\"Get in touch\">");
+	contains(home, "<a class=\"button action-bar__book\" href=\"/book\">Book online</a>");
+	lacks(home, "action-bar__call");
+	every = all_pages(bundle);
+	g_assert_cmpuint(occurrences(every, "action-bar__book"), >=, 2);
+	g_clear_pointer(&every, g_free);
+	g_clear_pointer(&bundle, json_node_unref);
+	/* With a phone and a live form the three share the bar: call, book, quote. */
+	json_object_set_member(root, "contact", json("{'phone':'+1 (555) 014-2270'}"));
+	json_object_set_member(root, "form", json(
+		"{'action':'/api/v1/sites/harbor/enquiries','fields':[{'name':'email','label':'Email','type':'email','required':true}]}"));
+	json_object_set_member(root, "ui", json("{'book':'Book a visit'}"));
+	bundle = compose_bundle(components, plan, pages);
+	home = file_content(bundle, "index.html");
+	contains(home, "action-bar__call");
+	contains(home, "<a class=\"button action-bar__book\" href=\"/book\">Book a visit</a>");
+	contains(home, "action-bar__quote");
+	g_assert_true(strstr(home, "action-bar__call") < strstr(home, "action-bar__book"));
+	g_assert_true(strstr(home, "action-bar__book") < strstr(home, "action-bar__quote"));
+	g_clear_pointer(&bundle, json_node_unref);
+	/* Only the supplied href, nothing else. */
+	json_object_set_member(root, "booking", json("{'href':'javascript:alert(1)'}"));
+	g_assert_false(ls_components_check_plan(components, plan, &error));
+	g_assert_nonnull(strstr(error->message, "booking"));
+	g_clear_error(&error);
+	json_object_remove_member(root, "booking");
+	bundle = compose_bundle(components, plan, pages);
+	every = all_pages(bundle);
+	lacks(every, "action-bar__book");
+}
+
 /* A supplied phone becomes a click-to-call link that stays in reach on every
  * page, and a quote action leads to the live form. After a send the visitor
  * stays on the page: each live form carries a hidden confirmation panel,
@@ -2843,6 +2893,7 @@ main(int argc, char **argv){
 	g_test_add_func("/components/accent-text", test_accent_text);
 	g_test_add_func("/components/supplied-form", test_supplied_form);
 	g_test_add_func("/components/contact-actions", test_contact_actions);
+	g_test_add_func("/components/booking-action", test_booking_action);
 	g_test_add_func("/components/footer-credit", test_footer_credit);
 	g_test_add_func("/components/missing-talk", test_missing_talk);
 	return g_test_run();
