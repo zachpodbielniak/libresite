@@ -1709,6 +1709,13 @@ taste_banned(LsComponents *self, const gchar *list, const gchar *pair){
 	return self->taste != NULL && pair != NULL && json_list_has(member_array(self->taste, list), pair);
 }
 
+/* Whether @pair may not open a dealt site: a banned opening, or a gimmick
+ * variant, which the site check refuses on any page. */
+static gboolean
+taste_gimmick(LsComponents *self, const gchar *pair){
+	return taste_banned(self, "openings", pair) || taste_banned(self, "variants", pair);
+}
+
 /* Whether @form may be dealt for the section @family. */
 static gboolean
 taste_form(LsComponents *self, const gchar *family, const gchar *form){
@@ -2051,7 +2058,7 @@ ls_components_suggest_opening(LsComponents *self, const gchar *seed){
 		JsonArray *fitting = member_array(composition_layout(self, composition), "openings");
 		g_autoptr(GPtrArray) calm = g_ptr_array_new();
 		for (i = 0; fitting != NULL && i < json_array_get_length(fitting); i++)
-			if (!taste_banned(self, "openings", json_array_get_string_element(fitting, i)))
+			if (!taste_gimmick(self, json_array_get_string_element(fitting, i)))
 				g_ptr_array_add(calm, (gpointer)json_array_get_string_element(fitting, i));
 		if (calm->len > 0)
 			return g_strdup(g_ptr_array_index(calm, seed_pick(seed, "opening", calm->len)));
@@ -2066,7 +2073,7 @@ ls_components_suggest_opening(LsComponents *self, const gchar *seed){
 		variants = json_object_get_members(member_object(member_object(self->components, name), "variants"));
 		for (variant = variants; variant != NULL; variant = variant->next) {
 			gchar *pair = g_strdup_printf("%s/%s", name, (const gchar *)variant->data);
-			if (taste_banned(self, "openings", pair))
+			if (taste_gimmick(self, pair))
 				g_free(pair);
 			else
 				g_ptr_array_add(choices, pair);
@@ -2395,7 +2402,7 @@ ls_components_apply_structure(LsComponents *self, JsonNode *plan_node, const gch
 		JsonObject *structure = member_object(plan, "structure");
 		const gchar *opening = ls_string(structure, "opening");
 		taste_clamp_look(self, look, seed);
-		if (taste_banned(self, "openings", opening)) {
+		if (taste_gimmick(self, opening)) {
 			gboolean photos = member_array(plan, "photos") != NULL && json_array_get_length(member_array(plan, "photos")) > 0;
 			JsonArray *openings = member_array(member_object(self->kinds, "home"), "openings");
 			g_autoptr(GPtrArray) calm = g_ptr_array_new_with_free_func(g_free);
@@ -2409,7 +2416,7 @@ ls_components_apply_structure(LsComponents *self, JsonNode *plan_node, const gch
 				variants = json_object_get_members(member_object(member_object(self->components, name), "variants"));
 				for (variant = variants; variant != NULL; variant = variant->next) {
 					gchar *pair = g_strdup_printf("%s/%s", name, (const gchar *)variant->data);
-					if (!taste_banned(self, "openings", pair) && (!photos || pair_leads(self, pair, ls_string(look, "frame"))))
+					if (!taste_gimmick(self, pair) && (!photos || pair_leads(self, pair, ls_string(look, "frame"))))
 						g_ptr_array_add(calm, pair);
 					else
 						g_free(pair);
@@ -6950,16 +6957,24 @@ directory_view(JsonObject *view, const gchar *id){
 		}
 		json_array_add_element(entries, json_node_copy(item));
 	}
-	g_ptr_array_sort(letters, compare_letters);
 	/* A letter index helps only a long list; over a few entries its
-	 * letters read as chips standing in for content. */
-	if (letters->len >= DIRECTORY_INDEX_LETTERS)
-		json_object_set_boolean_member(view, "letter_index", TRUE);
+	 * letters read as chips standing in for content, so a short directory
+	 * is one plain list in the writer's order. */
+	if (letters->len < DIRECTORY_INDEX_LETTERS) {
+		JsonObject *group = json_object_new();
+		g_autofree gchar *group_id = g_strdup_printf("%s-g1", id);
+		json_object_set_string_member(group, "group_id", group_id);
+		json_object_set_array_member(group, "entries", json_array_ref(items));
+		json_array_add_object_element(groups, group);
+		json_object_set_array_member(view, "groups", groups);
+		return;
+	}
+	g_ptr_array_sort(letters, compare_letters);
+	json_object_set_boolean_member(view, "letter_index", TRUE);
 	for (i = 0; i < letters->len; i++) {
 		JsonObject *group = json_object_new();
 		g_autofree gchar *group_id = g_strdup_printf("%s-g%u", id, i + 1);
-		if (letters->len >= DIRECTORY_INDEX_LETTERS)
-			json_object_set_string_member(group, "letter", letters->pdata[i]);
+		json_object_set_string_member(group, "letter", letters->pdata[i]);
 		json_object_set_string_member(group, "group_id", group_id);
 		json_object_set_array_member(group, "entries",
 			json_array_ref(g_hash_table_lookup(by_letter, letters->pdata[i])));

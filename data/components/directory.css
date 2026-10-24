@@ -6,3 +6,4 @@
 .directory__group { padding-block: var(--space-4); border-top: var(--border) solid var(--line); scroll-margin-top: var(--space-5); break-inside: avoid; }
 .directory--columns .directory__groups { columns: 16rem; column-gap: var(--space-6); }
 @container (min-width: 48rem) { .directory--list .directory__group { display: grid; grid-template-columns: 5rem minmax(0, 1fr); gap: var(--space-5); } .directory--list .directory__letter { margin: 0; } }
+.directory--list .directory__items:first-child { grid-column: 1 / -1; }
