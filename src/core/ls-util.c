@@ -356,6 +356,68 @@ ls_form_action_valid(const gchar *action){
 	return action[0] == '/' && action[1] != '/' && strstr(action, "..") == NULL &&
 		strspn(action, "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/_.-") == strlen(action);
 }
+/* One site.form field. @seen collects names so a later field, or the
+ * honeypot, cannot reuse one. The object is only read. */
+static gboolean
+form_field_valid(JsonObject *field, GHashTable *seen){
+	static const gchar *const types[] = {"text", "email", "tel", "url", "number", "date", "textarea", NULL};
+	const gchar *name = ls_string(field, "name");
+	const gchar *label = ls_string(field, "label");
+	const gchar *type = ls_string(field, "type");
+	const gchar *hint = ls_string(field, "hint");
+	const gchar *autocomplete = ls_string(field, "autocomplete");
+	JsonNode *required = json_object_get_member(field, "required");
+	JsonNode *maxlength = json_object_get_member(field, "maxlength");
+	if (!ls_object_keys(field, "|name|label|type|required|autocomplete|maxlength|hint|", NULL) ||
+		name == NULL || *name == '\0' || strlen(name) > 40 ||
+		strspn(name, "abcdefghijklmnopqrstuvwxyz0123456789_-") != strlen(name) ||
+		label == NULL || *label == '\0' || g_utf8_strlen(label, -1) > 80 ||
+		(json_object_has_member(field, "hint") && (hint == NULL || *hint == '\0' || g_utf8_strlen(hint, -1) > 200)) ||
+		(json_object_has_member(field, "autocomplete") && (autocomplete == NULL || *autocomplete == '\0' ||
+		strlen(autocomplete) > 40 ||
+		strspn(autocomplete, "abcdefghijklmnopqrstuvwxyz- ") != strlen(autocomplete))) ||
+		(type != NULL && !g_strv_contains(types, type)) ||
+		(required != NULL && json_node_get_value_type(required) != G_TYPE_BOOLEAN) ||
+		(maxlength != NULL && (json_node_get_value_type(maxlength) != G_TYPE_INT64 ||
+		json_node_get_int(maxlength) < 1 || json_node_get_int(maxlength) > 20000)) ||
+		!g_hash_table_add(seen, (gpointer)name))
+		return FALSE;
+	return TRUE;
+}
+const gchar *
+ls_form_requirements(void){
+	return "site.form needs {action, fields, honeypot}: action a same-site path such as /api/forms/contact or an "
+		"https:// address, without spaces, quotes, ? or #; fields 1 to 12 unique {name, label, type, required, "
+		"autocomplete, maxlength, hint} with names of lowercase letters, digits, - or _ and type text, email, tel, "
+		"url, number, date or textarea; honeypot an optional field name not among the fields";
+}
+gboolean
+ls_form_valid(JsonObject *form){
+	JsonNode *node;
+	JsonArray *fields;
+	const gchar *action, *trap;
+	g_autoptr(GHashTable) seen = g_hash_table_new(g_str_hash, g_str_equal);
+	guint i;
+	if (form == NULL || !ls_object_keys(form, "|action|fields|honeypot|", NULL))
+		return FALSE;
+	action = ls_string(form, "action");
+	if (!ls_form_action_valid(action))
+		return FALSE;
+	node = json_object_get_member(form, "fields");
+	fields = node != NULL && JSON_NODE_HOLDS_ARRAY(node) ? json_node_get_array(node) : NULL;
+	if (fields == NULL || json_array_get_length(fields) == 0 || json_array_get_length(fields) > 12)
+		return FALSE;
+	for (i = 0; i < json_array_get_length(fields); i++) {
+		JsonNode *entry = json_array_get_element(fields, i);
+		if (!JSON_NODE_HOLDS_OBJECT(entry) || !form_field_valid(json_node_get_object(entry), seen))
+			return FALSE;
+	}
+	trap = ls_string(form, "honeypot");
+	if (json_object_has_member(form, "honeypot") && (trap == NULL || *trap == '\0' || strlen(trap) > 40 ||
+		strspn(trap, "abcdefghijklmnopqrstuvwxyz0123456789_-") != strlen(trap) || g_hash_table_contains(seen, trap)))
+		return FALSE;
+	return TRUE;
+}
 /* {href}: a same-site path or https:// address, as a form action is. */
 gboolean
 ls_booking_valid(JsonObject *booking){

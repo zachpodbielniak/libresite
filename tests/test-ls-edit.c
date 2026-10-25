@@ -672,7 +672,9 @@ test_edit_photos(void){
 }
 
 /* An explicit caller-supplied form is rendered without a model call; normal
- * model edits cannot replace it and a refusal leaves the published tree intact. */
+ * model edits cannot replace it and a refusal leaves the published tree intact.
+ * A select field and an action outside the site.form alphabet are shapes the
+ * page checker would draw and the recipe would refuse. */
 static void
 test_trusted_form(void){
 	Site site;
@@ -680,25 +682,63 @@ test_trusted_form(void){
 	g_autoptr(GError) error = NULL;
 	g_autoptr(JsonNode) form = ls_json_parse("{\"action\":\"/enquiries/custom\",\"fields\":["
 		"{\"name\":\"custom_question\",\"label\":\"Your question\",\"type\":\"text\",\"required\":true}]}", NULL);
+	g_autoptr(JsonNode) select_form = ls_json_parse("{\"action\":\"/enquiries/custom\",\"fields\":["
+		"{\"name\":\"custom_question\",\"label\":\"Your question\",\"type\":\"select\",\"options\":[\"One\"]}]}", NULL);
+	g_autoptr(JsonNode) action_form = ls_json_parse("{\"action\":\"/enquiries/custom;\",\"fields\":["
+		"{\"name\":\"custom_question\",\"label\":\"Your question\",\"type\":\"text\"}]}", NULL);
 	g_autofree gchar *commit = NULL, *html = NULL, *before = NULL, *after = NULL, *outlines = NULL;
+	g_autofree gchar *subject = NULL, *owned = NULL;
 	JsonObject *field;
 	site_setup(&site);
 	editor = ls_editor_new(LS_PROVIDER(site.provider), site.prompts, site.settings);
+	before = git(site.site, "rev-parse", "HEAD", NULL);
+	g_assert_false(ls_editor_replace_form(editor, site.site, json_node_get_object(select_form), NULL, NULL, NULL, &error));
+	g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+	g_clear_error(&error);
+	g_assert_false(ls_editor_replace_form(editor, site.site, json_node_get_object(action_form), NULL, NULL, NULL, &error));
+	g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+	g_clear_error(&error);
+	after = git(site.site, "rev-parse", "HEAD", NULL);
+	g_assert_cmpstr(after, ==, before);
+	g_clear_pointer(&after, g_free);
+	g_assert_cmpint(site.provider->calls, ==, 0);
+	owned = ls_json_encode(form);
 	g_assert_true(ls_editor_replace_form(editor, site.site, json_node_get_object(form), NULL, &commit, NULL, &error));
 	g_assert_no_error(error);
 	g_assert_nonnull(commit);
 	g_assert_cmpint(site.provider->calls, ==, 0);
+	{
+		g_autofree gchar *still = ls_json_encode(form);
+		g_assert_cmpstr(still, ==, owned);
+	}
+	subject = git(site.site, "log", "-1", "--format=%s");
+	g_assert_cmpstr(subject, ==, "feat: Replace the contact form");
+	g_clear_pointer(&subject, g_free);
+	/* The same form again changes nothing, so it is not another version. */
+	g_assert_false(ls_editor_replace_form(editor, site.site, json_node_get_object(form), NULL, NULL, NULL, &error));
+	g_assert_no_error(error);
+	after = git(site.site, "rev-parse", "HEAD", NULL);
+	g_assert_cmpstr(after, ==, commit);
+	g_clear_pointer(&after, g_free);
 	html = read_file(site.site, "start.html");
 	g_assert_nonnull(strstr(html, "custom_question"));
 	g_assert_nonnull(strstr(html, "/enquiries/custom"));
 	outlines = read_file(site.site, ".libresite/outlines.json");
 	g_assert_nonnull(strstr(outlines, "custom_question"));
+	g_clear_pointer(&outlines, g_free);
+	g_clear_pointer(&before, g_free);
 	before = git(site.site, "rev-parse", "HEAD", NULL);
 	field = json_array_get_object_element(json_object_get_array_member(json_node_get_object(form), "fields"), 0);
 	json_object_set_string_member(field, "type", "not-an-input");
-	g_assert_false(ls_editor_replace_form(editor, site.site, json_node_get_object(form), NULL, NULL, NULL, &error));
-	g_assert_nonnull(error);
-	g_clear_error(&error);
+	{
+		g_autofree gchar *poison = ls_json_encode(form);
+		g_autofree gchar *unchanged = NULL;
+		g_assert_false(ls_editor_replace_form(editor, site.site, json_node_get_object(form), NULL, NULL, NULL, &error));
+		g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+		g_clear_error(&error);
+		unchanged = ls_json_encode(form);
+		g_assert_cmpstr(unchanged, ==, poison);
+	}
 	after = git(site.site, "rev-parse", "HEAD", NULL);
 	g_assert_cmpstr(after, ==, before);
 	g_clear_pointer(&after, g_free);
@@ -734,12 +774,25 @@ test_trusted_form(void){
 	g_assert_null(strstr(html, "custom_question"));
 	g_assert_true(ls_editor_replace_form(editor, site.site, NULL, NULL, NULL, NULL, &error));
 	g_assert_no_error(error);
+	subject = git(site.site, "log", "-1", "--format=%s");
+	g_assert_cmpstr(subject, ==, "feat: Remove the supplied contact form");
 	g_clear_pointer(&html, g_free);
 	html = read_file(site.site, "start.html");
+	g_assert_nonnull(strstr(html, "<form"));
 	g_assert_null(strstr(html, "custom_question"));
 	g_assert_null(strstr(html, "/enquiries/custom"));
 	g_assert_null(strstr(html, "replacement_question"));
 	g_assert_null(strstr(html, "/enquiries/replacement"));
+	outlines = read_file(site.site, ".libresite/outlines.json");
+	g_assert_null(strstr(outlines, "replacement_question"));
+	g_assert_null(strstr(outlines, "/enquiries/replacement"));
+	/* Removing a form that is already gone does not invent a version. */
+	g_clear_pointer(&before, g_free);
+	before = git(site.site, "rev-parse", "HEAD", NULL);
+	g_assert_false(ls_editor_replace_form(editor, site.site, NULL, NULL, NULL, NULL, &error));
+	g_assert_no_error(error);
+	after = git(site.site, "rev-parse", "HEAD", NULL);
+	g_assert_cmpstr(after, ==, before);
 	site_teardown(&site);
 }
 

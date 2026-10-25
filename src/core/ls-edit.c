@@ -576,6 +576,12 @@ editor_apply(LsEditor *self, const gchar *project, const gchar *request,
 	g_return_val_if_fail(LS_IS_EDITOR(self), FALSE);
 	g_return_val_if_fail(project != NULL && (replace_form || request != NULL), FALSE);
 	g_return_val_if_fail(error == NULL || *error == NULL, FALSE);
+	/* A bad form is refused before the site is read or locked. NULL removes
+	 * the supplied form; that is not a form object to check. */
+	if (replace_form && form != NULL && !ls_form_valid(form)) {
+		g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID, ls_form_requirements());
+		return FALSE;
+	}
 	if (!replace_form && (*request == '\0' || strspn(request, " \t\r\n") == strlen(request) || strlen(request) > 4000)) {
 		g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID, "The change request must be 1 to 4000 characters");
 		return FALSE;
@@ -690,15 +696,29 @@ editor_apply(LsEditor *self, const gchar *project, const gchar *request,
 	if (replace_form) {
 		g_autoptr(JsonNode) desired = deep_copy(old_plan);
 		/* Only this explicit caller operation changes the builder-owned form.
-		 * merge_answer copies and validates the complete plan and every page,
-		 * then the ordinary composition and atomic commit path below runs. */
-		if (form != NULL)
-			json_object_set_object_member(json_node_get_object(desired), "form", json_object_ref(form));
-		else
+		 * The caller's object stays untouched: the plan receives a private
+		 * copy. merge_answer then checks the complete plan and every page,
+		 * and the ordinary composition and atomic commit path below runs. */
+		if (form != NULL) {
+			g_autoptr(JsonNode) held = json_node_new(JSON_NODE_OBJECT);
+			g_autoptr(JsonNode) copied = NULL;
+			json_node_set_object(held, form);
+			copied = deep_copy(held);
+			if (copied == NULL || !JSON_NODE_HOLDS_OBJECT(copied)) {
+				g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID, "The form could not be copied");
+				goto out;
+			}
+			/* set_object_member takes the reference it is given. The extra
+			 * reference keeps the copy alive after that steal; @held still
+			 * owns the caller's object, which is not stored. */
+			json_object_set_object_member(json_node_get_object(desired), "form",
+				json_object_ref(json_node_get_object(copied)));
+		} else
 			json_object_remove_member(json_node_get_object(desired), "form");
 		if (!merge_answer(components, desired, old_pages,
 			signature_entry != NULL ? ls_string(signature_entry, "content") : NULL,
-			"{\"summary\":\"Update the contact form\",\"pages\":[]}", &edit, error))
+			form != NULL ? "{\"summary\":\"Replace the contact form\",\"pages\":[]}"
+				: "{\"summary\":\"Remove the supplied contact form\",\"pages\":[]}", &edit, error))
 			goto out;
 	} else {
 		/* The model sees the request, the plan the builder did not deal and every

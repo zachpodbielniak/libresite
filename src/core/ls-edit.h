@@ -56,12 +56,14 @@ gboolean ls_editor_apply(LsEditor *self, const gchar *project, const gchar *requ
  * @cancellable: (nullable): cancellation token
  * @error: return location for an error
  *
- * Validates the form with the whole plan and existing page specifications,
- * recomposes the site without a model call, and uses the same clean-tree,
- * hash, lock, atomic write and rollback checks as ls_editor_apply(). The
- * supplied object is never modified. Ordinary model edits still cannot
- * change the builder-owned form. Publication and binding the form's submission
- * destination remain the caller's responsibility.
+ * A supplied form must pass ls_form_valid(); an invalid one is refused
+ * before the project is read, and the caller's object is never modified.
+ * A valid form is copied, checked with the whole plan and the existing page
+ * specifications, and recomposed without a model call. Removal and
+ * replacement then use the same clean-tree, hash, lock, atomic write and
+ * rollback checks as ls_editor_apply(). Ordinary model edits still cannot
+ * change the builder-owned form. Publication and binding the form's
+ * submission destination remain the caller's responsibility.
  *
  * Returns: whether a new version was committed; FALSE without an error means
  *   no visible change, with the explanation in @summary
