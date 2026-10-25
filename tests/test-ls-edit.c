@@ -671,6 +671,78 @@ test_edit_photos(void){
 	site_teardown(&site);
 }
 
+/* An explicit caller-supplied form is rendered without a model call; normal
+ * model edits cannot replace it and a refusal leaves the published tree intact. */
+static void
+test_trusted_form(void){
+	Site site;
+	g_autoptr(LsEditor) editor = NULL;
+	g_autoptr(GError) error = NULL;
+	g_autoptr(JsonNode) form = ls_json_parse("{\"action\":\"/enquiries/custom\",\"fields\":["
+		"{\"name\":\"custom_question\",\"label\":\"Your question\",\"type\":\"text\",\"required\":true}]}", NULL);
+	g_autofree gchar *commit = NULL, *html = NULL, *before = NULL, *after = NULL, *outlines = NULL;
+	JsonObject *field;
+	site_setup(&site);
+	editor = ls_editor_new(LS_PROVIDER(site.provider), site.prompts, site.settings);
+	g_assert_true(ls_editor_replace_form(editor, site.site, json_node_get_object(form), NULL, &commit, NULL, &error));
+	g_assert_no_error(error);
+	g_assert_nonnull(commit);
+	g_assert_cmpint(site.provider->calls, ==, 0);
+	html = read_file(site.site, "start.html");
+	g_assert_nonnull(strstr(html, "custom_question"));
+	g_assert_nonnull(strstr(html, "/enquiries/custom"));
+	outlines = read_file(site.site, ".libresite/outlines.json");
+	g_assert_nonnull(strstr(outlines, "custom_question"));
+	before = git(site.site, "rev-parse", "HEAD", NULL);
+	field = json_array_get_object_element(json_object_get_array_member(json_node_get_object(form), "fields"), 0);
+	json_object_set_string_member(field, "type", "not-an-input");
+	g_assert_false(ls_editor_replace_form(editor, site.site, json_node_get_object(form), NULL, NULL, NULL, &error));
+	g_assert_nonnull(error);
+	g_clear_error(&error);
+	after = git(site.site, "rev-parse", "HEAD", NULL);
+	g_assert_cmpstr(after, ==, before);
+	g_clear_pointer(&after, g_free);
+	after = read_file(site.site, "start.html");
+	g_assert_cmpstr(after, ==, html);
+	/* The trusted path does not relax the ordinary model boundary. */
+	g_ptr_array_add(site.provider->answers, g_strdup("{\"summary\":\"Change form\",\"plan\":{\"form\":{}},\"pages\":[]}"));
+	g_assert_false(apply(&site, "Change the form", NULL, NULL, &error));
+	g_assert_error(error, LS_ERROR, LS_ERROR_VALIDATION);
+	g_clear_error(&error);
+	/* A subsequent ordinary edit preserves the trusted binding. */
+	{
+		g_autofree gchar *page = work_with_heading("Recent repairs");
+		g_ptr_array_set_size(site.provider->answers, 0);
+		g_ptr_array_add(site.provider->answers,
+			g_strdup_printf("{\"summary\":\"Rename\",\"pages\":[%s]}", page));
+		g_assert_true(apply(&site, "Rename the work page", NULL, NULL, &error));
+		g_assert_no_error(error);
+		g_clear_pointer(&html, g_free);
+		html = read_file(site.site, "start.html");
+		g_assert_nonnull(strstr(html, "custom_question"));
+		g_assert_nonnull(strstr(html, "/enquiries/custom"));
+	}
+	json_object_set_string_member(field, "type", "text");
+	json_object_set_string_member(field, "name", "replacement_question");
+	json_object_set_string_member(json_node_get_object(form), "action", "/enquiries/replacement");
+	g_assert_true(ls_editor_replace_form(editor, site.site, json_node_get_object(form), NULL, NULL, NULL, &error));
+	g_assert_no_error(error);
+	g_clear_pointer(&html, g_free);
+	html = read_file(site.site, "start.html");
+	g_assert_nonnull(strstr(html, "replacement_question"));
+	g_assert_nonnull(strstr(html, "/enquiries/replacement"));
+	g_assert_null(strstr(html, "custom_question"));
+	g_assert_true(ls_editor_replace_form(editor, site.site, NULL, NULL, NULL, NULL, &error));
+	g_assert_no_error(error);
+	g_clear_pointer(&html, g_free);
+	html = read_file(site.site, "start.html");
+	g_assert_null(strstr(html, "custom_question"));
+	g_assert_null(strstr(html, "/enquiries/custom"));
+	g_assert_null(strstr(html, "replacement_question"));
+	g_assert_null(strstr(html, "/enquiries/replacement"));
+	site_teardown(&site);
+}
+
 int
 main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
@@ -684,6 +756,7 @@ main(int argc, char **argv){
 	g_test_add_func("/edit/booking", test_edit_booking);
 	g_test_add_func("/edit/contact", test_edit_contact);
 	g_test_add_func("/edit/modules", test_edit_modules);
+	g_test_add_func("/edit/trusted-form", test_trusted_form);
 	g_test_add_func("/edit/refuses-drift", test_edit_refuses_drift);
 	g_test_add_func("/edit/not-a-site", test_edit_not_a_site);
 	g_test_add_func("/edit/after-revert", test_edit_after_revert);
