@@ -547,8 +547,9 @@ text_entry(const gchar *path, const gchar *content){
 	return entry;
 }
 
-gboolean
-ls_editor_apply(LsEditor *self, const gchar *project, const gchar *request, gchar **summary,
+static gboolean
+editor_apply(LsEditor *self, const gchar *project, const gchar *request,
+	gboolean replace_form, JsonObject *form, gchar **summary,
 	gchar **commit, GCancellable *cancellable, GError **error){
 	g_autofree gchar *absolute = NULL, *record_path = NULL, *record_text = NULL, *lock_path = NULL;
 	g_autofree gchar *outlines_path = NULL, *outlines_text = NULL, *new_outlines_text = NULL;
@@ -573,9 +574,15 @@ ls_editor_apply(LsEditor *self, const gchar *project, const gchar *request, gcha
 	gboolean okay = FALSE, touched = FALSE;
 	guint i;
 	g_return_val_if_fail(LS_IS_EDITOR(self), FALSE);
-	g_return_val_if_fail(project != NULL && request != NULL, FALSE);
+	g_return_val_if_fail(project != NULL && (replace_form || request != NULL), FALSE);
 	g_return_val_if_fail(error == NULL || *error == NULL, FALSE);
-	if (*request == '\0' || strspn(request, " \t\r\n") == strlen(request) || strlen(request) > 4000) {
+	/* A bad form is refused before the site is read or locked. NULL removes
+	 * the supplied form; that is not a form object to check. */
+	if (replace_form && form != NULL && !ls_form_valid(form)) {
+		g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID, ls_form_requirements());
+		return FALSE;
+	}
+	if (!replace_form && (*request == '\0' || strspn(request, " \t\r\n") == strlen(request) || strlen(request) > 4000)) {
 		g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID, "The change request must be 1 to 4000 characters");
 		return FALSE;
 	}
@@ -686,72 +693,101 @@ ls_editor_apply(LsEditor *self, const gchar *project, const gchar *request, gcha
 	if (components == NULL)
 		goto out;
 	base_url = site_base_url(files);
-	/* The model sees the request, the plan the builder did not deal and every
-	 * page, so it can change exactly what was asked and keep the rest. */
-	{
-		g_autoptr(JsonObject) task = json_object_new();
-		g_autoptr(JsonNode) node = json_node_new(JSON_NODE_OBJECT);
-		g_autoptr(JsonNode) shown = deep_copy(old_plan);
-		g_autofree gchar *task_text = NULL;
-		JsonArray *list = json_array_new();
-		g_autoptr(GList) names = json_object_get_members(old_pages);
-		GList *name;
-		json_object_remove_member(json_node_get_object(shown), "structure");
-		/* The booking address is the builder's link; an edit is not shown it. */
-		json_object_remove_member(json_node_get_object(shown), "booking");
-		ls_images_strip_variants(json_node_get_object(shown));
-		ls_module_strip_markup(json_node_get_object(shown));
-		json_object_set_string_member(task, "request", request);
-		json_object_set_member(task, "plan", g_steal_pointer(&shown));
-		for (name = names; name != NULL; name = name->next)
-			json_array_add_element(list, json_node_copy(json_object_get_member(old_pages, name->data)));
-		json_object_set_array_member(task, "pages", list);
-		if (signature_entry != NULL && ls_string(signature_entry, "content") != NULL)
-			json_object_set_string_member(task, "signature", ls_string(signature_entry, "content"));
-		json_node_set_object(node, task);
-		task_text = ls_json_encode(node);
-		reference = ls_components_describe(components);
-		prompt = ls_prompts_render_stage(self->prompts, "edit", reference, task_text, error);
-		if (prompt == NULL)
+	if (replace_form) {
+		g_autoptr(JsonNode) desired = deep_copy(old_plan);
+		/* Only this explicit caller operation changes the builder-owned form.
+		 * The caller's object stays untouched: the plan receives a private
+		 * copy. merge_answer then checks the complete plan and every page,
+		 * and the ordinary composition and atomic commit path below runs. */
+		if (form != NULL) {
+			g_autoptr(JsonNode) held = json_node_new(JSON_NODE_OBJECT);
+			g_autoptr(JsonNode) copied = NULL;
+			json_node_set_object(held, form);
+			copied = deep_copy(held);
+			if (copied == NULL || !JSON_NODE_HOLDS_OBJECT(copied)) {
+				g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID, "The form could not be copied");
+				goto out;
+			}
+			/* set_object_member takes the reference it is given. The extra
+			 * reference keeps the copy alive after that steal; @held still
+			 * owns the caller's object, which is not stored. */
+			json_object_set_object_member(json_node_get_object(desired), "form",
+				json_object_ref(json_node_get_object(copied)));
+		} else
+			json_object_remove_member(json_node_get_object(desired), "form");
+		if (!merge_answer(components, desired, old_pages,
+			signature_entry != NULL ? ls_string(signature_entry, "content") : NULL,
+			form != NULL ? "{\"summary\":\"Replace the contact form\",\"pages\":[]}"
+				: "{\"summary\":\"Remove the supplied contact form\",\"pages\":[]}", &edit, error))
 			goto out;
-	}
-	system = ls_prompts_get_spec_system(self->prompts);
-	settings = json_object_new();
-	{
-		g_autoptr(GList) names = json_object_get_members(self->settings);
-		GList *name;
-		for (name = names; name != NULL; name = name->next)
-			json_object_set_member(settings, name->data, json_node_copy(json_object_get_member(self->settings, name->data)));
-	}
-	json_object_set_string_member(settings, "json_schema",
-		"{\"type\": \"object\", \"required\": [\"summary\", \"pages\"], \"additionalProperties\": false, "
-		"\"properties\": {\"summary\": {\"type\": \"string\"}, \"plan\": {\"type\": \"object\"}, "
-		"\"pages\": {\"type\": \"array\", \"items\": {\"type\": \"object\"}}, "
-		"\"remove\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}}, \"signature\": {\"type\": \"string\"}}}\n");
-	retries = json_object_has_member(settings, "retries") ? json_object_get_int_member(settings, "retries") : 1;
-	for (attempt = 0; attempt <= MAX(retries, 0); attempt++) {
-		g_autoptr(GError) local = NULL;
-		g_autofree gchar *response = NULL, *retry = NULL;
-		say(self, "asking for the change, attempt %" G_GINT64_FORMAT "/%" G_GINT64_FORMAT, attempt + 1,
-			MAX(retries, 0) + 1);
-		if (feedback != NULL)
-			retry = g_strdup_printf("%s\n\nYOUR PREVIOUS ANSWER WAS REJECTED\n%.2000s\nAnswer again with the fix.\n",
-				prompt, feedback);
-		response = ls_provider_generate(self->provider, settings, system, retry != NULL ? retry : prompt,
-			cancellable, &local);
-		if (response != NULL) {
-			edit_clear(&edit);
-			if (merge_answer(components, old_plan, old_pages,
-				signature_entry != NULL ? ls_string(signature_entry, "content") : NULL, response, &edit, &local))
-				break;
+	} else {
+		/* The model sees the request, the plan the builder did not deal and every
+		 * page, so it can change exactly what was asked and keep the rest. */
+		{
+			g_autoptr(JsonObject) task = json_object_new();
+			g_autoptr(JsonNode) node = json_node_new(JSON_NODE_OBJECT);
+			g_autoptr(JsonNode) shown = deep_copy(old_plan);
+			g_autofree gchar *task_text = NULL;
+			JsonArray *list = json_array_new();
+			g_autoptr(GList) names = json_object_get_members(old_pages);
+			GList *name;
+			json_object_remove_member(json_node_get_object(shown), "structure");
+			/* The booking address is the builder's link; an edit is not shown it. */
+			json_object_remove_member(json_node_get_object(shown), "booking");
+			ls_images_strip_variants(json_node_get_object(shown));
+			ls_module_strip_markup(json_node_get_object(shown));
+			json_object_set_string_member(task, "request", request);
+			json_object_set_member(task, "plan", g_steal_pointer(&shown));
+			for (name = names; name != NULL; name = name->next)
+				json_array_add_element(list, json_node_copy(json_object_get_member(old_pages, name->data)));
+			json_object_set_array_member(task, "pages", list);
+			if (signature_entry != NULL && ls_string(signature_entry, "content") != NULL)
+				json_object_set_string_member(task, "signature", ls_string(signature_entry, "content"));
+			json_node_set_object(node, task);
+			task_text = ls_json_encode(node);
+			reference = ls_components_describe(components);
+			prompt = ls_prompts_render_stage(self->prompts, "edit", reference, task_text, error);
+			if (prompt == NULL)
+				goto out;
 		}
-		if (g_cancellable_is_cancelled(cancellable) || attempt == MAX(retries, 0) || response == NULL) {
-			g_propagate_error(error, g_steal_pointer(&local));
-			goto out;
+		system = ls_prompts_get_spec_system(self->prompts);
+		settings = json_object_new();
+		{
+			g_autoptr(GList) names = json_object_get_members(self->settings);
+			GList *name;
+			for (name = names; name != NULL; name = name->next)
+				json_object_set_member(settings, name->data, json_node_copy(json_object_get_member(self->settings, name->data)));
 		}
-		say(self, "answer rejected: %.300s", local->message);
-		g_free(feedback);
-		feedback = g_strdup(local->message);
+		json_object_set_string_member(settings, "json_schema",
+			"{\"type\": \"object\", \"required\": [\"summary\", \"pages\"], \"additionalProperties\": false, "
+			"\"properties\": {\"summary\": {\"type\": \"string\"}, \"plan\": {\"type\": \"object\"}, "
+			"\"pages\": {\"type\": \"array\", \"items\": {\"type\": \"object\"}}, "
+			"\"remove\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}}, \"signature\": {\"type\": \"string\"}}}\n");
+		retries = json_object_has_member(settings, "retries") ? json_object_get_int_member(settings, "retries") : 1;
+		for (attempt = 0; attempt <= MAX(retries, 0); attempt++) {
+			g_autoptr(GError) local = NULL;
+			g_autofree gchar *response = NULL, *retry = NULL;
+			say(self, "asking for the change, attempt %" G_GINT64_FORMAT "/%" G_GINT64_FORMAT, attempt + 1,
+				MAX(retries, 0) + 1);
+			if (feedback != NULL)
+				retry = g_strdup_printf("%s\n\nYOUR PREVIOUS ANSWER WAS REJECTED\n%.2000s\nAnswer again with the fix.\n",
+					prompt, feedback);
+			response = ls_provider_generate(self->provider, settings, system, retry != NULL ? retry : prompt,
+				cancellable, &local);
+			if (response != NULL) {
+				edit_clear(&edit);
+				if (merge_answer(components, old_plan, old_pages,
+					signature_entry != NULL ? ls_string(signature_entry, "content") : NULL, response, &edit, &local))
+					break;
+			}
+			if (g_cancellable_is_cancelled(cancellable) || attempt == MAX(retries, 0) || response == NULL) {
+				g_propagate_error(error, g_steal_pointer(&local));
+				goto out;
+			}
+			say(self, "answer rejected: %.300s", local->message);
+			g_free(feedback);
+			feedback = g_strdup(local->message);
+		}
 	}
 	/* Recompose the whole site from the merged plan and pages. */
 	{
@@ -963,4 +999,16 @@ out:
 		(void)close(lock_fd);
 	}
 	return okay;
+}
+
+gboolean
+ls_editor_apply(LsEditor *self, const gchar *project, const gchar *request, gchar **summary,
+	gchar **commit, GCancellable *cancellable, GError **error){
+	return editor_apply(self, project, request, FALSE, NULL, summary, commit, cancellable, error);
+}
+
+gboolean
+ls_editor_replace_form(LsEditor *self, const gchar *project, JsonObject *form, gchar **summary,
+	gchar **commit, GCancellable *cancellable, GError **error){
+	return editor_apply(self, project, NULL, TRUE, form, summary, commit, cancellable, error);
 }

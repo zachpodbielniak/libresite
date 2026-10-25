@@ -46,6 +46,31 @@ LsEditor *ls_editor_new(LsProvider *provider, LsPrompts *prompts, JsonObject *se
 gboolean ls_editor_apply(LsEditor *self, const gchar *project, const gchar *request, gchar **summary,
 	gchar **commit, GCancellable *cancellable, GError **error);
 /**
+ * ls_editor_replace_form:
+ * @self: an editor
+ * @project: a committed composed site, as for ls_editor_apply()
+ * @form: (transfer none) (nullable): caller-authorized form, or NULL to remove
+ *   the supplied form and restore the component's ordinary form
+ * @summary: (out) (optional) (transfer full): one-line version note
+ * @commit: (out) (optional) (transfer full): new commit hash
+ * @cancellable: (nullable): cancellation token
+ * @error: return location for an error
+ *
+ * A supplied form must pass ls_form_valid(); an invalid one is refused
+ * before the project is read, and the caller's object is never modified.
+ * A valid form is copied, checked with the whole plan and the existing page
+ * specifications, and recomposed without a model call. Removal and
+ * replacement then use the same clean-tree, hash, lock, atomic write and
+ * rollback checks as ls_editor_apply(). Ordinary model edits still cannot
+ * change the builder-owned form. Publication and binding the form's
+ * submission destination remain the caller's responsibility.
+ *
+ * Returns: whether a new version was committed; FALSE without an error means
+ *   no visible change, with the explanation in @summary
+ */
+gboolean ls_editor_replace_form(LsEditor *self, const gchar *project, JsonObject *form, gchar **summary,
+	gchar **commit, GCancellable *cancellable, GError **error);
+/**
  * ls_outlines_text:
  * @context: (transfer none): a finished composed build
  *

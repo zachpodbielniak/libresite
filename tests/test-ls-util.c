@@ -92,6 +92,38 @@ bookings(void){
 	g_assert_false(ls_booking_valid(NULL));
 }
 
+/* site.form, shared by recipe loading and a trusted edit of a built site. */
+static void
+forms(void){
+	const gchar *good[] = {
+		"{\"action\":\"/api/forms/contact\",\"fields\":[{\"name\":\"message\",\"label\":\"Message\"}]}",
+		"{\"action\":\"https://forms.example/harbor\",\"honeypot\":\"website\",\"fields\":["
+		"{\"name\":\"email\",\"label\":\"Email\",\"type\":\"email\",\"required\":true,\"autocomplete\":\"email\","
+		"\"maxlength\":4000,\"hint\":\"We reply from this address\"}]}"};
+	const gchar *bad[] = {"{}", "{\"action\":\"/x\"}",
+		"{\"action\":\"/enquiries/custom;\",\"fields\":[{\"name\":\"a\",\"label\":\"A\"}]}",
+		"{\"action\":\"/x?y=1\",\"fields\":[{\"name\":\"a\",\"label\":\"A\"}]}",
+		"{\"action\":\"/x\",\"fields\":[{\"name\":\"a\",\"label\":\"A\",\"type\":\"select\",\"options\":[\"One\"]}]}",
+		"{\"action\":\"/x\",\"fields\":[{\"name\":\"A\",\"label\":\"A\"}]}",
+		"{\"action\":\"/x\",\"honeypot\":\"a\",\"fields\":[{\"name\":\"a\",\"label\":\"A\"}]}",
+		"{\"action\":\"/x\",\"fields\":[{\"name\":\"a\",\"label\":\"A\"},{\"name\":\"a\",\"label\":\"B\"}]}",
+		"{\"action\":\"/x\",\"extra\":true,\"fields\":[{\"name\":\"a\",\"label\":\"A\"}]}"};
+	guint i;
+	for (i = 0; i < G_N_ELEMENTS(good); i++) {
+		g_autoptr(JsonNode) node = ls_json_parse(good[i], NULL);
+		if (!ls_form_valid(json_node_get_object(node)))
+			g_error("'%s' was refused", good[i]);
+	}
+	for (i = 0; i < G_N_ELEMENTS(bad); i++) {
+		g_autoptr(JsonNode) node = ls_json_parse(bad[i], NULL);
+		g_assert_nonnull(node);
+		if (ls_form_valid(json_node_get_object(node)))
+			g_error("'%s' was accepted", bad[i]);
+	}
+	g_assert_false(ls_form_valid(NULL));
+	g_assert_nonnull(strstr(ls_form_requirements(), "site.form"));
+}
+
 int
 main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
@@ -99,5 +131,6 @@ main(int argc, char **argv){
 	g_test_add_func("/util/email-addresses", email_addresses);
 	g_test_add_func("/util/credits", credits);
 	g_test_add_func("/util/booking", bookings);
+	g_test_add_func("/util/forms", forms);
 	return g_test_run();
 }

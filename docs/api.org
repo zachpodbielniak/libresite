@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, development, api
 #+created: 2026-09-10T20:00:00-04:00
-#+updated: 2026-10-03T12:00:00-04:00
+#+updated: 2026-10-25T12:00:00-04:00
 #+version: 0.1.0
 
 * Boundary
@@ -258,6 +258,7 @@ CLI plugins export =gboolean ls_plugin_register(LsPipeline *pipeline, GError **e
 | =ls_qa_check(directory, report, cancellable, error)= | Published-tree structural scan |
 | =ls_editor_new(provider, prompts, settings)= | Editor for built composed sites; =progress= signal on the calling thread |
 | =ls_editor_apply(self, project, request, summary, commit, cancellable, error)= | One plain-language change, checked, recomposed and committed; =FALSE= with no error when it changes nothing; see [[file:editing.org][editing.org]] |
+| =ls_editor_replace_form(self, project, form, summary, commit, cancellable, error)= | Trusted replacement or removal of the builder-owned form, without a model call; =form= is =NULL= or an =ls_form_valid()= object and is not modified; invalid input is =LS_ERROR_INVALID= before the project is read; see [[file:editing.org][editing.org]] |
 
 Call =ls_pipeline_validate()= before =ls_package_save()=. Load never substitutes the embedded catalog or current native templates. Pricing and rate-card schema are in [[file:usage.org][usage.org]]. QA report format is in [[file:qa.org][qa.org]].
 
@@ -277,6 +278,8 @@ These parser and path helpers ship in the public headers because recipe, artifac
 | =ls_email_valid(email)= | Whether text is one plain email address |
 | =ls_credit_valid(credit)= | Whether an object is a caller's footer credit ={text, url}= |
 | =ls_form_action_valid(action)= | Whether text is a same-site path or https:// address a live form may post to |
+| =ls_form_valid(form)= | Whether an object is a =site.form= the recipe and =ls_editor_replace_form()= accept |
+| =ls_form_requirements()= | The shared refusal sentence for a form =ls_form_valid()= rejects |
 | =ls_booking_valid(booking)= | Whether an object is a caller's booking page ={href}=, a same-site path or https:// address |
 | =ls_path_valid(path)= | Safe relative artifact path |
 | =ls_git_run(directory, arguments, output, cancellable, error)= | Git without inherited GIT_* state, global config, hooks or signing |

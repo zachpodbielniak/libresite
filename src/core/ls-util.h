@@ -73,6 +73,26 @@ gboolean ls_credit_valid(JsonObject *credit);
  */
 gboolean ls_form_action_valid(const gchar *action);
 /**
+ * ls_form_valid:
+ * @form: (nullable): a supplied live form, as site.form gives it
+ *
+ * Exactly the object the recipe accepts: action under
+ * ls_form_action_valid(), one to twelve fields, and an optional honeypot
+ * name that is not one of those fields. A field is name, label, and
+ * optionally type (text, email, tel, url, number, date or textarea),
+ * required, autocomplete, maxlength and hint. The object is not modified.
+ * Returns: whether @form is a form the builder draws
+ */
+gboolean ls_form_valid(JsonObject *form);
+/**
+ * ls_form_requirements:
+ *
+ * The refusal sentence for a form ls_form_valid() rejects. Recipe loading
+ * and the trusted editor share it, so both name the same shape.
+ * Returns: (transfer none): the site.form requirements
+ */
+const gchar *ls_form_requirements(void);
+/**
  * ls_booking_valid:
  * @booking: (nullable): a caller's online booking page, as supplied
  *
