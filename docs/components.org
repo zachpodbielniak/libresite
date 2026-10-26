@@ -348,6 +348,9 @@ A host that takes bookings for the business passes where they happen as =site.bo
 
 The =booking-calendar= component puts the host's open times on a page. For a bookable site, composition places one on the booking page, or on the contact/visit page if there is no booking page; a recipe may place it explicitly elsewhere. The builder supplies the address from =site.booking= and preserves the "Book online" action. The script requests =GET <href>?format=json=, where the host returns ={"time_zone":"America/New_York","slots":[{"start":"2026-10-27T14:00:00Z","end":"2026-10-27T15:00:00Z","label":"10:00 AM","day":"2026-10-27"}]}=. =day= and =label= are in the business's zone; =start= is the value to book. A day with no slots is unavailable. The visitor chooses a day and time, enters name, email and an optional note, and the script sends =POST <href>= with =start=, =name=, =email=, =notes= as JSON. A 201 response confirms in place; a 409 asks the visitor to choose another time. The host owns conflict checks and notifications. If scripts or availability fail, the ordinary booking link remains. Use a same-site =href= such as =/book= so the browser can read the JSON without cross-origin permissions. See [[file:../recipes/booking-calendar.yaml][the example recipe]].
 
+The calendar form links the site's privacy and terms pages before the name,
+email and note fields. These are the same pages linked in the footer.
+
 Icons come from Simple Icons 16.33.0 (CC0 1.0). Brand marks remain their owners' trademarks and link only to the business's own profiles. LinkedIn has no Simple Icons mark, so it and unrecognised hosts use the builder's own link glyph. A library archived before =networks.yaml= existed still loads, with the link glyph for every profile.
 
 * Confirmation after sending

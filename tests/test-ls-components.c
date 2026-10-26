@@ -2523,7 +2523,7 @@ test_booking_calendar(void){
 	JsonObject *root = json_node_get_object(plan);
 	JsonObject *visit = json_node_get_object(json_object_get_member(pages, "visit.html"));
 	JsonArray *sections = json_object_get_array_member(visit, "sections");
-	const gchar *html, *script, *style;
+	const gchar *html, *script, *style, *form, *privacy, *terms, *name;
 	json_object_set_member(root, "booking", json("{'href':'/book'}"));
 	json_array_add_element(sections, json("{'component':'booking-calendar','variant':'month',"
 		"'content':{'heading':'Choose a time'}}"));
@@ -2537,6 +2537,14 @@ test_booking_calendar(void){
 	contains(html, "name=\"name\"");
 	contains(html, "name=\"email\"");
 	contains(html, "name=\"notes\"");
+	form = strstr(html, "data-booking-form");
+	g_assert_nonnull(form);
+	privacy = strstr(form, "href=\"privacy.html\"");
+	terms = strstr(form, "href=\"terms.html\"");
+	name = strstr(form, "name=\"name\"");
+	g_assert_nonnull(privacy);
+	g_assert_nonnull(terms);
+	g_assert_true(privacy < name && terms < name);
 	contains(html, "aria-live=\"polite\"");
 	contains(script, "format=json");
 	contains(style, ".booking-calendar");
