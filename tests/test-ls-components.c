@@ -2547,6 +2547,8 @@ test_booking_calendar(void){
 	g_assert_true(privacy < name && terms < name);
 	contains(html, "aria-live=\"polite\"");
 	contains(script, "format=json");
+	contains(script, "if (Array.isArray(data)) return data;");
+	contains(script, "Array.isArray(data.slots)");
 	contains(style, ".booking-calendar");
 	g_clear_pointer(&bundle, json_node_unref);
 	json_object_remove_member(root, "booking");
@@ -2574,6 +2576,37 @@ test_booking_calendar_default_page(void){
 	/* Composition did not change the caller's page specification. */
 	g_assert_cmpuint(json_array_get_length(json_object_get_array_member(
 		json_node_get_object(json_object_get_member(pages, "contact.html")), "sections")), ==, 1);
+}
+
+/* "facebook.html" contains the letters book, and a full visit page cannot
+ * grow. Neither becomes the calendar; contact still can. */
+static void
+test_booking_calendar_placement(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(JsonNode) plan = load("plan.json");
+	g_autoptr(JsonObject) pages = fixture_pages();
+	g_autoptr(JsonNode) bundle = NULL;
+	JsonObject *root = json_node_get_object(plan);
+	JsonArray *planned = json_object_get_array_member(root, "pages");
+	JsonArray *sections = json_object_get_array_member(
+		json_node_get_object(json_object_get_member(pages, "visit.html")), "sections");
+	guint n;
+	json_object_set_member(root, "booking", json("{'href':'/book'}"));
+	json_array_add_element(planned, json("{'path':'facebook.html','kind':'general','title':'Notes',"
+		"'description':'A page whose name contains book.','brief':'Notes'}"));
+	json_object_set_member(pages, "facebook.html", json("{'path':'facebook.html',"
+		"'sections':[{'component':'page-header','content':{'heading':'Notes'}}]}"));
+	bundle = compose_bundle(components, plan, pages);
+	contains(file_content(bundle, "visit.html"), "class=\"block block--booking-calendar");
+	lacks(file_content(bundle, "facebook.html"), "class=\"block block--booking-calendar");
+	g_clear_pointer(&bundle, json_node_unref);
+	for (n = json_array_get_length(sections); n < 16; n++)
+		json_array_add_element(sections, json("{'component':'text','content':{'heading':'Extra note',"
+			"'body':'A short note.'}}"));
+	bundle = compose_bundle(components, plan, pages);
+	contains(file_content(bundle, "index.html"), "action-bar__book");
+	lacks(file_content(bundle, "visit.html"), "class=\"block block--booking-calendar");
+	lacks(file_content(bundle, "facebook.html"), "class=\"block block--booking-calendar");
 }
 
 /* A supplied phone becomes a click-to-call link that stays in reach on every
@@ -2963,6 +2996,7 @@ main(int argc, char **argv){
 	g_test_add_func("/components/booking-action", test_booking_action);
 	g_test_add_func("/components/booking-calendar", test_booking_calendar);
 	g_test_add_func("/components/booking-calendar-default-page", test_booking_calendar_default_page);
+	g_test_add_func("/components/booking-calendar-placement", test_booking_calendar_placement);
 	g_test_add_func("/components/footer-credit", test_footer_credit);
 	g_test_add_func("/components/missing-talk", test_missing_talk);
 	return g_test_run();
