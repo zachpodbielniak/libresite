@@ -1,0 +1,38 @@
+# Example: the host serves /book and owns the free times and booking POST.
+# This recipe is illustrative; use an invented business for test generation.
+version: 1
+name: maple-window-care
+site:
+  brief: >-
+    Create a clear five-page site for Maple Window Care, an invented window
+    cleaning business. Show services, practical preparation, coverage and
+    contact details without invented reviews or claims.
+  style: editorial
+  frontend: Static pages composed from the Libresite component library.
+  backend: none
+  database: none
+  booking: {href: /book}
+  requirements: >-
+    Plan index.html, services.html, about.html, visit.html and contact.html.
+    The contact page explains online booking. Use accessible layouts and
+    obvious calls to action. The host's booking page provides the live times;
+    do not invent availability or customer details.
+ai:
+  provider: claude-code
+  timeout: 0
+  max_tokens: 0
+pipeline:
+  steps:
+    - id: plan
+      type: plan
+      options: {sector: trades}
+    - id: pages
+      type: pages
+      options: {parallel: 8}
+    - id: acceptance
+      type: validate
+      options:
+        required: [index.html, services.html, about.html, visit.html, contact.html, site.js, styles.css]
+        checks:
+          - path: contact.html
+            contains: ['booking-calendar', 'data-booking-url="/book"']

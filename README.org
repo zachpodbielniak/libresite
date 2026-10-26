@@ -103,6 +103,7 @@ Replace illustrative business facts with approved client inputs before sealing a
 | Recipe | Result |
 |--------+--------|
 | [[file:recipes/landing.yaml][landing.yaml]] / [[file:recipes/studio.yaml][studio.yaml]] | Full eight-page studio SKU with route, interaction and handoff acceptance |
+| [[file:recipes/booking-calendar.yaml][booking-calendar.yaml]] | Sample service site with a live same-site booking calendar |
 | [[file:recipes/trades.yaml][trades.yaml]] | Seven-page trades SKU and local estimate worksheet |
 | [[file:recipes/professional-services.yaml][professional-services.yaml]] | Seven-page consultancy SKU and local engagement brief |
 | [[file:recipes/restaurant.yaml][restaurant.yaml]] | Seven-page restaurant SKU with an HTML menu and section filters |

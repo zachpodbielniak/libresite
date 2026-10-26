@@ -6344,6 +6344,9 @@ check_page_into(LsComponents *self, Problems *problems, JsonNode *plan_node, con
 			if (call == NULL)
 				problem(problems, "%s: call shows the site's supplied phone number, and this site has none; remove it", where);
 		}
+		if (g_str_equal(name, "booking-calendar") &&
+			(plan == NULL || !ls_booking_valid(member_object(plan, "booking"))))
+			problem(problems, "%s: booking-calendar needs the site's supplied booking page", where);
 		if ((g_str_equal(name, "hero") || g_str_equal(name, "cover") || g_str_equal(name, "poster")) && g_strcmp0(kind_name, "home") != 0)
 			problem(problems, "%s: %s belongs only on the home page; open this %s page with page-header",
 				where, name, kind_name);
@@ -7302,6 +7305,8 @@ render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArra
 			JsonObject *call = call_view(render->plan);
 			if (call != NULL)
 				json_object_set_object_member(view, "call", call);
+		} else if (g_str_equal(name, "booking-calendar") && render->book != NULL) {
+			json_object_set_string_member(view, "booking_url", render->book);
 		} else if (g_str_equal(name, "module")) {
 			/* The supplied snippet, as podbay drew it and checked again with
 			 * the plan; it also posts without scripts. */
@@ -8145,11 +8150,100 @@ quote_href(JsonObject *plan, JsonObject *pages){
 	return NULL;
 }
 
+/* A booking, contact or visit page outranks a name that merely contains
+ * those letters. Zero means leave the page alone. */
+static gint
+booking_calendar_score(JsonObject *entry){
+	const gchar *path = ls_string(entry, "path");
+	const gchar *kind = ls_string(entry, "kind");
+	if (path != NULL && (g_str_has_prefix(path, "book.") || g_str_has_prefix(path, "book-") ||
+		g_str_has_prefix(path, "booking.") || g_str_has_prefix(path, "booking-") ||
+		g_str_has_prefix(path, "reserv")))
+		return 5;
+	if ((path != NULL && g_str_has_prefix(path, "contact")) || g_strcmp0(kind, "contact") == 0)
+		return 4;
+	if ((path != NULL && g_str_has_prefix(path, "visit")) || g_strcmp0(kind, "visit") == 0)
+		return 3;
+	if (g_strcmp0(kind, "form") == 0)
+		return 2;
+	return 0;
+}
+
+/* Give a bookable site one calendar on its booking, contact or visit page
+ * when that page still has room. Copy the specifications only when inserting:
+ * the caller and the checkpoint still own their originals. */
+static JsonObject *
+pages_with_booking_calendar(JsonObject *plan, JsonObject *pages){
+	JsonArray *planned = member_array(plan, "pages");
+	JsonObject *copy;
+	GList *names, *item;
+	const gchar *target = NULL;
+	gint best = 0;
+	guint i;
+	if (pages == NULL || !ls_booking_valid(member_object(plan, "booking")))
+		return json_object_ref(pages);
+	for (i = 0; planned != NULL && i < json_array_get_length(planned); i++) {
+		JsonObject *entry = json_array_get_object_element(planned, i);
+		const gchar *path;
+		JsonNode *node;
+		JsonArray *sections;
+		gint score;
+		guint j;
+		if (entry == NULL)
+			continue;
+		path = ls_string(entry, "path");
+		node = path != NULL ? json_object_get_member(pages, path) : NULL;
+		sections = node != NULL && JSON_NODE_HOLDS_OBJECT(node)
+			? member_array(json_node_get_object(node), "sections") : NULL;
+		for (j = 0; sections != NULL && j < json_array_get_length(sections); j++) {
+			JsonObject *section = json_array_get_object_element(sections, j);
+			if (section != NULL && g_strcmp0(ls_string(section, "component"), "booking-calendar") == 0)
+				return json_object_ref(pages);
+		}
+		/* A full page cannot take another section; try the next candidate. */
+		if (sections == NULL || json_array_get_length(sections) >= MAX_SECTIONS)
+			continue;
+		score = booking_calendar_score(entry);
+		if (score > best) {
+			best = score;
+			target = path;
+		}
+	}
+	if (target == NULL)
+		return json_object_ref(pages);
+	copy = json_object_new();
+	names = json_object_get_members(pages);
+	for (item = names; item != NULL; item = item->next) {
+		JsonNode *node = json_object_get_member(pages, item->data);
+		if (node != NULL)
+			json_object_set_member(copy, item->data, json_node_copy(node));
+	}
+	g_list_free(names);
+	{
+		JsonNode *node = json_object_get_member(copy, target);
+		JsonObject *page = node != NULL && JSON_NODE_HOLDS_OBJECT(node) ? json_node_get_object(node) : NULL;
+		JsonArray *sections = member_array(page, "sections");
+		JsonObject *section;
+		JsonObject *content;
+		if (sections == NULL)
+			return copy;
+		section = json_object_new();
+		content = json_object_new();
+		json_object_set_string_member(section, "component", "booking-calendar");
+		json_object_set_string_member(section, "variant", "month");
+		json_object_set_string_member(content, "heading", "Choose a time");
+		json_object_set_object_member(section, "content", content);
+		json_array_add_object_element(sections, section);
+	}
+	return copy;
+}
+
 gchar *
 ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages, const gchar *base_url, GError **error){
 	Problems problems = {g_ptr_array_new_with_free_func(g_free)};
 	Render render = {self, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 	g_autoptr(JsonObject) ui = json_object_new();
+	g_autoptr(JsonObject) booking_pages = NULL;
 	g_autoptr(GHashTable) used = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 	g_autoptr(GHashTable) modules = g_hash_table_new(g_str_hash, g_str_equal);
 	g_autoptr(JsonNode) root = json_node_new(JSON_NODE_OBJECT);
@@ -8171,6 +8265,8 @@ ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages
 	if (base_url != NULL && base == NULL)
 		goto fail;
 	plan = json_node_get_object(plan_node);
+	booking_pages = pages_with_booking_calendar(plan, pages);
+	pages = booking_pages;
 	planned = member_array(plan, "pages");
 	for (i = 0; i < json_array_get_length(planned); i++) {
 		const gchar *path = ls_string(json_array_get_object_element(planned, i), "path");
