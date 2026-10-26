@@ -113,6 +113,9 @@
     <file>components/cards.css</file>
     <file>components/cards.html</file>
     <file>components/catalog.yaml</file>
+    <file>components/booking-calendar.html</file>
+    <file>components/booking-calendar.css</file>
+    <file>components/booking-calendar.js</file>
     <file>components/cta.css</file>
     <file>components/cta.html</file>
     <file>components/custom.css</file>

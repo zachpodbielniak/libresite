@@ -1223,6 +1223,13 @@ components:
     slots:
       heading: {type: text, max: 140}
       body: {type: rich, max: 400}
+  booking-calendar:
+    summary: The business's live open times, drawn from its supplied booking page. Only when site.booking is present. The builder supplies the booking address; write only the heading and introduction.
+    variants:
+      month: A phone-first month of open days, followed by times and a short booking form.
+    slots:
+      heading: {type: text, required: true, max: 140}
+      body: {type: rich, max: 400}
   notice:
     summary: A short announcement, such as holiday hours or a change of address.
     variants:

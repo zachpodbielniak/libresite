@@ -1,0 +1,19 @@
+<div class="wrap booking-calendar__inner" data-booking-url="{{booking_url}}">
+<div class="section-head"><{{htag}} id="{{id}}-h">{{{heading_html}}}</{{htag}}>{{#body}}<div class="prose">{{{body}}}</div>{{/body}}</div>
+<p class="booking-calendar__fallback">Choose a time on the <a href="{{booking_url}}">booking page</a>.</p>
+<div class="booking-calendar__app" hidden>
+<div class="booking-calendar__nav"><button type="button" data-booking-prev aria-label="Previous month">Previous</button><h3 data-booking-month aria-live="polite"></h3><button type="button" data-booking-next aria-label="Next month">Next</button></div>
+<div class="booking-calendar__weekdays" aria-hidden="true"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
+<div class="booking-calendar__days" data-booking-days role="group" aria-label="Available days"></div>
+<p class="booking-calendar__status" data-booking-status role="status" aria-live="polite"></p>
+<div data-booking-times hidden><h3 data-booking-day-title></h3><div class="booking-calendar__times" data-booking-time-list role="group" aria-label="Available times"></div></div>
+<form action="{{booking_url}}" method="post" data-booking-form hidden>
+<input type="hidden" name="start" data-booking-start>
+<p data-booking-picked></p>
+<label>Name <input name="name" autocomplete="name" maxlength="200" required></label>
+<label>Email <input name="email" type="email" autocomplete="email" maxlength="254" required></label>
+<label>Note (optional) <textarea name="notes" maxlength="4000" rows="3"></textarea></label>
+<button type="submit">Confirm booking</button>
+</form>
+<div class="booking-calendar__confirmed" data-booking-confirmed role="status" aria-live="polite" tabindex="-1" hidden></div>
+</div></div>

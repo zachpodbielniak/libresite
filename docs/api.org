@@ -191,6 +191,8 @@ Supplied podbay module snippets and stylesheets ([[file:components.org::*Podbay 
 
 =LsComponents= is the immutable, thread-safe component library ([[file:components.org][components.org]]).
 
+For a site with =site.booking: {href: "/book"}=, the =booking-calendar= component reads the host's public =GET /book?format=json= response: ={"time_zone":"IANA zone","slots":[{"start":"ISO-8601 UTC","end":"ISO-8601 UTC","label":"local time","day":"YYYY-MM-DD"}]}=. It sends =POST /book= with JSON =start=, =name=, =email= and optional =notes=. A successful host response uses HTTP 201; HTTP 409 means the time was taken. The host keeps availability and writes the booking. The component falls back to =/book= when the JSON cannot be read. See [[file:components.org::*Book online][Book online]] for placement and behavior.
+
 | Function | Transfer | Role |
 |----------+----------+------|
 | =ls_components_new(error)= | full, nullable | Load and validate the embedded catalog |

@@ -655,6 +655,7 @@ test_every_variant(void){
 	all = json_object_get_object_member(json_node_get_object(catalog), "components");
 	/* Builder-fed components need their supplied facts: profiles come with the fixture, a phone here. */
 	json_object_set_member(json_node_get_object(plan), "contact", json("{'phone':'+1 555 0100'}"));
+	json_object_set_member(json_node_get_object(plan), "booking", json("{'href':'/book'}"));
 	/* ...and a supplied podbay module for the module component. */
 	{
 		JsonArray *modules = json_array_new();
@@ -2480,6 +2481,7 @@ test_booking_action(void){
 	home = file_content(bundle, "index.html");
 	contains(home, "<nav class=\"action-bar\" aria-label=\"Get in touch\">");
 	contains(home, "<a class=\"button action-bar__book\" href=\"/book\">Book online</a>");
+	contains(file_content(bundle, "visit.html"), "class=\"block block--booking-calendar");
 	lacks(home, "action-bar__call");
 	every = all_pages(bundle);
 	g_assert_cmpuint(occurrences(every, "action-bar__book"), >=, 2);
@@ -2507,6 +2509,63 @@ test_booking_action(void){
 	bundle = compose_bundle(components, plan, pages);
 	every = all_pages(bundle);
 	lacks(every, "action-bar__book");
+}
+
+/* Booking stays on the site's page, using the host's route for times and
+ * the ordinary booking page as its no-script fallback. */
+static void
+test_booking_calendar(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(JsonNode) plan = load("plan.json");
+	g_autoptr(JsonObject) pages = fixture_pages();
+	g_autoptr(JsonNode) bundle = NULL;
+	g_autoptr(GError) error = NULL;
+	JsonObject *root = json_node_get_object(plan);
+	JsonObject *visit = json_node_get_object(json_object_get_member(pages, "visit.html"));
+	JsonArray *sections = json_object_get_array_member(visit, "sections");
+	const gchar *html, *script, *style;
+	json_object_set_member(root, "booking", json("{'href':'/book'}"));
+	json_array_add_element(sections, json("{'component':'booking-calendar','variant':'month',"
+		"'content':{'heading':'Choose a time'}}"));
+	bundle = compose_bundle(components, plan, pages);
+	html = file_content(bundle, "visit.html");
+	script = file_content(bundle, "site.js");
+	style = file_content(bundle, "styles.css");
+	contains(html, "data-booking-url=\"/book\"");
+	contains(html, "href=\"/book\"");
+	contains(html, "name=\"start\"");
+	contains(html, "name=\"name\"");
+	contains(html, "name=\"email\"");
+	contains(html, "name=\"notes\"");
+	contains(html, "aria-live=\"polite\"");
+	contains(script, "format=json");
+	contains(style, ".booking-calendar");
+	g_clear_pointer(&bundle, json_node_unref);
+	json_object_remove_member(root, "booking");
+	g_assert_false(ls_components_check_page(components, plan, "visit.html",
+		json_object_get_member(pages, "visit.html"), &error));
+	g_assert_nonnull(strstr(error->message, "booking"));
+}
+
+static void
+test_booking_calendar_default_page(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(JsonNode) plan = load("plan.json");
+	g_autoptr(JsonObject) pages = fixture_pages();
+	g_autoptr(JsonNode) bundle = NULL;
+	JsonObject *root = json_node_get_object(plan);
+	JsonArray *planned = json_object_get_array_member(root, "pages");
+	json_object_set_member(root, "booking", json("{'href':'/book'}"));
+	json_array_add_element(planned, json("{'path':'contact.html','kind':'contact','title':'Contact',"
+		"'description':'Reach us and choose a time.','brief':'Contact'}"));
+	json_object_set_member(pages, "contact.html", json("{'path':'contact.html',"
+		"'sections':[{'component':'page-header','content':{'heading':'Contact'}}]}"));
+	bundle = compose_bundle(components, plan, pages);
+	contains(file_content(bundle, "contact.html"), "class=\"block block--booking-calendar");
+	lacks(file_content(bundle, "visit.html"), "class=\"block block--booking-calendar");
+	/* Composition did not change the caller's page specification. */
+	g_assert_cmpuint(json_array_get_length(json_object_get_array_member(
+		json_node_get_object(json_object_get_member(pages, "contact.html")), "sections")), ==, 1);
 }
 
 /* A supplied phone becomes a click-to-call link that stays in reach on every
@@ -2894,6 +2953,8 @@ main(int argc, char **argv){
 	g_test_add_func("/components/supplied-form", test_supplied_form);
 	g_test_add_func("/components/contact-actions", test_contact_actions);
 	g_test_add_func("/components/booking-action", test_booking_action);
+	g_test_add_func("/components/booking-calendar", test_booking_calendar);
+	g_test_add_func("/components/booking-calendar-default-page", test_booking_calendar_default_page);
 	g_test_add_func("/components/footer-credit", test_footer_credit);
 	g_test_add_func("/components/missing-talk", test_missing_talk);
 	return g_test_run();

@@ -297,6 +297,8 @@ test_components(void){
 		GList *variant;
 		if (g_strv_contains(openings, name->data) || g_str_equal(name->data, "page-header"))
 			continue;
+		if (g_str_equal(name->data, "booking-calendar"))
+			json_object_set_member(json_node_get_object(plan), "booking", json("{'href':'/book'}"));
 		if (json_object_has_member(extra, name->data)) {
 			g_autoptr(GList) added = json_object_get_members(json_object_get_object_member(extra, name->data));
 			GList *a;

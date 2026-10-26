@@ -6344,6 +6344,9 @@ check_page_into(LsComponents *self, Problems *problems, JsonNode *plan_node, con
 			if (call == NULL)
 				problem(problems, "%s: call shows the site's supplied phone number, and this site has none; remove it", where);
 		}
+		if (g_str_equal(name, "booking-calendar") &&
+			(plan == NULL || !ls_booking_valid(member_object(plan, "booking"))))
+			problem(problems, "%s: booking-calendar needs the site's supplied booking page", where);
 		if ((g_str_equal(name, "hero") || g_str_equal(name, "cover") || g_str_equal(name, "poster")) && g_strcmp0(kind_name, "home") != 0)
 			problem(problems, "%s: %s belongs only on the home page; open this %s page with page-header",
 				where, name, kind_name);
@@ -7302,6 +7305,8 @@ render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArra
 			JsonObject *call = call_view(render->plan);
 			if (call != NULL)
 				json_object_set_object_member(view, "call", call);
+		} else if (g_str_equal(name, "booking-calendar") && render->book != NULL) {
+			json_object_set_string_member(view, "booking_url", render->book);
 		} else if (g_str_equal(name, "module")) {
 			/* The supplied snippet, as podbay drew it and checked again with
 			 * the plan; it also posts without scripts. */
@@ -8145,11 +8150,77 @@ quote_href(JsonObject *plan, JsonObject *pages){
 	return NULL;
 }
 
+/* Give a bookable site one calendar at its most relevant page. Copy the page
+ * specifications: the caller and the checkpoint still own their originals. */
+static JsonObject *
+pages_with_booking_calendar(JsonObject *plan, JsonObject *pages){
+	JsonArray *planned = member_array(plan, "pages");
+	JsonObject *copy;
+	GList *names, *item;
+	const gchar *target = NULL;
+	gint best = -1;
+	guint i;
+	if (!ls_booking_valid(member_object(plan, "booking")))
+		return json_object_ref(pages);
+	for (i = 0; planned != NULL && i < json_array_get_length(planned); i++) {
+		JsonObject *entry = json_array_get_object_element(planned, i);
+		const gchar *path = ls_string(entry, "path");
+		JsonNode *node = path != NULL ? json_object_get_member(pages, path) : NULL;
+		JsonArray *sections = node != NULL && JSON_NODE_HOLDS_OBJECT(node)
+			? member_array(json_node_get_object(node), "sections") : NULL;
+		gint score = 0;
+		guint j;
+		for (j = 0; sections != NULL && j < json_array_get_length(sections); j++) {
+			JsonObject *section = json_array_get_object_element(sections, j);
+			if (section != NULL && g_strcmp0(ls_string(section, "component"), "booking-calendar") == 0)
+				return json_object_ref(pages);
+		}
+		if (node == NULL || sections == NULL)
+			continue;
+		if (path != NULL && (strstr(path, "book") != NULL || strstr(path, "reserv") != NULL))
+			score = 5;
+		else if ((path != NULL && strstr(path, "contact") != NULL) ||
+			g_strcmp0(ls_string(entry, "kind"), "contact") == 0)
+			score = 4;
+		else if ((path != NULL && strstr(path, "visit") != NULL) ||
+			g_strcmp0(ls_string(entry, "kind"), "visit") == 0)
+			score = 3;
+		else if (g_strcmp0(ls_string(entry, "kind"), "form") == 0)
+			score = 2;
+		else if (g_strcmp0(path, "index.html") != 0)
+			score = 1;
+		if (score > best) {
+			best = score;
+			target = path;
+		}
+	}
+	copy = json_object_new();
+	names = json_object_get_members(pages);
+	for (item = names; item != NULL; item = item->next) {
+		g_autofree gchar *text = json_to_string(json_object_get_member(pages, item->data), FALSE);
+		json_object_set_member(copy, item->data, ls_json_parse(text, NULL));
+	}
+	g_list_free(names);
+	if (target != NULL) {
+		JsonObject *page = json_node_get_object(json_object_get_member(copy, target));
+		JsonArray *sections = member_array(page, "sections");
+		JsonObject *section = json_object_new();
+		JsonObject *content = json_object_new();
+		json_object_set_string_member(section, "component", "booking-calendar");
+		json_object_set_string_member(section, "variant", "month");
+		json_object_set_string_member(content, "heading", "Choose a time");
+		json_object_set_object_member(section, "content", content);
+		json_array_add_object_element(sections, section);
+	}
+	return copy;
+}
+
 gchar *
 ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages, const gchar *base_url, GError **error){
 	Problems problems = {g_ptr_array_new_with_free_func(g_free)};
 	Render render = {self, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 	g_autoptr(JsonObject) ui = json_object_new();
+	g_autoptr(JsonObject) booking_pages = NULL;
 	g_autoptr(GHashTable) used = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 	g_autoptr(GHashTable) modules = g_hash_table_new(g_str_hash, g_str_equal);
 	g_autoptr(JsonNode) root = json_node_new(JSON_NODE_OBJECT);
@@ -8171,6 +8242,8 @@ ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages
 	if (base_url != NULL && base == NULL)
 		goto fail;
 	plan = json_node_get_object(plan_node);
+	booking_pages = pages_with_booking_calendar(plan, pages);
+	pages = booking_pages;
 	planned = member_array(plan, "pages");
 	for (i = 0; i < json_array_get_length(planned); i++) {
 		const gchar *path = ls_string(json_array_get_object_element(planned, i), "path");
