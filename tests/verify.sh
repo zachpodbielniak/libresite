@@ -23,5 +23,5 @@ do
 		exit 1
 	fi
 done
-shellcheck "$root"/tests/*.sh "$root"/tests/fixtures/*.sh
+shellcheck "$root"/tests/*.sh "$root"/tests/fixtures/*.sh "$root"/scripts/*.sh
 printf '%s\n' 'LIBRESITE VERIFIED'
