@@ -1,0 +1,70 @@
+#+title: The site gate
+#+description: A browser check of a published site, as a visitor sees it, before a preview or a publish
+#+authors: Ben Doty
+#+categories: libresite, quality, testing
+#+created: 2026-11-02T16:00:00-05:00
+#+updated: 2026-11-02T16:00:00-05:00
+#+version: 0.1.0
+
+* What it does
+
+The site gate opens a published site in a real browser. It looks at each page as a visitor sees it, on a phone and on a desktop. It fails the site when the first screen is weak or a page is broken.
+
+Run it on a site before you send a preview or publish the site. A site that fails the gate is not ready.
+
+The gate does not change the site. It does not call a model. It does not run code from the site except the page scripts that the browser runs.
+
+* How to run it
+
+#+begin_src bash
+scripts/site-gate.sh ./my-site
+scripts/site-gate.sh --json gate.json sites/*/
+#+end_src
+
+You need =firefox=, =geckodriver=, =python3=, =jq=, =curl= and =zip=. On Fedora, the packages are =firefox=, =python3=, =jq=, =curl= and =zip=. Get =geckodriver= from its release page. To use a WebDriver server that runs already, give =--webdriver URL= or set =WEBDRIVER_URL=.
+
+The gate serves each site on =127.0.0.1= only. It opens every page at 390 x 844 px and at 1440 x 900 px. These are the sizes of the page, not of the window. Motion is reduced, and images load at once. One site takes 10 to 20 seconds.
+
+* What it prints
+
+One line for each site: =PASS= or =FAIL= and the site name. Under a =FAIL=, one line for each check that failed. The line tells where (page and width) and what. For example:
+
+#+begin_example
+FAIL 01-plumber
+  photo: index.html at 390 and 1440: no photo on the first screen (2 drawings)
+  action: index.html at 390: 2 primary actions on the first screen: "Call 585-555-0141", "Book online"
+  bar: index.html at 390: a fixed nav.action-bar covers 15% of the screen (123 of 844 px)
+#+end_example
+
+The exit status is 0 when all sites pass, 1 when a check fails, and 2 for a usage or browser error. =--json FILE= writes all findings, with the page and width of each.
+
+* The checks
+
+The first screen is the part of the page that shows before the visitor scrolls. The photo, headline and action checks look at the home page. The other checks look at every page.
+
+- photo :: A photo is on the first screen at both widths. A photo is a raster image (JPEG, PNG, WebP and similar), not an SVG drawing. It must cover at least 10 percent of the first screen, so a small logo does not count.
+- headline :: The first visible H1 is on the first screen. No fixed bar covers it. On a phone, its text is at least 28 px.
+- action :: The first screen has exactly one primary action. A primary action is a link or button with a solid fill that stands out from the colour behind it. Two buttons to the same place, such as two buttons for the same phone number, are one action. An outline button is not a primary action.
+- bar :: On a phone, no fixed bar covers more than 12 percent of the screen height. A fixed bar is a fixed element, or a sticky element that stays in place when the page scrolls. It must be at least half the screen wide. The gate measures each bar alone.
+- copy :: The page has none of these: "example business", "for demonstration", "ends here", "One of the N services", "Ask us about a ...".
+- empty :: Each section has its content. A section fails when it has no words except its heading and short links. A link of five words or more is a card, and its words count. A phone or email link counts. A picture, map, form or table counts. Text in a closed fold counts. A section named for hours must give a time. A section named for reviews must show a quote or link to a review site. A section named for a process must list two steps or more.
+- sideways :: The page does not scroll sideways.
+- clipped :: No text runs out of a box that hides overflow.
+- contrast :: Text reaches WCAG AA contrast against the first solid colour behind it: 4.5:1, or 3:1 for large text. Text on a picture is not measured.
+
+The sideways, clipped and contrast checks follow the checks of =make gate= (=tests/gate.sh= and =tests/options.sh=). The gate measures contrast in the light colour scheme only.
+
+* What it does not check
+
+- It does not know the trade. It cannot say if the one action is the right action for this business.
+- It does not check the palette against the owner's words.
+- It does not score the design. A person or a reviewer model must still look at the site.
+- It cannot tell a photo of the business from a stock photo, or a raster drawing from a photo.
+- It does not check links, forms that send, or the speed of the site on a phone network.
+
+* Tests
+
+=make site-gate= runs =tests/site-gate.sh=. The test needs the same tools as the gate. It is not part of =make tests=, because it needs a browser.
+
+The test uses =tests/fixtures/site-gate/=. The =good= site must pass. Each page in =cases/= is the good home page with one defect. The test puts that page in a copy of the good site. That site must fail only the check that starts its file name: =headline-bar.html= must fail only =headline=. When you add a check, add a case for it first, and see the test fail before you write the check.
+

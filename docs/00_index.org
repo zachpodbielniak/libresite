@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite
 #+created: 2026-09-09T20:00:00-04:00
-#+updated: 2026-10-23T01:40:00-04:00
+#+updated: 2026-11-02T16:00:00-05:00
 #+version: 0.1.0
 
 * Guides
@@ -30,6 +30,7 @@
 - [[file:operations.org][Operations, provider response schemas, NDJSON events, exit codes and recovery]]
 - [[file:testing.org][Tests and validation limits]]
 - [[file:qa.org][Published-tree QA runner]]
+- [[file:site-gate.org][Site gate: a browser check of a published site before a preview or a publish]]
 - [[file:robustness-review.org][Robustness review and verification scope]]
 - [[file:usage.org][Step usage and explicit job pricing]]
 
