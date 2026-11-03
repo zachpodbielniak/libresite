@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite, quality, testing
 #+created: 2026-09-10T18:40:00-04:00
-#+updated: 2026-10-03T12:00:00-04:00
+#+updated: 2026-11-03T17:20:00-05:00
 #+version: 0.1.0
 
 * Boundary
@@ -41,7 +41,7 @@ External =http(s)=, =mailto=, =tel=, =data= and fragment-only references are ign
 
 * What it does not check
 
-HTML validity beyond those tokens, WCAG/ARIA conformance, ranking SEO, TypeScript/C compilation, HTTP, or browser rendering. Those belong to the generated project's own tests and a human pass. Native validate remains the recipe-time acceptance gate.
+HTML validity beyond those tokens, WCAG/ARIA conformance, ranking SEO, TypeScript/C compilation, HTTP, or browser rendering. Those belong to the generated project's own tests and a human pass. Native validate remains the recipe-time acceptance gate. What a visitor sees on a published tree is [[file:site-gate.org][the site gate]] (=scripts/site-gate.sh=, fixtures via =make site-gate=). This runner does not perform that check.
 
 A successful QA report always states that it is not an a11y, SEO, compile or browser audit.
 

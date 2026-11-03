@@ -10,7 +10,7 @@ case ${1:-} in
 	exit 0 ;;
 --license) printf '%s\n' 'AGPL-3.0-or-later'; exit 0 ;;
 esac
-root=$(cd "$(dirname "$0")/.." && pwd)
+root=$(realpath "$(dirname -- "${BASH_SOURCE[0]}")/..")
 gate=${1:-$root/scripts/site-gate.sh}
 fixtures=$root/tests/fixtures/site-gate
 work=$(mktemp -d)
