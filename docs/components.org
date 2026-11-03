@@ -3,8 +3,8 @@
 #+authors: Zach Podbielniak
 #+categories: libresite
 #+created: 2026-09-28T16:00:00-04:00
-#+updated: 2026-11-03T12:00:00-05:00
-#+version: 0.5.0
+#+updated: 2026-11-03T18:00:00-05:00
+#+version: 0.6.0
 
 * Why it exists
 
@@ -106,7 +106,7 @@ The model-facing reference lists the axes and the override rules (LOOK and OVERR
 
 * The default design
 
-The builder, not the model, decides the design. Until the hand-made templates exist, every unthemed site wears one calm design. It is the catalog's =default= block at the end of =catalog.yaml=:
+The step 2 default design (one calm look for every unthemed site) is replaced by the preset picker; see [[*Presets and the picker][presets and the picker]]. The catalog's =default= block stays. =ls_components_apply_default()= still applies it to a plan without a theme, and a plan step without presets uses it. A plan step with the embedded library always chooses a preset, so new sites never wear it.
 
 #+begin_src yaml
 default:
@@ -118,16 +118,84 @@ default:
   home: services-first
 #+end_src
 
-After the plan call, =ls_components_apply_default()= does the following:
+=tests/test-default.c= covers the block, the identity, themes, the openings, the mark, the retired structure, the retired look values and the demo flag.
 
-- It sets =structure= to the home opening: =photo_opening= when the order supplies photos, else =opening=. The pages step rewrites the writer's first home section to that opening in the writer's own words (=ls_components_apply_opening()=). When the writer's words cannot fit it, or it needs a picture the site does not have, the default =opening= is used.
-- It keeps only the brand mark in the plan's =art=. The art stage draws nothing else.
-- Without a theme, it sets every look axis to its default, the colour tokens to the default palette, and the font tokens and web fonts to the default pairing (a plan without web fonts keeps its own installed stacks), and a visual sequence's layout to the default =scene=. The taste block's colour limit then applies.
-- With a theme, the theme's look, colours and type stay; builder axes the theme leaves open take their defaults.
+* Presets and the picker
 
-The same order always gets the same design, and two different businesses get the same look. Nothing is dealt from the recipe name or brief. The writer still chooses its sections, variants and words, in the order of the default home sequence.
+A site is built the way component libraries build pages: tokens, then primitives, then sections in layout variants, then the page as an ordered list of sections. Variety comes from layout and content, not from decoration. A variant has no colour, font, radius or shadow of its own. It reads the preset's tokens, so any two variants sit together without a clash.
 
-The catalog checks the block at load: the openings are calm home openings, the scene is a scene variant, and the palette, typeface and home exist in =identities.yaml=. =tests/test-default.c= covers the look, the identity, themes, the openings, the mark, the retired structure, the retired look values and the demo flag.
+** Presets
+
+A preset is a theme in =themes.yaml= with a =design= block. Each is read from one real site's measured palette and fonts (colour values and arrangement only; no code, photos or words). The first slice has three:
+
+| Preset | From | Colours | Type | Shape | Fits |
+|--------+------+---------+------+-------+------|
+| evergreen | Evergreen Home Heating & Energy | white, deep green =#163e31=, cream =#f6f4ed=, leaf =#72ab03= | Manrope | control 5 px, box 8 px | trades |
+| press | PRESS Modern Massage | cream =#f4f1ec=, dark brown, forest button =#295135= | Inter, one PT Serif italic phrase | control 2 px | wellness |
+| lindholm | Lindholm Roofing | white, royal blue =#0939b2=, navy =#001427=, orange pill =#ef7d05= | Work Sans | pill, box 20 px | trades |
+
+The =design= block holds:
+- =source=: the real site and what was read from it.
+- =fits=: the sectors it suits. This weights the default choice. It never forbids a preset.
+- =words=: owner style words that choose it, such as /clean/, /modern/ and /trustworthy/ for evergreen.
+- =roles=: the colour roles the plan tokens do not carry: =brand=, =brand_fg=, =inverse=, =inverse_fg=, =highlight=, =photo_primary= and =photo_primary_fg=.
+- =kicker= (=caps= or =pill=), =accent= (=colour= or =italic=) and =font_accent=: the primitives' personality.
+- =shape=: =control=, =box= and =badge= radii in px (daisyUI's three-radius split), =depth= (0 or 1) and the photo =scrim= (0.2 to 0.8).
+- =prefer=: the variant each section type prefers, or a list tried in order.
+
+Presets load as themes, so =ls_components_apply_theme()= and the theme load checks apply to them. At load, each preset also builds a design for an empty order, and that design must pass =ls_design_check()=.
+
+** Tokens
+
+=ls_design_css()= writes the design's tokens after the plan tokens in =styles.css=:
+- Colour roles as pairs: =--bg=/=--fg=, =--surface=/=--surface-fg=, =--muted-fg=, =--line=, =--primary=/=--primary-fg=, =--primary-text=, =--brand=/=--brand-fg=/=--brand-muted=, =--inverse=/=--inverse-fg=/=--inverse-muted=, =--highlight=, =--photo-primary=/=--photo-primary-fg= and =--focus=.
+- Tints derived at build time as literal colours: =--primary-hover=, =--brand-hover=, =--photo-primary-hover=, =--primary-soft=, =--brand-soft= and =--line-firm=. No component calls =color-mix()=.
+- =--text-1= to =--text-9= and =--space-1= to =--space-9= (the Radix Themes steps), =--container=, =--container-narrow=, =--section-y=, the three radii, =--shadow-1= to =--shadow-3= (none at depth 0), =--depth= and =--scrim=.
+
+Contrast repair: every text pair reaches 4.5:1. =ls_design_repair()= moves only the HSL lightness of one colour, in the smallest steps, away from its partner: the text for text roles, the ground for coloured grounds (primary, brand, inverse, photo primary). A pair that passes is kept exactly. The plan's seven working colour tokens are then set from the roles, so the older components on interior pages wear the same repaired pairs.
+
+** Primitives
+
+=design.css= holds the primitives every section uses: the button (one solid primary, an outline, a text link with an arrow), the kicker, the accent phrase (words marked =*like this*=), the heading block, the card, the photo, the rating line, the tick list and the section shell with its tones. A tone (=default=, =surface=, =inverse=, =brand=, =photo=) swaps the working colours inside the section, so every primitive keeps its AA pairs. The body carries =design design--PRESET header--LAYOUT footer--LAYOUT kicker--STYLE accent--STYLE=.
+
+** Sections and variants
+
+Each variant is =COMPONENT--VARIANT.html= and =COMPONENT--VARIANT.css=. The builder renders a section with its variant's own template when one exists. The variant styles follow =design.css= in the =ls-look= layer, so a variant's arrangement leads over the primitives it places.
+
+| Type | Variants | Arrangement from |
+|------+----------+------------------|
+| hero | photo-start, photo-center, split-card | Evergreen, PRESS and Table & Tulip; Mission Bowling, Highlands and Glenwood South; Lindholm |
+| services | photo-cards, price-list, sublinks | The Gleamery and Mission Bowling; PRESS; Lindholm |
+| reviews | card-grid, quote-headline | Highlands; PRESS |
+| contact | split, call-first | Harte Law and Lindholm; the target plumber of the quality audit |
+| header | bar, utility | Mission Bowling, Glenwood South and Village Dental; Lindholm |
+| footer | columns, simple | Evergreen and Lindholm; Glenwood South and Maple and June |
+
+The catalog's =library= block names the source of every variant, its layout =family=, what content it =needs= (=photos=, =items=, =item_photos=, =quotes=, =phone=, =action=) and, for the footer, its =tone=. =reviews= and =contact= are new components; the hero and services variants extend those components. A library variant without its markup or styles, a sector without an action or home, or a named colour that is not =#rrggbb= fails the load.
+
+** How the picker chooses
+
+The plan step runs the picker for every order whose plan step names no theme. The same order always gives the same site.
+
+1. Sector and home. The words of the business name, tagline, brief and offer names choose a sector (=trades=, =wellness=, else =any=). The sector gives the home's section types in order and the primary action: trades call, wellness book, any books when a booking page is supplied. The action falls back to the call, then the quote page, when its fact is missing. A section enters the home only when its content exists.
+2. Preset. The owner's words come first: =site.style=, =site.brand.colors=, =site.brand.tone= and the "Colours:", "Colors:" and "Style:" sentences of =site.requirements= (=ls_design_owner_words()=). The preset whose words match most wins. Without a match, a stable FNV-1a hash of the business name picks one; presets that fit the sector weigh 6, the others 1. Presets that =site.avoid= fingerprints name leave that hash pick unless every preset is avoided. The fingerprint now records its =preset=. The owner's first named colour (=library.colors=; neutral words do not count) then replaces every role tied to the preset's brand colour, before contrast repair.
+3. Variants. Content filters each type's variants: photo cards need one photo per card after the opening's; call-first needs a phone and the call action; the utility header needs a phone; reviews need supplied quotes (=site.reviews=). The preset's preferred variant weighs 6, the others 1, and the hash picks. Without a photo, the home opens on =library.fallback_opening=.
+4. Clash rules (=ls_design_check_home()=). No two adjacent sections share the surface or inverse tone (the footer counts), at most one brand tone in any three sections, and no two adjacent sections of one layout family. A later section moves to another family's variant when one is eligible. The hero keeps its own ground; the others alternate between the page and the surface.
+
+The result is the plan's builder-owned =design= member: the preset, its source, sector and action, the header and footer layouts, the home sections with their variants and tones, the repaired colour roles, the owner colour words applied, the primitives and the shape. =ls_components_apply_design()= writes it with the plan tokens and the home opening. The plan prompt receives the opening and the home sections; the home writer receives the plan.
+
+** The home page
+
+=ls_components_design_home()= makes the home page the design's list. Each designed section takes the writer's section of the same type (a cover counts as a hero, voices as reviews, a contact card or call as contact) in the designed variant, keeping the slots that variant has. Reviews take the order's quotes word for word. Photo cards take a supplied photo each that the opening does not show. Other sections are dropped, with any link to them. The builder draws the hero's and the contact section's actions: the one primary action, plus the quote as an outline beside a call, plus the phone as a line when the action is not the call. The header button and the phone's action bar lead to the same place, so the first screen has one primary action. Wide screens hide the action bar; the header has the button.
+
+** Photographs and credits
+
+A preset site's footer credits every supplied photo with a =credit=. Photos marked =stock: true= in =site.photos= are listed as "Stock photos, not of this business", so a stock photo never passes for the owner's work.
+
+** Checks
+
+- =tests/test-ls-design.c=: the presets and variants load through the catalog with their sources; the hash is fixed; the same order gives the same design; owner words first; contrast repair; eligibility; the clash rules over two hundred businesses; =site.avoid=; and a composed preset site.
+- Preset sites run the taste checks except the look-default check. They write no signature layer.
 
 * Structure
 
@@ -173,7 +241,7 @@ Stock flourishes become fingerprints: once a visitor has seen the same double ru
 - =ls_components_check_signature()= accepts only CSS of at most 8000 bytes whose colours are the site's custom properties (no literals, =rgb()=, =hsl()= or =color-mix()=), whose =url()= values are percent-encoded SVG data images without scripts or links, and which never uses =display: none=, =visibility: hidden=, =position: fixed=, =!important=, imports or markup. A rejected layer goes back once with the reason; a layer that never passes is left out and the site builds plainly. It never falls back to a stock flourish.
 - The accepted layer is kept as =site/signature.css= beside the page specifications, so rebuilds and reviews reuse it, and joins the plan as its builder-owned =signature= member when the site is composed.
 - In =styles.css= it sits in the last cascade layer, =@layer ls-base, ls-modules, ls-components, ls-look, ls-signature=: it leads over every library rule, the site's own plan CSS and restyles still lead over it, and a few library guards declared =!important= in an earlier layer (focus rings, the page-header index label) hold against it.
-- Themed sites and page reviews write no new signature; a replacement prompt catalog without the =signature= stage simply goes without one.
+- Themed sites, preset sites and page reviews write no new signature; a replacement prompt catalog without the =signature= stage simply goes without one.
 
 Live runs of the bookshop and the dog farm each wrote their layer in about 21 seconds, beside the pages and inside the usual build time, first try: drawer-pull dividers, shelf-bay lines behind the opening and a brass rule for the bookshop; fence-rail dividers with posts, a post line along the header and footer and a lattice edge for the dog farm.
 
@@ -185,7 +253,7 @@ The customer sees one site, so the builder no longer measures how alike sites ar
 - An embedder keeps the fingerprints of delivered sites and passes the ones that matter (the same trade, the same area) back as =site.avoid= on the next order, up to 500 of them. The builder keeps =site.avoid= out of every prompt.
 - A signature layer whose hashed declarations overlap an avoided site's by =LS_COMPONENTS_SIGNATURE_TOO_CLOSE= (half) or more is sent back with the reason (=ls_components_signature_overlap()=); like any failing layer, one that never clears is left out.
 
-=/pages/clone-check= builds one order, then the same order with the first site as =site.avoid=, and checks that the repeated signature layer is refused.
+A preset site writes no signature layer. Its fingerprint records its =preset=, and an order that avoids it gets another preset from the hash pick (see [[*How the picker chooses][how the picker chooses]]). =/pages/clone-check= builds one order, then the same order with the first site as =site.avoid=, and checks that the second wears another preset.
 
 * Missing facts
 
@@ -247,7 +315,7 @@ seed_artifacts:
   - {path: assets/photos/dining-room.jpg, encoding: base64, content: ...}
 #+end_src
 
-The plan step reads each photo's pixel size from its PNG, JPEG or WebP header and passes the list to the model as =supplied_photos=; a photo whose seed is missing or unreadable stops the step before any call. The builder then writes the list into the plan as =photos= (the model cannot change it), so any image slot may use a photo path, and pages render it at its real size. The prompts ask the plan to feature the photos where they fit. The builder draws no pictures: picture slots take supplied photos, and the only artwork is the brand mark. Photos never grow taller than the screen: a tall one crops to cover its box, and a photo in the page's opening stays under 60 percent of the screen height so the headline is on the first screen. A photo may name a =focus=, one or two of =left=, =center=, =right=, =top=, =bottom=, or two percentages such as =70% 30%=; the builder writes it as the image's crop position so the subject stays in frame. Credits are kept in the plan for the operator; licensed stock such as Unsplash and Pexels needs no on-page credit, and the model may still show one in a caption.
+The plan step reads each photo's pixel size from its PNG, JPEG or WebP header and passes the list to the model as =supplied_photos=; a photo whose seed is missing or unreadable stops the step before any call. The builder then writes the list into the plan as =photos= (the model cannot change it), so any image slot may use a photo path, and pages render it at its real size. The prompts ask the plan to feature the photos where they fit. The builder draws no pictures: picture slots take supplied photos, and the only artwork is the brand mark. Photos never grow taller than the screen: a tall one crops to cover its box, and a photo in the page's opening stays under 60 percent of the screen height so the headline is on the first screen. A photo may name a =focus=, one or two of =left=, =center=, =right=, =top=, =bottom=, or two percentages such as =70% 30%=; the builder writes it as the image's crop position so the subject stays in frame. Credits are kept in the plan. A preset site lists every credit in its footer, and a photo marked =stock: true= is named as a stock photo there (see [[*Photographs and credits][photographs and credits]]); other sites keep the credits for the operator, and the model may still show one in a caption.
 
 The plan step also sizes every photo for phones: a capped largest size and smaller widths as WebP, stored in the plan as =variants= and shown with =srcset=, =sizes= and the capped dimensions, while an oversized original moves to the run record instead of the published site. Small photos are published as supplied. See [[file:images.org][photographs sized for phones]] for the caps, defaults and =options.images=.
 
@@ -413,7 +481,9 @@ Files live in =data/components/= and are embedded by =data/resources.xml=:
 
 | File | Role |
 |------+------|
-| =catalog.yaml= | Components, variants and typed slots; the source of the model-facing reference |
+| =catalog.yaml= | Components, variants and typed slots; the source of the model-facing reference; the =library= block the design picker reads |
+| =design.css= | Design primitives and section tones for preset sites |
+| =NAME--VARIANT.html=, =NAME--VARIANT.css= | A library variant's own markup and layout |
 | =NAME.html= | Section template in the Mustache subset below |
 | =NAME.css=, =NAME.js= | Optional styles and behavior, included only when a page uses the component |
 | =layout.html=, =section.html= | Page shell and section wrapper |
