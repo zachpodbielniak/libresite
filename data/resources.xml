@@ -41,6 +41,32 @@
     <file>components/contact--call-first.css</file>
     <file>components/reviews.html</file>
     <file>components/reviews.css</file>
+    <file>components/facts--strip.html</file>
+    <file>components/facts--strip.css</file>
+    <file>components/steps--numbered-row.html</file>
+    <file>components/steps--numbered-row.css</file>
+    <file>components/steps--expect.html</file>
+    <file>components/steps--expect.css</file>
+    <file>components/about.html</file>
+    <file>components/about.css</file>
+    <file>components/about--history.html</file>
+    <file>components/about--history.css</file>
+    <file>components/about--photo-story.html</file>
+    <file>components/about--photo-story.css</file>
+    <file>components/areas--town-list.html</file>
+    <file>components/areas--town-list.css</file>
+    <file>components/areas--address-band.html</file>
+    <file>components/areas--address-band.css</file>
+    <file>components/gallery--featured.html</file>
+    <file>components/gallery--featured.css</file>
+    <file>components/faq--questions.html</file>
+    <file>components/faq--questions.css</file>
+    <file>components/faq--side-heading.html</file>
+    <file>components/faq--side-heading.css</file>
+    <file>components/cta--closing-band.html</file>
+    <file>components/cta--closing-band.css</file>
+    <file>components/cta--promise.html</file>
+    <file>components/cta--promise.css</file>
     <file>components/contact.html</file>
     <file>components/contact.css</file>
     <file>components/look-lettering-wide.css</file>

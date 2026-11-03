@@ -216,7 +216,7 @@ kinds:
   home:
     summary: The front door. A confident opening, a short tour of what matters and a clear next step.
     openings: [hero, cover, custom]
-    suggested: [services, reviews, contact, cards, bento, features, media, statement, marquee, numbers, voices, strip, quote, text, cta, showcase, big-list, story, badges, offer, social]
+    suggested: [services, facts, steps, about, areas, gallery, faq, cta, reviews, contact, cards, bento, features, media, statement, marquee, numbers, voices, strip, quote, text, showcase, big-list, story, badges, offer, social]
   index:
     summary: A list of things to choose from, such as work, articles, services or locations. Opens with a page header; the list is the page.
     openings: [page-header]
@@ -224,7 +224,7 @@ kinds:
   detail:
     summary: One thing in depth, such as a project, service, dish or product. Key facts up front, then the story, evidence and related items.
     openings: [page-header]
-    suggested: [facts, specs, product, recipe, text, figure, compare, carousel, article, callout, table, links, pager, story, share]
+    suggested: [text, checklist, faq, cta, facts, specs, product, recipe, figure, compare, carousel, article, callout, table, links, pager, story, share]
     sidebar: true
   article:
     summary: Longform reading such as an essay, guide or case study. A reading column with contents, inline figures and notes.
@@ -442,6 +442,8 @@ components:
       outline: A thick accent outline, centred.
       sidebar: A painted title column beside the actions.
       underline: The title runs into a long accent rule leading to the actions.
+      closing-band: 'The closing call on the brand colour: one line, the one primary action, the phone and the email. The builder draws the actions.'
+      promise: 'A quiet promise line and the one primary action on the page ground. The builder draws the actions.'
     slots:
       heading: {type: text, required: true, max: 140}
       body: {type: rich, max: 800}
@@ -456,8 +458,11 @@ components:
       split: The heading stays beside the questions.
       cards: Each question a card in a grid.
       ruled: Large questions between heavy rules.
+      questions: Native expanding rows, one question each, in one readable column.
+      side-heading: The heading and a short line on the left, the questions on the right.
     slots:
       heading: {type: text, max: 140}
+      intro: {type: rich, max: 400}
       items:
         type: items
         min_items: 1
@@ -475,6 +480,7 @@ components:
       cards: Outlined cards.
       ledger: A two-column table of ruled rows.
       ribbon: The facts in one painted strip.
+      strip: 'One row of two to four supplied facts under the opening, divided by rules. The builder fills it from the order.'
     slots:
       heading: {type: text, max: 140}
       intro: {type: rich, max: 800}
@@ -518,6 +524,7 @@ components:
       wide: The first picture across the column, the rest below.
       duo: Two large pictures a row.
       stack: One big picture at a time, its caption beside it.
+      featured: 'Two to four of the owner''s own photos, each with its caption. The builder fills it; never stock photos.'
     slots:
       heading: {type: text, max: 140}
       items:
@@ -907,6 +914,8 @@ components:
       timeline: Numbered stops on a vertical line.
       numerals: An oversized number above each step.
       cards: Each step a painted card.
+      numbered-row: 'The owner''s steps numbered in a row on wide screens. The builder fills the steps word for word.'
+      expect: 'The owner''s steps as plain ruled rows of what to expect. The builder fills the steps word for word.'
     slots:
       heading: {type: text, max: 140}
       intro: {type: rich, max: 600}
@@ -1175,12 +1184,16 @@ components:
       chips: Place names as tags.
       columns: Place names in columns.
       map: A drawn map with the business at the center and the places in rings around it.
+      town-list: 'The supplied towns in columns under one line, the hours and address beside them. The builder fills the facts.'
+      address-band: 'The supplied address, hours and towns in one band. The builder fills the facts.'
     slots:
       heading: {type: text, max: 140}
       intro: {type: rich, max: 600}
       items: {type: items, min_items: 1, max_items: 60, fields: {name: {type: text, required: true, max: 60}}}
       art: {type: image}
       note: {type: rich, max: 400}
+      hours: {type: text, max: 400, note: "town-list and address-band: the supplied hours, from the builder."}
+      address: {type: text, max: 200, note: "town-list and address-band: the supplied address, from the builder."}
   contact-card:
     summary: The supplied ways to get in touch, in one block with clear actions.
     variants:
@@ -1211,6 +1224,18 @@ components:
           name: {type: text, required: true, max: 80}
           source: {type: text, max: 80}
           headline: {type: text, max: 80}
+  about:
+    summary: The business in a few true sentences, on the home page. Only supplied facts such as the year it started, where it works and how it works; never invented people, awards or history.
+    variants:
+      history: 'The supplied starting year set large beside a short story.'
+      photo-story: 'One of the owner''s own photos beside a short story and one link.'
+    slots:
+      kicker: {type: text, max: 80}
+      heading: {type: text, required: true, max: 140}
+      body: {type: rich, required: true, max: 1200}
+      since: {type: text, max: 12, note: "history: the supplied year, from the builder."}
+      link: {type: link}
+      art: {type: image, note: "photo-story: the builder gives it one of the owner's own photos."}
   contact:
     summary: How to reach the business, on the home page. The supplied details beside one clear next step; the builder draws the phone and the primary action.
     variants:
@@ -1811,15 +1836,15 @@ library:
     trades:
       words: [plumber, plumbers, plumbing, drain, drains, heating, hvac, furnace, boiler, roof, roofer, roofing, gutters, electric, electrician, electrical, landscaping, landscaper, contractor, contracting, handyman, painter, painting]
       action: call
-      home: [hero, services, reviews, contact]
+      home: [hero, facts, services, steps, about, areas, gallery, reviews, faq, cta]
     wellness:
       words: [salon, hair, haircut, spa, massage, barber, barbershop, nails, beauty, wellness, stylist, studio, skin, facial]
       action: book
-      home: [hero, services, reviews, contact]
+      home: [hero, facts, services, steps, about, areas, gallery, reviews, faq, cta]
     any:
       words: []
       action: book
-      home: [hero, services, reviews, contact]
+      home: [hero, facts, services, steps, about, areas, gallery, reviews, faq, cta]
   variants:
     hero/photo-start:
       source: 'Evergreen Home Heating & Energy, PRESS Modern Massage and Table & Tulip: a full-bleed photo with a fade from the left and left-aligned words.'
@@ -1861,6 +1886,57 @@ library:
       source: 'The target plumber in the libresite quality audit: a large call button first, the hours beside it.'
       family: band
       needs: {phone: true, action: call}
+    facts/strip:
+      source: 'Evergreen Home Heating (family-owned, rating, since 1975) and Mission Bowling Club: one row of supplied facts with separators (HyperUI stats, MIT, for the structure).'
+      family: strip
+      tone: default
+      needs: {facts: 2}
+    steps/numbered-row:
+      source: 'Evergreen Home Heating "The right system": numbered steps in a row (HyperUI sections, MIT, for the structure).'
+      family: steps
+      needs: {steps: 2}
+    steps/expect:
+      source: 'Veterans Contracting and Electrified Garage: what to expect as plain rows.'
+      family: rows
+      needs: {steps: 2}
+    about/history:
+      source: 'Heath Ceramics and Guin Service: the since-year line beside a short story.'
+      family: story
+      needs: {history: true}
+    about/photo-story:
+      source: 'Alyssa Nikole and the Highlands Landscaping intro: a large photo beside a short story and one button (HyperUI sections, MIT, for the structure).'
+      family: split
+      needs: {history: true, own_photos: 2}
+    areas/town-list:
+      source: 'Lindholm Roofing and Highlands Landscaping: the supplied towns in columns under one line.'
+      family: columns
+      needs: {towns: 1}
+    areas/address-band:
+      source: 'Nosotros: the address and hours in one band.'
+      family: band
+      needs: {place: true}
+    gallery/featured:
+      source: 'Maple and June, Table & Tulip and Veterans Contracting: two to four named projects, photo and caption.'
+      family: grid
+      needs: {own_photos: 3}
+    faq/questions:
+      source: 'Veterans Contracting and Portland Strength Collective: native details rows (HyperUI FAQs, MIT, for the structure).'
+      family: list
+      needs: {items: [1, 24]}
+    faq/side-heading:
+      source: 'Harte Law: the heading and lede on the left, the questions on the right (HyperUI FAQs, MIT, for the structure).'
+      family: split
+      needs: {items: [1, 24]}
+    cta/closing-band:
+      source: 'Mission Bowling Club ("Ready to bowl?") and Evergreen Home Heating: one line and one button on the brand colour (HyperUI CTAs, MIT, for the structure).'
+      family: band
+      tone: brand
+      needs: {}
+    cta/promise:
+      source: 'PRESS Modern Massage and Veterans Contracting: a quiet promise line and one button on the page ground (HyperUI CTAs, MIT, for the structure).'
+      family: close
+      tone: default
+      needs: {}
     header/bar:
       source: 'Mission Bowling Club, Glenwood South and Village Dental: wordmark left, task-named links, one button right (HyperUI headers, MIT).'
       needs: {}

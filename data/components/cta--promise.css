@@ -1,0 +1,8 @@
+/* cta/promise: a quiet promise line and the one primary action on the page
+ * ground (PRESS, Veterans). Layout only. */
+.cta--promise .cta__promise { display: grid; justify-items: center; gap: var(--space-4); max-width: 44rem; text-align: center; padding-top: var(--space-6); border-top: 1px solid var(--line); }
+.cta--promise .cta__title { margin: 0; }
+.cta--promise .prose { font-size: var(--text-4); color: var(--muted-fg); }
+.cta--promise .actions { justify-content: center; margin: 0; }
+.cta--promise .cta__direct { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-1) var(--space-5); margin: 0; }
+.cta--promise .cta__direct a { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; overflow-wrap: anywhere; }

@@ -1,0 +1,6 @@
+/* about/photo-story: a large photo beside a short story and one button
+ * (Alyssa Nikole, Highlands). Layout only. */
+.about--photo-story .about__photo img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
+@container (min-width: 52rem) {
+	.about--photo-story .about__inner { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-8); }
+}

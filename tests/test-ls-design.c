@@ -338,12 +338,14 @@ static const gchar home_page[] =
 	"{\"component\": \"features\", \"variant\": \"numbered\", \"content\": {\"heading\": \"Dropped\","
 	" \"items\": [{\"title\": \"One\", \"body\": \"Two\"}]}},"
 	"{\"component\": \"services\", \"variant\": \"rows\", \"content\": {\"heading\": \"What we fix\","
-	" \"items\": [{\"name\": \"Emergency repairs\", \"summary\": \"Burst pipes and leaks.\"},"
-	" {\"name\": \"Drain cleaning\", \"summary\": \"Kitchen and main lines.\"},"
-	" {\"name\": \"Sump pumps\", \"link\": {\"href\": \"work.html\", \"label\": \"Sump pumps\"}}]}},"
-	"{\"component\": \"contact\", \"variant\": \"split\", \"content\": {\"heading\": \"Call us or write\","
-	" \"items\": [{\"label\": \"Hours\", \"value\": \"Mon-Fri 7am-6pm\"},"
-	" {\"label\": \"Phone\", \"value\": \"585-555-0141\"}]}}]}}";
+	" \"items\": [{\"name\": \"Emergency repairs\", \"summary\": \"Burst pipes and leaks. Calls come at all hours. Water off first.\"},"
+	" {\"name\": \"Drain cleaning\", \"summary\": \"Kitchen and main lines. Slow drains first. Roots block old lines.\"},"
+	" {\"name\": \"Sump pumps\", \"summary\": \"Pumps that keep a basement dry. Spring is busiest. Test it yearly.\"}]}},"
+	"{\"component\": \"faq\", \"variant\": \"list\", \"content\": {\"heading\": \"Questions\","
+	" \"items\": [{\"question\": \"Do you clear main lines?\", \"answer\": \"Yes, kitchen and main lines.\"},"
+	" {\"question\": \"Question 2?\", \"answer\": \"A general answer.\"}, {\"question\": \"Question 3?\", \"answer\": \"A general answer.\"}, {\"question\": \"Question 4?\", \"answer\": \"A general answer.\"}, {\"question\": \"Question 5?\", \"answer\": \"A general answer.\"}, {\"question\": \"Question 6?\", \"answer\": \"A general answer.\"}, {\"question\": \"Question 7?\", \"answer\": \"A general answer.\"}, {\"question\": \"Question 8?\", \"answer\": \"A general answer.\"}, {\"question\": \"Question 9?\", \"answer\": \"A general answer.\"}, {\"question\": \"Question 10?\", \"answer\": \"A general answer.\"}, {\"question\": \"Question 11?\", \"answer\": \"A general answer.\"}, {\"question\": \"Question 12?\", \"answer\": \"A general answer.\"}]}},"
+	"{\"component\": \"cta\", \"variant\": \"band\", \"content\": {\"heading\": \"Call us or write\","
+	" \"actions\": [{\"href\": \"index.html\", \"label\": \"Call\"}]}}]}}";
 
 /* A plan wearing a preset composes: the preset's role tokens and tints are
  * in styles.css with no rotation, outline text or texture, the home page
@@ -363,17 +365,9 @@ test_compose(void){
 	JsonArray *files;
 	const gchar *css = NULL, *home = NULL;
 	guint i;
-	const gchar *routes[] = {"work", "start", "journal", "visit"};
 	g_assert_true(g_file_get_contents("tests/fixtures/composed/plan.json", &plan_text, NULL, NULL));
 	plan = parse(plan_text);
 	pages = parse(home_page);
-	for (i = 0; i < G_N_ELEMENTS(routes); i++) {
-		g_autofree gchar *path = g_strdup_printf("tests/fixtures/composed/%s.json", routes[i]);
-		g_autofree gchar *route = g_strdup_printf("%s.html", routes[i]);
-		g_autofree gchar *text = NULL;
-		g_assert_true(g_file_get_contents(path, &text, NULL, NULL));
-		json_object_set_member(json_node_get_object(pages), route, parse(text));
-	}
 	json_object_set_member(json_node_get_object(plan), "photos", json_node_copy(photos));
 	/* The plan step copies the supplied phone and booking page in. */
 	json_object_set_member(json_node_get_object(plan), "contact", parse("{\"phone\": \"585-555-0141\"}"));
@@ -387,6 +381,21 @@ test_compose(void){
 	ls_components_apply_default(components, plan, TRUE);
 	ls_components_check_plan(components, plan, &error);
 	g_assert_no_error(error);
+	/* Every other planned page gets a short writer answer. */
+	{
+		JsonArray *planned = json_object_get_array_member(json_node_get_object(plan), "pages");
+		for (i = 0; i < json_array_get_length(planned); i++) {
+			const gchar *route = ls_string(json_array_get_object_element(planned, i), "path");
+			g_autofree gchar *text = g_strdup_printf("{\"path\": \"%s\", \"sections\": [{\"component\": \"page-header\","
+				" \"variant\": \"plain\", \"content\": {\"heading\": \"%s\"}}, {\"component\": \"text\", \"variant\":"
+				" \"narrow\", \"content\": {\"body\": \"Words.\"}}, {\"component\": \"faq\", \"variant\": \"list\","
+				" \"content\": {\"items\": [{\"question\": \"One?\", \"answer\": \"Yes.\"}, {\"question\": \"Two?\","
+				" \"answer\": \"Yes.\"}, {\"question\": \"Three?\", \"answer\": \"Yes.\"}]}}]}", route,
+				ls_string(json_array_get_object_element(planned, i), "title"));
+			if (!g_str_equal(route, "index.html"))
+				json_object_set_member(json_node_get_object(pages), route, parse(text));
+		}
+	}
 	{
 		JsonNode *page = json_object_get_member(json_node_get_object(pages), "index.html");
 		JsonArray *sections;
@@ -400,12 +409,11 @@ test_compose(void){
 		g_assert_cmpuint(json_array_get_length(sections), ==, json_array_get_length(json_object_get_array_member(
 			json_object_get_object_member(json_node_get_object(plan), "design"), "home")));
 		g_assert_cmpstr(ls_string(json_array_get_object_element(sections, 1), "component"), ==, "services");
-		/* The builder draws the phone, so the writer's phone row goes. */
+		/* The page closes on the call band, whose actions are the builder's. */
 		{
-			JsonObject *contact = json_array_get_object_element(sections, json_array_get_length(sections) - 1);
-			JsonArray *items = json_object_get_array_member(json_object_get_object_member(contact, "content"), "items");
-			g_assert_cmpstr(ls_string(contact, "component"), ==, "contact");
-			g_assert_cmpuint(json_array_get_length(items), ==, 1);
+			JsonObject *last = json_array_get_object_element(sections, json_array_get_length(sections) - 1);
+			g_assert_cmpstr(ls_string(last, "component"), ==, "cta");
+			g_assert_false(json_object_has_member(json_object_get_object_member(last, "content"), "actions"));
 		}
 	}
 	bundle = ls_components_compose(components, plan, json_node_get_object(pages), NULL, &error);
@@ -442,9 +450,13 @@ test_compose(void){
 	g_assert_nonnull(strstr(home, "href=\"tel:5855550141\""));
 	g_assert_nonnull(strstr(home, "Stock photo"));
 	g_assert_nonnull(strstr(home, "flickr user rick"));
-	/* A service with nothing but its name is a fact, not a link. */
-	g_assert_nonnull(strstr(home, "Sump pumps"));
-	g_assert_null(strstr(home, ">Sump pumps</a>"));
+	/* Each service on the home links to its own page. */
+	{
+		const gchar *main = strstr(home, "<main");
+		g_assert_nonnull(main);
+		g_assert_nonnull(strstr(main, "href=\"sump-pumps.html\">Sump pumps</a>"));
+		g_assert_nonnull(strstr(main, "href=\"drain-cleaning.html\">Drain cleaning</a>"));
+	}
 	/* The plumber's primary action is the call, not the booking page. */
 	g_assert_null(strstr(home, "action-bar__book"));
 }

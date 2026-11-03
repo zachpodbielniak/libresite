@@ -1,0 +1,6 @@
+<div class="wrap cta__promise">
+<{{htag}} class="cta__title" id="{{id}}-h">{{{heading_html}}}</{{htag}}>
+{{#body}}<div class="prose">{{{body}}}</div>
+{{/body}}{{#has_actions}}<p class="actions">{{#actions}}<a class="button{{^primary}} button--outline{{/primary}}" href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{label}}</a>{{/actions}}</p>
+{{/has_actions}}{{#call}}<p class="cta__direct">{{#show_phone}}<a href="{{tel}}">{{phone}}</a>{{/show_phone}}{{#email}}<a href="mailto:{{email}}">{{email}}</a>{{/email}}</p>
+{{/call}}</div>

@@ -518,6 +518,27 @@ test_retry_one(void){
 	fixture_teardown(&fixture);
 }
 
+/* A writer that fails twice sees both rejections on its third try, so a
+ * fix for the second does not bring back the first. */
+static void
+test_retry_remembers(void){
+	Fixture fixture;
+	g_autoptr(GError) error = NULL;
+	GPtrArray *work;
+	const gchar *third;
+	fixture_setup(&fixture, 8, 2);
+	run_plan(&fixture);
+	g_hash_table_insert(fixture.provider->failures, g_strdup("work.html"), GINT_TO_POINTER(2));
+	g_assert_true(run_step(&fixture, LS_TYPE_PAGES_STEP, 1, NULL, &error));
+	g_assert_no_error(error);
+	work = prompts_for(fixture.provider, "work.html");
+	g_assert_cmpuint(work->len, ==, 3);
+	third = g_ptr_array_index(work, 2);
+	g_assert_nonnull(strstr(third, "Attempt 1:"));
+	g_assert_nonnull(strstr(third, "Attempt 2:"));
+	fixture_teardown(&fixture);
+}
+
 /* Exhausted retries fail the step and leave the project untouched. */
 static void
 test_failure(void){
@@ -1275,6 +1296,7 @@ main(int argc, char **argv){
 	g_test_add_func("/pages/parallel", test_parallel);
 	g_test_add_func("/pages/sequential", test_sequential);
 	g_test_add_func("/pages/retry-one", test_retry_one);
+	g_test_add_func("/pages/retry-remembers", test_retry_remembers);
 	g_test_add_func("/pages/failure", test_failure);
 	g_test_add_func("/pages/acceptance", test_acceptance);
 	g_test_add_func("/pages/plan-credit", test_plan_credit);

@@ -1,0 +1,11 @@
+/* faq/side-heading: the heading and a short line on the left, the
+ * questions on the right (Harte Law). Layout only. */
+.faq--side-heading .faq__split { display: grid; gap: var(--space-6); }
+.faq--side-heading .faq__list { border-top: 1px solid var(--line-firm); }
+.faq--side-heading .faq__item { border-bottom: 1px solid var(--line); }
+.faq--side-heading summary { min-height: 48px; padding-block: var(--space-4); font-size: var(--text-4); font-weight: 600; cursor: pointer; }
+.faq--side-heading .faq__item .prose { padding-bottom: var(--space-5); color: var(--muted-fg); }
+@container (min-width: 52rem) {
+	.faq--side-heading .faq__split { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: var(--space-8); align-items: start; }
+	.faq--side-heading .section-head { position: sticky; top: var(--space-6); }
+}

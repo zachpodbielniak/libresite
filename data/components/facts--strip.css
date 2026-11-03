@@ -1,0 +1,13 @@
+/* facts/strip: one row of supplied facts under the opening, divided by
+ * rules (Evergreen, Mission Bowling). Layout only. */
+.facts--strip.block { padding-block: var(--space-6); border-bottom: 1px solid var(--line); }
+.facts--strip .facts__strip { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4) var(--space-5); margin: 0; }
+.facts--strip .facts__fact { display: grid; gap: var(--space-1); align-content: start; }
+.facts--strip dt { order: 2; font-size: var(--text-2); color: var(--muted-fg); }
+.facts--strip dd { order: 1; margin: 0; font-family: var(--font-display); font-size: var(--text-6); font-weight: var(--heading-weight); line-height: 1.2; }
+.facts--strip dd p { margin: 0; }
+@container (min-width: 52rem) {
+	.facts--strip .facts__strip { grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 0; }
+	.facts--strip .facts__fact { padding-inline: var(--space-6); border-left: 1px solid var(--line); }
+	.facts--strip .facts__fact:first-child { padding-left: 0; border-left: 0; }
+}

@@ -58,6 +58,10 @@ body.design {
 .design .link-arrow::after, .design .services__more a::after { content: "\2192"; }
 .design .link-arrow:hover, .design .services__more a:hover { text-decoration: underline; }
 
+/* An email address is one long word: it may break anywhere before it
+ * runs off a phone screen. */
+.design a[href^="mailto:"] { overflow-wrap: anywhere; }
+
 /* Card and photo: one radius, flat or raised by the preset's depth. */
 .design .card, .design .services__card, .design .services__group, .design .reviews__item, .design .contact__card {
 	border-radius: var(--radius-box); background: var(--bg); color: var(--fg); box-shadow: var(--shadow-2);
@@ -133,7 +137,8 @@ body.design {
 }
 .design.footer--columns .site-footer :is(.brand, a, .site-footer__social a) { color: var(--inverse-fg); }
 .design.footer--columns .site-footer :is(.site-footer__photos, .site-footer__credit) { color: var(--inverse-muted); padding-top: var(--space-4); border-top: 1px solid var(--inverse-line); }
-.design.footer--columns .site-footer nav ul { flex-direction: column; gap: 0; }
+.design.footer--columns .site-footer nav ul { display: block; columns: 2; column-gap: var(--space-6); }
+.design.footer--columns .site-footer nav li { break-inside: avoid; }
 @media (min-width: 48rem) {
 	.design.footer--columns .site-footer__inner { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: var(--space-8); }
 }

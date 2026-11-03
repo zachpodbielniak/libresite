@@ -289,6 +289,18 @@ gboolean ls_components_apply_design(LsComponents *self, JsonNode *plan, JsonObje
  */
 gboolean ls_components_design_home(LsComponents *self, JsonNode *plan, JsonNode *page);
 /**
+ * ls_components_home_questions:
+ * @plan: (transfer none) (nullable): the site plan, borrowed
+ *
+ * The fewest questions the FAQ on a designed home must hold: eight, or twelve
+ * when the home shows none of the order's own facts (no trust strip,
+ * process, about, area, gallery or reviews). The page check holds the
+ * home to it and the home writer is told it.
+ *
+ * Returns: the minimum, or 0 without a design that fixes the pages
+ */
+guint ls_components_home_questions(JsonNode *plan);
+/**
  * ls_components_apply_theme:
  * @self: a component library
  * @plan: (transfer none): a site plan object, modified in place

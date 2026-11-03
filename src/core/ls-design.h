@@ -82,6 +82,19 @@ GPtrArray *ls_design_owner_words(JsonObject *site);
  * Returns: (transfer full) (nullable): a preset name, or %NULL when the
  *   theme catalog has no presets
  */
+/**
+ * ls_design_facts:
+ * @site: (nullable): the recipe's site object, borrowed
+ *
+ * Reads the supplied facts the builder places itself, word for word:
+ * the year after "since", the hours, the address, the towns served and
+ * the owner's process steps, from structured members first and else from
+ * the labelled sentences of site.requirements.
+ *
+ * Returns: (transfer full): the facts; a member is absent when not supplied
+ */
+JsonObject *ls_design_facts(JsonObject *site);
+
 gchar *ls_design_pick_preset(JsonObject *library, JsonObject *themes, JsonObject *site);
 
 /**

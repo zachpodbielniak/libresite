@@ -1,0 +1,9 @@
+/* steps/numbered-row: the owner's steps numbered in a row on wide screens
+ * (Evergreen "The right system"). Layout only. */
+.steps--numbered-row .steps__row { display: grid; gap: var(--space-6); margin: 0; padding: 0; list-style: none; }
+.steps--numbered-row .steps__step { display: grid; gap: var(--space-3); align-content: start; padding-top: var(--space-4); border-top: 1px solid var(--line-firm); }
+.steps--numbered-row .steps__number { font-size: var(--text-2); font-weight: 600; letter-spacing: 0.12em; color: var(--muted-fg); font-variant-numeric: tabular-nums; }
+.steps--numbered-row .steps__text { margin: 0; font-family: var(--font-display); font-size: var(--text-5); font-weight: var(--heading-weight); line-height: 1.3; }
+@container (min-width: 52rem) {
+	.steps--numbered-row .steps__row { grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); }
+}

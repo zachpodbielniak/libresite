@@ -286,6 +286,139 @@ sector_of(JsonObject *library, JsonObject *site){
 	return best;
 }
 
+/* ---- Supplied facts ------------------------------------------------------- */
+
+/* Labels of the sentences the order form writes into site.requirements,
+ * and the openings of its fixed instruction sentences: a labelled value
+ * runs to the next of either. */
+static const gchar *const fact_labels[] = {"Hours:", "Service area:", "Colours:", "Colors:", "Style:",
+	"process, in order:", NULL};
+static const gchar *const sentence_openings[] = {". Use ", ". Show ", ". Apply ", ". Do not ", ". If ", ". Make ",
+	". The owner", NULL};
+
+/* The text after @label in @text up to the next label, instruction
+ * sentence or doubled full stop, trimmed; NULL when @label is absent. */
+static gchar *
+labelled_value(const gchar *text, const gchar *label){
+	const gchar *start = text != NULL ? strstr(text, label) : NULL;
+	const gchar *end;
+	gchar *value;
+	guint i;
+	if (start == NULL)
+		return NULL;
+	start += strlen(label);
+	end = start + strlen(start);
+	for (i = 0; fact_labels[i] != NULL; i++) {
+		const gchar *next = strstr(start, fact_labels[i]);
+		if (next != NULL && next < end)
+			end = next;
+	}
+	for (i = 0; sentence_openings[i] != NULL; i++) {
+		const gchar *next = strstr(start, sentence_openings[i]);
+		if (next != NULL && next + 1 < end)
+			end = next + 1;
+	}
+	{
+		const gchar *doubled = strstr(start, "..");
+		if (doubled != NULL && doubled + 1 < end)
+			end = doubled + 1;
+	}
+	value = g_strstrip(g_strndup(start, (gsize)(end - start)));
+	if (value[0] == '\0') {
+		g_free(value);
+		return NULL;
+	}
+	return value;
+}
+
+/* The towns of "A, B, C and D", in order. */
+static JsonArray *
+split_places(const gchar *text){
+	JsonArray *places = json_array_new();
+	g_autofree gchar *list = g_strdup(text);
+	g_auto(GStrv) parts = NULL;
+	guint i;
+	g_strdelimit(list, ";", ',');
+	{
+		gsize length = strlen(list);
+		while (length > 0 && list[length - 1] == '.')
+			list[--length] = '\0';
+	}
+	{
+		g_autoptr(GRegex) joiner = g_regex_new("\\s+and\\s+", 0, 0, NULL);
+		g_autofree gchar *commas = g_regex_replace_literal(joiner, list, -1, 0, ",", 0, NULL);
+		parts = g_strsplit(commas, ",", -1);
+	}
+	for (i = 0; parts[i] != NULL; i++) {
+		gchar *place = g_strstrip(parts[i]);
+		if (place[0] != '\0' && strlen(place) <= 60)
+			json_array_add_string_element(places, place);
+	}
+	return places;
+}
+
+/* The numbered steps of "1. A. 2. B. 3. C.", word for word. */
+static JsonArray *
+split_steps(const gchar *text){
+	JsonArray *steps = json_array_new();
+	g_autoptr(GRegex) number = g_regex_new("(?:^|\\s)\\d{1,2}\\.\\s+", 0, 0, NULL);
+	g_auto(GStrv) parts = g_regex_split(number, text, 0);
+	guint i;
+	for (i = 0; parts[i] != NULL; i++) {
+		gchar *step = g_strstrip(parts[i]);
+		if (step[0] != '\0' && strlen(step) <= 160)
+			json_array_add_string_element(steps, step);
+	}
+	return steps;
+}
+
+JsonObject *
+ls_design_facts(JsonObject *site){
+	JsonObject *facts = json_object_new();
+	JsonObject *brand = object_of(site, "brand"), *contact = object_of(site, "contact");
+	const gchar *requirements = str_of(site, "requirements");
+	const gchar *sources[3];
+	guint i;
+	sources[0] = str_of(brand, "tagline");
+	sources[1] = str_of(site, "brief");
+	sources[2] = requirements;
+	/* The year after "since", from the tagline first. */
+	{
+		g_autoptr(GRegex) since = g_regex_new("\\b[Ss]ince\\s+((?:18|19|20)\\d\\d)\\b", 0, 0, NULL);
+		for (i = 0; i < G_N_ELEMENTS(sources) && !json_object_has_member(facts, "since"); i++) {
+			g_autoptr(GMatchInfo) match = NULL;
+			if (sources[i] != NULL && g_regex_match(since, sources[i], 0, &match)) {
+				g_autofree gchar *year = g_match_info_fetch(match, 1);
+				json_object_set_string_member(facts, "since", year);
+			}
+		}
+	}
+	if (str_of(contact, "address") != NULL)
+		json_object_set_string_member(facts, "address", str_of(contact, "address"));
+	{
+		g_autofree gchar *hours = labelled_value(requirements, "Hours:");
+		g_autofree gchar *area = labelled_value(requirements, "Service area:");
+		g_autofree gchar *process = labelled_value(requirements, "process, in order:");
+		if (hours != NULL)
+			json_object_set_string_member(facts, "hours", hours);
+		if (area != NULL) {
+			JsonArray *places = split_places(area);
+			if (json_array_get_length(places) > 0)
+				json_object_set_array_member(facts, "area", places);
+			else
+				json_array_unref(places);
+		}
+		if (process != NULL) {
+			JsonArray *steps = split_steps(process);
+			if (json_array_get_length(steps) >= 2)
+				json_object_set_array_member(facts, "process", steps);
+			else
+				json_array_unref(steps);
+		}
+	}
+	return facts;
+}
+
 /* ---- Picking -------------------------------------------------------------- */
 
 static gint64
@@ -375,21 +508,53 @@ typedef struct {
 	guint quotes;	/* supplied reviews */
 	gboolean phone;
 	gboolean booking;
+	guint facts;	/* supplied trust facts: year, towns, hours, address */
+	guint steps;	/* the owner's process steps */
+	guint towns;	/* towns served */
+	gboolean history;	/* a supplied year the business started */
+	gboolean place;	/* supplied hours or an address */
+	guint own_photos;	/* supplied photos that are not stock */
 	const gchar *action;	/* the design's primary action, once chosen */
 } Content;
 
 static Content
-content_of(JsonObject *site, JsonArray *photos){
+content_of(JsonObject *site, JsonArray *photos, JsonObject *facts){
 	Content content;
 	JsonObject *contact = object_of(site, "contact");
 	JsonObject *booking = object_of(site, "booking");
+	guint i;
 	content.photos = photos != NULL ? json_array_get_length(photos) : 0;
 	content.items = array_of(site, "offers") != NULL ? json_array_get_length(array_of(site, "offers")) : 0;
 	content.quotes = array_of(site, "reviews") != NULL ? json_array_get_length(array_of(site, "reviews")) : 0;
 	content.phone = str_of(contact, "phone") != NULL;
 	content.booking = booking != NULL && str_of(booking, "href") != NULL;
+	content.towns = array_of(facts, "area") != NULL ? json_array_get_length(array_of(facts, "area")) : 0;
+	content.steps = array_of(facts, "process") != NULL ? json_array_get_length(array_of(facts, "process")) : 0;
+	content.history = str_of(facts, "since") != NULL;
+	content.place = str_of(facts, "hours") != NULL || str_of(facts, "address") != NULL;
+	content.facts = (content.history ? 1 : 0) + (content.towns > 0 ? 1 : 0) + (str_of(facts, "hours") != NULL ? 1 : 0) +
+		(str_of(facts, "address") != NULL ? 1 : 0);
+	content.own_photos = 0;
+	for (i = 0; photos != NULL && i < json_array_get_length(photos); i++) {
+		JsonObject *photo = JSON_NODE_HOLDS_OBJECT(json_array_get_element(photos, i))
+			? json_array_get_object_element(photos, i) : NULL;
+		JsonNode *flag = photo != NULL ? json_object_get_member(photo, "stock") : NULL;
+		if (photo != NULL && !(flag != NULL && JSON_NODE_HOLDS_VALUE(flag) && json_node_get_boolean(flag)))
+			content.own_photos++;
+	}
 	content.action = NULL;
 	return content;
+}
+
+/* Whether @needs asks for at least @key of something @have does not reach. */
+static gboolean
+short_of(JsonObject *needs, const gchar *key, guint have){
+	return json_object_has_member(needs, key) && have < (guint)json_object_get_int_member(needs, key);
+}
+
+static gboolean
+wants(JsonObject *needs, const gchar *key, gboolean have){
+	return json_object_has_member(needs, key) && json_object_get_boolean_member(needs, key) && !have;
 }
 
 static gboolean
@@ -412,6 +577,11 @@ eligible(JsonObject *library, const gchar *pair, Content *content){
 		content->photos < (guint)json_object_get_int_member(needs, "photos"))
 		return FALSE;
 	if (json_object_has_member(needs, "phone") && json_object_get_boolean_member(needs, "phone") && !content->phone)
+		return FALSE;
+	/* Sections built from the order's facts show only with those facts. */
+	if (short_of(needs, "facts", content->facts) || short_of(needs, "steps", content->steps) ||
+		short_of(needs, "towns", content->towns) || short_of(needs, "own_photos", content->own_photos) ||
+		wants(needs, "history", content->history) || wants(needs, "place", content->place))
 		return FALSE;
 	/* A layout built around one action shows only where that action leads. */
 	if (json_object_has_member(needs, "action") && g_strcmp0(str_of(needs, "action"), content->action) != 0)
@@ -515,9 +685,13 @@ assign_tones(JsonObject *library, JsonArray *home, const gchar *footer){
 	for (i = 0; i < n; i++) {
 		JsonObject *section = json_array_get_object_element(home, i);
 		const gchar *tone;
+		g_autofree gchar *pair = g_strdup_printf("%s/%s", str_of(section, "component"), str_of(section, "variant"));
+		const gchar *own = str_of(object_of(object_of(library, "variants"), pair), "tone");
 		if (i == 0)
 			tone = g_strcmp0(family_of(library, str_of(section, "component"), str_of(section, "variant")),
 				"bleed") == 0 ? "photo" : "default";
+		else if (own != NULL)
+			tone = own;
 		else
 			tone = i % 2 == 1 ? "default" : "surface";
 		if (i == n - 1 && i > 0 && g_strcmp0(tone, footer_tone) == 0)
@@ -613,6 +787,92 @@ build_roles(JsonObject *library, JsonObject *theme, JsonObject *site, JsonArray 
 	return roles;
 }
 
+/* A flat lowercase route for @name: ASCII letters and digits joined by
+ * hyphens, at most 48 characters. */
+static gchar *
+route_slug(const gchar *name){
+	GString *out = g_string_new(NULL);
+	const gchar *p;
+	for (p = name != NULL ? name : ""; *p != '\0' && out->len < 48; p++) {
+		if (g_ascii_isalnum(*p))
+			g_string_append_c(out, g_ascii_tolower(*p));
+		else if (*p == '&' && out->len > 0 && out->str[out->len - 1] == '-')
+			g_string_append(out, "and-");
+		else if (out->len > 0 && out->str[out->len - 1] != '-')
+			g_string_append_c(out, '-');
+	}
+	while (out->len > 0 && out->str[out->len - 1] == '-')
+		g_string_truncate(out, out->len - 1);
+	return g_string_free(out, FALSE);
+}
+
+static void
+add_page(JsonArray *pages, const gchar *path, const gchar *kind, const gchar *title, const gchar *offer){
+	JsonObject *page = json_object_new();
+	json_object_set_string_member(page, "path", path);
+	json_object_set_string_member(page, "kind", kind);
+	json_object_set_string_member(page, "title", title);
+	if (offer != NULL)
+		json_object_set_string_member(page, "offer", offer);
+	json_array_add_object_element(pages, page);
+}
+
+#define MAX_SERVICE_PAGES 16
+
+/* The pages of an order with offers: home, the services, one page for every supplied
+ * service, About with a supplied year, Service area with supplied towns,
+ * and contact. */
+static JsonArray *
+site_pages(JsonObject *site, Content *content){
+	JsonArray *pages = json_array_new();
+	JsonArray *offers = array_of(site, "offers");
+	g_autoptr(GHashTable) taken = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+	const gchar *fixed[] = {"index", "services", "about", "service-area", "contact", "404", "privacy", "terms"};
+	guint i, count = 0;
+	for (i = 0; i < G_N_ELEMENTS(fixed); i++)
+		g_hash_table_add(taken, g_strdup(fixed[i]));
+	add_page(pages, "index.html", "home", "Home", NULL);
+	add_page(pages, "services.html", "services", "Services", NULL);
+	for (i = 0; offers != NULL && i < json_array_get_length(offers) && count < MAX_SERVICE_PAGES; i++) {
+		JsonObject *offer = JSON_NODE_HOLDS_OBJECT(json_array_get_element(offers, i))
+			? json_array_get_object_element(offers, i) : NULL;
+		const gchar *name = str_of(offer, "name");
+		g_autofree gchar *slug = route_slug(name);
+		g_autofree gchar *path = NULL;
+		guint n = 2;
+		if (name == NULL)
+			continue;
+		if (slug[0] == '\0' || g_hash_table_contains(taken, slug)) {
+			gchar *prefixed = g_strconcat("service-", slug[0] != '\0' ? slug : "page", NULL);
+			g_free(slug);
+			slug = prefixed;
+		}
+		while (g_hash_table_contains(taken, slug)) {
+			gchar *numbered = g_strdup_printf("%.40s-%u", slug, n++);
+			if (!g_hash_table_contains(taken, numbered)) {
+				g_free(slug);
+				slug = numbered;
+			} else
+				g_free(numbered);
+		}
+		g_hash_table_add(taken, g_strdup(slug));
+		path = g_strconcat(slug, ".html", NULL);
+		add_page(pages, path, "detail", name, str_of(offer, "id"));
+		/* Whether the owner described it: a bare name needs general words. */
+		if (str_of(offer, "description") != NULL && strspn(str_of(offer, "description"), " \t\n") <
+			strlen(str_of(offer, "description")))
+			json_object_set_boolean_member(json_array_get_object_element(pages, json_array_get_length(pages) - 1),
+				"described", TRUE);
+		count++;
+	}
+	if (content->history)
+		add_page(pages, "about.html", "about", "About", NULL);
+	if (content->towns > 0)
+		add_page(pages, "service-area.html", "visit", "Service area", NULL);
+	add_page(pages, "contact.html", "contact", "Contact", NULL);
+	return pages;
+}
+
 static const gchar *
 layout_pick(JsonObject *library, JsonObject *design, const gchar *type, Content *content, const gchar *name){
 	g_autoptr(GArray) choices = choices_for(library, design, type, content);
@@ -626,7 +886,8 @@ ls_design_new(JsonObject *library, JsonObject *themes, JsonObject *site, const g
 	JsonObject *preset_design = object_of(theme, "design");
 	JsonObject *design, *sector;
 	JsonArray *home, *types, *applied;
-	Content content = content_of(site, photos);
+	g_autoptr(JsonObject) facts = ls_design_facts(site);
+	Content content = content_of(site, photos, facts);
 	const gchar *sector_name = sector_of(library, site), *action, *name = business_name(site);
 	guint i;
 	g_return_val_if_fail(error == NULL || *error == NULL, NULL);
@@ -668,6 +929,11 @@ ls_design_new(JsonObject *library, JsonObject *themes, JsonObject *site, const g
 	separate_families(library, preset_design, home, &content);
 	assign_tones(library, home, str_of(design, "footer"));
 	json_object_set_array_member(design, "home", home);
+	json_object_set_object_member(design, "facts", json_object_ref(facts));
+	/* A structured order's offers fix the pages; a brief alone leaves them
+	 * to the plan. */
+	if (content.items > 0)
+		json_object_set_array_member(design, "pages", site_pages(site, &content));
 	applied = json_array_new();
 	json_object_set_object_member(design, "roles", build_roles(library, theme, site, applied));
 	json_object_set_array_member(design, "colors", applied);
@@ -744,10 +1010,31 @@ ls_design_check(JsonObject *library, JsonObject *design, GString *why){
 	gsize start = why->len;
 	guint i;
 	if (design == NULL || !ls_object_keys(design,
-		"|preset|source|sector|action|header|footer|home|roles|colors|kicker|accent|font_accent|shape|", NULL)) {
+		"|preset|source|sector|action|header|footer|home|roles|colors|kicker|accent|font_accent|shape|facts|pages|",
+		NULL)) {
 		g_string_append(why, "design may only have preset, source, sector, action, header, footer, home, roles, "
-			"colors, kicker, accent, font_accent and shape\n");
+			"colors, kicker, accent, font_accent, shape, facts and pages\n");
 		return FALSE;
+	}
+	/* Older designs have no pages or facts; newer ones list routes the
+	 * plan checks again as planned pages. */
+	{
+		JsonArray *pages = array_of(design, "pages");
+		JsonObject *facts = object_of(design, "facts");
+		if (json_object_has_member(design, "pages") && (pages == NULL || json_array_get_length(pages) == 0 ||
+			json_array_get_length(pages) > 24))
+			g_string_append(why, "design.pages must list 1 to 24 pages\n");
+		for (i = 0; pages != NULL && i < json_array_get_length(pages); i++) {
+			JsonNode *node = json_array_get_element(pages, i);
+			JsonObject *page = JSON_NODE_HOLDS_OBJECT(node) ? json_node_get_object(node) : NULL;
+			if (page == NULL || !ls_object_keys(page, "|path|kind|title|offer|described|", NULL) || str_of(page, "path") == NULL ||
+				!g_str_has_suffix(str_of(page, "path"), ".html") || str_of(page, "kind") == NULL ||
+				str_of(page, "title") == NULL)
+				g_string_append_printf(why, "design.pages[%u] must be {path, kind, title, optional offer and described}\n", i);
+		}
+		if (json_object_has_member(design, "facts") && (facts == NULL ||
+			!ls_object_keys(facts, "|since|hours|address|area|process|", NULL)))
+			g_string_append(why, "design.facts may only have since, hours, address, area and process\n");
 	}
 	if (str_of(design, "preset") == NULL)
 		g_string_append(why, "design.preset must name a preset\n");

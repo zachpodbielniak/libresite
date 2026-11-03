@@ -415,6 +415,14 @@ plan_prompt(LsPrompts *prompts, LsRecipe *recipe, JsonObject *config, LsComponen
 				json_array_add_string_element(list, pair);
 		}
 		json_object_set_array_member(task, "home", list);
+		/* And the order's offers fix the pages: their paths, kinds and titles. */
+		if (json_object_has_member(design, "pages")) {
+			g_autofree gchar *text = NULL;
+			g_autoptr(JsonNode) pages = json_node_new(JSON_NODE_ARRAY);
+			json_node_set_array(pages, json_object_get_array_member(design, "pages"));
+			text = ls_json_encode(pages);
+			json_object_set_member(task, "pages", ls_json_parse(text, NULL));
+		}
 	}
 	if (chosen != NULL) {
 		JsonObject *theme = json_object_new();
@@ -944,8 +952,14 @@ run_jobs(LsStep *self, LsProvider *provider, const gchar *system, GPtrArray *job
 			g_autofree gchar *status = g_strdup_printf("%s %s attempt %" G_GINT64_FORMAT " failed: %s; retrying",
 				job_label(job), job->path, job->attempts, line);
 			g_signal_emit_by_name(self, "progress", status);
-			g_free(job->feedback);
-			job->feedback = g_strdup(local_error->message);
+			/* Every rejection so far, newest first: a fix for the latest
+			 * must not bring back an earlier one. */
+			{
+				gchar *all = g_strdup_printf("Attempt %" G_GINT64_FORMAT ": %s%s%s", job->attempts,
+					local_error->message, job->feedback != NULL ? "\n" : "", job->feedback != NULL ? job->feedback : "");
+				g_free(job->feedback);
+				job->feedback = all;
+			}
 			job->attempts++;
 			g_thread_pool_push(pool, job, NULL);
 			continue;
@@ -1021,6 +1035,28 @@ page_prompt(LsPrompts *prompts, LsRecipe *recipe, JsonObject *config, const gcha
 	}
 	json_object_set_string_member(task, "route", ls_string(entry, "path"));
 	json_object_set_string_member(task, "slug", slug);
+	/* The home writer is told how many questions its FAQ needs. */
+	if (g_strcmp0(ls_string(entry, "path"), "index.html") == 0 && ls_components_home_questions(plan_node) > 0)
+		json_object_set_int_member(task, "home_questions", ls_components_home_questions(plan_node));
+	/* A service page names the one supplied service it is about. */
+	{
+		JsonArray *designed = member_array_of(member_object_of(plan, "design"), "pages");
+		JsonArray *offers = member_array_of(member_object_of(ls_recipe_get_root(recipe), "site"), "offers");
+		guint d, o;
+		for (d = 0; designed != NULL && d < json_array_get_length(designed); d++) {
+			JsonObject *target = json_array_get_object_element(designed, d);
+			if (g_strcmp0(ls_string(target, "path"), ls_string(entry, "path")) != 0 || ls_string(target, "offer") == NULL)
+				continue;
+			for (o = 0; offers != NULL && o < json_array_get_length(offers); o++) {
+				JsonNode *offer = json_array_get_element(offers, o);
+				if (JSON_NODE_HOLDS_OBJECT(offer) &&
+					g_strcmp0(ls_string(json_node_get_object(offer), "id"), ls_string(target, "offer")) == 0) {
+					g_autofree gchar *text = ls_json_encode(offer);
+					json_object_set_member(task, "service", ls_json_parse(text, NULL));
+				}
+			}
+		}
+	}
 	json_object_set_object_member(task, "page", json_object_ref(entry));
 	json_object_set_array_member(task, "required", required != NULL ? json_array_ref(required) : json_array_new());
 	if (current != NULL)
