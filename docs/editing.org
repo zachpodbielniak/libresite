@@ -17,7 +17,7 @@ libresite --edit ./my-site --change "Add a Fleet accounts page and link it from 
 git -C ./my-site log --oneline
 #+end_src
 
-Each edit is one model call. The model sees the request, the plan (without the dealt structure), every page specification, the signature layer and the component catalog, and answers with only what changes: a one-line =summary=, the plan members it replaces, the complete specifications of pages it changes or adds, routes to =remove=, and optionally a new =signature=. Everything else is kept exactly as it is. The commit message is =feat: SUMMARY=.
+Each edit is one model call. The model sees the request, the plan (without the builder's structure), every page specification, the signature layer and the component catalog, and answers with only what changes: a one-line =summary=, the plan members it replaces, the complete specifications of pages it changes or adds, routes to =remove=, and optionally a new =signature=. Everything else is kept exactly as it is. The commit message is =feat: SUMMARY=.
 
 Optional flags: =--provider= and =--model= (default =claude-code= with its default model), =--timeout= (seconds; 0 waits without limit, the default), =--prompts= for a replacement catalog with an =edit= stage, =--max-prompt-bytes= and =--debug=. The answer gets one retry with the exact rejection.
 

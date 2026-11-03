@@ -46,14 +46,14 @@ Each component template writes its own =sizes= inside ={{#srcset}}...{{/srcset}}
 
 | Layout | Components | =sizes= |
 |--------+------------+---------|
-| Full bleed | cover, poster | =100vw= |
+| Full bleed | cover | =100vw= |
 | Half width beside text | hero, media, page-header, story, showcase, profile, compare, location, locations, areas, product | =(max-width: 48rem) 100vw, 50vw= |
 | Reading column | article, figure | =(max-width: 48rem) 100vw, 48rem= |
 | Grids and rows | cards, filter, products, news, recipe, gallery, strip, carousel, team, bento | =(max-width: 40rem) 100vw, (max-width: 64rem) 50vw, 33vw= |
 
 A new component that shows art must do the same; =/components/templates-srcset= fails otherwise.
 
-Loading is unchanged and already split by position. In the hero, cover, media and poster components an image in the page's first section loads eagerly with =fetchpriority="high"= and lazily anywhere else; the page-header opening always loads with high priority; every other component's image is =loading="lazy"=, except the product gallery, which leaves loading to the browser. Link previews (=og:image=), the gallery's click-to-enlarge and photo focus rules use the largest variant. =--qa= checks that every =srcset= candidate is published, not only the =src= (see [[file:qa.org][QA]]).
+Loading is unchanged and already split by position. In the hero, cover and media components an image in the page's first section loads eagerly with =fetchpriority="high"= and lazily anywhere else; the page-header opening always loads with high priority; every other component's image is =loading="lazy"=, except the product gallery, which leaves loading to the browser. Link previews (=og:image=), the gallery's click-to-enlarge and photo focus rules use the largest variant. =--qa= checks that every =srcset= candidate is published, not only the =src= (see [[file:qa.org][QA]]).
 
 * Format
 
