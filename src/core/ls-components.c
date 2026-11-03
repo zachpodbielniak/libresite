@@ -8215,8 +8215,9 @@ pages_with_booking_calendar(JsonObject *plan, JsonObject *pages){
 	names = json_object_get_members(pages);
 	for (item = names; item != NULL; item = item->next) {
 		JsonNode *node = json_object_get_member(pages, item->data);
+		/* json_node_copy() shares the object, so copy the text. */
 		if (node != NULL)
-			json_object_set_member(copy, item->data, json_node_copy(node));
+			json_object_set_member(copy, item->data, node_copy(node));
 	}
 	g_list_free(names);
 	{
