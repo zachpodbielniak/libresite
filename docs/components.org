@@ -3,8 +3,8 @@
 #+authors: Zach Podbielniak
 #+categories: libresite
 #+created: 2026-09-28T16:00:00-04:00
-#+updated: 2026-11-03T18:00:00-05:00
-#+version: 0.6.0
+#+updated: 2026-11-03T21:00:00-05:00
+#+version: 0.7.0
 
 * Why it exists
 
@@ -26,7 +26,7 @@ pipeline:
 #+end_src
 
 1. =plan= makes one model call and stores =site/plan.json=: design tokens, optional web fonts, brand, navigation, footer, voice, the brand mark and every route with a title, meta description and a short brief. Mechanical token misses are repaired natively (see [[*Plan repair][plan repair]]); anything else is rejected with every problem listed, and retried.
-2. =pages= reads the plan and writes one page specification per route and the brand mark's SVG, all at once on worker threads, up to =options.parallel= (1 to 16, default 6) in flight. Each answer is checked on the step thread; a rejected answer is retried alone with its exact rejection. When every job is accepted the builder composes the whole site, runs the immediately following =validate= steps on the candidate, and sends a failure back to the one page that caused it. Nothing reaches the project until the composed site passes.
+2. =pages= reads the plan and writes one page specification per route and the brand mark's SVG, all at once on worker threads, up to =options.parallel= (1 to 16, default 6) in flight. Each answer is checked on the step thread; a rejected answer is retried alone with its exact rejection and every earlier one, newest first, so a fix for the latest does not bring back an earlier fault. When every job is accepted the builder composes the whole site, runs the immediately following =validate= steps on the candidate, and sends a failure back to the one page that caused it. Nothing reaches the project until the composed site passes.
 3. =validate= checks the composed files as with any recipe.
 4. =prune= with =prefixes: [site/]= and =archive: true= takes the plan and page specifications out of the published site and keeps them in the run record (=.libresite/run.json=, member =archive=). They are the site's source: editing and theme switching work on them, and the pages are drawn from them.
 
@@ -168,10 +168,17 @@ Each variant is =COMPONENT--VARIANT.html= and =COMPONENT--VARIANT.css=. The buil
 | services | photo-cards, price-list, sublinks | The Gleamery and Mission Bowling; PRESS; Lindholm |
 | reviews | card-grid, quote-headline | Highlands; PRESS |
 | contact | split, call-first | Harte Law and Lindholm; the target plumber of the quality audit |
+| facts (trust strip) | strip | Evergreen and Mission Bowling |
+| steps (process) | numbered-row, expect | Evergreen; Veterans and Electrified |
+| about | history, photo-story | Heath and Guin; Alyssa Nikole and Highlands |
+| areas (area and hours) | town-list, address-band | Lindholm and Highlands; Nosotros |
+| gallery | featured | Maple and June, Table & Tulip and Veterans |
+| faq | questions, side-heading | Veterans and Portland Strength; Harte Law |
+| cta (closing call) | closing-band, promise | Mission Bowling and Evergreen; PRESS and Veterans |
 | header | bar, utility | Mission Bowling, Glenwood South and Village Dental; Lindholm |
 | footer | columns, simple | Evergreen and Lindholm; Glenwood South and Maple and June |
 
-The catalog's =library= block names the source of every variant, its layout =family=, what content it =needs= (=photos=, =items=, =item_photos=, =quotes=, =phone=, =action=) and, for the footer, its =tone=. =reviews= and =contact= are new components; the hero and services variants extend those components. A library variant without its markup or styles, a sector without an action or home, or a named colour that is not =#rrggbb= fails the load.
+The catalog's =library= block names the source of every variant, its layout =family=, what content it =needs= (=photos=, =items=, =item_photos=, =quotes=, =phone=, =action=, =facts=, =steps=, =towns=, =history=, =place=, =own_photos=) and, for the footer and fixed-tone sections, its =tone=. The spec names list, split and band for FAQ and closing variants; the catalog calls them =questions=, =side-heading= and =closing-band=, because =faq/list=, =faq/split= and =cta/band= already name the older variants that unthemed sites wear. =reviews= and =contact= are new components; the hero and services variants extend those components. A library variant without its markup or styles, a sector without an action or home, or a named colour that is not =#rrggbb= fails the load.
 
 ** How the picker chooses
 
@@ -187,6 +194,59 @@ The result is the plan's builder-owned =design= member: the preset, its source, 
 ** The home page
 
 =ls_components_design_home()= makes the home page the design's list. Each designed section takes the writer's section of the same type (a cover counts as a hero, voices as reviews, a contact card or call as contact) in the designed variant, keeping the slots that variant has. Reviews take the order's quotes word for word. Photo cards take a supplied photo each that the opening does not show. Other sections are dropped, with any link to them. The builder draws the hero's and the contact section's actions: the one primary action, plus the quote as an outline beside a call, plus the phone as a line when the action is not the call. The header button and the phone's action bar lead to the same place, so the first screen has one primary action. Wide screens hide the action bar; the header has the button.
+
+** Pages and sections from the order
+
+An order with offers fixes the site's pages (=design.pages=). The builder makes them; the model does not choose them.
+
+| Page | Kind | When |
+|------+------+------|
+| =index.html= | home | always |
+| =services.html= | services | always |
+| one page per offer, such as =drain-cleaning.html= | detail | always, up to 16 offers |
+| =about.html= | about | the order gives a starting year ("since 1998") |
+| =service-area.html= | visit | the order gives the towns it serves |
+| =contact.html= | contact | always |
+
+A service page's path is the slug of the offer's name. A slug that another page uses gets a =service-= prefix or a number. An order with only a brief has no =design.pages=, and the plan chooses its pages as before.
+
+=ls_design_facts()= reads the facts the builder places word for word:
+- =since=: the year after "since" in the tagline, the brief or the requirements.
+- =address=: =contact.address=.
+- =hours=, =area= and =process=: the "Hours:", "Service area:" and "process, in order:" sentences that the order form writes into =site.requirements=. A value ends at the next label, at a fixed instruction sentence of the form, or at a doubled full stop. The towns split at commas and "and"; the steps split at their numbers.
+
+These facts decide which home sections show, in this order: hero, trust strip, services, process, about, area and hours, gallery, reviews, FAQ and the closing call.
+
+| Section | Shows when | Who writes what |
+|---------+------------+-----------------|
+| facts/strip | two or more facts of year, towns, hours and address | the builder writes every item |
+| steps | two or more process steps | the writer gives the heading; the builder writes the steps |
+| about | a starting year | the writer gives the heading and the body from supplied facts; the builder adds the year |
+| areas | towns, or hours or an address | the writer gives the heading; the builder writes towns, hours and address |
+| gallery/featured | three or more photos that are not stock | the builder places the photos with their alt text as captions |
+| reviews | supplied quotes | the builder places the quotes |
+| faq | one or more offers | the writer answers from supplied facts and general truths |
+| cta | always | the writer gives the heading and one line; the builder draws the action, the phone and the email |
+
+Stock photos never fill a gallery or the about photo, so they never pass for the owner's work. A section without its content stays out of the home.
+
+=ls_components_apply_design()= makes the design's pages the plan's pages, in the design's order. A page that the writer planned keeps its brief and its description (when 50 to 160 characters long). A service page keeps the offer's name as its title. The builder writes a description for a page that has none. Pages that the design does not list are removed.
+
+The builder also writes the navigation: a Services link with "All services" and every service page under it (up to 8 links), then About, Service area and Contact. Wide screens show the services as a drop-down menu; the phone menu shows every link. The footer lists every page of the design, then privacy and terms. The plan's =nav=, =action= and =footer.links= are replaced. On the home, each service name links to its own page.
+
+Each service writer receives TASK =service=: the offer as supplied. The page stage asks for a page header, a general "What it involves" text, a checklist of common signs, three or four questions and the closing call. The prompts permit general, true information about a kind of work (=spec_system=, GENERAL KNOWLEDGE). They forbid claims of this business's own methods, prices, timings, guarantees, licences, staff or results.
+
+The page check refuses a thin answer and sends the reason back to its writer:
+- The home needs its FAQ with eight or more questions. A home without a trust strip, process, about, area, gallery or reviews (an order of names only) needs twelve or more.
+- Every service on the home needs a summary. A service without a supplied description needs three or more general sentences.
+- A service page needs a text or article section on what the work involves, and three or more questions.
+- On a preset site, a heading that promises a process ("how it works", "our process") heads two or more steps. The site gate asks the same of the published page.
+
+=ls_components_home_questions()= gives the home's minimum, and the home writer receives it as TASK =home_questions=, so the writer knows the count before the check applies it. These are counts of questions and sentences, not word quotas. Each question and each sentence must still come from supplied facts or general truths.
+
+On a preset site every closing call renders as =cta/closing-band= on the brand tone, or as =cta/promise=, whatever older variant the writer named. The builder's buttons then sit on a tone made for them. Inside a reading page's column the band is a rounded panel with its own inner space. An email link may break at any letter, so a long address never runs off a phone screen.
+
+=tests/test-content.c= covers the service pages, the facts, the sections that stay out without content, a composed site whose header and footer link every page, and the home and service page depth checks.
 
 ** Photographs and credits
 

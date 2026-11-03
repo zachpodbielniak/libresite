@@ -12,7 +12,7 @@
 - [[file:revision.org][Existing-project revisions and incremental file operations]]
 - [[file:editing.org][Editing a built site in place, one committed version per change]]
 - [[file:recipe-format.org][Recipe reference]]
-- [[file:components.org][Composed sites: plan, parallel pages, the component library, presets and the design picker, call and quote actions, the confirmation after sending, and supplied podbay modules]]
+- [[file:components.org][Composed sites: plan, parallel pages, the component library, presets and the design picker, the pages and home sections the order fixes, call and quote actions, the confirmation after sending, and supplied podbay modules]]
 - [[file:inspiration.org][Inspiration: ideas harvested from 631 surveyed designs, with source and licence]]
 - [[file:credits.org][Showcase photograph credits]]
 - [[file:images.org][Photographs sized for phones: caps, WebP variants, srcset and how to change them]]
