@@ -7,10 +7,10 @@
 .block.contact-card--strip { padding-top: var(--space-7); }
 /* split: the title beside the details, in sections wide enough for both. */
 @container (min-width: 60rem) {
-	.contact-card--split:not(.sec-w-narrow) .contact-card__box { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 0 var(--space-7); align-items: start; }
-	.contact-card--split:not(.sec-w-narrow) .contact-card__box > :not(.contact-card__title) { grid-column: 2; }
-	.contact-card--split:not(.sec-w-narrow) .contact-card__title { grid-row: 1 / span 3; font-size: var(--step-3); }
-	.contact-card--split:not(.sec-w-narrow) .contact-card__items { margin-top: 0; }
+	.contact-card--split .contact-card__box { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 0 var(--space-7); align-items: start; }
+	.contact-card--split .contact-card__box > :not(.contact-card__title) { grid-column: 2; }
+	.contact-card--split .contact-card__title { grid-row: 1 / span 3; font-size: var(--step-3); }
+	.contact-card--split .contact-card__items { margin-top: 0; }
 }
 /* band: an accent band across the page. */
 .block.contact-card--band { padding-block: var(--space-7); }

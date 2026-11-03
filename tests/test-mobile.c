@@ -1,8 +1,7 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
-/* A mobile check of twenty real-model sites found six faults, each held
- * here and in the browser gate (tests/mobile.sh): the heading fitter
- * measured through a running entrance and squeezed text to 6px; a dealt
- * tint repainted an accent band under white text; desktop photos were
+/* A mobile check of twenty real-model sites found faults, each held here
+ * and in the browser gate (tests/mobile.sh): the heading fitter measured
+ * through a running entrance and squeezed text to 6px; desktop photos were
  * served for a third of the screen; breadcrumbs and links standing alone
  * were too small to tap; web fonts swapped in late and moved the page; and
  * portrait photos were cropped to a strip. With MOBILE_OUTPUT set, photo
@@ -144,7 +143,7 @@ photo_site(LsComponents *components, const gchar *seed, const gchar *kit, GHashT
 	JsonObject *root = json_node_get_object(plan), *structure;
 	guint i;
 	json_object_set_array_member(root, "photos", photos(files));
-	g_assert_true(ls_components_apply_seed(components, plan, seed, "trades", FALSE));
+	g_assert_true(ls_components_apply_default(components, plan, FALSE));
 	json_object_set_member(root, "fonts",
 		json("[{'family':'Fraunces','weights':[400,700],'italic':true},{'family':'Work Sans','weights':[400,600]}]"));
 	structure = json_object_get_object_member(root, "structure");
@@ -179,19 +178,6 @@ test_fitter(void){
 	g_assert_nonnull(strstr(script, "atRest(fitAll);"));
 	g_assert_nonnull(strstr(script, "floor = Math.max(size * 0.3, Math.min(size, 16));"));
 	g_assert_null(strstr(script, "floor = size * 0.3;"));
-}
-
-/* A dealt tint or ink never repaints a section that paints its own accent
- * band; the accent band's text colour would land on the tint. */
-static void
-test_painted_bands(void){
-	g_autofree gchar *css = read_file("data/components/look.css");
-	const gchar *painted = ":not(.cta--band, .statement--band, .marquee--accent, .contact-card--band)";
-	g_autofree gchar *tint = g_strconcat("main > .block.sec-tone.sec-tone-tint", painted, " {", NULL);
-	g_autofree gchar *ink = g_strconcat("main > .block.sec-tone.sec-tone-ink", painted, ",", NULL);
-	g_assert_nonnull(strstr(css, tint));
-	g_assert_nonnull(strstr(css, ink));
-	g_assert_null(strstr(css, "main > .block.sec-tone.sec-tone-tint {"));
 }
 
 /* A rich-text paragraph or list item that is one link and nothing else is
@@ -416,7 +402,6 @@ int
 main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
 	g_test_add_func("/mobile/fitter", test_fitter);
-	g_test_add_func("/mobile/painted-bands", test_painted_bands);
 	g_test_add_func("/mobile/link-lines", test_link_lines);
 	g_test_add_func("/mobile/tap-targets", test_tap_targets);
 	g_test_add_func("/mobile/danger", test_danger);

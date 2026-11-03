@@ -47,7 +47,7 @@ layout=$(cat <<'JS'
 const done = arguments[arguments.length - 1];
 const issues = [];
 const say = (what, el) => issues.push(`${what}: ${el.tagName.toLowerCase()}${el.className && typeof el.className === "string" ? "." + el.className.trim().split(/\s+/)[0] : ""} "${(el.textContent || el.getAttribute("aria-label") || "").trim().slice(0, 30)}"`);
-const hidden = el => el.closest("[aria-hidden='true'], .visually-hidden, dialog:not([open]), [hidden], .skip-link, .marquee, .kit-marquee, noscript") ||
+const hidden = el => el.closest("[aria-hidden='true'], .visually-hidden, dialog:not([open]), [hidden], .skip-link, .marquee, noscript") ||
   (el.closest("details:not([open])") && !el.closest("summary")) ||
   (el.getBoundingClientRect().width <= 1 && el.getBoundingClientRect().height <= 1);
 const shown = el => { const s = getComputedStyle(el), r = el.getBoundingClientRect(); return s.visibility !== "hidden" && s.display !== "none" && r.width > 0 && r.height > 0; };

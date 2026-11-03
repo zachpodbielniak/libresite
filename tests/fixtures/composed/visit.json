@@ -8,7 +8,7 @@
         "heading": "Visit the workshop",
         "lede": "Bring the piece, or send photos first.",
         "art": {
-          "src": "assets/bench.svg",
+          "src": "assets/mark.svg",
           "alt": "Drawn map of the workshop street"
         }
       }
@@ -39,7 +39,7 @@
         "address": "Harbor & Pine\n\n12 Quay Lane, Harbor County",
         "directions": "Parking behind the building.",
         "art": {
-          "src": "assets/bench.svg",
+          "src": "assets/mark.svg",
           "alt": "Map drawing"
         },
         "actions": [

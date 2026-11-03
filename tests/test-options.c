@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
 /* Every option, composed: one site per component (all its variants, the
- * extras included), per home opening, home composition, motion kit, art
- * direction, font pairing and palette, so the browser gate
+ * extras included), per home opening, extra look value, font pairing and
+ * palette, so the browser gate
  * (tests/options.sh) can check each at 390, 768 and 1440. Here each must
  * compose and pass the page and plan checks; with OPTIONS_OUTPUT set, the
  * sites are written out. See docs/components.org, "Mobile by default". */
@@ -67,15 +67,6 @@ catalog(void){
 				join(json_object_get_object_member(json_object_get_object_member(json_object_get_object_member(root,
 					"components"), owner->data), "variants"), json_object_get_object_member(openings, owner->data));
 		}
-		{
-			const gchar *joins[][3] = {{"layouts", "compositions", "layouts"}, {"kits", "motion_kits", "kits"},
-				{"directions", "art_directions", "directions"}};
-			guint j;
-			for (j = 0; wider != NULL && j < G_N_ELEMENTS(joins); j++)
-				if (json_object_has_member(wider, joins[j][0]))
-					join(json_object_get_object_member(json_object_get_object_member(root, joins[j][1]), joins[j][2]),
-						json_object_get_object_member(wider, joins[j][0]));
-		}
 		/* The bold block's openings and components. */
 		if (json_object_has_member(root, "bold")) {
 			JsonObject *bold = json_object_get_object_member(root, "bold");
@@ -114,7 +105,7 @@ sample_value(JsonObject *slot, guint depth){
 	if (g_str_equal(type, "links"))
 		return json("[{'href':'start.html','label':'Ask for an estimate'},{'href':'visit.html','label':'Visit us'}]");
 	if (g_str_equal(type, "image"))
-		return json("{'src':'assets/bench.svg','alt':'A drawing of the workshop bench'}");
+		return json("{'src':'assets/mark.svg','alt':'The workshop mark'}");
 	if (g_str_equal(type, "choice")) {
 		node = json_node_new(JSON_NODE_VALUE);
 		json_node_set_string(node, json_array_get_string_element(json_object_get_array_member(slot, "values"), 0));
@@ -200,7 +191,7 @@ base_plan(LsComponents *components){
 		json_array_add_object_element(modules, module);
 		json_object_set_array_member(root, "modules", modules);
 	}
-	g_assert_true(ls_components_apply_seed(components, plan, "options\nEvery option at every width.", "trades", FALSE));
+	g_assert_true(ls_components_apply_default(components, plan, FALSE));
 	/* The fixture's restyle (red tabs) tests the restyle plumbing; the
 	 * browser gates judge the library's own colours. */
 	if (json_object_has_member(root, "restyle"))
@@ -262,10 +253,9 @@ emit(LsComponents *components, JsonNode *plan, JsonNode *home, const gchar *name
 		g_assert_cmpint(g_mkdir_with_parents(parent, 0700), ==, 0);
 		g_assert_true(g_file_set_contents(out, json_object_get_string_member(file, "content"), -1, NULL));
 	}
-	for (i = 0; i < 2; i++) {
-		const gchar *art = i == 0 ? "bench.svg" : "mark.svg";
-		g_autofree gchar *source = g_build_filename("tests/fixtures/composed", art, NULL);
-		g_autofree gchar *out = g_build_filename(output, name, "assets", art, NULL);
+	{
+		g_autofree gchar *source = g_build_filename("tests/fixtures/composed", "mark.svg", NULL);
+		g_autofree gchar *out = g_build_filename(output, name, "assets", "mark.svg", NULL);
 		g_autofree gchar *svg = NULL, *parent = g_path_get_dirname(out);
 		g_assert_true(g_file_get_contents(source, &svg, NULL, NULL));
 		g_assert_cmpint(g_mkdir_with_parents(parent, 0700), ==, 0);
@@ -273,7 +263,7 @@ emit(LsComponents *components, JsonNode *plan, JsonNode *home, const gchar *name
 	}
 }
 
-static const gchar *const openings[] = {"hero", "cover", "poster", "manifesto", NULL};
+static const gchar *const openings[] = {"hero", "cover", NULL};
 
 /* One home page per component, every variant a section, the variant
  * rendered as named (no dealt family). */
@@ -368,31 +358,13 @@ test_openings(void){
 	}
 }
 
-/* One site per dealt option: home composition, motion kit, art direction,
- * font pairing and palette, each over the fixture site. */
+/* One site per look value a theme or explicit option may wear, and per
+ * curated font pairing and palette, each over the fixture site. */
 static void
-test_dealt(void){
+test_looks(void){
 	g_autoptr(GError) error = NULL;
 	g_autoptr(LsComponents) components = ls_components_new(&error);
-	struct { const gchar *block, *list, *key; } dealt[] = {
-		{"compositions", "layouts", "composition"}, {"motion_kits", "kits", "kit"}, {"art_directions", "directions", "direction"}
-	};
-	guint d, i;
 	g_assert_no_error(error);
-	for (d = 0; d < G_N_ELEMENTS(dealt); d++) {
-		JsonObject *options = json_object_get_object_member(json_object_get_object_member(catalog(), dealt[d].block), dealt[d].list);
-		g_autoptr(GList) names = json_object_get_members(options);
-		GList *name;
-		for (name = names; name != NULL; name = name->next) {
-			g_autoptr(JsonNode) plan = base_plan(components);
-			g_autoptr(JsonNode) home = load("tests/fixtures/composed/index.json");
-			g_autofree gchar *site = g_strdup_printf("%s-%s", dealt[d].key, (const gchar *)name->data);
-			json_object_set_string_member(json_object_get_object_member(json_node_get_object(plan), "structure"),
-				dealt[d].key, name->data);
-			ls_components_apply_composition(components, plan, home);
-			emit(components, plan, home, site);
-		}
-	}
 	/* Every extra look value. */
 	{
 		JsonObject *extra = json_object_get_object_member(catalog(), "extra_looks");
@@ -411,7 +383,7 @@ test_dealt(void){
 			}
 		}
 	}
-	/* Font pairings and palettes: curated ones and generated ones. */
+	/* Curated font pairings and palettes. */
 	{
 		g_autoptr(JsonNode) identities = NULL, pairings = NULL;
 		JsonObject *groups[3];
@@ -446,21 +418,6 @@ test_dealt(void){
 				emit(components, plan, home, site);
 			}
 		}
-		for (i = 0; i < 24; i++) {
-			g_autofree gchar *seed = g_strdup_printf("generated palette %u", i);
-			g_autoptr(JsonObject) identity = ls_components_suggest_identity(components, seed, NULL);
-			JsonObject *palette = json_object_get_object_member(identity, "palette");
-			JsonObject *tokens = json_object_get_object_member(palette, "tokens");
-			g_autoptr(JsonNode) plan = base_plan(components);
-			g_autoptr(JsonNode) home = load("tests/fixtures/composed/index.json");
-			g_autoptr(GList) keys = json_object_get_members(tokens);
-			GList *key;
-			g_autofree gchar *site = g_strdup_printf("palette-%s", json_object_get_string_member(palette, "name"));
-			for (key = keys; key != NULL; key = key->next)
-				json_object_set_string_member(json_object_get_object_member(json_node_get_object(plan), "tokens"),
-					key->data, json_object_get_string_member(tokens, key->data));
-			emit(components, plan, home, site);
-		}
 	}
 }
 
@@ -469,6 +426,6 @@ main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
 	g_test_add_func("/options/components", test_components);
 	g_test_add_func("/options/openings", test_openings);
-	g_test_add_func("/options/dealt", test_dealt);
+	g_test_add_func("/options/looks", test_looks);
 	return g_test_run();
 }

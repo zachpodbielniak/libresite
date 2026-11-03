@@ -3,7 +3,7 @@
 set -euo pipefail
 case ${1:-} in
 -h|--help)
-	printf '%s\n' 'Usage: mobile.sh WEBDRIVER_URL SITES_DIR...' 'Render the sites first, such as with OPTIONS_OUTPUT=DIR build/release/test-options and' 'MOBILE_OUTPUT=DIR build/release/test-mobile (make gate does it all).' 'Opens every page of the sites in the first directory and the home page of the rest, with motion' 'allowed, at 390 wide on a 2x screen and 1440 wide on a 1x screen, and fails on: text under 12px or squeezed below 16px, text below WCAG AA contrast (also' 'with every section band tone laid over each section), tap targets under 44px outside running' 'text, photos served with under 0.8 of the pixels their box needs, photos cropped to a strip of' 'under 40 percent, and web fonts that can swap in late. Writes mobile.json in the first directory' 'and exits nonzero on any failure.'
+	printf '%s\n' 'Usage: mobile.sh WEBDRIVER_URL SITES_DIR...' 'Render the sites first, such as with OPTIONS_OUTPUT=DIR build/release/test-options and' 'MOBILE_OUTPUT=DIR build/release/test-mobile (make gate does it all).' 'Opens every page of the sites in the first directory and the home page of the rest, with motion' 'allowed, at 390 wide on a 2x screen and 1440 wide on a 1x screen, and fails on: text under 12px or squeezed below 16px, text below WCAG AA contrast,' 'tap targets under 44px outside running' 'text, photos served with under 0.8 of the pixels their box needs, photos cropped to a strip of' 'under 40 percent, and web fonts that can swap in late. Writes mobile.json in the first directory' 'and exits nonzero on any failure.'
 	exit 0 ;;
 --license) printf '%s\n' 'AGPL-3.0-or-later'; exit 0 ;;
 esac
@@ -109,20 +109,6 @@ const contrast = el => {
   for (const el of texts) {
     const low = contrast(el);
     if (low !== null) say(`contrast ${low.toFixed(2)}`, el);
-  }
-  /* Any section may be dealt a band tone; each must keep its text legible. */
-  for (const block of document.querySelectorAll("main > .block:not(:first-child)")) {
-    if (block.classList.contains("sec-tone")) continue;
-    const was = block.className;
-    for (const tone of ["tint", "ink", "accent"]) {
-      block.className = `${was} sec-tone sec-tone-${tone}`;
-      for (const el of block.querySelectorAll("*")) {
-        if (!own(el) || hidden(el) || !shown(el)) continue;
-        const low = contrast(el);
-        if (low !== null) say(`contrast ${low.toFixed(2)} on a ${tone} band`, el);
-      }
-    }
-    block.className = was;
   }
   /* Tap targets, leaving out links inside running text. */
   for (const el of document.querySelectorAll("a[href], button, summary, input:not([type=hidden]), select, textarea")) {

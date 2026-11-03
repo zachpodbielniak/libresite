@@ -43,11 +43,6 @@
     <file>components/look-panels-paper.css</file>
     <file>components/look-panels-stack.css</file>
     <file>components/look-rhythm-airy.css</file>
-    <file>components/art-duotone.css</file>
-    <file>components/art-cutout.css</file>
-    <file>components/art-framed.css</file>
-    <file>components/art-collage.css</file>
-    <file>components/art-lineart.css</file>
     <file>components/services--ledger.css</file>
     <file>components/services--tiles.css</file>
     <file>components/voices--stack.css</file>
@@ -62,19 +57,6 @@
     <file>components/contact-card--postcard.css</file>
     <file>components/gallery--polaroid.css</file>
     <file>components/gallery--filmstrip.css</file>
-    <file>components/kit-cascade.css</file>
-    <file>components/kit-parallax.css</file>
-    <file>components/kit-aurora.css</file>
-    <file>components/kit-ticker.css</file>
-    <file>components/kit-spotlight.css</file>
-    <file>components/kit-still.css</file>
-    <file>components/motion-counters.js</file>
-    <file>components/home-full-bleed.css</file>
-    <file>components/home-editorial.css</file>
-    <file>components/home-bento.css</file>
-    <file>components/home-oversized-type.css</file>
-    <file>components/home-stacked-cards.css</file>
-    <file>components/home-zigzag.css</file>
     <file>components/themes.yaml</file>
     <file>components/identities.yaml</file>
     <file>components/pairings.yaml</file>
@@ -206,8 +188,6 @@
     <file>components/directory.html</file>
     <file>components/locations.css</file>
     <file>components/locations.html</file>
-    <file>components/manifesto.css</file>
-    <file>components/manifesto.html</file>
     <file>components/marquee.css</file>
     <file>components/marquee.html</file>
     <file>components/notice.css</file>
@@ -237,8 +217,6 @@
     <file>components/big-list.html</file>
     <file>components/offer.css</file>
     <file>components/offer.html</file>
-    <file>components/poster.css</file>
-    <file>components/poster.html</file>
     <file>components/profile.css</file>
     <file>components/profile.html</file>
     <file>components/showcase.css</file>
@@ -291,19 +269,6 @@
     <file>components/look-nav-segmented.css</file>
     <file>components/look-nav-wavy.css</file>
     <file>components/look-nav-arrow.css</file>
-    <file>components/art-halftone.css</file>
-    <file>components/art-stamp.css</file>
-    <file>components/art-blueprint.css</file>
-    <file>components/art-window.css</file>
-    <file>components/art-layers.css</file>
-    <file>components/art-torn.css</file>
-    <file>components/art-glow.css</file>
-    <file>components/kit-curtain.css</file>
-    <file>components/kit-bloom.css</file>
-    <file>components/kit-hinge.css</file>
-    <file>components/kit-beacon.css</file>
-    <file>components/kit-spring.css</file>
-    <file>components/kit-wash.css</file>
     <file>components/look-rhythm-sheets.css</file>
     <file>components/look-rhythm-stacked.css</file>
     <file>components/look-rhythm-fade.css</file>
@@ -335,32 +300,15 @@
     <file>components/look-heads-highlight.css</file>
     <file>components/look-heads-caps.css</file>
     <file>components/look-heads-trail.css</file>
-    <file>components/look-heads-ghost.css</file>
     <file>components/look-heads-bracket.css</file>
     <file>components/look-heads-framed.css</file>
     <file>components/look-heads-newsprint.css</file>
     <file>components/look-heads-shadow.css</file>
-    <file>components/look-heads-disc.css</file>
     <file>components/look-heads-initial.css</file>
     <file>components/look-heads-panel.css</file>
     <file>components/hero--slab.css</file>
     <file>components/cover--band.css</file>
     <file>components/cover--letterbox.css</file>
-    <file>components/poster--front.css</file>
-    <file>components/manifesto--run.css</file>
-    <file>components/manifesto--tiles.css</file>
-    <file>components/home-banded.css</file>
-    <file>components/home-chapters.css</file>
-    <file>components/home-gazette.css</file>
-    <file>components/home-halves.css</file>
-    <file>components/home-lead.css</file>
-    <file>components/home-mosaic.css</file>
-    <file>components/home-pinned.css</file>
-    <file>components/home-register.css</file>
-    <file>components/home-slant.css</file>
-    <file>components/home-spine.css</file>
-    <file>components/home-spread.css</file>
-    <file>components/home-wall.css</file>
     <file>components/cover--flood.css</file>
     <file>components/cover--wordmark.css</file>
     <file>components/cover--halves.css</file>
@@ -371,8 +319,6 @@
     <file>components/hero--brutal.css</file>
     <file>components/hero--kinetic.css</file>
     <file>components/hero--breakout.css</file>
-    <file>components/poster--fold.css</file>
-    <file>components/manifesto--stepped.css</file>
     <file>components/slabs.html</file>
     <file>components/slabs.css</file>
     <file>components/menuboard.html</file>

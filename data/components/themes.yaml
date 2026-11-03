@@ -105,7 +105,7 @@ themes:
     look:
       header: bar
       nav: slashes
-      heads: numbered
+      heads: rule
       buttons: offset
       panels: outlined
       rhythm: divided
@@ -186,7 +186,7 @@ themes:
       lettering: plain
       links: highlight
       scheme: fixed
-    css: '.hero__title, .poster__title { color: var(--accent); } .kicker { color: var(--accent); }'
+    css: '.hero__title { color: var(--accent); } .kicker { color: var(--accent); }'
   soft:
     summary: 'Friendly and calm: cream, sage, rounded everything, soft shadows and centered headings.'
     tokens:
@@ -357,7 +357,7 @@ themes:
       scheme: fixed
     css: 'body { font-weight: 300; } .brand { letter-spacing: 0.3em; }'
   workshop:
-    summary: 'Made by hand: chalk paper, green-black ink, signal red, numbered sections, pressed buttons and a drafting grid.'
+    summary: 'Made by hand: chalk paper, green-black ink, signal red, ruled section heads, pressed buttons and a drafting grid.'
     tokens:
       paper: '#f3efe4'
       ink: '#16211c'
@@ -395,7 +395,7 @@ themes:
     look:
       header: stacked
       nav: underline
-      heads: numbered
+      heads: rule
       buttons: offset
       panels: outlined
       rhythm: divided
@@ -473,7 +473,7 @@ themes:
       lettering: gradient
       links: highlight
       scheme: fixed
-    css: '.site-footer .brand, .hero__title, .poster__title { color: var(--accent); }'
+    css: '.site-footer .brand, .hero__title { color: var(--accent); }'
   terracotta:
     summary: 'Sun-baked Mediterranean: clay, cream and olive, a soft serif display, highlighted words and warm glows.'
     tokens:
@@ -950,7 +950,7 @@ themes:
     look:
       header: bar
       nav: caps
-      heads: numbered
+      heads: rule
       buttons: hud
       panels: hud
       rhythm: divided
@@ -969,7 +969,7 @@ themes:
       lettering: plain
       links: dotted
       scheme: fixed
-    css: '.site-header { border-bottom-color: color-mix(in srgb, var(--accent) 45%, transparent); } h1, .hero__title, .poster__title { text-shadow: 0 0 1.5rem color-mix(in srgb, var(--accent) 45%, transparent); } ::selection { background: var(--accent); color: var(--accent-ink); }'
+    css: '.site-header { border-bottom-color: color-mix(in srgb, var(--accent) 45%, transparent); } h1, .hero__title { text-shadow: 0 0 1.5rem color-mix(in srgb, var(--accent) 45%, transparent); } ::selection { background: var(--accent); color: var(--accent-ink); }'
   hologram:
     summary: 'Hologram: violet-black space with plasma magenta light, glass panels glowing over aurora fields and a starfield.'
     tokens:
@@ -1023,9 +1023,9 @@ themes:
       lettering: gradient
       links: highlight
       scheme: fixed
-    css: '.hero__title, .poster__title, .manifesto__title { background: linear-gradient(100deg, var(--ink) 30%, var(--accent)); -webkit-background-clip: text; background-clip: text; color: transparent; }'
+    css: '.hero__title { background: linear-gradient(100deg, var(--ink) 30%, var(--accent)); -webkit-background-clip: text; background-clip: text; color: transparent; }'
   swiss:
-    summary: 'Swiss grid: white, black and one red, tight heavy grotesk, numbered sections, ruled items and a full sitemap footer.'
+    summary: 'Swiss grid: white, black and one red, tight heavy grotesk, ruled section heads and items and a full sitemap footer.'
     tokens:
       paper: '#ffffff'
       ink: '#0a0a0a'
@@ -1058,7 +1058,7 @@ themes:
     look:
       header: bar
       nav: underline
-      heads: numbered
+      heads: rule
       buttons: square
       panels: rules
       rhythm: divided
@@ -1131,7 +1131,7 @@ themes:
       links: underline
       scheme: auto
   terminal:
-    summary: 'Retro terminal: black screen, phosphor green monospace everywhere, scanlines, outlined boxes and numbered sections.'
+    summary: 'Retro terminal: black screen, phosphor green monospace everywhere, scanlines, outlined boxes and ruled section heads.'
     tokens:
       paper: '#0b0f0a'
       ink: '#b9f5a4'
@@ -1160,7 +1160,7 @@ themes:
     look:
       header: bar
       nav: slashes
-      heads: numbered
+      heads: rule
       buttons: hud
       panels: outlined
       rhythm: divided

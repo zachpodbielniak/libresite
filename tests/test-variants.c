@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
 /* Component variants: services, reviews, process, questions, calls to
- * action, contact and galleries each have at least three looks, every one
- * dealt per seed, with the extra ones in their own files. See
+ * action, contact and galleries each have at least three looks, with the
+ * extra ones in their own files. See
  * docs/components.org, "Component variants". */
 #include "libresite.h"
 #include "core/ls-components.h"
@@ -223,41 +223,10 @@ test_render(void){
 }
 
 
-/* Chosen per seed: across sites the builder deals every variant of every
- * covered component, the extras included, and the model may name them. */
-static void
-test_dealt(void){
-	g_autoptr(LsComponents) components = library();
-	g_autoptr(GHashTable) dealt = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
-	g_autofree gchar *reference = ls_components_describe(components);
-	guint i, s;
-	for (s = 0; s < 400; s++) {
-		g_autofree gchar *seed = g_strdup_printf("variant-%u\nA business %u.", s, s);
-		g_autoptr(JsonObject) structure = ls_components_deal_structure(components, seed);
-		JsonObject *variants = json_object_get_object_member(structure, "variants");
-		for (i = 0; covered[i] != NULL; i++)
-			g_hash_table_add(dealt, g_strdup_printf("%s/%s", covered[i], json_object_get_string_member(variants, covered[i])));
-	}
-	for (i = 0; covered[i] != NULL; i++) {
-		JsonObject *added = json_object_get_object_member(extra(), covered[i]);
-		g_autoptr(GList) names = json_object_get_members(added);
-		GList *name;
-		for (name = names; name != NULL; name = name->next) {
-			g_autofree gchar *pair = g_strdup_printf("%s/%s", covered[i], (const gchar *)name->data);
-			if (!g_hash_table_contains(dealt, pair) && !taste_in(taste_block(components), "variants", pair))
-				g_error("%s is never dealt", pair);
-			if (g_hash_table_contains(dealt, pair) && taste_in(taste_block(components), "variants", pair))
-				g_error("%s is a gimmick but dealt", pair);
-			g_assert_nonnull(strstr(reference, json_object_get_string_member(added, name->data)));
-		}
-	}
-}
-
 int
 main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
 	g_test_add_func("/variants/catalog", test_catalog);
 	g_test_add_func("/variants/render", test_render);
-	g_test_add_func("/variants/dealt", test_dealt);
 	return g_test_run();
 }

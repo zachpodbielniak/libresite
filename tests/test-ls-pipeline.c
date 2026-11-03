@@ -106,7 +106,7 @@ test_composed_run(void){
 	g_autofree gchar *temp = g_dir_make_tmp("libresite-pipeline-XXXXXX", NULL);
 	g_autofree gchar *output = g_build_filename(temp, "site", NULL);
 	const gchar *present[] = {"index.html", "work.html", "start.html", "404.html", "privacy.html",
-		"terms.html", "styles.css", "site.js", "robots.txt", "sitemap.xml", "assets/bench.svg", "assets/mark.svg"};
+		"terms.html", "styles.css", "site.js", "robots.txt", "sitemap.xml", "assets/mark.svg"};
 	g_autofree gchar *specs = publish_path(output, "site");
 	g_autofree gchar *index_path = publish_path(output, "index.html");
 	g_autofree gchar *index = NULL;
@@ -123,8 +123,9 @@ test_composed_run(void){
 			g_error("missing %s", present[i]);
 	}
 	g_assert_false(g_file_test(specs, G_FILE_TEST_EXISTS));
-	/* The plan, five pages, two artworks and the signature layer. */
-	g_assert_cmpint(((SiteProvider *)provider)->calls, ==, 1 + 5 + 2 + 1);
+	/* The plan, five pages, the mark (the only artwork the builder keeps)
+	 * and the signature layer. */
+	g_assert_cmpint(((SiteProvider *)provider)->calls, ==, 1 + 5 + 1 + 1);
 	g_assert_true(g_file_get_contents(index_path, &index, NULL, NULL));
 	g_assert_nonnull(strstr(index, "<link rel=\"canonical\" href=\"https://harbor.example/\">"));
 }

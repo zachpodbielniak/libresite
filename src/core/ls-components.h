@@ -82,17 +82,6 @@ gchar *ls_components_dup_page_schema(LsComponents *self);
  */
 gchar *ls_components_dup_art_schema(LsComponents *self);
 /**
- * ls_components_suggest_look:
- * @self: a component library
- * @seed: stable text identifying the site, such as the recipe name and brief
- *
- * Picks one value per look axis from a hash of @seed, so different sites
- * start from different skeletons while one site always gets the same
- * suggestion. The plan may keep or change any axis.
- * Returns: (transfer full): axis name to look value
- */
-JsonObject *ls_components_suggest_look(LsComponents *self, const gchar *seed);
-/**
  * ls_components_get_look_description:
  * @self: a component library
  * @axis: a look axis, such as "art"
@@ -103,54 +92,25 @@ JsonObject *ls_components_suggest_look(LsComponents *self, const gchar *seed);
  */
 const gchar *ls_components_get_look_description(LsComponents *self, const gchar *axis, const gchar *value);
 /**
- * ls_components_deal_structure:
- * @self: a component library
- * @seed: stable text identifying the site
- *
- * Deals the site's structure genes from a hash of @seed: continuous column
- * width, edge gutter, section pace, inner padding, card width and display
- * scale, how often sections narrow, bleed, band, shift, loosen or tighten,
- * and one variant per dealable component. The same seed always deals the
- * same structure. See docs/components.org.
- * Returns: (transfer full): the structure object a plan carries
- */
-JsonObject *ls_components_deal_structure(LsComponents *self, const gchar *seed);
-/**
- * ls_components_apply_structure:
+ * ls_components_apply_default:
  * @self: a component library
  * @plan: (transfer none): plan to change in place
- * @seed: stable text identifying the site
- * @themed: whether a theme already set the plan's look
- *
- * Makes the builder authoritative for page structure: replaces any
- * structure in @plan with ls_components_deal_structure(), and sets every
- * look axis the catalog marks builder-owned (the page frame, heading
- * position, header, rhythm, alignment, footer and motion) to the value
- * dealt from @seed. With @themed, axes the theme already named keep the
- * theme's value.
- * Returns: whether @plan was an object and changed
- */
-gboolean ls_components_apply_structure(LsComponents *self, JsonNode *plan, const gchar *seed, gboolean themed);
-/**
- * ls_components_apply_seed:
- * @self: a component library
- * @plan: (transfer none): plan to change in place
- * @seed: stable text identifying the site
- * @sector: (nullable): the business sector identities are dealt by
  * @themed: whether a theme already set the plan's design
  *
- * Makes the seed, not the model, decide the site's design: applies
- * ls_components_apply_structure() (which also deals the home opening as
- * structure.opening), then, without a theme, sets every remaining look axis
- * to ls_components_suggest_look() except the stock flourishes, and the
- * colour tokens, font tokens and web fonts to the identity
- * ls_components_suggest_identity() deals. A plan without web fonts keeps
- * its own font tokens, so an order that forbids remote fonts still gets
- * none. The same seed always gives the same design.
+ * Makes the builder, not the model, decide the site's design: one calm
+ * default from the catalog's default block (docs/components.org, "The
+ * default design"). Sets structure to the default home opening, or the
+ * photo opening when the plan has supplied photos, and keeps only the
+ * brand mark in the plan's art. Without a theme, it also sets every look
+ * axis to its default, the colour tokens, font tokens and web fonts to
+ * ls_components_get_default_identity(), and a visual sequence's layout to
+ * the default scene. A plan without web fonts keeps its own font tokens,
+ * so an order that forbids remote fonts still gets none. With @themed, the
+ * theme's look, colours and type stay; builder axes it leaves open take
+ * their defaults.
  * Returns: whether @plan was an object and changed
  */
-gboolean ls_components_apply_seed(LsComponents *self, JsonNode *plan, const gchar *seed, const gchar *sector,
-	gboolean themed);
+gboolean ls_components_apply_default(LsComponents *self, JsonNode *plan, gboolean themed);
 /**
  * ls_components_apply_opening:
  * @self: a component library
@@ -158,133 +118,16 @@ gboolean ls_components_apply_seed(LsComponents *self, JsonNode *plan, const gcha
  * @path: the home page's route
  * @page: (transfer none): the home page specification, changed in place
  *
- * Rewrites the page's opening section (a hero, cover, poster or manifesto)
- * as the component and variant in the plan's structure.opening, carrying
- * over its kicker, heading, lede, actions and art; a cover or a split hero
- * without art borrows the plan's first artwork other than the mark. When
- * the dealt opening cannot hold the words (a heading too long for a
- * poster, too few lines for a manifesto, no art at all), the next opening
- * in a fixed order from the dealt one that can is used. Custom openings,
- * pages that do not open with an opening component and plans without
- * structure.opening are left alone.
+ * Rewrites the page's opening section (a hero or cover) as the component
+ * and variant in the plan's structure.opening, carrying over its kicker,
+ * heading, lede, actions and art; a supplied photo leads any opening that
+ * shows a picture. When that opening cannot hold the words or needs a
+ * picture the site does not have, the catalog's default opening is used.
+ * Custom openings, pages that do not open with an opening component and
+ * plans without structure.opening are left alone.
  * Returns: whether @page changed
  */
 gboolean ls_components_apply_opening(LsComponents *self, JsonNode *plan, const gchar *path, JsonNode *page);
-/**
- * ls_components_apply_composition:
- * @self: a component library
- * @plan: (transfer none): a plan whose structure names a home composition
- * @page: (transfer none): the home page specification, changed in place
- *
- * Orders the home page's sections after its opening by the dealt home
- * composition: each section takes its role's place in the composition's
- * order (offer, process, proof, story and practical, in a composition's own
- * sequence), sections that close the page or give ways to get in touch
- * come last, sections of one role keep an order picked from the site's
- * name, and two sections of one component are kept apart where another of
- * their role can sit between. The same plan always gives the same order.
- * Returns: whether @page changed
- */
-gboolean ls_components_apply_composition(LsComponents *self, JsonNode *plan, JsonNode *page);
-/**
- * ls_components_apply_forms:
- * @self: a component library
- * @plan: (transfer none): a plan whose structure names section forms
- * @path: the page's route
- * @page: (transfer none): a page specification, changed in place
- *
- * Rewrites every section after the opening whose component belongs to a
- * family of the catalog's section_forms (offers, process, questions) as the
- * form the plan dealt that family, carrying its heading, intro and items'
- * title, body and link. A form whose result fails the page check is skipped
- * for the next in the family; the writer's component is the last resort.
- * Returns: whether @page changed
- */
-gboolean ls_components_apply_forms(LsComponents *self, JsonNode *plan, const gchar *path, JsonNode *page);
-/**
- * ls_components_apply_extras:
- * @self: a component library
- * @plan: (transfer none): a plan whose structure lists extras
- * @page: (transfer none): the home page specification, changed in place
- *
- * Adds the dealt extra home sections, each built only from the site's own
- * words: a marquee of its first list of offers' names, a statement of its
- * tagline, links to its interior pages with their descriptions, or the same
- * pages as an oversized index (big-list). An extra
- * the site has no words for, or one the page already has, is left out.
- * Returns: whether @page changed
- */
-gboolean ls_components_apply_extras(LsComponents *self, JsonNode *plan, JsonNode *page);
-/**
- * ls_components_get_direction_brief:
- * @self: a component library
- * @name: an art direction from the catalog's art_directions
- *
- * Returns: (transfer none) (nullable): what the artist is told about how
- *   the site shows its artwork, or %NULL for an unknown direction
- */
-const gchar *ls_components_get_direction_brief(LsComponents *self, const gchar *name);
-/**
- * ls_components_suggest_angles:
- * @self: a component library
- * @seed: stable text identifying the site
- *
- * Deals the site's headline angle for its home page and the subject of its
- * artwork from the catalog's content_angles, the same ones
- * ls_components_deal_structure() records as structure.angle and
- * structure.subject.
- * Returns: (transfer full): {headline: {name, description}, subject: {name,
- *   description}}, empty when the library has no content angles
- */
-JsonObject *ls_components_suggest_angles(LsComponents *self, const gchar *seed);
-/**
- * ls_components_get_angle_description:
- * @self: a component library
- * @group: "headline" or "subject"
- * @name: a name from that group of content_angles
- *
- * Returns: (transfer none) (nullable): what the writer is told, or %NULL
- *   for an unknown group or name
- */
-const gchar *ls_components_get_angle_description(LsComponents *self, const gchar *group, const gchar *name);
-/**
- * ls_components_suggest_opening:
- * @self: a component library
- * @seed: stable text identifying the site
- *
- * Picks one home-page opening as "component/variant" from a hash of @seed,
- * so home pages rotate between heroes, covers, posters and manifestos.
- * Returns: (transfer full) (nullable): the suggestion, or %NULL when the
- *   home kind lists no component openings
- */
-gchar *ls_components_suggest_opening(LsComponents *self, const gchar *seed);
-/**
- * ls_components_suggest_photo_opening:
- * @self: a component library
- * @seed: stable text identifying the site
- *
- * The home opening a site from @seed wears when its order supplies photos:
- * the dealt opening when a picture leads it on the first screen (every
- * cover, a split, backdrop or breakout opening; not the arch or banner,
- * which raise it below the words), else one of the dealt composition's
- * openings that a picture leads, else one of every such opening. The plan
- * step deals the same one into structure.opening once photos are known.
- * Returns: (transfer full) (nullable): component/variant, such as cover/full
- */
-gchar *ls_components_suggest_photo_opening(LsComponents *self, const gchar *seed);
-/**
- * ls_components_suggest_scene:
- * @self: a component library
- * @seed: stable text identifying the site
- *
- * The calm photo-led opening a site from @seed wears when it has a visual
- * sequence: one of the taste block's scenes (split, right, above, scrim).
- * ls_components_apply_seed() sets it as the plan's visual.layout, so the
- * seed, not the writer, picks it.
- * Returns: (transfer full) (nullable): a scene variant; %NULL for a
- *   library without taste scenes
- */
-gchar *ls_components_suggest_scene(LsComponents *self, const gchar *seed);
 /**
  * ls_components_spread_photos:
  * @self: a component library
@@ -326,9 +169,11 @@ gboolean ls_components_ensure_photo(LsComponents *self, JsonNode *plan, const gc
  *
  * Checks a built site for what the catalog's taste block forbids: the word
  * "illustrative" in visible copy, a page headline that is a question, a
- * page of a photo site without a photograph, letter chips, a look value,
- * variant, motion kit or art direction outside the calm systems, and a
- * page or surface colour louder than the chroma limit, and a page that
+ * page of a photo site without a photograph, letter chips, a gimmick
+ * variant, a look value other than the default design's on an unthemed
+ * site without a visual sequence, a footer that says the business is an
+ * example on a site that is not a demo build, a page or surface colour
+ * louder than the chroma limit, and a page that
  * shows one supplied photo twice (a picture's phone crop counts when it is
  * another photo).
  * Returns: whether the site is clean
@@ -351,33 +196,29 @@ guint ls_components_count_photos(LsComponents *self, JsonNode *plan, JsonNode *b
  * @self: a component library
  *
  * Returns: (transfer full) (array zero-terminated=1): the business sectors
- *   that identities are dealt by, in catalog order
+ *   that identities fit, in catalog order
  */
 gchar **ls_components_list_sectors(LsComponents *self);
 /**
- * ls_components_suggest_identity:
+ * ls_components_get_default_identity:
  * @self: a component library
- * @seed: stable text identifying the site
- * @sector: (nullable): a sector from ls_components_list_sectors(), or %NULL
- *   (or an unknown name) to deal from every entry
  *
- * Deals a palette, a type pairing and a home-page section sequence that fit
- * @sector, picked from a hash of @seed, so sites start from designs suited to
- * their business instead of one default. The plan adapts them.
+ * The palette, type pairing and home-page section sequence the catalog's
+ * default block names from identities.yaml. Every unthemed site wears them.
  * Returns: (transfer full): {palette: {name, summary, tokens},
  *   type: {name, summary, tokens, fonts}, home: {name, sections}}
  */
-JsonObject *ls_components_suggest_identity(LsComponents *self, const gchar *seed, const gchar *sector);
+JsonObject *ls_components_get_default_identity(LsComponents *self);
 /**
  * ls_components_check_identity:
  * @self: a component library
  * @plan: a site plan
- * @identity: (nullable): the identity dealt to this site
+ * @identity: (nullable): the identity the site wears
  * @error: return location for an error
  *
  * Rejects a plan whose tokens fall back on the house default (warm cream
  * paper with a rust accent, or Fraunces over Source Sans) unless @identity
- * itself dealt it. The error, %LS_ERROR_VALIDATION, is written to be sent
+ * itself is it. The error, %LS_ERROR_VALIDATION, is written to be sent
  * back to the model.
  * Returns: whether the plan's identity is its own
  */
@@ -508,29 +349,6 @@ JsonArray *ls_components_social(LsComponents *self, JsonArray *links);
 gboolean ls_components_check_signature(const gchar *css, GError **error);
 
 /**
- * LS_COMPONENTS_TOO_CLOSE:
- *
- * The ls_components_similarity() score at or above which two sites read
- * as the same design.
- */
-#define LS_COMPONENTS_TOO_CLOSE 0.6
-/**
- * LS_COMPONENTS_DEALS:
- *
- * How many deals ls_components_choose_seed() weighs for a site with sites
- * to avoid: its own seed and derived ones, keeping the one furthest from
- * the closest avoided site, so sites in one market spread apart.
- */
-#define LS_COMPONENTS_DEALS 64
-/**
- * LS_COMPONENTS_WORN_OPENING:
- *
- * What ls_components_choose_seed() adds to a deal's score for each site to
- * avoid that opens the same way, so openings spread across a market rather
- * than repeating behind otherwise different sites.
- */
-#define LS_COMPONENTS_WORN_OPENING 0.03
-/**
  * LS_COMPONENTS_SIGNATURE_TOO_CLOSE:
  *
  * The ls_components_signature_overlap() share at or above which two
@@ -544,25 +362,15 @@ gboolean ls_components_check_signature(const gchar *css, GError **error);
  * @home: (transfer none) (nullable): the home page specification
  *
  * Summarises what a visitor notices about a composed site: every look
- * axis, the column and spacing genes, the paper, ink and accent colours,
- * the display and body families, the home page's opening and section
- * sequence, and hashed shape-carrying declarations of its signature layer.
- * It holds no copy, facts or photographs, so an embedder can keep one per
- * delivered site and pass earlier ones back as site.avoid.
+ * axis, the paper, ink and accent colours, the display and body families,
+ * the home page's opening and section sequence, and hashed shape-carrying
+ * declarations of its signature layer. It holds no copy, facts or
+ * photographs, so an embedder can keep one per delivered site and pass
+ * earlier ones back as site.avoid, where the signature layer is checked
+ * for clones.
  * Returns: (transfer full): a version 1 fingerprint object
  */
 JsonObject *ls_components_fingerprint(LsComponents *self, JsonNode *plan, JsonNode *home);
-/**
- * ls_components_similarity:
- * @a: (transfer none): a fingerprint
- * @b: (transfer none): another fingerprint
- *
- * Scores how alike two sites look from their layout, colours, type and
- * home page, ignoring the signature layer. Parts missing from either side
- * are left out of the score; malformed parts count as different.
- * Returns: 0 (nothing shared) to 1 (the same design)
- */
-gdouble ls_components_similarity(JsonObject *a, JsonObject *b);
 /**
  * ls_components_signature_overlap:
  * @a: (transfer none): a fingerprint
@@ -572,44 +380,6 @@ gdouble ls_components_similarity(JsonObject *a, JsonObject *b);
  *   declarations, 0 when either has none
  */
 gdouble ls_components_signature_overlap(JsonObject *a, JsonObject *b);
-/**
- * ls_components_choose_seed:
- * @self: a component library
- * @seed: the site seed (recipe name and brief)
- * @sector: (nullable): the business sector for identity dealing
- * @avoid: (transfer none) (nullable): earlier sites' fingerprints
- * @closest: (out) (optional): the chosen deal's highest similarity to @avoid
- *
- * Deals the structure, look and identity from @seed and from
- * %LS_COMPONENTS_DEALS - 1 derived seeds and keeps the deal whose highest
- * similarity to any fingerprint in @avoid, plus %LS_COMPONENTS_WORN_OPENING
- * for each one that opens the same way, is lowest. There is no score
- * ceiling: a crowded avoid list still returns that least-alike deal.
- * Without @avoid the seed is returned unchanged, so existing sites keep
- * their deal. A site with supplied photos uses
- * ls_components_choose_photo_seed(), which weighs the opening and scene
- * that site will actually wear.
- * Returns: (transfer full): the seed to deal this site from
- */
-gchar *ls_components_choose_seed(LsComponents *self, const gchar *seed, const gchar *sector, JsonArray *avoid,
-	gdouble *closest);
-/**
- * ls_components_choose_photo_seed:
- * @self: a component library
- * @seed: the site seed (recipe name and brief)
- * @sector: (nullable): the business sector for identity dealing
- * @avoid: (transfer none) (nullable): earlier sites' fingerprints
- * @closest: (out) (optional): the chosen deal's highest similarity to @avoid
- *
- * ls_components_choose_seed() for a site with supplied photos. The opening
- * it weighs is the one ls_components_suggest_photo_opening() deals, and the
- * scene ls_components_suggest_scene() deals counts too: the same for each
- * earlier site opening on it, and a whole point when the last fingerprint
- * in @avoid (the site just before) does, so neighbours open differently.
- * Returns: (transfer full): the seed to deal this site from
- */
-gchar *ls_components_choose_photo_seed(LsComponents *self, const gchar *seed, const gchar *sector, JsonArray *avoid,
-	gdouble *closest);
 /**
  * ls_components_compose:
  * @self: a component library

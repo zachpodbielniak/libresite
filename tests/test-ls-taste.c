@@ -70,12 +70,21 @@ test_illustrative_copy_fails(void){
 	json_object_set_string_member(content_of(page, 0), "lede",
 		"These photographs are stock imagery used as visual references.");
 	g_assert_false(ls_components_check_page(library, plan, "index.html", page, NULL));
-	/* The footer note discloses without the word. */
+	/* The footer note credits stock photographs without the word; only a
+	 * demo build says its business is an example. */
 	json_object_set_string_member(json_object_get_object_member(json_node_get_object(plan), "footer"), "note",
 		"Illustrative business. Stock photography.");
 	g_assert_false(ls_components_check_plan(library, plan, NULL));
 	json_object_set_string_member(json_object_get_object_member(json_node_get_object(plan), "footer"), "note",
+		"Stock photography from StockSnap, CC0.");
+	g_assert_true(ls_components_check_plan(library, plan, &error));
+	g_assert_no_error(error);
+	json_object_set_string_member(json_object_get_object_member(json_node_get_object(plan), "footer"), "note",
 		"An example business. Stock photography from StockSnap, CC0.");
+	g_assert_false(ls_components_check_plan(library, plan, &error));
+	g_assert_nonnull(strstr(error->message, "example business"));
+	g_clear_error(&error);
+	json_object_set_boolean_member(json_node_get_object(plan), "demo", TRUE);
 	g_assert_true(ls_components_check_plan(library, plan, &error));
 	g_assert_no_error(error);
 }
@@ -95,57 +104,6 @@ test_question_headline_fails(void){
 	g_assert_true(ls_components_check_page(library, plan, "index.html", page, NULL));
 	json_object_set_string_member(json_object_get_object_member(root, "visual"), "headline", "Will this be a treat?");
 	g_assert_false(ls_visual_check_plan(root, NULL));
-}
-
-/* Over many seeds the builder never deals a gimmick. */
-static void
-test_no_gimmicks_dealt(void){
-	static const gchar *const banned[][2] = {
-		{"images", "tilt"}, {"images", "blob"}, {"images", "taped"}, {"lettering", "outline"},
-		{"lettering", "gradient"}, {"emphasis", "outline"}, {"texture", "dots"}, {"texture", "aurora"},
-		{"backdrop", "glow"}, {"backdrop", "mesh"}, {"edges", "torn"}, {"photos", "duotone"},
-		{"photos", "arch"}, {"nav", "circled"}, {"nav", "pill"}, {"buttons", "knob"}, {"buttons", "chrome"},
-		{"heads", "disc"}, {"panels", "glass"}, {"panels", "folded"}, {"footer", "arched"}, {"footer", "chips"},
-		{"header", "floating"}, {"header", "glass"}};
-	static const gchar *const banned_structure[][2] = {
-		{"kit", "spotlight"}, {"kit", "aurora"}, {"kit", "hinge"}, {"kit", "ticker"}, {"kit", "parallax"},
-		{"direction", "collage"}, {"direction", "stamp"}, {"direction", "window"}, {"direction", "duotone"}, {"direction", "torn"},
-		{"opening", "hero/brutal"}, {"opening", "cover/stub"}, {"opening", "cover/flood"},
-		{"opening", "manifesto/stepped"}, {"opening", "hero/kinetic"},
-		{"angle", "question"}, {"angle", "character"}};
-	g_autoptr(LsComponents) library = ls_components_new(NULL);
-	guint s, i;
-	for (s = 0; s < 240; s++) {
-		g_autofree gchar *seed = g_strdup_printf("taste-%u", s);
-		g_autoptr(JsonNode) plan = s % 2 == 0 ? photo_plan() : read_json("tests/fixtures/composed/plan.json");
-		JsonObject *root = json_node_get_object(plan), *look, *structure, *variants, *forms;
-		JsonArray *extras;
-		g_assert_true(ls_components_apply_seed(library, plan, seed, "trades", FALSE));
-		look = json_object_get_object_member(root, "look");
-		structure = json_object_get_object_member(root, "structure");
-		for (i = 0; i < G_N_ELEMENTS(banned); i++)
-			if (g_strcmp0(ls_string(look, banned[i][0]), banned[i][1]) == 0)
-				g_error("seed %s dealt look %s %s", seed, banned[i][0], banned[i][1]);
-		for (i = 0; i < G_N_ELEMENTS(banned_structure); i++)
-			if (g_strcmp0(ls_string(structure, banned_structure[i][0]), banned_structure[i][1]) == 0)
-				g_error("seed %s dealt %s %s", seed, banned_structure[i][0], banned_structure[i][1]);
-		variants = json_object_get_object_member(structure, "variants");
-		g_assert_cmpstr(ls_string(variants, "cards"), !=, "polaroid");
-		g_assert_cmpstr(ls_string(variants, "gallery"), !=, "polaroid");
-		/* Nor a banned opening through the per-component variants. */
-		g_assert_cmpstr(ls_string(variants, "hero"), !=, "arch");
-		g_assert_cmpstr(ls_string(variants, "hero"), !=, "brutal");
-		g_assert_cmpstr(ls_string(variants, "cover"), !=, "stub");
-		forms = json_object_get_object_member(structure, "forms");
-		if (forms != NULL) {
-			g_assert_cmpstr(ls_string(forms, "offer"), !=, "directory");
-			g_assert_cmpstr(ls_string(forms, "practical"), !=, "glossary");
-			g_assert_cmpstr(ls_string(forms, "process"), !=, "jobsheet");
-		}
-		extras = json_object_get_array_member(structure, "extras");
-		for (i = 0; extras != NULL && i < json_array_get_length(extras); i++)
-			g_assert_cmpstr(json_array_get_string_element(extras, i), !=, "marquee");
-	}
 }
 
 /* A light, coloured ground: chroma over the limit with its brightest
@@ -180,7 +138,7 @@ test_calm_palette(void){
 		g_autoptr(JsonNode) plan = read_json("tests/fixtures/composed/plan.json");
 		g_autoptr(GError) error = NULL;
 		JsonObject *tokens;
-		g_assert_true(ls_components_apply_seed(library, plan, seed, s % 3 == 0 ? "food" : "trades", FALSE));
+		g_assert_true(ls_components_apply_default(library, plan, FALSE));
 		tokens = json_object_get_object_member(json_node_get_object(plan), "tokens");
 		if (loud(ls_string(tokens, "paper")) || loud(ls_string(tokens, "surface")))
 			g_error("seed %s paper %s surface %s", seed, ls_string(tokens, "paper"), ls_string(tokens, "surface"));
@@ -202,7 +160,7 @@ test_calm_palette(void){
 			json_object_set_member(root, "media", json_node_copy(json_object_get_member(extra, "media")));
 			json_object_set_member(root, "visual", json_node_copy(json_object_get_member(extra, "visual")));
 			json_object_set_string_member(json_object_get_object_member(root, "visual"), "world", worlds[s]);
-			g_assert_true(ls_components_apply_seed(library, plan, "world", "trades", FALSE));
+			g_assert_true(ls_components_apply_default(library, plan, FALSE));
 			tokens = json_object_get_object_member(root, "tokens");
 			if (neon(ls_string(tokens, "accent")) || loud(ls_string(tokens, "paper")))
 				g_error("world %s: paper %s accent %s", worlds[s], ls_string(tokens, "paper"), ls_string(tokens, "accent"));
@@ -236,7 +194,7 @@ test_photo_every_page(void){
 	g_autoptr(GString) problems = g_string_new(NULL);
 	g_autofree gchar *text = NULL;
 	guint i;
-	g_assert_true(ls_components_apply_seed(library, plan, "photo-every-page", "trades", FALSE));
+	g_assert_true(ls_components_apply_default(library, plan, FALSE));
 	for (i = 0; i < G_N_ELEMENTS(routes); i++) {
 		g_autofree gchar *fixture = g_strdup_printf("tests/fixtures/composed/%s.json", routes[i]);
 		g_autofree gchar *route = g_strdup_printf("%s.html", routes[i]);
@@ -273,7 +231,7 @@ test_site_check(void){
 		{"work.html", "<body class=\"", "<body class=\"look-lettering-outline ", "outline"},
 		{"work.html", "<main", "<section class=\"block block--cards cards cards--polaroid\"></section><main", "polaroid"},
 		{"work.html", "<main", "<nav class=\"directory__letters\"><ul><li><a href=\"#a\">C</a></li><li><a href=\"#b\">D</a></li></ul></nav><main", "letter"},
-		{"work.html", "<body class=\"", "<body class=\"kit-spotlight ", "spotlight"},
+		{"work.html", "</footer>", "<p>An example business.</p></footer>", "example business"},
 		{"styles.css", "--paper:", "--paper: #99ffff; --was-paper:", "colour"}
 	};
 	g_autoptr(LsComponents) library = ls_components_new(NULL);
@@ -287,7 +245,7 @@ test_site_check(void){
 		g_autofree gchar *text = NULL;
 		JsonArray *files;
 		guint i;
-		g_assert_true(ls_components_apply_seed(library, plan, "site-check", "trades", FALSE));
+		g_assert_true(ls_components_apply_default(library, plan, FALSE));
 		for (i = 0; i < G_N_ELEMENTS(routes); i++) {
 			g_autofree gchar *fixture = g_strdup_printf("tests/fixtures/composed/%s.json", routes[i]);
 			g_autofree gchar *route = g_strdup_printf("%s.html", routes[i]);
@@ -325,7 +283,7 @@ test_site_check(void){
 		g_autofree gchar *text = NULL;
 		const gchar *routes[] = {"index", "work", "start", "journal", "visit"};
 		guint i;
-		g_assert_true(ls_components_apply_seed(library, plan, "site-check", "trades", FALSE));
+		g_assert_true(ls_components_apply_default(library, plan, FALSE));
 		for (i = 0; i < G_N_ELEMENTS(routes); i++) {
 			g_autofree gchar *fixture = g_strdup_printf("tests/fixtures/composed/%s.json", routes[i]);
 			g_autofree gchar *route = g_strdup_printf("%s.html", routes[i]);
@@ -350,7 +308,7 @@ test_writer_gimmick_variant(void){
 	const gchar *routes[] = {"index", "work", "start", "journal", "visit"};
 	JsonNode *page;
 	guint i;
-	g_assert_true(ls_components_apply_seed(library, plan, "writer-gimmick", "trades", FALSE));
+	g_assert_true(ls_components_apply_default(library, plan, FALSE));
 	for (i = 0; i < G_N_ELEMENTS(routes); i++) {
 		g_autofree gchar *fixture = g_strdup_printf("tests/fixtures/composed/%s.json", routes[i]);
 		g_autofree gchar *route = g_strdup_printf("%s.html", routes[i]);
@@ -388,7 +346,7 @@ test_stock_caption(void){
 	json_object_set_member(root, "visual", json_node_copy(json_object_get_member(extra, "visual")));
 	json_object_set_string_member(json_object_get_object_member(root, "media"), "kind", "stock");
 	json_object_set_string_member(json_object_get_object_member(root, "media"), "source", "CC0 stock photograph");
-	g_assert_true(ls_components_apply_seed(library, plan, "stock-caption", "trades", FALSE));
+	g_assert_true(ls_components_apply_default(library, plan, FALSE));
 	for (i = 0; i < G_N_ELEMENTS(routes); i++) {
 		g_autofree gchar *fixture = g_strdup_printf("tests/fixtures/composed/%s.json", routes[i]);
 		g_autofree gchar *route = g_strdup_printf("%s.html", routes[i]);
@@ -429,12 +387,40 @@ test_dealt_opening_passes_taste(void){
 			g_autofree gchar *seed = g_strdup_printf("opening-%s-%u", sector != NULL ? sector : "none", s);
 			g_autoptr(JsonNode) plan = s % 2 == 0 ? photo_plan() : read_json("tests/fixtures/composed/plan.json");
 			const gchar *opening;
-			g_assert_true(ls_components_apply_seed(library, plan, seed, sector, FALSE));
+			g_assert_true(ls_components_apply_default(library, plan, FALSE));
 			opening = ls_string(json_object_get_object_member(json_node_get_object(plan), "structure"), "opening");
 			if (listed(json_object_get_array_member(taste, "openings"), opening) ||
 				listed(json_object_get_array_member(taste, "variants"), opening))
 				g_error("seed %s (sector %s) dealt the gimmick opening %s", seed, sector != NULL ? sector : "none", opening);
 		}
+	}
+}
+
+/* The default design wears no gimmick: no loud look value, and a calm
+ * home opening with or without photos. */
+static void
+test_no_gimmicks_default(void){
+	static const gchar *const banned[][2] = {
+		{"images", "tilt"}, {"images", "blob"}, {"images", "taped"}, {"lettering", "outline"},
+		{"lettering", "gradient"}, {"emphasis", "outline"}, {"texture", "dots"}, {"texture", "aurora"},
+		{"backdrop", "glow"}, {"backdrop", "mesh"}, {"edges", "torn"}, {"photos", "duotone"},
+		{"photos", "arch"}, {"nav", "circled"}, {"nav", "pill"}, {"buttons", "knob"}, {"buttons", "chrome"},
+		{"panels", "glass"}, {"panels", "folded"}, {"footer", "arched"}, {"footer", "chips"},
+		{"header", "floating"}, {"header", "glass"}};
+	static const gchar *const banned_openings[] = {"hero/brutal", "cover/stub", "cover/flood", "hero/kinetic",
+		"hero/arch", NULL};
+	g_autoptr(LsComponents) library = ls_components_new(NULL);
+	guint s, i;
+	for (s = 0; s < 2; s++) {
+		g_autoptr(JsonNode) plan = s == 0 ? photo_plan() : read_json("tests/fixtures/composed/plan.json");
+		JsonObject *root = json_node_get_object(plan), *look, *structure;
+		g_assert_true(ls_components_apply_default(library, plan, FALSE));
+		look = json_object_get_object_member(root, "look");
+		structure = json_object_get_object_member(root, "structure");
+		for (i = 0; i < G_N_ELEMENTS(banned); i++)
+			g_assert_cmpstr(ls_string(look, banned[i][0]), !=, banned[i][1]);
+		g_assert_cmpuint(json_object_get_size(structure), ==, 1);
+		g_assert_false(g_strv_contains(banned_openings, ls_string(structure, "opening")));
 	}
 }
 
@@ -444,7 +430,7 @@ main(int argc, char **argv){
 	g_test_add_func("/taste/disclosure-words", test_disclosure_words);
 	g_test_add_func("/taste/illustrative-copy-fails", test_illustrative_copy_fails);
 	g_test_add_func("/taste/question-headline-fails", test_question_headline_fails);
-	g_test_add_func("/taste/no-gimmicks-dealt", test_no_gimmicks_dealt);
+	g_test_add_func("/taste/no-gimmicks-default", test_no_gimmicks_default);
 	g_test_add_func("/taste/dealt-opening-passes-taste", test_dealt_opening_passes_taste);
 	g_test_add_func("/taste/calm-palette", test_calm_palette);
 	g_test_add_func("/taste/photo-every-page", test_photo_every_page);

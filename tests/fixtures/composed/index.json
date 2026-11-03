@@ -6,7 +6,7 @@
       "heading": "Old furniture, made useful again",
       "lede": "We repair joints, finishes and **structure** so a piece can go back to work. See [recent work](work.html).",
       "actions": [{"href": "start.html", "label": "Book a repair"}, {"href": "#how", "label": "How it works"}],
-      "art": {"src": "assets/bench.svg", "alt": "Plan drawing of a workbench"}
+      "art": {"src": "assets/mark.svg", "alt": "Plan drawing of a workbench"}
     }},
     {"component": "features", "variant": "numbered", "id": "how", "content": {
       "heading": "How a repair works",

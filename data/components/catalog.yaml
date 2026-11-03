@@ -6,9 +6,8 @@
 version: 1
 # Site-wide look. Each axis changes structure shared by every component
 # (look.css); the plan picks one value per axis so two sites that use the same
-# components do not share a skeleton. The first value is the default. An axis
-# with plain: N deals its default to about N percent of sites, so busy
-# backgrounds stay occasional.
+# components do not share a skeleton. The first value is the default, and
+# an unthemed site wears every axis at its default (see default below).
 looks:
   header:
     summary: How the site header is laid out.
@@ -32,7 +31,6 @@ looks:
     values:
       plain: No ornament.
       rule: A short heavy rule above each heading.
-      numbered: Sections are numbered 01, 02, 03 before the heading.
       bar: A thick accent bar at the heading's left edge.
       split: On wide screens the heading sits left and its intro right.
       giant: Oversized, tightly set headings.
@@ -90,7 +88,6 @@ looks:
       sitemap: A full sitemap of every page in columns above the fine print.
   texture:
     summary: Background texture on the page.
-    plain: 50
     values:
       none: Plain.
       grain: Fine paper grain.
@@ -136,7 +133,6 @@ looks:
       number: Tracked capitals with a leading slash.
   backdrop:
     summary: A background behind the page's opening section.
-    plain: 50
     values:
       none: The page background.
       glow: Soft glows of the accent and surface colors.
@@ -158,7 +154,6 @@ looks:
       neon: Glowing strokes in the accent on dark fields, like neon tubes.
   photos:
     summary: Treatment of supplied photographs. Photos of the customer's own people, animals, food or place stay natural unless the brief asks otherwise.
-    plain: 40
     values:
       natural: As shot.
       duotone: Two-tone in the ink and accent colors.
@@ -168,7 +163,6 @@ looks:
       soft: A soft, generously rounded mask.
   edges:
     summary: The edge between sections that have their own background.
-    plain: 50
     values:
       straight: Straight.
       wave: A gentle wave.
@@ -177,7 +171,6 @@ looks:
       steps: A stepped edge.
   lettering:
     summary: Typographic flourishes.
-    plain: 20
     values:
       plain: None.
       dropcap: A large drop cap opens the first paragraph of reading text.
@@ -194,12 +187,11 @@ looks:
       dotted: A dotted underline.
   scheme:
     summary: Light and dark.
-    plain: 50
     values:
       fixed: One scheme, as designed.
       auto: Follows the visitor's device, with a matching dark or light version built from the tokens.
   frame:
-    summary: The page silhouette, dealt by the builder.
+    summary: The page silhouette, set by the builder.
     builder: true
     values:
       top: A header bar across the top and one column below.
@@ -210,7 +202,7 @@ looks:
       offset: Content set right of a wide empty margin, with headings hanging into it.
       masthead: A newspaper masthead with a huge wordmark between rules.
   headpos:
-    summary: Where section headings sit, dealt by the builder.
+    summary: Where section headings sit, set by the builder.
     builder: true
     values:
       top: Above the section content.
@@ -223,7 +215,7 @@ looks:
 kinds:
   home:
     summary: The front door. A confident opening, a short tour of what matters and a clear next step.
-    openings: [hero, cover, manifesto, custom, poster]
+    openings: [hero, cover, custom]
     suggested: [cards, bento, features, media, statement, marquee, numbers, voices, strip, quote, text, cta, showcase, big-list, story, badges, offer, social]
   index:
     summary: A list of things to choose from, such as work, articles, services or locations. Opens with a page header; the list is the page.
@@ -978,16 +970,6 @@ components:
       lede: {type: rich, max: 500}
       art: {type: image, required: true}
       actions: {type: links, max_items: 2}
-  manifesto:
-    summary: A few short declarations set very large, one after another. A typographic opening or pause.
-    variants:
-      stacked: Lines stacked, alternating weight.
-      numbered: Each line numbered.
-      outlined: Lines in outline type with one filled.
-    slots:
-      heading: {type: text, max: 120, note: "Optional; becomes the page h1 when this opens the page."}
-      lines: {type: items, min_items: 2, max_items: 6, fields: {text: {type: text, required: true, max: 90}}}
-      actions: {type: links, max_items: 2}
   statement:
     summary: One sentence set large between sections, the idea the page is built on.
     variants:
@@ -1316,18 +1298,6 @@ components:
     slots:
       label: {type: text, required: true, max: 120, note: "Accessible name for the region."}
       html: {type: html, required: true, max: 12000}
-  poster:
-    summary: A typographic poster opening. The title is the image. Home only.
-    variants:
-      type: Type alone, set as large as the width allows.
-      stamped: The title in a tilted accent block with the lede beside it.
-      backdrop: Artwork behind the title, faded into the page.
-    slots:
-      kicker: {type: text, max: 80}
-      heading: {type: text, required: true, max: 80, note: "Short: two to six words set very large."}
-      lede: {type: rich, max: 400}
-      art: {type: image, note: "Used by backdrop."}
-      actions: {type: links, max_items: 2}
   showcase:
     summary: Large feature panels, one per project, service or product, each with artwork and a short pitch.
     variants:
@@ -1418,110 +1388,10 @@ components:
       body: {type: rich, max: 600}
       includes: {type: items, max_items: 10, fields: {text: {type: text, required: true, max: 120}}}
       actions: {type: links, max_items: 2}
-# Home compositions (docs/components.org, "Home compositions"). The builder
-# deals one per site from its seed: it narrows the home opening to the
-# composition's openings, sets the builder look axes it names, orders the
-# home sections after the opening by role, and with css: true adds
-# home-NAME.css for the home page. avoid lists frames it is never dealt with.
-compositions:
-  roles:
-    offer: [services, cards, bento, features, products, product, pricing, offer, showcase, strip, gallery, carousel, media, big-list, menu, specials, entries, filter, news, jobs, directory, timetable, schedule, recipe]
-    process: [steps, timeline, story, checklist, compare, tabs, split]
-    proof: [voices, quote, press, partners, badges, numbers, facts, team, profile]
-    story: [text, lead, statement, manifesto, figure, columns, callout, marquee, article, glossary, custom, module]
-    practical: [faq, hours, location, locations, areas, notice, details, table, specs, jumpnav]
-    close: [cta, contact-card, call, form, links, social, share, pager]
-  layouts:
-    split:
-      summary: Split hero. Words beside a picture, then an even run of sections.
-      openings: [hero/split, cover/split, hero/overlap, hero/banner]
-      order: [offer, process, proof, story, practical]
-    full-bleed:
-      summary: Full-bleed. The opening picture runs edge to edge and sections run across the whole width.
-      openings: [cover/full, hero/banner, poster/backdrop, cover/framed]
-      look: {frame: wide}
-      order: [story, practical, offer, proof, process]
-      css: true
-    editorial:
-      summary: Editorial column. One narrow reading column under a typographic opening, like a magazine page.
-      openings: [poster/type, hero/statement, hero/minimal, manifesto/stacked]
-      look: {frame: center}
-      order: [story, process, offer, proof, practical]
-      css: true
-    bento:
-      summary: Bento grid. After the opening, sections sit side by side as tiles of a grid on wide screens.
-      openings: [hero/centered, hero/split, cover/framed, hero/overlap]
-      look: {headpos: top}
-      order: [offer, proof, practical, story, process]
-      avoid: [center]
-      css: true
-    oversized-type:
-      summary: Oversized type. A poster or manifesto opening and section headings set very large.
-      openings: [poster/type, poster/stamped, manifesto/stacked, manifesto/outlined]
-      order: [proof, process, practical, offer, story]
-      css: true
-    side-rail:
-      summary: Sticky side rail. A contents column of the home sections stays beside them on wide screens.
-      openings: [hero/statement, hero/split, poster/stamped, hero/minimal]
-      look: {headpos: top}
-      order: [practical, process, offer, proof, story]
-      avoid: [rail, split, center]
-      sidebar: true
-    stacked-cards:
-      summary: Stacked cards. Each section after the opening is its own card, stacked down the page.
-      openings: [hero/centered, cover/framed, manifesto/numbered, hero/statement]
-      order: [offer, practical, process, proof, story]
-      avoid: [center]
-      css: true
-    zigzag:
-      summary: Zigzag. Sections step from one side to the other down the page.
-      openings: [hero/overlap, cover/split, hero/banner, manifesto/outlined, cover/full]
-      look: {headpos: top}
-      order: [process, story, offer, proof, practical]
-      avoid: [center]
-      css: true
-# Motion kits (docs/components.org, "Motion"). The builder deals one per
-# unthemed site from its seed: kit-NAME.css (and motion-SCRIPT.js when it
-# names a script) is added to every page, the body carries kit-NAME, look sets builder
-# axes the kit replaces, and marquee: true adds a decorative band of the
-# site's name above the footer. Everything moves only for visitors who have
-# not asked for reduced motion.
-motion_kits:
-  kits:
-    cascade:
-      summary: The opening's lines arrive one after another, list items cascade in as they scroll into view, and buttons fill with a sweep.
-      look: {motion: none}
-    parallax:
-      summary: The opening's picture drifts slower than the page, section headings slide in from the side, and link underlines grow under the pointer.
-      look: {motion: none}
-    aurora:
-      summary: Soft shapes drift slowly behind the opening, which fades up on arrival, and cards float under the pointer.
-      look: {motion: none}
-    ticker:
-      summary: A band of the business's name runs above the footer, figures count up as they come into view, and buttons press in.
-      look: {motion: none}
-      script: counters
-      marquee: true
-    spotlight:
-      summary: Sections settle into place as they scroll in, figures count up, and cards tilt toward the pointer.
-      look: {motion: none}
-      script: counters
-    still:
-      summary: Almost still. Only the opening's heading settles on arrival; links, buttons and focus rings answer with small, crisp movements.
-      look: {motion: none}
-# Generated palettes (docs/components.org, "Type and colour range"). share
-# percent of sites get a palette generated from their seed instead of a
-# curated one: a mode (weights in percent), a base hue anywhere on the
-# wheel and an accent hue at one of the harmony offsets in degrees, built
-# in OKLCH and adjusted until every text pair reaches WCAG AA.
-palette_generator:
-  share: 80
-  modes: {light: 28, dark: 16, tinted: 24, vivid: 16, deep: 16}
-  harmonies: {complementary: 180, split-warm: 150, split-cool: 210, triadic: 120, analogous: 35}
 # Extra component variants (docs/components.org, "Component variants").
-# Each joins its component's variants at load, so plans may name it and the
-# builder deals it like any other; its styles are NAME--VARIANT.css, added
-# only to sites that render it. They restyle the component's own markup.
+# Each joins its component's variants at load, so page writers may name it
+# like any other; its styles are NAME--VARIANT.css, added only to sites
+# that render it. They restyle the component's own markup.
 extra_variants:
   services:
     ledger: Each service under a heavy rule with a large running number, two to a row.
@@ -1544,91 +1414,9 @@ extra_variants:
   gallery:
     polaroid: Prints in thick paper frames, each turned a little.
     filmstrip: Pictures in one dark band that scrolls sideways, edged with sprocket holes.
-# Art directions (docs/components.org, "Art direction"). The builder deals
-# one per unthemed site: look picks the drawing style and image treatment
-# from its lists, brief goes to the artist with every artwork, and
-# art-NAME.css styles the drawn artwork (never photographs or the mark).
-art_directions:
-  directions:
-    duotone:
-      summary: Drawn artwork shown in two tones, the accent for its darks and white for its lights.
-      look: {art: [flat, woodcut, neon], images: [plain, rounded, shadow]}
-      brief: The site shows every artwork in two tones, the accent for darks and white for lights. Draw a few large shapes with strong light and dark contrast so it reads well in two colours; avoid fine detail and gradients.
-    cutout:
-      summary: Drawn artwork cut into arches, slants and rounded shapes over an accent block.
-      look: {art: [cutpaper, flat], images: [plain, shadow, blob]}
-      brief: The site cuts each artwork into an arch, a slant or a rounded shape. Keep the subject centred with generous margin so the cut never crops it, and fill the whole canvas with background colour.
-    framed:
-      summary: Drawn artwork hung in frames with a mat, like prints on a wall.
-      look: {art: [woodcut, line, open, blueprint], images: [framed, print]}
-      brief: The site hangs each artwork in a frame with a mat. Compose it as a finished print, centred, with an even border of open space inside the edge.
-    collage:
-      summary: Drawn artwork pinned up like a collage, turned, taped and layered over scraps.
-      look: {art: [cutpaper, open, flat], images: [taped, print, tilt]}
-      brief: The site pins each artwork up like a collage, turned and taped over a paper scrap. Draw separate layered pieces with a cut-paper feel and visible edges.
-    lineart:
-      summary: Drawn artwork as line drawings inside a fine offset outline with corner marks.
-      look: {art: [line, blueprint], images: [plain, rounded, framed]}
-      brief: The site shows each artwork as a line drawing inside a fine outline. Use single-weight lines on an open background, with at most one accent fill.
-# Content angles (docs/components.org, "Content angles"). The builder deals
-# each unthemed or themed site one headline angle for its home page and one
-# subject for its artwork, from its seed; the plan, page and art writers are
-# told them. The words and drawings stay the model's.
-content_angles:
-  headlines:
-    promise: Lead with the one result the customer gets, in their own words, not a slogan.
-    problem: Name the trouble the customer has right now and say that it ends here.
-    place: Ground it in the kind of homes, yards or seasons the business works in, without inventing a place name.
-    craft: Show how the work is done, one specific technique or habit of the crew.
-    time: Lead with when, how quickly, how long it lasts or the season it is for, without promising a time that was not supplied.
-    question: Ask the question the customer is asking themselves, and answer it in the lede.
-    plain: Say exactly what the business does, in plain short words, no adjectives.
-    character: Let the business's personality speak, as its owner would say it across a kitchen table.
-  subjects:
-    tool: The trade's most characteristic tool, drawn close up.
-    material: The material the work is made of, as a texture or a close detail.
-    detail: One telling detail of the finished work, close up, never the whole house.
-    process: A moment of the work in progress, with hands and tools but no faces.
-    result: The finished result as the customer sees it from inside their home or yard.
-    pattern: A repeating pattern built from the trade's own shapes.
-    setting: The setting at a time of day, such as a yard at dusk or a room in morning light.
-    diagram: A clear cutaway or diagram of how the system works.
-# Section forms and extras (docs/components.org, "Section forms and
-# extras"). Each site is dealt one form per family; a section of that
-# family takes the form, its heading, intro and items carried over by the
-# field names below (title and body, in the slot named by list, items by
-# default; link where both have it). The close family is a page's last
-# section, a closing call (call: true): its heading, words and links move
-# between a call to action, a statement and a list of links. extras are
-# home sections the builder builds only from the site's own words; share
-# percent of sites get one, picked from the list.
-section_forms:
-  families:
-    offer: [services, cards, bento, entries, big-list]
-    process: [steps, features, tabs, columns]
-    practical: [faq, details, glossary]
-    close: [cta, statement, links]
-  fields:
-    services: {title: name, body: summary}
-    cards: {title: title, body: body}
-    bento: {list: tiles, title: title, body: body}
-    big-list: {title: title, body: meta}
-    features: {title: title, body: body}
-    entries: {title: title, body: summary}
-    steps: {title: title, body: body}
-    tabs: {title: label, body: body}
-    columns: {title: heading, body: body}
-    faq: {title: question, body: answer}
-    details: {title: title, body: body}
-    glossary: {title: term, body: definition}
-    cta: {call: true}
-    statement: {call: true}
-    links: {call: true}
-  extras: [marquee, statement, links, big-list]
-  share: 90
-# Extra look values (docs/components.org, "Section forms and extras"). Each
-# joins its axis at load and is dealt like the others; its styles are
-# look-AXIS-VALUE.css, added only to sites that wear it.
+# Extra look values (docs/components.org, "Look"). Each joins its axis at
+# load for themes to wear; its styles are look-AXIS-VALUE.css, added only to
+# sites that wear it.
 extra_looks:
   align:
     right: Headings and intros set to the right where the column has room.
@@ -1665,20 +1453,11 @@ extra_looks:
   images:
     blob: Pictures in a soft organic shape.
     tilt: Pictures turned slightly, one way then the other.
-# Wider option pools (docs/components.org, "Sameness under a tenth"). Each
-# list joins the block it names when the library loads and is dealt like
-# the rest: looks join their axes (look-AXIS-VALUE.css), openings join a
-# home opening component (COMPONENT--VARIANT.css, dealt through the
-# compositions that list it), layouts the home compositions, kits the
-# motion kits, directions the art directions, forms the section form
-# families, with their fields, and modes the generated palette modes.
+# Wider option pools (docs/components.org, "Look"). Each list joins the
+# block it names when the library loads: looks join their axes
+# (look-AXIS-VALUE.css) and openings join a home opening component
+# (COMPONENT--VARIANT.css).
 wider:
-  forms: {offer: [directory], process: [split], practical: [facts]}
-  modes: {earth: 18}
-  fields:
-    directory: {title: title, body: note}
-    split: {list: panels, title: heading, body: body}
-    facts: {title: label, body: value}
   looks:
     panels:
       capped: Surface cards under a thick accent cap along the top edge.
@@ -1755,12 +1534,10 @@ wider:
       highlight: A broad accent marker stroke behind each line of the heading.
       caps: Compact, widely spaced heavy capitals.
       trail: An accent line runs on from the heading to the edge of its column.
-      ghost: The section's number set huge and faint behind the heading.
       bracket: The heading held between square accent brackets.
       framed: The heading inside a closed double-ruled frame.
       newsprint: A heavy rule above and a hairline below, across the column, like a newspaper section.
       shadow: Heavy headings with a hard offset shadow in the accent, like a painted sign.
-      disc: The section's number in a solid accent disc before the heading.
       initial: The first letter set larger and heavier in the accent.
       panel: The heading set on a tinted band with an accent foot.
     buttons:
@@ -1774,157 +1551,18 @@ wider:
       large: Oversized, softly rounded buttons with a bold label, made for a thumb.
       chevron: Buttons that point forward like a road sign.
       wide: Long square bars with the label at the start and an arrow in its own cell at the far end.
-  kits:
-    curtain:
-      summary: The opening's words and picture are uncovered by wipes, section headings wipe in as they scroll into view, and cards draw an accent edge under the pointer.
-      look: {motion: none}
-    bloom:
-      summary: The opening comes into focus from a soft blur, sections sharpen as they scroll into view, and cards and buttons glow under the pointer.
-      look: {motion: none}
-    hinge:
-      summary: The opening's lines swing down and its picture swings open like a door, cards flip up as they scroll into view, and cards turn on their hinge under the pointer.
-      look: {motion: none}
-    beacon:
-      summary: The opening's words drop into place, its first button sends out three slow rings, figures count up, and buttons hold a ring under the pointer.
-      look: {motion: none}
-      script: counters
-    spring:
-      summary: The opening pops in with a springy overshoot, cards spring in as they scroll into view, and buttons and cards bounce under the pointer.
-      look: {motion: none}
-    wash:
-      summary: The opening arrives under a wash of the accent that fades back while its heading darkens to ink, sections wash in as they scroll into view, and cards and buttons take on colour under the pointer.
-      look: {motion: none}
-  directions:
-    halftone:
-      summary: Drawn artwork dissolving into a printer's dot screen toward one corner.
-      look: {art: [flat, woodcut, cutpaper], images: [plain, rounded]}
-      brief: The site prints each artwork through a dot screen that takes over toward one corner, so fine detail there turns to dots. Keep the subject and its key detail toward the upper left, use bold shapes with strong light and dark contrast, and avoid thin lines.
-    stamp:
-      summary: Drawn artwork printed as a postage stamp with a perforated, tinted margin and a round postmark.
-      look: {art: [flat, line, woodcut, open], images: [plain, tilt]}
-      brief: The site prints each artwork as a postage stamp with a perforated margin and a postmark over its top right corner. Compose it like a stamp, one clear centred subject on a plain field, and keep the top right corner free of anything important.
-    blueprint:
-      summary: Drawn artwork mounted on a drafting sheet with a fine accent grid and a dimension line beneath.
-      look: {art: [blueprint, line], images: [plain, rounded]}
-      brief: The site mounts each artwork on a drafting sheet with a grid round it and a dimension line beneath. Draw it as a clean technical drawing on a plain light field, with thin even lines and a few short labels, centred with an even margin.
-    window:
-      summary: Drawn artwork seen through an arched window with glazing bars, a frame and a sill.
-      look: {art: [open, flat, cutpaper, line], images: [plain, rounded, blob]}
-      brief: The site shows each artwork through an arched window whose glazing bars cross it, a little above the middle and down the centre. Draw a scene or a view rather than one small object, keep faces and words off those two lines, and keep the top corners plain because the arch cuts them away.
-    layers:
-      summary: Drawn artwork lying on a stack of offset tinted sheets that step back up and to the left.
-      look: {art: [flat, cutpaper, open, neon], images: [plain, rounded]}
-      brief: The site lays each artwork on a stack of offset sheets tinted in the accent. Fill the whole canvas with a solid background in a colour other than the accent, so the artwork reads as the top sheet, and keep the subject inside a generous margin.
-    torn:
-      summary: Drawn artwork torn from a sheet with ragged top and bottom edges, lifting off the page on a soft shadow.
-      look: {art: [cutpaper, woodcut, flat], images: [plain, print, taped]}
-      brief: The site tears each artwork along its top and bottom edges. Fill the whole canvas with a solid paper-like background and keep the subject clear of the top and bottom twentieth, where the tear eats into it.
-    glow:
-      summary: Drawn artwork backlit like a lightbox sign, a rounded panel with a bright edge and a soft accent halo.
-      look: {art: [neon, line, flat], images: [plain, rounded]}
-      brief: The site backlights each artwork like a lightbox sign with a halo in the accent. Draw on a solid dark or deep-toned field that fills the whole canvas, with bright strokes and shapes that glow against it, and keep a margin inside the rounded corners.
   openings:
     hero:
       slab: The opening on a rounded block of the accent, the picture beside the words and hanging below its edge.
     cover:
       band: A wide picture with the words on a solid band of ink that runs in from the left over its foot.
       letterbox: The headline large across the column, the picture as a wide strip from edge to edge, then the lede and buttons side by side.
-    poster:
-      front: A newspaper front page, a dateline between double rules, the headline centred over a framed picture and the lede in ruled columns.
-    manifesto:
-      run: The lines run on as one large paragraph, the first set heavy and the rest light, each ended by an accent dot.
-      tiles: The first line large on an accent tile, the rest numbered on tiles sharing the rows below it.
-  layouts:
-    banded:
-      summary: Banded. Sections alternate between a full-width tinted band and a narrow reading column with its heading centred.
-      openings: [cover/band, hero/slab, poster/backdrop, cover/full]
-      order: [proof, offer, process, practical, story]
-      avoid: [center]
-      css: true
-    chapters:
-      summary: Chapters. Each section opens under a heavy rule with its number set very large in a margin column beside it.
-      openings: [poster/front, manifesto/run, hero/statement, cover/letterbox]
-      look: {headpos: top}
-      order: [practical, story, process, offer, proof]
-      avoid: [center, offset]
-      css: true
-    gazette:
-      summary: Gazette. On wide screens the home is set like a newspaper page, the sections running down two ruled columns between the opening and the close.
-      openings: [poster/front, manifesto/tiles, poster/type, manifesto/run]
-      look: {headpos: top}
-      order: [proof, story, offer, process, practical]
-      avoid: [center, rail, split, offset]
-      css: true
-    halves:
-      summary: Halves. Each section is split in two, its heading on a tinted half that runs to the screen edge and changes side from one section to the next.
-      openings: [hero/slab, cover/split, manifesto/tiles, hero/split]
-      look: {headpos: top}
-      order: [practical, offer, proof, process, story]
-      avoid: [center]
-      css: true
-    lead:
-      summary: Lead story. The first section after the opening leads in a wide column with the next three stacked beside it as briefs.
-      openings: [cover/letterbox, hero/slab, cover/band, hero/overlap]
-      look: {headpos: top}
-      order: [proof, practical, story, offer, process]
-      avoid: [center, rail, split, offset]
-      css: true
-    mosaic:
-      summary: Mosaic. Sections fill a grid of wide and narrow cells, alternately tinted, two to a row in turning proportions.
-      openings: [manifesto/run, cover/band, poster/front, manifesto/tiles]
-      look: {headpos: top}
-      order: [practical, proof, offer, story, process]
-      avoid: [center, rail, split, offset]
-      css: true
-    pinned:
-      summary: Pinned intro. On wide screens the opening stays pinned in a tinted column on the left while the sections scroll past beside it.
-      openings: [hero/statement, hero/minimal, poster/stamped, manifesto/outlined]
-      look: {headpos: top}
-      order: [process, offer, proof, story, practical]
-      avoid: [rail, split, center, offset]
-      css: true
-    register:
-      summary: Register. Sections read as the entries of an index, each under a hairline rule with its number set large in outline in a margin column.
-      openings: [hero/minimal, manifesto/numbered, hero/centered, poster/type]
-      look: {headpos: top}
-      order: [story, practical, process, proof, offer]
-      avoid: [offset]
-      css: true
-    slant:
-      summary: Slant. Every other section runs across the page as a tinted band with slanted edges, so the page reads as angled ribbons.
-      openings: [cover/full, hero/banner, poster/backdrop, manifesto/stacked]
-      order: [story, proof, offer, process, practical]
-      css: true
-    spine:
-      summary: Spine. A timeline rule runs down the leading edge of the sections on wide screens, a ring marking where each one starts.
-      openings: [hero/split, cover/split, manifesto/outlined, hero/overlap]
-      look: {headpos: top}
-      order: [process, proof, practical, offer, story]
-      avoid: [center]
-      css: true
-    spread:
-      summary: Magazine spread. On wide screens each section opens across two pages, its number and heading on a tinted facing page, the sides alternating.
-      openings: [cover/split, poster/type, manifesto/numbered, hero/statement]
-      look: {headpos: top}
-      order: [story, offer, proof, practical, process]
-      avoid: [center, offset]
-      css: true
-    wall:
-      summary: Gallery wall. Sections hang as framed pieces of uneven widths, two to a row and staggered on wide screens.
-      openings: [cover/framed, hero/centered, poster/backdrop, hero/banner]
-      look: {headpos: top}
-      order: [process, practical, story, offer, proof]
-      avoid: [center]
-      css: true
 # Bold openings and forms (docs/components.org, "Bold openings and forms").
 # Rebuilt from scratch after the survey in docs/inspiration.org; nothing is
 # copied. openings join the home opening components like the wider block's
 # (COMPONENT--VARIANT.css), pictures says what each does with a picture
-# (needs, shows or hides), and deal_in adds them to existing compositions so
-# they open a good share of sites. components are new section components
-# (NAME.html, NAME.css), each joining a section form family (forms, fields)
-# and a composition role (roles). weights replace the generated palette
-# modes' weights, toward bold colour fields and deep grounds.
+# (needs, shows or hides), and components are new section components
+# (NAME.html, NAME.css).
 bold:
   openings:
     cover:
@@ -1939,10 +1577,6 @@ bold:
       brutal: The headline, words, buttons and picture as tiles in heavy ink frames with hard offset shadows, in the accent and the surface.
       kinetic: A headline set very large that rises out of a mask on arrival, its emphasis swept in the accent, then drifts back as the page scrolls.
       breakout: The words on an ink block, the picture breaking out above the block's top edge, with a drawn arrow pointing at the first button.
-    poster:
-      fold: The headline so large it runs past the first screen, the words and buttons small in the corner above it.
-    manifesto:
-      stepped: The lines in large capitals, each stepped further in than the one above, every second one in the accent.
   pictures:
     cover/flood: needs
     cover/wordmark: needs
@@ -1954,28 +1588,6 @@ bold:
     hero/brutal: shows
     hero/kinetic: shows
     hero/breakout: needs
-    poster/fold: hides
-  deal_in:
-    split: [cover/halves, hero/breakout, hero/arch]
-    full-bleed: [cover/flood, cover/wordmark, cover/cinema]
-    editorial: [poster/fold, manifesto/stepped, hero/kinetic]
-    bento: [hero/brutal, cover/stub, cover/tint]
-    oversized-type: [poster/fold, hero/kinetic, cover/wordmark]
-    side-rail: [hero/kinetic, manifesto/stepped, hero/arch]
-    stacked-cards: [hero/brutal, cover/stub, hero/breakout]
-    zigzag: [cover/halves, hero/breakout, cover/tint]
-    banded: [cover/flood, cover/tint, cover/cinema]
-    chapters: [poster/fold, cover/cinema, manifesto/stepped]
-    gazette: [poster/fold, manifesto/stepped, hero/kinetic]
-    halves: [cover/halves, hero/brutal, cover/flood]
-    lead: [cover/cinema, cover/stub, hero/arch]
-    mosaic: [hero/brutal, cover/tint, manifesto/stepped]
-    pinned: [hero/kinetic, hero/arch, manifesto/stepped]
-    register: [hero/kinetic, poster/fold, cover/stub]
-    slant: [cover/flood, cover/wordmark, cover/halves]
-    spine: [hero/breakout, hero/arch, cover/halves]
-    spread: [cover/wordmark, cover/cinema, hero/breakout]
-    wall: [cover/stub, cover/tint, hero/brutal]
   components:
     slabs:
       summary: Offers as wide stacked slabs in turning grounds, each numbered, its name set large beside its words.
@@ -2100,36 +1712,6 @@ bold:
           fields:
             title: {type: text, required: true, max: 200}
             body: {type: rich, required: true, max: 2000}
-  roles:
-    offer: [slabs, menuboard, volumes]
-    process: [jobsheet, progress, stairs]
-    practical: [expect, broadsheet]
-  forms: {offer: [slabs, menuboard, volumes], process: [jobsheet, progress, stairs], practical: [expect, broadsheet]}
-  fields:
-    slabs: {title: title, body: body}
-    menuboard: {title: title, body: body}
-    volumes: {title: title, body: body}
-    jobsheet: {title: title, body: body}
-    progress: {title: title, body: body}
-    stairs: {title: title, body: body}
-    expect: {title: title, body: body}
-    broadsheet: {title: title, body: body}
-  weights: {light: 14, dark: 14, tinted: 18, vivid: 26, deep: 22}
-# The wow pass (docs/components.org, "The wow pass"): look values a theme may
-# wear but the builder never deals. Black-and-white and two-tone photo
-# treatments drained real customers' photos of their colour.
-wow:
-  undealt:
-    photos: [mono, duotone]
-  # A site with photos opens on one; these openings raise their picture
-  # under the words, below the first screen, so photo sites skip them.
-  photo_below: [hero/arch, hero/banner]
-  # Under these frames the opening's headline falls below the first screen
-  # of a 1440 by 900 window: the masthead's nameplate above the cinema
-  # cover's ink bars, wide screen and title card. Photo sites skip them.
-  frame_below:
-    masthead: [cover/cinema]
-
 # Asset-first sequences: subject before composition, one material world.
 bar:
   components:
@@ -2160,49 +1742,24 @@ bar:
         body: {type: rich, max: 180}
         art: {type: image, required: true}
 
-# Taste (Ben, 2026-10-21: variety had become gimmicks). The builder deals
-# only from these calm systems: looks lists the values each axis may take;
-# kits, directions and forms the motion, art and section forms a site may
-# get; openings and variants are never dealt or rendered on a dealt site;
-# angles the home headline angles; chroma caps how coloured the page and surface may be (0 to 1, max minus
-# min channel). Other values stay in the library for themes and explicit
-# options only. docs/components.org, "Taste".
+# Taste (Ben, 2026-10-21: variety had become gimmicks). openings and
+# variants never render on an unthemed site; chroma caps how coloured the
+# page and surface may be (0 to 1, max minus min channel). The other values
+# stay in the library for themes and explicit options only.
+# docs/components.org, "Taste".
 taste:
-  looks:
-    header: [bar, centered, stacked, inverted, underlined, roomy, slim, ledger, spread, divided]
-    nav: [underline, caps, bold, muted]
-    heads: [plain, rule, split, underline, dash, newsprint, trail, caps]
-    buttons: [square, underline, block, arrow, outline, ink, wide]
-    panels: [flat, outlined, rules, paper, marker, edge, capped]
-    rhythm: [even, bands, divided, airy, tight]
-    align: [left, center]
-    images: [plain, framed]
-    footer: [simple, big, inverted, sitemap, centered, ruled, slim, directory, split, letterhead, reversed, block]
-    texture: [none]
-    motion: [none, rise, reveal]
-    emphasis: [accent, italic]
-    ornament: [none, rule]
-    kicker: [mono, line, accent]
-    backdrop: [none]
-    art: [open, line, flat]
-    photos: [natural]
-    edges: [straight]
-    lettering: [plain, smallcaps, wide, leadin]
-    links: [underline, thick]
-    frame: [top, wide, center, split, rail]
-    headpos: [top, side]
-  kits: [cascade, still, curtain, wash]
-  directions: [framed, lineart]
-  forms:
-    offer: [services, cards, entries, big-list]
-    process: [steps, features, columns, tabs]
-    practical: [faq, details, expect]
-    close: [cta, statement, links]
-  extras: [statement, links, big-list]
-  # Home headlines are statements of what the business does.
-  angles: [plain, promise, craft, place, problem]
-  # The calm photo-led openings the seed deals a visual sequence (scene variants).
-  scenes: [split, right, above, scrim]
-  openings: [hero/slab, hero/brutal, hero/kinetic, hero/arch, cover/flood, cover/tint, cover/stub, poster/fold, poster/front, manifesto/run, manifesto/tiles, manifesto/stepped]
-  variants: [cards/polaroid, cards/overlap, gallery/polaroid, poster/stamped, cta/note, manifesto/outlined, steps/chapters, jobsheet/sheet]
+  openings: [hero/slab, hero/brutal, hero/kinetic, hero/arch, cover/flood, cover/tint, cover/stub]
+  variants: [cards/polaroid, cards/overlap, gallery/polaroid, cta/note, steps/chapters, jobsheet/sheet]
   chroma: 0.16
+# The default design (docs/components.org, "The default design"). Until the
+# hand-made templates exist, every unthemed site wears this one calm design:
+# each look axis at its default; the home opening, or photo_opening when the
+# order supplies photos, and the scene for a plan with a visual sequence;
+# and this palette, type pairing and home sequence from identities.yaml.
+default:
+  opening: hero/centered
+  photo_opening: hero/split
+  scene: split
+  palette: harbor
+  typeface: geometric
+  home: services-first

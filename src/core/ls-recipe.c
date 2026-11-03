@@ -339,7 +339,7 @@ invalid:
 	return FALSE;
 }
 /* site.avoid: fingerprints of earlier sites, as written by the builder, so
- * this one is dealt a design that is not too close to any of them. */
+ * this one cannot reuse an earlier site's signature layer (the clone check). */
 static gboolean
 avoid_list(JsonObject *site, GError **error){
 	JsonNode *node = json_object_get_member(site, "avoid");
@@ -373,7 +373,7 @@ validate_site(JsonObject *site, GError **error){
 	guint i;
 	if (!ls_object_keys(site,
 		"|brief|audience|style|stack|frontend|backend|database|requirements|pages|offers|contact|brand|copy_lock|languages|"
-		"photos|media|social|avoid|form|modules|credit|booking|",
+		"photos|media|social|avoid|form|modules|credit|booking|demo|",
 		error))
 		return FALSE;
 	if (!json_object_has_member(site, "brief")) {
@@ -414,6 +414,14 @@ validate_site(JsonObject *site, GError **error){
 				g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID,
 					"site.credit needs {text, url}: text one line of 1 to 80 characters and url an https:// "
 					"address without spaces, quotes or angle brackets");
+				return FALSE;
+			}
+		} else if (g_str_equal(key, "demo")) {
+			/* An explicit demo build: the one kind of site that may say, in its
+			 * footer note, that its business is an example. */
+			JsonNode *node = json_object_get_member(site, key);
+			if (!JSON_NODE_HOLDS_VALUE(node) || json_node_get_value_type(node) != G_TYPE_BOOLEAN) {
+				g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID, "site.demo must be true or false");
 				return FALSE;
 			}
 		} else if (g_str_equal(key, "booking")) {

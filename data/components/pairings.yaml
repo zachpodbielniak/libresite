@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# Curated font pairings (docs/components.org, "Type and colour range"),
-# dealt like the typefaces in identities.yaml and checked the same way at
-# load. Every family is open source and served by Bunny Fonts; the first
+# Curated font pairings (docs/components.org, "The default design"), joined
+# to the typefaces in identities.yaml and checked the same way at load. Every family is open source and served by Bunny Fonts; the first
 # family of each stack is the one the fonts list loads.
 version: 1
 pairings:

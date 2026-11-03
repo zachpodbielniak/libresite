@@ -130,7 +130,7 @@ test_world_identity(void){
 		g_autoptr(GError) error = NULL;
 		JsonObject *root = json_node_get_object(plan);
 		json_object_set_string_member(json_object_get_object_member(root, "visual"), "world", worlds[i]);
-		ls_components_apply_seed(library, plan, "world-identity", "trades", FALSE);
+		ls_components_apply_default(library, plan, FALSE);
 		g_test_message("world: %s", worlds[i]);
 		g_assert_true(ls_components_check_plan(library, plan, &error));
 		g_assert_no_error(error);
@@ -253,7 +253,7 @@ test_sequence(void){
 		json_object_set_string_member(v, "layout", layouts[l]);
 		json_object_set_string_member(media, "clip", "assets/film.webm");
 		json_object_set_string_member(media, "clip_portrait", "assets/phone.webm");
-		g_assert_true(ls_components_apply_seed(library, plan, "visual-sequence", "trades", FALSE));
+		g_assert_true(ls_components_apply_default(library, plan, FALSE));
 		/* The seed deals the layout; every one is rendered here. */
 		json_object_set_string_member(v, "layout", layouts[l]);
 		for (i = 0; i < G_N_ELEMENTS(routes); i++) {
