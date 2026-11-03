@@ -20,7 +20,7 @@ PUBLIC_HEADERS = $(wildcard src/*.h src/core/*.h src/interfaces/*.h src/model/*.
 UNIT_TESTS = $(patsubst tests/%.c,%,$(wildcard tests/test-*.c))
 UNIT_BINS = $(addprefix $(OUTDIR)/,$(UNIT_TESTS))
 include rules.mk
-.PHONY: all tests test stack-tests sameness gate clean install help bundled-deps
+.PHONY: all tests test stack-tests sameness gate site-gate clean install help bundled-deps
 all: $(CLI) $(LIB_SHARED) $(OUTDIR)/libresite-1.0.pc
 $(LIB_STATIC): $(LIB_OBJECTS)
 	$(AR) rcs $@ $^
@@ -86,6 +86,11 @@ gate: all $(OUTDIR)/test-sameness $(OUTDIR)/test-compositions $(OUTDIR)/test-var
 	mkdir -p $(GATE_OUT)/taste-bad && cp -r tests/fixtures/taste-bad/. $(GATE_OUT)/taste-bad/
 	! bash tests/gate.sh "$(WEBDRIVER_URL)" $(GATE_OUT)/taste-bad >/dev/null
 	jq -e '[.pages[] | (.rotated | length) > 0 and (.blobs | length) > 0 and (.loud | length) > 0 and (.stroked | length) > 0] | all' $(GATE_OUT)/taste-bad/gate.json >/dev/null
+# The site gate's own checks (docs/site-gate.org): a good fixture site
+# passes and each defect page fails only its check. Needs firefox and
+# geckodriver, or WEBDRIVER_URL.
+site-gate:
+	bash tests/site-gate.sh
 # Live visual acceptance is separate from the hermetic fixture gate.
 .PHONY: visual-review
 visual-review:
@@ -119,5 +124,5 @@ bundled-deps:
 clean:
 	$(RM) -r $(OUTDIR)
 help:
-	@printf '%s\n' 'make [DEBUG=1] [ASAN=1] [UBSAN=1] [DEPS=bundled]' 'make tests | stack-tests | sameness [WEBDRIVER_URL=...] | gate WEBDRIVER_URL=... | install DESTDIR=... PREFIX=... | clean'
+	@printf '%s\n' 'make [DEBUG=1] [ASAN=1] [UBSAN=1] [DEPS=bundled]' 'make tests | stack-tests | sameness [WEBDRIVER_URL=...] | gate WEBDRIVER_URL=... | site-gate | install DESTDIR=... PREFIX=... | clean'
 endif

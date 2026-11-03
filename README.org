@@ -165,6 +165,7 @@ Repository skills live in [[file:skills/libresite-landing/SKILL.md][skills/libre
 - [[file:docs/editing.org][Editing a built site in place]]
 - [[file:docs/testing.org][Verification and its limits]]
 - [[file:docs/qa.org][Published-tree QA runner]]
+- [[file:docs/site-gate.org][Site gate: browser check before a preview or a publish]]
 - [[file:docs/robustness-review.org][Robustness review and deterministic acceptance]]
 - [[file:docs/usage.org][Usage records, rate-card format and accounting limits]]
 
