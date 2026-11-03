@@ -1,0 +1,12 @@
+<div class="wrap">
+{{#heading}}<div class="section-head">
+<{{htag}} id="{{id}}-h">{{{heading_html}}}</{{htag}}>
+{{#intro}}<div class="prose">{{{intro}}}</div>
+{{/intro}}</div>
+{{/heading}}<ul class="reviews__list" role="list">
+{{#items}}<li><figure class="reviews__item">
+<blockquote class="reviews__quote"><p>{{quote}}</p></blockquote>
+<figcaption><span class="reviews__name">{{name}}</span>{{#source}}<span class="reviews__source">{{source}}</span>{{/source}}</figcaption>
+</figure></li>
+{{/items}}</ul>
+</div>

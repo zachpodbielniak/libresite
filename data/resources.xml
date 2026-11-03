@@ -18,6 +18,31 @@
     <file>components/visual.css</file>
 
     <file>components/look.css</file>
+    <file>components/design.css</file>
+    <file>components/hero--photo-start.html</file>
+    <file>components/hero--photo-start.css</file>
+    <file>components/hero--photo-center.html</file>
+    <file>components/hero--photo-center.css</file>
+    <file>components/hero--split-card.html</file>
+    <file>components/hero--split-card.css</file>
+    <file>components/services--photo-cards.html</file>
+    <file>components/services--photo-cards.css</file>
+    <file>components/services--price-list.html</file>
+    <file>components/services--price-list.css</file>
+    <file>components/services--sublinks.html</file>
+    <file>components/services--sublinks.css</file>
+    <file>components/reviews--card-grid.html</file>
+    <file>components/reviews--card-grid.css</file>
+    <file>components/reviews--quote-headline.html</file>
+    <file>components/reviews--quote-headline.css</file>
+    <file>components/contact--split.html</file>
+    <file>components/contact--split.css</file>
+    <file>components/contact--call-first.html</file>
+    <file>components/contact--call-first.css</file>
+    <file>components/reviews.html</file>
+    <file>components/reviews.css</file>
+    <file>components/contact.html</file>
+    <file>components/contact.css</file>
     <file>components/look-lettering-wide.css</file>
     <file>components/look-lettering-italic.css</file>
     <file>components/look-images-blob.css</file>

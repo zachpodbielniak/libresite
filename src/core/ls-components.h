@@ -240,6 +240,55 @@ gchar **ls_components_list_themes(LsComponents *self);
  */
 const gchar *ls_components_get_theme_summary(LsComponents *self, const gchar *name);
 /**
+ * ls_components_get_themes:
+ * @self: a component library
+ *
+ * Returns: (transfer none): the theme catalog as loaded, theme name to
+ *   theme; presets are the themes with a design block
+ */
+JsonObject *ls_components_get_themes(LsComponents *self);
+/**
+ * ls_components_get_library:
+ * @self: a component library
+ *
+ * Returns: (transfer none) (nullable): the catalog's library block that
+ *   the design picker reads (see ls-design.h), or %NULL for an archived
+ *   library without one
+ */
+JsonObject *ls_components_get_library(LsComponents *self);
+/**
+ * ls_components_apply_design:
+ * @self: a component library
+ * @plan: (transfer none): a site plan object, modified in place
+ * @design: (transfer none): a design from ls_design_new(), copied
+ *
+ * Writes @design into the plan as its builder-owned design member, sets
+ * the plan's working colour tokens to the design's repaired colour roles
+ * and the home opening in structure to the design's hero variant. Apply
+ * the design's preset as a theme first.
+ *
+ * Returns: whether @plan was an object and changed
+ */
+gboolean ls_components_apply_design(LsComponents *self, JsonNode *plan, JsonObject *design);
+/**
+ * ls_components_design_home:
+ * @self: a component library
+ * @plan: (transfer none): the site plan, borrowed
+ * @page: (transfer none): the home page specification, modified in place
+ *
+ * Makes the home page the design's ordered list of sections: each designed
+ * section takes the writer's section of the same type (a cover counts as a
+ * hero, voices as reviews, a contact card or call as contact) in the
+ * designed variant, keeping only the slots that variant has; reviews take
+ * the order's supplied quotes; photo cards take a supplied photo each that
+ * the opening does not show; every other section is dropped. A designed
+ * section the writer did not write is left out. Without a plan design the
+ * page is unchanged.
+ *
+ * Returns: whether @page changed
+ */
+gboolean ls_components_design_home(LsComponents *self, JsonNode *plan, JsonNode *page);
+/**
  * ls_components_apply_theme:
  * @self: a component library
  * @plan: (transfer none): a site plan object, modified in place

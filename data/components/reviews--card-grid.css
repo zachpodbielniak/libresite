@@ -1,0 +1,2 @@
+/* reviews/card-grid: many short quotes, three a row (Highlands). Layout only. */
+.reviews--card-grid .reviews__list { grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); }

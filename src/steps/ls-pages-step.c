@@ -4,6 +4,7 @@
  * then composes the site natively. See docs/components.org. */
 #include "steps/ls-step.h"
 #include "core/ls-components.h"
+#include "core/ls-design.h"
 #include "core/ls-images.h"
 #include "core/ls-module.h"
 #include "core/ls-visual.h"
@@ -50,6 +51,32 @@ static const gchar *
 plan_theme(JsonObject *config){
 	JsonObject *options = step_options(config);
 	return options != NULL ? ls_string(options, "theme") : NULL;
+}
+
+/* The theme the plan step applies: the one its options name, else the
+ * preset the design picker chooses for the order (docs/components.org,
+ * "Presets and the picker"). Returns: (transfer full) (nullable). */
+static gchar *
+step_theme(LsRecipe *recipe, JsonObject *config, LsComponents *components){
+	JsonObject *library = ls_components_get_library(components);
+	if (plan_theme(config) != NULL)
+		return g_strdup(plan_theme(config));
+	if (library == NULL)
+		return NULL;
+	return ls_design_pick_preset(library, ls_components_get_themes(components),
+		member_object_of(ls_recipe_get_root(recipe), "site"));
+}
+
+/* The design for a preset theme, from the order and its photos; NULL for
+ * a theme that is not a preset. Returns: (transfer full) (nullable). */
+static JsonObject *
+step_design(LsRecipe *recipe, LsComponents *components, const gchar *theme, JsonArray *photos){
+	JsonObject *library = ls_components_get_library(components);
+	JsonObject *themes = ls_components_get_themes(components);
+	JsonObject *preset = theme != NULL ? member_object_of(themes, theme) : NULL;
+	if (library == NULL || preset == NULL || member_object_of(preset, "design") == NULL)
+		return NULL;
+	return ls_design_new(library, themes, member_object_of(ls_recipe_get_root(recipe), "site"), theme, photos, NULL);
 }
 
 /* Pixel size of a PNG, JPEG or WebP image, read from its header. */
@@ -121,6 +148,9 @@ plan_photos(LsRecipe *recipe, LsContext *context, GError **error){
 		json_object_set_string_member(entry, "alt", ls_string(photo, "alt"));
 		if (ls_string(photo, "credit") != NULL)
 			json_object_set_string_member(entry, "credit", ls_string(photo, "credit"));
+		/* A stock photo is credited as stock, never as the owner's work. */
+		if (json_object_has_member(photo, "stock") && json_object_get_boolean_member(photo, "stock"))
+			json_object_set_boolean_member(entry, "stock", TRUE);
 		if (ls_string(photo, "focus") != NULL)
 			json_object_set_string_member(entry, "focus", ls_string(photo, "focus"));
 		json_array_add_object_element(out, entry);
@@ -352,6 +382,8 @@ plan_prompt(LsPrompts *prompts, LsRecipe *recipe, JsonObject *config, LsComponen
 	g_autoptr(JsonNode) node = json_node_new(JSON_NODE_OBJECT);
 	g_autofree gchar *reference = ls_components_describe(components);
 	g_autofree gchar *task_json = NULL;
+	g_autofree gchar *chosen = step_theme(recipe, config, components);
+	g_autoptr(JsonObject) design = step_design(recipe, components, chosen, photos);
 	JsonArray *routes = json_array_new();
 	g_autoptr(GList) paths = json_object_get_members(literals);
 	GList *item;
@@ -369,10 +401,25 @@ plan_prompt(LsPrompts *prompts, LsRecipe *recipe, JsonObject *config, LsComponen
 		if (opening != NULL)
 			json_object_set_string_member(task, "opening", opening);
 	}
-	if (plan_theme(config) != NULL) {
+	/* A design fixes the home page: its opening and its sections in order. */
+	if (design != NULL) {
+		JsonArray *home = json_object_get_array_member(design, "home");
+		JsonArray *list = json_array_new();
+		guint i;
+		for (i = 0; i < json_array_get_length(home); i++) {
+			JsonObject *section = json_array_get_object_element(home, i);
+			g_autofree gchar *pair = g_strdup_printf("%s/%s", ls_string(section, "component"), ls_string(section, "variant"));
+			if (i == 0)
+				json_object_set_string_member(task, "opening", pair);
+			else
+				json_array_add_string_element(list, pair);
+		}
+		json_object_set_array_member(task, "home", list);
+	}
+	if (chosen != NULL) {
 		JsonObject *theme = json_object_new();
-		json_object_set_string_member(theme, "name", plan_theme(config));
-		json_object_set_string_member(theme, "summary", ls_components_get_theme_summary(components, plan_theme(config)));
+		json_object_set_string_member(theme, "name", chosen);
+		json_object_set_string_member(theme, "summary", ls_components_get_theme_summary(components, chosen));
 		json_object_set_object_member(task, "theme", theme);
 	} else {
 		if (json_object_has_member(identity, "palette"))
@@ -380,7 +427,7 @@ plan_prompt(LsPrompts *prompts, LsRecipe *recipe, JsonObject *config, LsComponen
 		if (json_object_has_member(identity, "type"))
 			json_object_set_member(task, "type", json_node_copy(json_object_get_member(identity, "type")));
 	}
-	if (json_object_has_member(identity, "home"))
+	if (design == NULL && json_object_has_member(identity, "home"))
 		json_object_set_member(task, "home", json_node_copy(json_object_get_member(identity, "home")));
 	/* Only an explicit demo build may say its business is an example. */
 	{
@@ -431,9 +478,9 @@ plan_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *prom
 	g_autoptr(JsonArray) photos = NULL;
 	g_autoptr(JsonArray) sized = json_array_new();
 	g_autoptr(GPtrArray) retired = g_ptr_array_new_with_free_func(g_free);
-	g_autofree gchar *prompt = NULL, *retry = NULL;
+	g_autofree gchar *prompt = NULL, *retry = NULL, *theme = NULL;
+	g_autoptr(JsonObject) design = NULL;
 	const gchar *system = ls_prompts_get_spec_system(prompts);
-	const gchar *theme;
 	gint64 retries, attempt;
 	if (ls_context_is_revision(context)) {
 		g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID,
@@ -443,7 +490,7 @@ plan_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *prom
 	components = ls_recipe_new_components(recipe, error);
 	if (components == NULL || !ls_spec_step_check(prompts, recipe, config, error))
 		return FALSE;
-	theme = plan_theme(config);
+	theme = step_theme(recipe, config, components);
 	settings = spec_settings(recipe, config, theme != NULL ? ls_components_get_themed_plan_schema(components)
 		: ls_components_get_plan_schema(components));
 	retries = json_object_get_int_member(settings, "retries");
@@ -453,6 +500,7 @@ plan_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *prom
 	photos = plan_photos(recipe, context, error);
 	if (photos == NULL)
 		return FALSE;
+	design = step_design(recipe, components, theme, photos);
 	prompt = plan_prompt(prompts, recipe, config, components, identity, photos, error);
 	if (prompt == NULL)
 		return FALSE;
@@ -515,6 +563,23 @@ plan_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *prom
 					json_object_remove_member(root, "visual");
 			}
 			ls_components_apply_default(components, plan, theme != NULL);
+			/* The picker's design and the order's quotes are the builder's. */
+			{
+				JsonObject *root = json_node_get_object(plan);
+				JsonObject *site = member_object_of(ls_recipe_get_root(recipe), "site");
+				JsonNode *reviews = site != NULL ? json_object_get_member(site, "reviews") : NULL;
+				const gchar *owned[] = {"design", "reviews"};
+				guint k;
+				for (k = 0; k < G_N_ELEMENTS(owned); k++)
+					if (json_object_has_member(root, owned[k]))
+						json_object_remove_member(root, owned[k]);
+				if (design != NULL)
+					ls_components_apply_design(components, plan, design);
+				if (design != NULL && reviews != NULL && JSON_NODE_HOLDS_ARRAY(reviews)) {
+					g_autofree gchar *text = ls_json_encode(reviews);
+					json_object_set_member(root, "reviews", ls_json_parse(text, NULL));
+				}
+			}
 		}
 		/* Supplied social profiles are the builder's facts too. */
 		if (plan != NULL && JSON_NODE_HOLDS_OBJECT(plan)) {
@@ -763,8 +828,11 @@ accept_job(Job *job, LsComponents *components, JsonNode *plan, GError **error){
 	if (job->kind == JOB_PAGE) {
 		/* The home page opens with the planned opening, in the writer's
 		 * own words. */
-		if (is_home_route(plan, job->path))
+		if (is_home_route(plan, job->path)) {
 			ls_components_apply_opening(components, plan, job->path, node);
+			/* A design's home is its ordered list of sections. */
+			ls_components_design_home(components, plan, node);
+		}
 		ls_visual_apply_page(json_node_get_object(plan), json_node_get_object(node));
 		/* Each supplied photo shows at most once per page, the visual
 		 * sequence's photos included. */
@@ -1240,7 +1308,8 @@ pages_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *pro
 	}
 	/* The signature layer is written beside the pages. A catalog without the
 	 * stage, a themed site or a review simply goes without one. */
-	if (!review && !recipe_themed(recipe) && member_object_of(plan_object, "visual") == NULL) {
+	if (!review && !recipe_themed(recipe) && member_object_of(plan_object, "design") == NULL &&
+		member_object_of(plan_object, "visual") == NULL) {
 		g_autoptr(GError) local_error = NULL;
 		g_autofree gchar *prompt = signature_prompt(prompts, recipe, config, plan_object, &local_error);
 		if (prompt != NULL) {
@@ -1269,7 +1338,8 @@ pages_execute(LsStep *self, LsRecipe *recipe, JsonObject *config, LsPrompts *pro
 		g_autoptr(GError) local_error = NULL;
 		g_autoptr(LsContext) candidate = ls_context_new();
 		g_autoptr(GPtrArray) redo = NULL;
-		g_autofree gchar *bundle = site_bundle(components, plan, jobs, site_base_url(recipe, options), recipe_themed(recipe), error);
+		g_autofree gchar *bundle = site_bundle(components, plan, jobs, site_base_url(recipe, options),
+			recipe_themed(recipe) && member_object_of(plan_object, "design") == NULL, error);
 		Job *culprit;
 		if (bundle == NULL)
 			return FALSE;

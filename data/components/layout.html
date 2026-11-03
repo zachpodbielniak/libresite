@@ -29,7 +29,13 @@
 <body class="page page--{{slug}} page--kind-{{kind}} {{look_classes}}">
 <a class="skip-link" href="#main">{{skip_label}}</a>
 <header class="site-header">
-<div class="wrap site-header__inner">
+{{#header_utility}}<div class="site-header__utility">
+<div class="wrap site-header__utility-inner">
+{{#call}}<a class="site-header__phone" href="{{tel}}">{{phone}}</a>
+{{/call}}{{#secondary}}<a class="button button--outline button--small" href="{{href}}">{{label}}</a>
+{{/secondary}}</div>
+</div>
+{{/header_utility}}<div class="wrap site-header__inner">
 <a class="brand" href="index.html"{{#home}} aria-current="page"{{/home}}>{{#mark}}<img src="{{src}}" alt="" width="32" height="32">{{/mark}}<span>{{wordmark}}</span></a>
 {{#tagline}}<p class="site-header__tagline">{{tagline}}</p>
 {{/tagline}}<button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" hidden>{{menu_label}}</button>
@@ -77,7 +83,9 @@
 {{/has_sitemap}}<div class="wrap site-footer__inner">
 <div>
 <p class="brand">{{wordmark}}</p>
-{{#footer_note}}<div class="site-footer__note prose">{{{footer_note}}}</div>
+{{#footer_contact}}<p class="site-footer__contact"><a href="{{tel}}">{{phone}}</a>{{#email}}
+<a href="mailto:{{email}}">{{email}}</a>{{/email}}</p>
+{{/footer_contact}}{{#footer_note}}<div class="site-footer__note prose">{{{footer_note}}}</div>
 {{/footer_note}}{{#has_social}}<ul class="site-footer__social" role="list" aria-label="{{social_label}}">
 {{#social}}<li><a href="{{url}}" rel="me noopener">{{#icon}}<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path fill="currentColor" d="{{icon}}"/></svg>{{/icon}}<span class="visually-hidden">{{label}}</span></a></li>
 {{/social}}</ul>
@@ -88,7 +96,8 @@
 {{/footer_links}}</ul>
 </nav>
 </div>
-{{#credit}}<p class="wrap site-footer__credit"><a href="{{url}}" rel="noopener">{{text}}</a></p>
+{{#photo_credits}}<p class="wrap site-footer__photos">{{photo_credits}}</p>
+{{/photo_credits}}{{#credit}}<p class="wrap site-footer__credit"><a href="{{url}}" rel="noopener">{{text}}</a></p>
 {{/credit}}</footer>
 </body>
 </html>

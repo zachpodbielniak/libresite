@@ -1339,3 +1339,218 @@ themes:
       lettering: gradient
       links: highlight
       scheme: fixed
+  # Presets (docs/components.org, "Presets and the picker"): themes with a
+  # design block, each read from one real site's measured palette and fonts
+  # (colour values and layout ideas only; no code, photos or words). The
+  # picker chooses one for every site that names no theme.
+  evergreen:
+    summary: 'Calm trades: white and deep green, a cream surface, one leaf-green detail, Manrope and small radii.'
+    tokens:
+      paper: '#ffffff'
+      ink: '#163e31'
+      muted: '#485e67'
+      surface: '#f6f4ed'
+      line: '#dcd8cc'
+      accent: '#163e31'
+      accent_ink: '#ffffff'
+      font_display: '"Manrope", system-ui, sans-serif'
+      font_body: '"Manrope", system-ui, sans-serif'
+      font_mono: 'ui-monospace, monospace'
+      base_size: 1.0625
+      ratio: 1.25
+      measure: 64
+      radius: 5
+      border: 1
+      space: 1
+      density: regular
+      heading_weight: 600
+      heading_tracking: -0.02
+      heading_leading: 1.1
+      heading_case: none
+    fonts:
+    - family: Manrope
+      weights:
+      - 400
+      - 500
+      - 600
+      - 700
+    look:
+      header: bar
+      nav: underline
+      heads: plain
+      buttons: square
+      panels: flat
+      rhythm: even
+      align: left
+      images: plain
+      footer: simple
+      texture: none
+      motion: none
+      emphasis: accent
+      ornament: none
+      kicker: mono
+      backdrop: none
+      art: open
+      photos: natural
+      edges: straight
+      lettering: plain
+      links: underline
+      scheme: fixed
+    design:
+      source: 'Evergreen Home Heating & Energy (evergreenhomeheatingandenergy.com): palette, fonts and arrangement read from its computed styles, 2026-11-02. Manrope stands in for Satoshi.'
+      fits: [trades]
+      words: [clean, modern, calm, trustworthy, honest, simple, fresh, green, natural, plain]
+      roles:
+        brand: '#163e31'
+        brand_fg: '#ffffff'
+        inverse: '#163e31'
+        inverse_fg: '#ffffff'
+        highlight: '#72ab03'
+        photo_primary: '#f6f4ed'
+        photo_primary_fg: '#163e31'
+      kicker: caps
+      accent: colour
+      shape: {control: 5, box: 8, badge: 999, depth: 0, scrim: 0.62}
+      prefer: {hero: photo-start, services: [photo-cards, price-list], reviews: card-grid, contact: call-first, header: bar, footer: columns}
+  press:
+    summary: 'Warm wellness: cream and dark brown, a forest-green button, Inter with one PT Serif italic phrase.'
+    tokens:
+      paper: '#f4f1ec'
+      ink: '#3b2311'
+      muted: '#6a5242'
+      surface: '#ebe4da'
+      line: '#d9cdbd'
+      accent: '#295135'
+      accent_ink: '#ffffff'
+      font_display: '"Inter", system-ui, sans-serif'
+      font_body: '"Inter", system-ui, sans-serif'
+      font_mono: 'ui-monospace, monospace'
+      base_size: 1.0625
+      ratio: 1.25
+      measure: 62
+      radius: 2
+      border: 1
+      space: 1.05
+      density: airy
+      heading_weight: 500
+      heading_tracking: -0.025
+      heading_leading: 1.08
+      heading_case: none
+    fonts:
+    - family: Inter
+      weights:
+      - 400
+      - 500
+      - 600
+    - family: PT Serif
+      weights:
+      - 400
+      italic: true
+    look:
+      header: bar
+      nav: underline
+      heads: plain
+      buttons: square
+      panels: flat
+      rhythm: even
+      align: left
+      images: plain
+      footer: simple
+      texture: none
+      motion: none
+      emphasis: italic
+      ornament: none
+      kicker: mono
+      backdrop: none
+      art: open
+      photos: natural
+      edges: straight
+      lettering: plain
+      links: underline
+      scheme: fixed
+    design:
+      source: 'PRESS Modern Massage (pressmodernmassage.com): palette, fonts and arrangement read from its computed styles, 2026-11-02. Inter stands in for Helvetica Neue.'
+      fits: [wellness]
+      words: [warm, soft, calm, relaxed, relaxing, gentle, cosy, cozy, beige, cream, brown, elegant, natural, earthy]
+      roles:
+        brand: '#9f6a38'
+        brand_fg: '#ffffff'
+        inverse: '#3b2311'
+        inverse_fg: '#f4f1ec'
+        highlight: '#9f6a38'
+        photo_primary: '#295135'
+        photo_primary_fg: '#ffffff'
+      font_accent: '"PT Serif", Georgia, serif'
+      kicker: caps
+      accent: italic
+      shape: {control: 2, box: 4, badge: 2, depth: 0, scrim: 0.5}
+      prefer: {hero: photo-center, services: price-list, reviews: quote-headline, contact: split, header: bar, footer: simple}
+  lindholm:
+    summary: 'Friendly family trades: white, royal blue and navy, an orange pill, Work Sans and generous rounded boxes.'
+    tokens:
+      paper: '#ffffff'
+      ink: '#231f20'
+      muted: '#4f5661'
+      surface: '#eef1f6'
+      line: '#d7dce5'
+      accent: '#ef7d05'
+      accent_ink: '#231f20'
+      font_display: '"Work Sans", system-ui, sans-serif'
+      font_body: '"Work Sans", system-ui, sans-serif'
+      font_mono: 'ui-monospace, monospace'
+      base_size: 1.0625
+      ratio: 1.25
+      measure: 66
+      radius: 20
+      border: 1
+      space: 1
+      density: regular
+      heading_weight: 700
+      heading_tracking: -0.01
+      heading_leading: 1.12
+      heading_case: none
+    fonts:
+    - family: Work Sans
+      weights:
+      - 400
+      - 500
+      - 600
+      - 700
+    look:
+      header: bar
+      nav: caps
+      heads: plain
+      buttons: pill
+      panels: raised
+      rhythm: even
+      align: left
+      images: rounded
+      footer: simple
+      texture: none
+      motion: none
+      emphasis: accent
+      ornament: none
+      kicker: mono
+      backdrop: none
+      art: open
+      photos: natural
+      edges: straight
+      lettering: plain
+      links: underline
+      scheme: fixed
+    design:
+      source: 'Lindholm Roofing (lindholmroofing.com): palette, fonts and arrangement read from its computed styles, 2026-11-02. The orange button takes a dark label for AA.'
+      fits: [trades]
+      words: [bold, friendly, family, bright, blue, orange, classic, strong, cheerful, welcoming]
+      roles:
+        brand: '#0939b2'
+        brand_fg: '#ffffff'
+        inverse: '#001427'
+        inverse_fg: '#ffffff'
+        highlight: '#ef7d05'
+        photo_primary: '#ef7d05'
+        photo_primary_fg: '#231f20'
+      kicker: caps
+      accent: colour
+      shape: {control: 999, box: 20, badge: 999, depth: 1, scrim: 0.55}
+      prefer: {hero: split-card, services: sublinks, reviews: card-grid, contact: split, header: utility, footer: columns}

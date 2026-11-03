@@ -46,7 +46,7 @@ fake_generate(LsProvider *provider, JsonObject *settings, const gchar *system, c
 		self->last_prompt = g_strdup(prompt);
 		return g_strdup(g_ptr_array_index(self->answers, index));
 	}
-	if (strstr(schema, "\"tokens\"") != NULL)
+	if (strstr(schema, "\"character\"") != NULL)
 		return fixture("plan.json");
 	if (strstr(schema, "\"required\": [\"css\"]") != NULL)
 		return g_strdup("{\"css\": \".em { color: var(--accent-text); }\"}");

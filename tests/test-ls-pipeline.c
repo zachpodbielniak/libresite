@@ -35,7 +35,7 @@ site_generate(LsProvider *provider, JsonObject *settings, const gchar *system, c
 	(void)error;
 	g_atomic_int_inc(&((SiteProvider *)provider)->calls);
 	g_assert_nonnull(schema);
-	if (strstr(schema, "\"tokens\"") != NULL)
+	if (strstr(schema, "\"character\"") != NULL)
 		return read_fixture("plan.json");
 	if (strstr(schema, "\"required\": [\"css\"]") != NULL)
 		return g_strdup("{\"css\": \".em { color: var(--accent-text); }\"}");
@@ -123,9 +123,9 @@ test_composed_run(void){
 			g_error("missing %s", present[i]);
 	}
 	g_assert_false(g_file_test(specs, G_FILE_TEST_EXISTS));
-	/* The plan, five pages, the mark (the only artwork the builder keeps)
-	 * and the signature layer. */
-	g_assert_cmpint(((SiteProvider *)provider)->calls, ==, 1 + 5 + 1 + 1);
+	/* The plan, five pages and the mark (the only artwork the builder
+	 * keeps); a preset site writes no signature layer. */
+	g_assert_cmpint(((SiteProvider *)provider)->calls, ==, 1 + 5 + 1);
 	g_assert_true(g_file_get_contents(index_path, &index, NULL, NULL));
 	g_assert_nonnull(strstr(index, "<link rel=\"canonical\" href=\"https://harbor.example/\">"));
 }

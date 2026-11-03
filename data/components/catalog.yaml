@@ -216,7 +216,7 @@ kinds:
   home:
     summary: The front door. A confident opening, a short tour of what matters and a clear next step.
     openings: [hero, cover, custom]
-    suggested: [cards, bento, features, media, statement, marquee, numbers, voices, strip, quote, text, cta, showcase, big-list, story, badges, offer, social]
+    suggested: [services, reviews, contact, cards, bento, features, media, statement, marquee, numbers, voices, strip, quote, text, cta, showcase, big-list, story, badges, offer, social]
   index:
     summary: A list of things to choose from, such as work, articles, services or locations. Opens with a page header; the list is the page.
     openings: [page-header]
@@ -290,6 +290,9 @@ components:
       centered: Headline and lede centered, art below.
       overlap: Headline overlapping the top edge of the art.
       minimal: A single strong line and one action, lots of space.
+      photo-start: A full-bleed photo fading from the left; kicker, headline, lede and actions sit left over the fade. Needs a photo.
+      photo-center: A full-bleed photo under a soft scrim; a short centered headline, a lede and one action. Needs a photo.
+      split-card: The words in a rounded card of the brand colour, a rounded photo beside it. Needs a photo.
     slots:
       kicker: {type: text, max: 80, note: "Short label above the heading; omit rather than repeat the site name."}
       heading: {type: text, required: true, max: 140}
@@ -1148,6 +1151,9 @@ components:
       cards: Painted cards with the price as a pill.
       menu: A dotted leader from each name to its price.
       split: Name and price in a column beside the description.
+      photo-cards: One card per service with its photo, name, one line and one link; three or four a row.
+      price-list: Ruled rows of name, one short line and the supplied price and duration; two columns on wide screens.
+      sublinks: One card per group of services with a short line and the services as a list of links.
     slots:
       heading: {type: text, max: 140}
       intro: {type: rich, max: 600}
@@ -1161,6 +1167,8 @@ components:
           price: {type: text, max: 40, note: "Only a supplied price."}
           duration: {type: text, max: 40}
           link: {type: link}
+          art: {type: image, note: "photo-cards: the builder gives each card a supplied photo."}
+          links: {type: links, max_items: 8, note: "sublinks: the supplied services in this group, each linking to where it is described."}
   areas:
     summary: The places a business serves, as a list with an optional drawn map.
     variants:
@@ -1186,6 +1194,32 @@ components:
       body: {type: rich, max: 600}
       items: {type: items, min_items: 1, max_items: 6, fields: {label: {type: text, required: true, max: 40}, value: {type: text, required: true, max: 120}, link: {type: link}}}
       actions: {type: links, max_items: 2}
+  reviews:
+    summary: Supplied customer quotes with their names, drawn by the builder from the order's reviews. Only when the order supplies them; never write, shorten or change a quote.
+    variants:
+      card-grid: Many short quotes with names, three a row.
+      quote-headline: Each quote led by a short headline taken word for word from it.
+    slots:
+      heading: {type: text, max: 140}
+      intro: {type: rich, max: 400}
+      items:
+        type: items
+        min_items: 1
+        max_items: 9
+        fields:
+          quote: {type: text, required: true, max: 400}
+          name: {type: text, required: true, max: 80}
+          source: {type: text, max: 80}
+          headline: {type: text, max: 80}
+  contact:
+    summary: How to reach the business, on the home page. The supplied details beside one clear next step; the builder draws the phone and the primary action.
+    variants:
+      split: The heading, a line and the one primary action on the left; the supplied details in a card on the right.
+      call-first: A large call button with the details beside it. Only with a supplied phone.
+    slots:
+      heading: {type: text, required: true, max: 120}
+      body: {type: rich, max: 600}
+      items: {type: items, max_items: 6, fields: {label: {type: text, required: true, max: 40}, value: {type: text, required: true, max: 160}, link: {type: link}}}
   module:
     summary: One of the site's supplied podbay modules, such as a booking or contact form, drawn by the builder from the plan's modules. Only when the plan lists modules; set module to its id and write only the words around it. At most once per page.
     variants:
@@ -1763,3 +1797,103 @@ default:
   palette: harbor
   typeface: geometric
   home: services-first
+# The component library's first slice (docs/components.org, "Presets and the
+# picker"). The picker reads this block: which section types a business's
+# home lists, which variants content makes eligible, the layout family each
+# variant belongs to (two of one family never touch; needs.action keeps a
+# layout built around one action to sites whose action it is), the real site each
+# variant's arrangement comes from, the owner colour words it knows and the
+# words that tell a business's sector. Presets live in themes.yaml.
+library:
+  weights: {prefer: 6, fit: 6, other: 1}
+  fallback_opening: hero/centered
+  sectors:
+    trades:
+      words: [plumber, plumbers, plumbing, drain, drains, heating, hvac, furnace, boiler, roof, roofer, roofing, gutters, electric, electrician, electrical, landscaping, landscaper, contractor, contracting, handyman, painter, painting]
+      action: call
+      home: [hero, services, reviews, contact]
+    wellness:
+      words: [salon, hair, haircut, spa, massage, barber, barbershop, nails, beauty, wellness, stylist, studio, skin, facial]
+      action: book
+      home: [hero, services, reviews, contact]
+    any:
+      words: []
+      action: book
+      home: [hero, services, reviews, contact]
+  variants:
+    hero/photo-start:
+      source: 'Evergreen Home Heating & Energy, PRESS Modern Massage and Table & Tulip: a full-bleed photo with a fade from the left and left-aligned words.'
+      family: bleed
+      needs: {photos: 1}
+    hero/photo-center:
+      source: 'Mission Bowling Club, Highlands Landscaping and Glenwood South Barberstudio: a full-bleed photo, a scrim and a centered heading (HyperUI banners, MIT, for the arrangement).'
+      family: bleed
+      needs: {photos: 1}
+    hero/split-card:
+      source: 'Lindholm Roofing: the words in a rounded royal-blue card, a rounded crew photo beside it.'
+      family: split
+      needs: {photos: 1}
+    services/photo-cards:
+      source: 'The Gleamery, Mission Bowling Club and Portland Strength Collective: photo, title, one line and one link per card (HyperUI cards and shadcn/ui card, MIT, for the structure).'
+      family: cards
+      needs: {items: [2, 6], item_photos: true}
+    services/price-list:
+      source: 'PRESS Modern Massage service cards with prices, set as ruled rows like a salon price list.'
+      family: rows
+      needs: {items: [1, 24]}
+    services/sublinks:
+      source: 'Lindholm Roofing: one card per service group with the services as links.'
+      family: cards
+      needs: {items: [4, 24]}
+    reviews/card-grid:
+      source: 'Highlands Landscaping: many short quotes with names, three a row (HyperUI testimonials, MIT, for the structure).'
+      family: cards
+      needs: {quotes: [3, 9]}
+    reviews/quote-headline:
+      source: 'PRESS Modern Massage: each review led by a short headline pulled from it.'
+      family: quotes
+      needs: {quotes: [1, 6]}
+    contact/split:
+      source: 'Harte Law and Lindholm Roofing contact sections: details and one action beside a card (HyperUI contact forms, MIT, for the structure).'
+      family: split
+      needs: {}
+    contact/call-first:
+      source: 'The target plumber in the libresite quality audit: a large call button first, the hours beside it.'
+      family: band
+      needs: {phone: true, action: call}
+    header/bar:
+      source: 'Mission Bowling Club, Glenwood South and Village Dental: wordmark left, task-named links, one button right (HyperUI headers, MIT).'
+      needs: {}
+    header/utility:
+      source: 'Lindholm Roofing: a top row with the phone and the quote action, the service links below.'
+      needs: {phone: true}
+    footer/columns:
+      source: 'Evergreen Home Heating and Lindholm Roofing: name and contact, then link columns, on the inverse colour (HyperUI footers, MIT).'
+      tone: inverse
+      needs: {}
+    footer/simple:
+      source: 'Glenwood South Barberstudio and Maple and June: name, one line of links and contact on the surface colour (HyperUI footers, MIT).'
+      tone: surface
+      needs: {}
+  # Owner colour words and the colours they set; neutral words leave the
+  # preset's colours as they are.
+  neutral: [white, cream, ivory, beige, grey, gray, silver, light, dark, and]
+  colors:
+    navy: '#1f3a5f'
+    blue: '#1f5fa8'
+    teal: '#136f6f'
+    green: '#2f6b3a'
+    forest: '#1f4d2b'
+    sage: '#5d7f62'
+    red: '#a1262b'
+    burgundy: '#7a1f2b'
+    orange: '#c2560c'
+    yellow: '#e3b324'
+    gold: '#b8892b'
+    brass: '#a07a2c'
+    purple: '#5b3a8c'
+    pink: '#b84d73'
+    brown: '#6b4226'
+    charcoal: '#2f3437'
+    black: '#111111'
+    stone: '#7a7266'

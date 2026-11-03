@@ -309,7 +309,8 @@ artifact_text(LsContext *context, const gchar *path){
 	return artifact != NULL ? ls_artifact_get_content(artifact) : NULL;
 }
 
-/* The plan step asks for the plan schema and stores a checked plan. */
+/* The plan step asks for the plan schema of the preset the picker chose
+ * (the preset supplies the tokens) and stores a checked plan. */
 static void
 test_plan(void){
 	Fixture fixture;
@@ -317,7 +318,8 @@ test_plan(void){
 	fixture_setup(&fixture, 4, 1);
 	fixture.provider->bad_plan = TRUE;
 	run_plan(&fixture);
-	g_assert_nonnull(strstr(fixture.provider->last_schema, "\"tokens\""));
+	g_assert_null(strstr(fixture.provider->last_schema, "\"tokens\""));
+	g_assert_nonnull(strstr(artifact_text(fixture.context, "site/plan.json"), "\"design\""));
 	g_assert_nonnull(artifact_text(fixture.context, "site/plan.json"));
 	prompts = prompts_for(fixture.provider, "plan");
 	g_assert_cmpuint(prompts->len, ==, 2);
@@ -325,9 +327,8 @@ test_plan(void){
 	g_assert_nonnull(strstr(g_ptr_array_index(prompts, 0), "Plan three pages."));
 	g_assert_nonnull(strstr(g_ptr_array_index(prompts, 0), "\"opening\":\"hero/centered\""));
 	g_assert_null(strstr(g_ptr_array_index(prompts, 0), "\"suggested_look\""));
-	g_assert_nonnull(strstr(g_ptr_array_index(prompts, 0), "\"palette\":{"));
-	g_assert_nonnull(strstr(g_ptr_array_index(prompts, 0), "\"type\":{"));
-	g_assert_nonnull(strstr(g_ptr_array_index(prompts, 0), "\"home\":{"));
+	g_assert_nonnull(strstr(g_ptr_array_index(prompts, 0), "\"theme\":{\"name\":"));
+	g_assert_nonnull(strstr(g_ptr_array_index(prompts, 0), "\"home\":["));
 	g_assert_nonnull(strstr(g_ptr_array_index(prompts, 0), "\"demo\":false"));
 	g_assert_nonnull(strstr(g_ptr_array_index(prompts, 0), "Nothing is sent."));
 	g_assert_nonnull(strstr(g_ptr_array_index(prompts, 1), "PREVIOUS ATTEMPT REJECTED"));
@@ -344,7 +345,7 @@ test_parallel(void){
 	g_autoptr(GError) error = NULL;
 	const gchar *paths[] = {"index.html", "work.html", "start.html", "404.html", "privacy.html",
 		"terms.html", "styles.css", "site.js", "robots.txt", "assets/mark.svg",
-		"site/pages/index.json", "site/pages/work.json", "site/pages/start.json", "site/signature.css"};
+		"site/pages/index.json", "site/pages/work.json", "site/pages/start.json"};
 	guint i;
 	fixture_setup(&fixture, 8, 1);
 	run_plan(&fixture);
@@ -356,21 +357,15 @@ test_parallel(void){
 	for (i = 0; i < G_N_ELEMENTS(paths); i++)
 		if (ls_context_lookup(fixture.context, paths[i]) == NULL)
 			g_error("missing %s", paths[i]);
-	/* The plan's calls, the pages, the mark (the only artwork the builder
-	 * keeps) and the signature layer; no call draws the bench. */
+	/* The plan's calls, the pages and the mark (the only artwork the
+	 * builder keeps); no call draws the bench, and a preset site writes no
+	 * signature layer. */
 	g_assert_null(ls_context_lookup(fixture.context, "assets/bench.svg"));
 	g_assert_null(prompts_for(fixture.provider, "assets/bench.svg"));
-	g_assert_cmpint(fixture.provider->calls, ==, 8);
+	g_assert_cmpint(fixture.provider->calls, ==, 7);
 	g_assert_cmpint(fixture.provider->max_in_flight, >=, 3);
-	/* The signature layer comes last in the styles and is kept for rebuilds. */
-	g_assert_nonnull(strstr(artifact_text(fixture.context, "styles.css"), "/* Site signature */\n@layer ls-signature {\nmain > .block + .block::before"));
-	g_assert_nonnull(strstr(artifact_text(fixture.context, "site/signature.css"), "var(--accent)"));
-	{
-		const gchar *prompt = g_ptr_array_index(prompts_for(fixture.provider, "signature"), 0);
-		g_assert_nonnull(strstr(prompt, "\"genes\":{\"curve\":"));
-		g_assert_nonnull(strstr(prompt, "motif"));
-		g_assert_null(strstr(prompt, "\"pages\""));
-	}
+	g_assert_null(prompts_for(fixture.provider, "signature"));
+	g_assert_nonnull(strstr(artifact_text(fixture.context, "styles.css"), "/* design */"));
 	g_assert_cmpuint(g_hash_table_size(fixture.provider->threads), >=, 3);
 	g_assert_cmpint(fixture.off_thread, ==, 0);
 	g_assert_cmpint(fixture.progress, >=, 5);
@@ -398,39 +393,28 @@ test_parallel(void){
 	fixture_teardown(&fixture);
 }
 
-/* A signature that breaks the rules is sent back once with the reason; one
- * that never passes is left out and the site still builds, plainly. */
+/* A preset site asks for no signature layer: the preset is its design, and
+ * a flourish the model draws would bring back the dealt look. */
 static void
 test_signature_fallback(void){
-	gint bad[] = {1, 5};
-	guint v;
-	for (v = 0; v < G_N_ELEMENTS(bad); v++) {
-		Fixture fixture;
-		g_autoptr(GError) error = NULL;
-		gboolean okay;
-		fixture_setup(&fixture, 8, 1);
-		run_plan(&fixture);
-		fixture.provider->bad_signature = bad[v];
-		okay = run_step(&fixture, LS_TYPE_PAGES_STEP, 1, NULL, &error);
-		g_assert_no_error(error);
-		g_assert_true(okay);
-		if (v == 0) {
-			GPtrArray *prompts = prompts_for(fixture.provider, "signature");
-			g_assert_cmpuint(prompts->len, ==, 2);
-			g_assert_nonnull(strstr(g_ptr_array_index(prompts, 1), "colours must be var(--paper)"));
-			g_assert_nonnull(ls_context_lookup(fixture.context, "site/signature.css"));
-		} else {
-			g_assert_null(ls_context_lookup(fixture.context, "site/signature.css"));
-			g_assert_null(strstr(artifact_text(fixture.context, "styles.css"), "Site signature"));
-			g_assert_nonnull(ls_context_lookup(fixture.context, "index.html"));
-		}
-		fixture_teardown(&fixture);
-	}
+	Fixture fixture;
+	g_autoptr(GError) error = NULL;
+	gboolean okay;
+	fixture_setup(&fixture, 8, 1);
+	run_plan(&fixture);
+	okay = run_step(&fixture, LS_TYPE_PAGES_STEP, 1, NULL, &error);
+	g_assert_no_error(error);
+	g_assert_true(okay);
+	g_assert_null(prompts_for(fixture.provider, "signature"));
+	g_assert_null(ls_context_lookup(fixture.context, "site/signature.css"));
+	g_assert_null(strstr(artifact_text(fixture.context, "styles.css"), "Site signature"));
+	g_assert_nonnull(ls_context_lookup(fixture.context, "index.html"));
+	fixture_teardown(&fixture);
 }
 
 /* The plan reports the facts to ask the owner; the pages step writes the
- * site's fingerprint; an order that lists it as avoid cannot reuse the same
- * signature layer (the clone check). */
+ * site's fingerprint with its preset; an order that lists it as avoid gets
+ * another preset (the clone check for preset sites). */
 static void
 test_clone_check(void){
 	Fixture first, second;
@@ -448,7 +432,7 @@ test_clone_check(void){
 	g_assert_no_error(error);
 	fp = json_node_get_object(fingerprint);
 	g_assert_cmpint(json_object_get_int_member(fp, "v"), ==, 1);
-	g_assert_cmpuint(json_array_get_length(json_object_get_array_member(fp, "signature")), >, 0);
+	g_assert_nonnull(ls_string(fp, "preset"));
 	/* The home page opens as the builder set it, not as the writer wrote it. */
 	{
 		g_autoptr(JsonNode) home = ls_json_parse(artifact_text(first.context, "site/pages/index.json"), NULL);
@@ -482,20 +466,15 @@ test_clone_check(void){
 		g_assert_no_error(error);
 	}
 	run_plan(&second);
-	/* One design for both: the builder no longer deals a different layout. */
+	/* The second order wears another preset than the first. */
 	plan_a = ls_json_parse(artifact_text(first.context, "site/plan.json"), NULL);
 	plan_b = ls_json_parse(artifact_text(second.context, "site/plan.json"), NULL);
-	g_assert_true(json_object_equal(json_object_get_object_member(json_node_get_object(plan_a), "look"),
-		json_object_get_object_member(json_node_get_object(plan_b), "look")));
+	g_assert_cmpstr(ls_string(json_object_get_object_member(json_node_get_object(plan_a), "design"), "preset"), ==,
+		ls_string(fp, "preset"));
+	g_assert_cmpstr(ls_string(json_object_get_object_member(json_node_get_object(plan_b), "design"), "preset"), !=,
+		ls_string(fp, "preset"));
 	g_assert_true(run_step(&second, LS_TYPE_PAGES_STEP, 1, NULL, &error));
 	g_assert_no_error(error);
-	/* The fake writes the same layer every time: sent back once, then left out. */
-	{
-		GPtrArray *prompts = prompts_for(second.provider, "signature");
-		g_assert_cmpuint(prompts->len, ==, 2);
-		g_assert_nonnull(strstr(g_ptr_array_index(prompts, 1), "repeat an earlier site's signature layer"));
-	}
-	g_assert_null(ls_context_lookup(second.context, "site/signature.css"));
 	g_assert_nonnull(ls_context_lookup(second.context, "index.html"));
 	fixture_teardown(&first);
 	fixture_teardown(&second);
@@ -530,7 +509,8 @@ test_retry_one(void){
 		g_assert_no_error(error);
 		g_assert_true(okay);
 	}
-	g_assert_cmpint(fixture.provider->calls, ==, 9);
+	/* The plan, three pages, one retry and the mark; no signature. */
+	g_assert_cmpint(fixture.provider->calls, ==, 8);
 	work = prompts_for(fixture.provider, "work.html");
 	g_assert_cmpuint(work->len, ==, 2);
 	g_assert_nonnull(strstr(g_ptr_array_index(work, 1), "unknown component 'banner'"));
@@ -621,12 +601,10 @@ test_review(void){
 		g_assert_no_error(error);
 		g_assert_true(okay);
 	}
-	/* The plan, seven write calls (with the mark and the signature) and five
-	 * review calls: a review keeps the signature it found and writes no new
-	 * one. */
-	g_assert_cmpint(fixture.provider->calls, ==, 1 + 7 + 5);
-	g_assert_cmpuint(prompts_for(fixture.provider, "signature")->len, ==, 1);
-	g_assert_nonnull(strstr(artifact_text(fixture.context, "styles.css"), "/* Site signature */"));
+	/* The plan, six write calls (with the mark; a preset site has no
+	 * signature) and five review calls. */
+	g_assert_cmpint(fixture.provider->calls, ==, 1 + 6 + 5);
+	g_assert_null(prompts_for(fixture.provider, "signature"));
 	g_assert_cmpuint(prompts_for(fixture.provider, "work.html")->len, ==, 2);
 	g_assert_nonnull(strstr(g_ptr_array_index(prompts_for(fixture.provider, "work.html"), 1), "Ladderback chair"));
 	fixture_teardown(&fixture);
@@ -721,19 +699,16 @@ test_plan_options(void){
 	}
 }
 
-/* The sector option deals an identity that fits it, and the builder applies
- * it: a plan that falls back on the house default costs no retry, because
- * its colours are replaced by the dealt palette. */
+/* The sector option is still checked but no longer changes the design: the
+ * picker's preset does. A plan that falls back on the house default costs no
+ * retry, because the preset's repaired colours replace its colours. */
 static void
 test_plan_identity(void){
 	Fixture fixture;
 	GPtrArray *prompts;
 	g_autoptr(GError) error = NULL;
-	g_autoptr(LsComponents) components = ls_components_new(&error);
 	JsonObject *options = json_object_new();
 	const gchar *task;
-	g_autofree gchar *wanted = NULL;
-	g_assert_no_error(error);
 	fixture_setup(&fixture, 4, 1);
 	json_object_set_string_member(options, "sector", "food");
 	json_object_set_object_member(step_config(&fixture, 0), "options", options);
@@ -742,20 +717,17 @@ test_plan_identity(void){
 	run_plan(&fixture);
 	prompts = prompts_for(fixture.provider, "plan");
 	g_assert_cmpuint(prompts->len, ==, 1);
-	/* The prompt carries the default identity, whatever the sector, and the
-	 * stored plan wears it. */
 	{
-		g_autoptr(JsonObject) identity = ls_components_get_default_identity(components);
-		JsonObject *palette = json_object_get_object_member(json_object_get_object_member(identity, "palette"), "tokens");
 		g_autoptr(JsonNode) plan = ls_json_parse(artifact_text(fixture.context, "site/plan.json"), NULL);
-		wanted = g_strdup_printf("\"palette\":{\"summary\":\"%s\"",
-			ls_string(json_object_get_object_member(identity, "palette"), "summary"));
+		JsonObject *design = json_object_get_object_member(json_node_get_object(plan), "design");
+		g_assert_nonnull(design);
 		g_assert_cmpstr(ls_string(json_object_get_object_member(json_node_get_object(plan), "tokens"), "accent"), ==,
-			ls_string(palette, "accent"));
+			ls_string(json_object_get_object_member(design, "roles"), "primary"));
 	}
 	task = strstr(g_ptr_array_index(prompts, 0), "TASK (JSON)");
 	g_assert_nonnull(task);
-	g_assert_nonnull(strstr(task, wanted));
+	g_assert_nonnull(strstr(task, "\"theme\":{\"name\":"));
+	g_assert_null(strstr(task, "\"palette\":{"));
 	fixture_teardown(&fixture);
 }
 

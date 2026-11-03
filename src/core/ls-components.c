@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
 #include "core/ls-components.h"
+#include "core/ls-design.h"
 #include "core/ls-module.h"
 #include "core/ls-visual.h"
 #include "core/ls-taste.h"
@@ -35,6 +36,7 @@ struct _LsComponents {
 	JsonObject *pictures;	/* bold opening -> needs, shows, photo or hides; NULL without */
 	JsonObject *taste;	/* openings and variants an unthemed site never shows; NULL without */
 	JsonObject *fallback;	/* the default block: the one design unthemed sites wear */
+	JsonObject *library;	/* the library block the design picker reads; NULL without */
 	JsonNode *network_catalog;
 	JsonObject *networks;	/* social network -> {label, hosts, path}; NULL without networks.yaml */
 	GPtrArray *order;
@@ -1272,6 +1274,81 @@ taste_gimmick(LsComponents *self, const gchar *pair){
 	return taste_banned(self, "openings", pair) || taste_banned(self, "variants", pair);
 }
 
+/* The library block (docs/components.org, "Presets and the picker"): every
+ * variant names its source and brings its own markup and styles, sectors
+ * list real section types and one primary action, named colours are
+ * #rrggbb. Optional, so archived libraries load as before. */
+static gboolean
+load_library(LsComponents *self, GChecksum *digest, JsonObject *root, GError **error){
+	JsonObject *library = member_object(root, "library");
+	JsonObject *variants, *sectors, *colors;
+	g_autoptr(GList) pairs = NULL, names = NULL;
+	GList *item;
+	if (!json_object_has_member(root, "library"))
+		return TRUE;
+	if (library == NULL || !ls_object_keys(library, "|weights|fallback_opening|sectors|variants|neutral|colors|", NULL) ||
+		(variants = member_object(library, "variants")) == NULL || (sectors = member_object(library, "sectors")) == NULL ||
+		(colors = member_object(library, "colors")) == NULL)
+		return catalog_invalid(error, "library", "needs weights, fallback_opening, sectors, variants, neutral and colors");
+	if (!is_opening(self, ls_string(library, "fallback_opening")))
+		return catalog_invalid(error, "library", "fallback_opening is a home opening as component/variant");
+	pairs = json_object_get_members(variants);
+	for (item = pairs; item != NULL; item = item->next) {
+		const gchar *pair = item->data;
+		const gchar *slash = strchr(pair, '/');
+		JsonObject *entry = member_object(variants, pair);
+		g_autofree gchar *component = slash != NULL ? g_strndup(pair, (gsize)(slash - pair)) : NULL;
+		if (component == NULL || entry == NULL || !ls_object_keys(entry, "|source|family|needs|tone|", NULL) ||
+			ls_string(entry, "source") == NULL || strlen(ls_string(entry, "source")) < 12 ||
+			(json_object_has_member(entry, "needs") && member_object(entry, "needs") == NULL))
+			return catalog_invalid(error, pair, "library variants are component/variant with a source and needs");
+		if (g_str_equal(component, "header") || g_str_equal(component, "footer"))
+			continue;
+		{
+			g_autofree gchar *markup = g_strdup_printf("%s--%s.html", component, slash + 1);
+			g_autofree gchar *style = g_strdup_printf("%s--%s.css", component, slash + 1);
+			g_autofree gchar *html = NULL, *css = NULL;
+			if (!json_object_has_member(member_object(member_object(self->components, component), "variants"), slash + 1))
+				return catalog_invalid(error, pair, "library variants extend catalog components");
+			html = load_resource(self, digest, markup, TRUE, error);
+			css = html != NULL ? load_resource(self, digest, style, TRUE, error) : NULL;
+			if (css == NULL)
+				return FALSE;
+			g_ptr_array_add(self->extras, g_strdup_printf("%s--%s", component, slash + 1));
+		}
+	}
+	names = json_object_get_members(sectors);
+	for (item = names; item != NULL; item = item->next) {
+		JsonObject *sector = member_object(sectors, item->data);
+		JsonArray *home = member_array(sector, "home");
+		const gchar *action = ls_string(sector, "action");
+		guint i;
+		if (sector == NULL || !ls_object_keys(sector, "|words|action|home|", NULL) || home == NULL ||
+			action == NULL || (!g_str_equal(action, "call") && !g_str_equal(action, "book") && !g_str_equal(action, "quote")))
+			return catalog_invalid(error, item->data, "library sectors need words, an action (call, book or quote) and home");
+		for (i = 0; i < json_array_get_length(home); i++)
+			if (member_object(self->components, json_array_get_string_element(home, i)) == NULL)
+				return catalog_invalid(error, item->data, "library homes list catalog components");
+	}
+	if (member_object(sectors, "any") == NULL)
+		return catalog_invalid(error, "library", "sectors need an any sector");
+	{
+		g_autoptr(GList) words = json_object_get_members(colors);
+		for (item = words; item != NULL; item = item->next) {
+			gdouble rgb[3];
+			if (!parse_color(ls_string(colors, item->data), rgb))
+				return catalog_invalid(error, item->data, "library colors are #rrggbb");
+		}
+	}
+	{
+		g_autofree gchar *kit = load_resource(self, digest, "design.css", TRUE, error);
+		if (kit == NULL)
+			return FALSE;
+	}
+	self->library = library;
+	return TRUE;
+}
+
 LsComponents *
 ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 	g_autoptr(LsComponents) self = g_object_new(LS_TYPE_COMPONENTS, NULL);
@@ -1291,7 +1368,7 @@ ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 	if (self->catalog == NULL)
 		return NULL;
 	root = JSON_NODE_HOLDS_OBJECT(self->catalog) ? json_node_get_object(self->catalog) : NULL;
-	if (root == NULL || !ls_object_keys(root, "|version|looks|kinds|components|extra_variants|extra_looks|wider|bold|bar|taste|default|", error) ||
+	if (root == NULL || !ls_object_keys(root, "|version|looks|kinds|components|extra_variants|extra_looks|wider|bold|bar|taste|default|library|", error) ||
 		(self->components = member_object(root, "components")) == NULL ||
 		(self->kinds = member_object(root, "kinds")) == NULL ||
 		(self->looks = member_object(root, "looks")) == NULL) {
@@ -1392,7 +1469,7 @@ ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 		}
 	}
 	if (!join_openings(self, digest, root, "wider", error) || !join_openings(self, digest, root, "bold", error) ||
-		!load_pictures(self, root, error))
+		!load_pictures(self, root, error) || !load_library(self, digest, root, error))
 		return NULL;
 	/* Page kinds name only real components; home is the one hero kind. */
 	{
@@ -1697,6 +1774,11 @@ opening_picture(LsComponents *self, const gchar *component, const gchar *variant
 	g_autofree gchar *pair = g_strdup_printf("%s/%s", component, variant);
 	if (self->pictures != NULL && ls_string(self->pictures, pair) != NULL)
 		return ls_string(self->pictures, pair);
+	{
+		JsonObject *needs = member_object(member_object(member_object(self->library, "variants"), pair), "needs");
+		if (needs != NULL && json_object_has_member(needs, "photos"))
+			return "needs";
+	}
 	if (g_strcmp0(component, "cover") == 0 ||
 		(g_strcmp0(component, "hero") == 0 && (g_strcmp0(variant, "split") == 0 || g_strcmp0(variant, "banner") == 0)))
 		return "needs";
@@ -1872,6 +1954,189 @@ ls_components_apply_opening(LsComponents *self, JsonNode *plan_node, const gchar
 		return TRUE;
 	}
 	return FALSE;
+}
+
+
+/* The writer's components that may stand in for a designed section type. */
+static gboolean
+stands_for(const gchar *type, const gchar *component){
+	if (g_strcmp0(type, component) == 0)
+		return TRUE;
+	if (g_strcmp0(type, "hero") == 0)
+		return g_strcmp0(component, "cover") == 0;
+	if (g_strcmp0(type, "reviews") == 0)
+		return g_strcmp0(component, "voices") == 0;
+	if (g_strcmp0(type, "contact") == 0)
+		return g_strcmp0(component, "contact-card") == 0 || g_strcmp0(component, "call") == 0;
+	return FALSE;
+}
+
+/* The supplied photos the page's opening does not show, in order. */
+static GPtrArray *
+free_photos(JsonObject *plan, JsonArray *sections){
+	GPtrArray *out = g_ptr_array_new();
+	JsonArray *photos = member_array(plan, "photos");
+	const gchar *opening = NULL;
+	guint i;
+	if (sections != NULL && json_array_get_length(sections) > 0 && JSON_NODE_HOLDS_OBJECT(json_array_get_element(sections, 0))) {
+		JsonObject *art = member_object(member_object(json_array_get_object_element(sections, 0), "content"), "art");
+		opening = art != NULL ? ls_string(art, "src") : NULL;
+	}
+	for (i = 0; photos != NULL && i < json_array_get_length(photos); i++) {
+		JsonObject *photo = json_array_get_object_element(photos, i);
+		if (g_strcmp0(ls_string(photo, "path"), opening) != 0)
+			g_ptr_array_add(out, photo);
+	}
+	return out;
+}
+
+/* Whether @node is a link to an anchor that @ids does not hold. */
+static gboolean
+dangling_link(JsonNode *node, GHashTable *ids){
+	JsonObject *link = node != NULL && JSON_NODE_HOLDS_OBJECT(node) ? json_node_get_object(node) : NULL;
+	const gchar *href = link != NULL && json_object_has_member(link, "href") ? ls_string(link, "href") : NULL;
+	return href != NULL && href[0] == '#' && !g_hash_table_contains(ids, href + 1);
+}
+
+/* Drops every link in @node to a section the design left out. */
+static void
+drop_dangling(JsonNode *node, GHashTable *ids){
+	if (node == NULL)
+		return;
+	if (JSON_NODE_HOLDS_ARRAY(node)) {
+		JsonArray *array = json_node_get_array(node);
+		guint i = json_array_get_length(array);
+		while (i-- > 0) {
+			if (dangling_link(json_array_get_element(array, i), ids))
+				json_array_remove_element(array, i);
+			else
+				drop_dangling(json_array_get_element(array, i), ids);
+		}
+	} else if (JSON_NODE_HOLDS_OBJECT(node)) {
+		JsonObject *object = json_node_get_object(node);
+		g_autoptr(GList) keys = json_object_get_members(object);
+		GList *key;
+		for (key = keys; key != NULL; key = key->next) {
+			JsonNode *value = json_object_get_member(object, key->data);
+			if (dangling_link(value, ids))
+				json_object_remove_member(object, key->data);
+			else
+				drop_dangling(value, ids);
+		}
+	}
+}
+
+gboolean
+ls_components_design_home(LsComponents *self, JsonNode *plan_node, JsonNode *page){
+	JsonObject *plan, *design;
+	JsonArray *home, *sections, *rebuilt, *supplied;
+	g_autofree gboolean *taken = NULL;
+	g_autoptr(GPtrArray) photos = NULL;
+	guint i, j, next_photo = 0;
+	g_return_val_if_fail(LS_IS_COMPONENTS(self), FALSE);
+	if (plan_node == NULL || !JSON_NODE_HOLDS_OBJECT(plan_node) || page == NULL || !JSON_NODE_HOLDS_OBJECT(page))
+		return FALSE;
+	plan = json_node_get_object(plan_node);
+	design = member_object(plan, "design");
+	home = member_array(design, "home");
+	sections = member_array(json_node_get_object(page), "sections");
+	if (home == NULL || sections == NULL)
+		return FALSE;
+	supplied = member_array(plan, "reviews");
+	taken = g_new0(gboolean, json_array_get_length(sections) + 1);
+	photos = free_photos(plan, sections);
+	rebuilt = json_array_new();
+	for (i = 0; i < json_array_get_length(home); i++) {
+		JsonObject *entry = json_array_get_object_element(home, i);
+		const gchar *type = ls_string(entry, "component");
+		JsonObject *slots = member_object(member_object(self->components, type), "slots");
+		JsonObject *from = NULL, *source, *section, *content;
+		g_autoptr(GList) keys = slots != NULL ? json_object_get_members(slots) : NULL;
+		GList *key;
+		for (j = 0; from == NULL && j < json_array_get_length(sections); j++) {
+			JsonNode *node = json_array_get_element(sections, j);
+			if (!taken[j] && JSON_NODE_HOLDS_OBJECT(node) && stands_for(type, ls_string(json_node_get_object(node), "component"))) {
+				from = json_node_get_object(node);
+				taken[j] = TRUE;
+			}
+		}
+		/* Reviews are the order's quotes; the writer may only head them. */
+		if (from == NULL && !(g_strcmp0(type, "reviews") == 0 && supplied != NULL))
+			continue;
+		section = json_object_new();
+		content = json_object_new();
+		json_object_set_string_member(section, "component", type);
+		json_object_set_string_member(section, "variant", ls_string(entry, "variant"));
+		if (from != NULL && ls_string(from, "id") != NULL)
+			json_object_set_string_member(section, "id", ls_string(from, "id"));
+		source = from != NULL ? member_object(from, "content") : NULL;
+		for (key = keys; source != NULL && key != NULL; key = key->next)
+			if (json_object_has_member(source, key->data) && !JSON_NODE_HOLDS_NULL(json_object_get_member(source, key->data)))
+				json_object_set_member(content, key->data, node_copy(json_object_get_member(source, key->data)));
+		if (g_strcmp0(type, "reviews") == 0 && supplied != NULL) {
+			JsonArray *items = json_array_new();
+			const gchar *fields[] = {"quote", "name", "source", "headline"};
+			guint k, f;
+			for (k = 0; k < json_array_get_length(supplied); k++) {
+				JsonObject *review = json_array_get_object_element(supplied, k), *item = json_object_new();
+				for (f = 0; f < G_N_ELEMENTS(fields); f++)
+					if (ls_string(review, fields[f]) != NULL)
+						json_object_set_string_member(item, fields[f], ls_string(review, fields[f]));
+				json_array_add_object_element(items, item);
+			}
+			json_object_set_array_member(content, "items", items);
+		}
+		/* Photo cards and service groups: each a supplied photo the opening
+		 * does not show, while there are photos left. */
+		if (g_strcmp0(type, "services") == 0) {
+			JsonArray *items = member_array(content, "items");
+			for (j = 0; items != NULL && j < json_array_get_length(items); j++) {
+				JsonObject *item = json_array_get_object_element(items, j);
+				if (json_object_has_member(item, "art"))
+					json_object_remove_member(item, "art");
+				if ((g_strcmp0(ls_string(entry, "variant"), "photo-cards") == 0 ||
+					g_strcmp0(ls_string(entry, "variant"), "sublinks") == 0) && next_photo < photos->len) {
+					JsonObject *photo = g_ptr_array_index(photos, next_photo++), *art = json_object_new();
+					json_object_set_string_member(art, "src", ls_string(photo, "path"));
+					json_object_set_string_member(art, "alt", ls_string(photo, "alt") != NULL ? ls_string(photo, "alt") : "");
+					json_object_set_object_member(item, "art", art);
+				}
+			}
+		}
+		/* The builder draws the phone and email; a writer's row repeating
+		 * either is dropped. */
+		if (g_strcmp0(type, "contact") == 0 && member_array(content, "items") != NULL) {
+			JsonArray *items = member_array(content, "items");
+			JsonObject *contact = member_object(plan, "contact");
+			g_autofree gchar *tel = contact != NULL && ls_string(contact, "phone") != NULL
+				? ls_phone_tel(ls_string(contact, "phone")) : NULL;
+			const gchar *email = contact != NULL ? ls_string(contact, "email") : NULL;
+			j = json_array_get_length(items);
+			while (j-- > 0) {
+				JsonObject *item = json_array_get_object_element(items, j);
+				const gchar *value = item != NULL ? ls_string(item, "value") : NULL;
+				g_autofree gchar *as_tel = value != NULL ? ls_phone_tel(value) : NULL;
+				if (value != NULL && ((tel != NULL && g_strcmp0(as_tel, tel) == 0) ||
+					(email != NULL && g_ascii_strcasecmp(value, email) == 0)))
+					json_array_remove_element(items, j);
+			}
+		}
+		/* The builder draws the opening's and the contact's actions. */
+		if ((g_strcmp0(type, "hero") == 0 || g_strcmp0(type, "contact") == 0) && json_object_has_member(content, "actions"))
+			json_object_remove_member(content, "actions");
+		json_object_set_object_member(section, "content", content);
+		json_array_add_object_element(rebuilt, section);
+	}
+	json_object_set_array_member(json_node_get_object(page), "sections", rebuilt);
+	{
+		g_autoptr(GHashTable) ids = g_hash_table_new(g_str_hash, g_str_equal);
+		JsonNode *node = json_object_get_member(json_node_get_object(page), "sections");
+		for (i = 0; i < json_array_get_length(rebuilt); i++)
+			if (ls_string(json_array_get_object_element(rebuilt, i), "id") != NULL)
+				g_hash_table_add(ids, (gpointer)ls_string(json_array_get_object_element(rebuilt, i), "id"));
+		drop_dangling(node, ids);
+	}
+	return TRUE;
 }
 
 /* The role a component plays on a home page; anything unlisted reads as story. */
@@ -2510,7 +2775,9 @@ check_photos(Problems *problems, JsonObject *plan){
 		const gchar *path = photo != NULL ? ls_string(photo, "path") : NULL;
 		JsonNode *width = photo != NULL ? json_object_get_member(photo, "width") : NULL;
 		JsonNode *height = photo != NULL ? json_object_get_member(photo, "height") : NULL;
-		if (photo == NULL || !ls_object_keys(photo, "|path|alt|credit|focus|width|height|variants|", NULL) || path == NULL ||
+		if (photo == NULL || !ls_object_keys(photo, "|path|alt|credit|stock|focus|width|height|variants|", NULL) || path == NULL ||
+			(json_object_has_member(photo, "stock") && (!JSON_NODE_HOLDS_VALUE(json_object_get_member(photo, "stock")) ||
+			json_node_get_value_type(json_object_get_member(photo, "stock")) != G_TYPE_BOOLEAN)) ||
 			(json_object_has_member(photo, "focus") && !ls_focus_valid(ls_string(photo, "focus"))) ||
 			!g_str_has_prefix(path, "assets/") || strstr(path, "..") != NULL || strpbrk(path, " \"'<>\\") != NULL ||
 			ls_string(photo, "alt") == NULL || width == NULL || height == NULL ||
@@ -2786,6 +3053,38 @@ check_restyle(Problems *problems, LsComponents *self, JsonObject *plan){
 		problem(problems, "restyle CSS must total at most 24000 bytes");
 }
 
+/* design is the builder's (the picker's), reviews the order's supplied
+ * quotes; a model answer never sets either. */
+static void
+check_design(Problems *problems, LsComponents *self, JsonObject *plan){
+	JsonArray *reviews = member_array(plan, "reviews");
+	guint i;
+	if (json_object_has_member(plan, "design")) {
+		g_autoptr(GString) why = g_string_new(NULL);
+		if (self->library == NULL || member_object(plan, "design") == NULL)
+			problem(problems, "design needs a library with presets");
+		else if (!ls_design_check(self->library, member_object(plan, "design"), why))
+			problem(problems, "%s", g_strstrip(why->str));
+	}
+	if (!json_object_has_member(plan, "reviews"))
+		return;
+	if (reviews == NULL || json_array_get_length(reviews) == 0 || json_array_get_length(reviews) > 9) {
+		problem(problems, "reviews must list 1 to 9 supplied quotes");
+		return;
+	}
+	for (i = 0; i < json_array_get_length(reviews); i++) {
+		JsonNode *node = json_array_get_element(reviews, i);
+		JsonObject *review = JSON_NODE_HOLDS_OBJECT(node) ? json_node_get_object(node) : NULL;
+		if (review == NULL || !ls_object_keys(review, "|quote|name|source|headline|", NULL) ||
+			blank(ls_string(review, "quote")) || blank(ls_string(review, "name")) ||
+			g_utf8_strlen(ls_string(review, "quote"), -1) > 400 || g_utf8_strlen(ls_string(review, "name"), -1) > 80 ||
+			(ls_string(review, "source") != NULL && g_utf8_strlen(ls_string(review, "source"), -1) > 80) ||
+			(ls_string(review, "headline") != NULL && g_utf8_strlen(ls_string(review, "headline"), -1) > 80))
+			problem(problems, "reviews[%u] must be {quote up to 400 characters, name up to 80, optional source and "
+				"headline up to 80}", i);
+	}
+}
+
 static void
 check_plan_into(Problems *problems, LsComponents *self, JsonNode *node){
 	JsonObject *kinds = self->kinds;
@@ -2802,7 +3101,8 @@ check_plan_into(Problems *problems, LsComponents *self, JsonNode *node){
 		return;
 	}
 	if (!ls_object_keys(plan, "|name|tagline|lang|character|missing|tokens|fonts|brand|nav|action|footer|voice|look|"
-		"art|photos|media|visual|social|form|contact|modules|credit|booking|demo|pages|css|restyle|ui|structure|signature|", NULL))
+		"art|photos|media|visual|social|form|contact|modules|credit|booking|demo|pages|css|restyle|ui|structure|signature|"
+		"design|reviews|", NULL))
 		problem(problems, "unknown top-level key; allowed: name, tagline, lang, character, missing, tokens, fonts, "
 			"brand, nav, action, footer, voice, look, art, photos, pages, css, restyle, ui");
 	check_missing(problems, plan);
@@ -2828,6 +3128,7 @@ check_plan_into(Problems *problems, LsComponents *self, JsonNode *node){
 		problem(problems, "booking must be the supplied {href}: a same-site path such as /book or an https:// address");
 	check_structure(problems, self, plan);
 	check_look(problems, self, plan);
+	check_design(problems, self, plan);
 	check_restyle(problems, self, plan);
 	check_fonts(problems, plan);
 	plan_scope(plan, &scope);
@@ -3018,6 +3319,50 @@ nudge(JsonObject *tokens, const gchar *key, const gchar *background, gdouble min
 }
 
 
+/* A preset is a theme with a design block: a source, the sectors it fits,
+ * its words, its colour roles, primitives, shape and preferred variants.
+ * The design it builds for an empty order must pass ls_design_check(). */
+static void
+check_preset(Problems *problems, LsComponents *self, JsonObject *theme, const gchar *name){
+	JsonObject *design = member_object(theme, "design");
+	JsonObject *prefer = member_object(design, "prefer");
+	g_autoptr(GList) types = prefer != NULL ? json_object_get_members(prefer) : NULL;
+	g_autoptr(JsonObject) built = NULL;
+	g_autoptr(GError) local_error = NULL;
+	g_autoptr(GString) why = g_string_new(NULL);
+	GList *type;
+	if (self->library == NULL) {
+		problem(problems, "presets need the catalog's library block");
+		return;
+	}
+	if (design == NULL || !ls_object_keys(design, "|source|fits|words|roles|kicker|accent|font_accent|shape|prefer|", NULL) ||
+		ls_string(design, "source") == NULL || member_array(design, "fits") == NULL ||
+		member_array(design, "words") == NULL || member_object(design, "roles") == NULL || prefer == NULL) {
+		problem(problems, "a preset's design needs source, fits, words, roles, shape and prefer");
+		return;
+	}
+	for (type = types; type != NULL; type = type->next) {
+		JsonNode *wish = json_object_get_member(prefer, type->data);
+		JsonArray *list = JSON_NODE_HOLDS_ARRAY(wish) ? json_node_get_array(wish) : NULL;
+		guint i, n = list != NULL ? json_array_get_length(list) : 1;
+		for (i = 0; i < n; i++) {
+			JsonNode *one = list != NULL ? json_array_get_element(list, i) : wish;
+			const gchar *variant = JSON_NODE_HOLDS_VALUE(one) && json_node_get_value_type(one) == G_TYPE_STRING
+				? json_node_get_string(one) : "";
+			g_autofree gchar *pair = g_strdup_printf("%s/%s", (const gchar *)type->data, variant);
+			if (member_object(member_object(self->library, "variants"), pair) == NULL)
+				problem(problems, "design.prefer.%s is not a library variant or a list of them", (const gchar *)type->data);
+		}
+	}
+	built = ls_design_new(self->library, self->themes, NULL, name, NULL, &local_error);
+	if (built == NULL) {
+		problem(problems, "%s", local_error->message);
+		return;
+	}
+	if (!ls_design_check(self->library, built, why))
+		problem(problems, "%s", g_strstrip(why->str));
+}
+
 /* Themes are whole designs. Each is checked as the design half of a plan,
  * so applying one can never produce a plan that fails its own checks. */
 static gboolean
@@ -3045,7 +3390,7 @@ load_themes(LsComponents *self, GChecksum *digest, GError **error){
 				g_ptr_array_unref(problems.messages);
 				return catalog_invalid(error, name->data, "theme names are lowercase words");
 			}
-		if (theme == NULL || !ls_object_keys(theme, "|summary|tokens|fonts|look|css|restyle|", NULL) ||
+		if (theme == NULL || !ls_object_keys(theme, "|summary|tokens|fonts|look|css|restyle|design|", NULL) ||
 			ls_string(theme, "summary") == NULL || member_object(theme, "tokens") == NULL ||
 			member_object(theme, "look") == NULL) {
 			g_ptr_array_unref(problems.messages);
@@ -3062,6 +3407,9 @@ load_themes(LsComponents *self, GChecksum *digest, GError **error){
 			"\"description\": \"A theme check page of about sixty characters in length.\", \"brief\": \"b\"}]}", NULL);
 		copy_theme(theme, json_node_get_object(plan));
 		check_plan_into(&problems, self, plan);
+		/* A preset's design must build and pass its own checks. */
+		if (json_object_has_member(theme, "design"))
+			check_preset(&problems, self, theme, name->data);
 		if (problems.messages->len > 0) {
 			g_autofree gchar *why = NULL;
 			g_ptr_array_add(problems.messages, NULL);
@@ -3120,8 +3468,69 @@ ls_components_apply_theme(LsComponents *self, JsonNode *plan, const gchar *name,
 		return FALSE;
 	}
 	copy_theme(theme, json_node_get_object(plan));
+	/* A design belongs to its preset; another theme leaves it behind. */
+	if (json_object_has_member(json_node_get_object(plan), "design") &&
+		(member_object(json_node_get_object(plan), "design") == NULL ||
+		g_strcmp0(ls_string(member_object(json_node_get_object(plan), "design"), "preset"), name) != 0))
+		json_object_remove_member(json_node_get_object(plan), "design");
 	return TRUE;
 }
+
+JsonObject *
+ls_components_get_themes(LsComponents *self){
+	g_return_val_if_fail(LS_IS_COMPONENTS(self), NULL);
+	return self->themes;
+}
+
+JsonObject *
+ls_components_get_library(LsComponents *self){
+	g_return_val_if_fail(LS_IS_COMPONENTS(self), NULL);
+	return self->library;
+}
+
+gboolean
+ls_components_apply_design(LsComponents *self, JsonNode *plan_node, JsonObject *design){
+	JsonObject *plan, *tokens, *roles, *structure, *first;
+	JsonArray *home;
+	const gchar *map[][2] = {{"paper", "bg"}, {"ink", "fg"}, {"muted", "muted_fg"}, {"surface", "surface"},
+		{"line", "line"}, {"accent", "primary"}, {"accent_ink", "primary_fg"}};
+	guint i;
+	g_return_val_if_fail(LS_IS_COMPONENTS(self), FALSE);
+	if (plan_node == NULL || !JSON_NODE_HOLDS_OBJECT(plan_node) || design == NULL)
+		return FALSE;
+	plan = json_node_get_object(plan_node);
+	{
+		g_autoptr(JsonNode) holder = json_node_new(JSON_NODE_OBJECT);
+		g_autofree gchar *text = NULL;
+		json_node_set_object(holder, design);
+		text = ls_json_encode(holder);
+		json_object_set_member(plan, "design", ls_json_parse(text, NULL));
+	}
+	roles = member_object(member_object(plan, "design"), "roles");
+	tokens = member_object(plan, "tokens");
+	if (tokens == NULL) {
+		tokens = json_object_new();
+		json_object_set_object_member(plan, "tokens", tokens);
+	}
+	/* The plan's working colours are the design's roles, so every older
+	 * component on every page wears the same repaired pairs. */
+	for (i = 0; i < G_N_ELEMENTS(map); i++)
+		if (ls_string(roles, map[i][1]) != NULL)
+			json_object_set_string_member(tokens, map[i][0], ls_string(roles, map[i][1]));
+	home = member_array(member_object(plan, "design"), "home");
+	first = home != NULL && json_array_get_length(home) > 0 ? json_array_get_object_element(home, 0) : NULL;
+	if (first != NULL && g_strcmp0(ls_string(first, "component"), "hero") == 0) {
+		g_autofree gchar *opening = g_strdup_printf("hero/%s", ls_string(first, "variant"));
+		structure = member_object(plan, "structure");
+		if (structure == NULL) {
+			structure = json_object_new();
+			json_object_set_object_member(plan, "structure", structure);
+		}
+		json_object_set_string_member(structure, "opening", opening);
+	}
+	return TRUE;
+}
+
 
 /* ---- Identities ---------------------------------------------------------- */
 
@@ -3539,6 +3948,9 @@ ls_components_fingerprint(LsComponents *self, JsonNode *plan, JsonNode *home){
 			json_array_add_string_element(rest, component);
 	}
 	fp = fingerprint_new(member_object(root, "look"), tokens, tokens, opening, rest);
+	/* The preset, so a nearby order can avoid it (site.avoid). */
+	if (member_object(root, "design") != NULL && ls_string(member_object(root, "design"), "preset") != NULL)
+		json_object_set_string_member(fp, "preset", ls_string(member_object(root, "design"), "preset"));
 	if (ls_string(root, "signature") != NULL)
 		json_object_set_array_member(fp, "signature", signature_shingles(ls_string(root, "signature")));
 	return fp;
@@ -4595,11 +5007,112 @@ static gchar *link_key(const gchar *href);
 /* The site's one primary action, as the action bar draws it: the supplied
  * booking page, else the supplied phone, else the live form; NULL without
  * any. Other buttons are primary only when they lead to the same place. */
+/* A string member of the plan's design, or NULL without a design. */
+static const gchar *
+design_string(JsonObject *plan, const gchar *key){
+	JsonObject *design = plan != NULL ? member_object(plan, "design") : NULL;
+	return design != NULL ? ls_string(design, key) : NULL;
+}
+
+/* The first planned page of the contact kind, or NULL. */
+static const gchar *
+contact_route(JsonObject *plan){
+	JsonArray *pages = member_array(plan, "pages");
+	guint i;
+	for (i = 0; pages != NULL && i < json_array_get_length(pages); i++) {
+		JsonObject *entry = json_array_get_object_element(pages, i);
+		if (g_strcmp0(ls_string(entry, "kind"), "contact") == 0)
+			return ls_string(entry, "path");
+	}
+	return NULL;
+}
+
+/* A design's one primary action as {href, label}: the call, the booking
+ * page or the quote page, as design.action says; NULL without a design or
+ * without what the action needs. */
+static JsonObject *
+design_primary(Render *render){
+	JsonObject *design = member_object(render->plan, "design");
+	const gchar *action = design_string(render->plan, "action");
+	g_autoptr(JsonObject) call = NULL;
+	JsonObject *link;
+	if (design == NULL || action == NULL)
+		return NULL;
+	call = call_view(render->plan);
+	link = json_object_new();
+	if (g_str_equal(action, "call") && call != NULL) {
+		g_autofree gchar *label = g_strdup_printf("%s %s", ui_text(render, "call"), ls_string(call, "phone"));
+		json_object_set_string_member(link, "href", ls_string(call, "tel"));
+		json_object_set_string_member(link, "label", label);
+	} else if (g_str_equal(action, "book") && render->book != NULL) {
+		json_object_set_string_member(link, "href", render->book);
+		json_object_set_string_member(link, "label", ui_text(render, "book"));
+	} else if (render->quote != NULL || contact_route(render->plan) != NULL) {
+		json_object_set_string_member(link, "href", render->quote != NULL ? render->quote : contact_route(render->plan));
+		json_object_set_string_member(link, "label", ui_text(render, "quote"));
+	} else {
+		json_object_unref(link);
+		return NULL;
+	}
+	return link;
+}
+
+/* The quiet second action beside a call: the quote page, as an outline. */
+static JsonObject *
+design_secondary(Render *render){
+	JsonObject *design = member_object(render->plan, "design");
+	const gchar *href = render->quote != NULL ? render->quote : contact_route(render->plan);
+	g_autoptr(JsonObject) call = call_view(render->plan);
+	JsonObject *link;
+	if (design == NULL || g_strcmp0(design_string(render->plan, "action"), "call") != 0 || call == NULL || href == NULL ||
+		g_strcmp0(href, render->page_path) == 0)
+		return NULL;
+	link = json_object_new();
+	json_object_set_string_member(link, "href", href);
+	json_object_set_string_member(link, "label", ui_text(render, "quote"));
+	return link;
+}
+
+/* The supplied photos' credit line: every photo with a credit, stock
+ * photos named as stock so none passes for the owner's own work. */
+static gchar *
+photo_credits(JsonObject *plan){
+	JsonArray *photos = member_array(plan, "photos");
+	GString *stock = g_string_new(NULL), *own = g_string_new(NULL);
+	gchar *out;
+	guint i;
+	for (i = 0; photos != NULL && i < json_array_get_length(photos); i++) {
+		JsonObject *photo = json_array_get_object_element(photos, i);
+		JsonNode *flag = json_object_get_member(photo, "stock");
+		GString *into = flag != NULL && JSON_NODE_HOLDS_VALUE(flag) && json_node_get_boolean(flag) ? stock : own;
+		if (blank(ls_string(photo, "credit")))
+			continue;
+		g_string_append_printf(into, "%s%s", into->len > 0 ? "; " : "", ls_string(photo, "credit"));
+	}
+	if (stock->len == 0 && own->len == 0)
+		out = NULL;
+	else if (own->len == 0)
+		out = g_strdup_printf("Stock photos, not of this business: %s.", stock->str);
+	else if (stock->len == 0)
+		out = g_strdup_printf("Photos: %s.", own->str);
+	else
+		out = g_strdup_printf("Photos: %s. Stock photos, not of this business: %s.", own->str, stock->str);
+	g_string_free(stock, TRUE);
+	g_string_free(own, TRUE);
+	return out;
+}
+
 static gchar *
 supplied_action(Render *render){
 	JsonObject *contact = member_object(render->plan, "contact");
 	const gchar *phone = contact != NULL ? ls_string(contact, "phone") : NULL;
 	g_autofree gchar *tel = phone != NULL ? ls_phone_tel(phone) : NULL;
+	/* A design names the action that fits the trade. */
+	{
+		g_autoptr(JsonObject) primary = design_primary(render);
+		if (primary != NULL)
+			return g_strdup(ls_string(primary, "href"));
+	}
 	if (render->book != NULL)
 		return g_strdup(render->book);
 	if (tel != NULL)
@@ -5017,7 +5530,9 @@ static void
 render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArray *toc){
 	g_autoptr(GHashTable) anchors = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 	g_autoptr(GPtrArray) ids = section_ids(sections, anchors);
-	guint i;
+	JsonArray *designed = g_strcmp0(render->page_path, "index.html") == 0
+		? member_array(member_object(render->plan, "design"), "home") : NULL;
+	guint i, cursor = 0;
 	for (i = 0; i < json_array_get_length(sections); i++) {
 		JsonObject *section = json_array_get_object_element(sections, i);
 		const gchar *name = ls_string(section, "component");
@@ -5033,8 +5548,10 @@ render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArra
 		g_autoptr(JsonObject) view = json_object_new();
 		g_autoptr(JsonObject) wrapper = json_object_new();
 		g_autoptr(GList) keys = json_object_get_members(slots);
-		g_autofree gchar *file = g_strconcat(name, ".html", NULL);
+		g_autofree gchar *own = g_strdup_printf("%s--%s.html", name, variant);
+		g_autofree gchar *file = file_text(render->self, own) != NULL ? g_strdup(own) : g_strconcat(name, ".html", NULL);
 		g_autofree gchar *flag = g_strconcat("v_", variant, NULL);
+		const gchar *tone = NULL;
 		g_autofree gchar *inner = NULL, *html = NULL;
 		GList *key;
 		guint k;
@@ -5063,6 +5580,23 @@ render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArra
 		}
 		if (g_str_equal(name, "scene") || g_str_equal(name, "material"))
 			ls_visual_view(render->plan, view, i);
+		/* A service with nothing but its name is a fact, not a link: a bare
+		 * link reads as navigation, not as the work the business does. */
+		if (g_str_equal(name, "services") && member_array(view, "items") != NULL) {
+			JsonArray *items = member_array(view, "items");
+			guint e;
+			for (e = 0; e < json_array_get_length(items); e++) {
+				JsonObject *item = json_array_get_object_element(items, e);
+				gboolean bare = TRUE;
+				const gchar *detail[] = {"summary", "price", "duration"};
+				guint d;
+				for (d = 0; d < G_N_ELEMENTS(detail); d++)
+					bare = bare && (!json_object_has_member(item, detail[d]) ||
+						JSON_NODE_HOLDS_NULL(json_object_get_member(item, detail[d])));
+				if (bare && json_object_has_member(item, "link"))
+					json_object_set_null_member(item, "link");
+			}
+		}
 		/* Builder facts the model never writes: supplied profiles and share targets. */
 		if (g_str_equal(name, "social")) {
 			JsonArray *profiles = profile_views(render);
@@ -5071,10 +5605,11 @@ render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArra
 		} else if (g_str_equal(name, "share")) {
 			json_object_set_array_member(view, "targets", share_views(render));
 			json_object_set_string_member(view, "share_title", render->page_title);
-		} else if (g_str_equal(name, "call")) {
+		} else if (g_str_equal(name, "call") || (g_str_equal(name, "contact") && member_object(render->plan, "design") != NULL)) {
 			JsonObject *call = call_view(render->plan);
 			if (call != NULL)
 				json_object_set_object_member(view, "call", call);
+			json_object_set_string_member(view, "call_label", ui_text(render, "call"));
 		} else if (g_str_equal(name, "booking-calendar") && render->book != NULL) {
 			json_object_set_string_member(view, "booking_url", render->book);
 		} else if (g_str_equal(name, "module")) {
@@ -5212,7 +5747,38 @@ render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArra
 			form_view(render, view, content, id);
 		if (g_str_equal(name, "directory"))
 			directory_view(view, id);
+		/* A design draws the opening's and the contact's actions: the one
+		 * primary action that fits the trade, and the quote as an outline
+		 * beside a call; the phone as a line when the action is not the call. */
+		if (member_object(render->plan, "design") != NULL && ((i == 0 && g_str_equal(name, "hero")) ||
+			g_str_equal(name, "contact"))) {
+			g_autoptr(JsonObject) primary = design_primary(render);
+			g_autoptr(JsonObject) secondary = design_secondary(render);
+			JsonArray *actions = json_array_new();
+			JsonObject *call = call_view(render->plan);
+			if (primary != NULL)
+				json_array_add_object_element(actions, link_view(primary, TRUE));
+			if (secondary != NULL)
+				json_array_add_object_element(actions, link_view(secondary, FALSE));
+			json_object_set_array_member(view, "actions", actions);
+			json_object_set_boolean_member(view, "has_actions", json_array_get_length(actions) > 0);
+			if (call != NULL && g_strcmp0(design_string(render->plan, "action"), "call") != 0)
+				json_object_set_object_member(view, "phone_line", call);
+			else if (call != NULL)
+				json_object_unref(call);
+		}
+		/* Home sections sit on the tone the design gave them. */
+		for (; designed != NULL && cursor < json_array_get_length(designed); cursor++) {
+			JsonObject *entry = json_array_get_object_element(designed, cursor);
+			if (g_strcmp0(ls_string(entry, "component"), name) == 0) {
+				tone = ls_string(entry, "tone");
+				cursor++;
+				break;
+			}
+		}
 		inner = render_template(render, file, view);
+		if (tone != NULL)
+			json_object_set_string_member(wrapper, "tone", tone);
 		json_object_set_string_member(wrapper, "component", name);
 		json_object_set_string_member(wrapper, "variant", variant);
 		json_object_set_string_member(wrapper, "id", id);
@@ -5383,6 +5949,16 @@ render_page(Render *render, const gchar *path, const gchar *title, const gchar *
 			g_free(classes);
 			classes = more;
 		}
+		/* A design names its preset, its header and footer layouts and its
+		 * primitives on the body. */
+		if (member_object(plan, "design") != NULL) {
+			JsonObject *design = member_object(plan, "design");
+			gchar *more = g_strdup_printf("%s design design--%s header--%s footer--%s kicker--%s accent--%s", classes,
+				ls_string(design, "preset"), ls_string(design, "header"), ls_string(design, "footer"),
+				ls_string(design, "kicker"), ls_string(design, "accent"));
+			g_free(classes);
+			classes = more;
+		}
 		json_object_set_string_member(view, "look_classes", classes);
 	}
 	json_object_set_boolean_member(view, "home", g_str_equal(path, "index.html"));
@@ -5422,25 +5998,56 @@ render_page(Render *render, const gchar *path, const gchar *title, const gchar *
 		json_object_set_string_member(view, "tagline", ls_string(plan, "tagline"));
 	append_link_views(nav, member_array(plan, "nav"), path, seen);
 	json_object_set_array_member(view, "nav", nav);
-	if (member_object(plan, "action") != NULL) {
+	if (member_object(plan, "design") != NULL) {
+		/* The header's button is the one primary action; the utility row
+		 * adds the phone and the quote beside it. */
+		g_autoptr(JsonObject) primary = design_primary(render);
+		g_autoptr(JsonObject) secondary = design_secondary(render);
+		JsonObject *design = member_object(plan, "design");
+		if (primary != NULL)
+			json_object_set_object_member(view, "action", link_view(primary, TRUE));
+		if (g_strcmp0(ls_string(design, "header"), "utility") == 0) {
+			JsonObject *utility = json_object_new();
+			JsonObject *call = call_view(plan);
+			if (call != NULL)
+				json_object_set_object_member(utility, "call", call);
+			if (secondary != NULL)
+				json_object_set_object_member(utility, "secondary", link_view(secondary, FALSE));
+			json_object_set_object_member(view, "header_utility", utility);
+		}
+		{
+			JsonObject *contact = call_view(plan);
+			if (contact != NULL)
+				json_object_set_object_member(view, "footer_contact", contact);
+		}
+	} else if (member_object(plan, "action") != NULL) {
 		JsonObject *action = link_view(member_object(plan, "action"),
 			may_lead(render, ls_string(member_object(plan, "action"), "href")));
 		json_object_set_object_member(view, "action", action);
 	}
+	/* A preset site credits every supplied photo; stock never passes for
+	 * the owner's own work. */
+	if (member_object(plan, "design") != NULL) {
+		g_autofree gchar *credits = photo_credits(plan);
+		if (credits != NULL)
+			json_object_set_string_member(view, "photo_credits", credits);
+	}
 	/* One primary action stays in reach on every page: the supplied booking
 	 * page, else the supplied phone, else the live form. */
 	{
-		JsonObject *call = render->book == NULL ? call_view(plan) : NULL;
-		gboolean quote = render->book == NULL && call == NULL && render->quote != NULL;
-		if (call != NULL || quote || render->book != NULL) {
+		const gchar *chosen = design_string(plan, "action");
+		const gchar *book = chosen == NULL || g_str_equal(chosen, "book") ? render->book : NULL;
+		JsonObject *call = book == NULL && (chosen == NULL || !g_str_equal(chosen, "quote")) ? call_view(plan) : NULL;
+		gboolean quote = book == NULL && call == NULL && render->quote != NULL;
+		if (call != NULL || quote || book != NULL) {
 			JsonObject *bar = json_object_new();
 			json_object_set_string_member(bar, "label", ui_text(render, "quick_actions"));
 			json_object_set_string_member(bar, "call_label", ui_text(render, "call"));
 			if (call != NULL)
 				json_object_set_object_member(bar, "call", call);
-			if (render->book != NULL) {
+			if (book != NULL) {
 				JsonObject *link = json_object_new();
-				json_object_set_string_member(link, "href", render->book);
+				json_object_set_string_member(link, "href", book);
 				json_object_set_string_member(link, "label", ui_text(render, "book"));
 				json_object_set_object_member(bar, "book", link);
 			}
@@ -5959,6 +6566,14 @@ pages_with_booking_calendar(JsonObject *plan, JsonObject *pages){
 	return copy;
 }
 
+/* Whether @extra (COMPONENT--VARIANT) is one of the library's variants. */
+static gboolean
+library_variant(LsComponents *self, const gchar *extra){
+	const gchar *dash = strstr(extra, "--");
+	g_autofree gchar *pair = dash != NULL ? g_strdup_printf("%.*s/%s", (gint)(dash - extra), extra, dash + 2) : NULL;
+	return pair != NULL && member_object(member_object(self->library, "variants"), pair) != NULL;
+}
+
 gchar *
 ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages, const gchar *base_url, GError **error){
 	Problems problems = {g_ptr_array_new_with_free_func(g_free)};
@@ -6056,7 +6671,10 @@ ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages
 	{
 		g_autofree gchar *tokens = token_css(member_object(plan, "tokens"), member_object(plan, "structure"));
 		g_autofree gchar *focus = focus_css(plan);
+		g_autofree gchar *design = member_object(plan, "design") != NULL ? ls_design_css(member_object(plan, "design")) : NULL;
 		g_string_append(css, tokens);
+		if (design != NULL)
+			g_string_append(css, design);
 		if (g_strcmp0(ls_string(member_object(plan, "look"), "scheme"), "auto") == 0) {
 			g_autofree gchar *scheme = scheme_css(member_object(plan, "tokens"));
 			g_string_append(css, scheme);
@@ -6094,10 +6712,20 @@ ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages
 	for (i = 0; i < self->extras->len; i++) {
 		const gchar *extra = g_ptr_array_index(self->extras, i);
 		g_autofree gchar *file = g_strconcat(extra, ".css", NULL);
-		if (g_hash_table_contains(used, extra))
+		if (g_hash_table_contains(used, extra) && !library_variant(self, extra))
 			g_string_append_printf(css, "\n/* %s */\n@layer ls-components {\n%s}\n", extra, file_text(self, file));
 	}
 	g_string_append_printf(css, "\n/* look */\n@layer ls-look {\n%s}\n", file_text(self, "look.css"));
+	/* A design's primitives and section shells lead over the stock look. */
+	if (member_object(plan, "design") != NULL && file_text(self, "design.css") != NULL)
+		g_string_append_printf(css, "\n/* design */\n@layer ls-look {\n%s}\n", file_text(self, "design.css"));
+	/* Library variants own layout and lead over the primitives they arrange. */
+	for (i = 0; i < self->extras->len; i++) {
+		const gchar *extra = g_ptr_array_index(self->extras, i);
+		g_autofree gchar *file = g_strconcat(extra, ".css", NULL);
+		if (g_hash_table_contains(used, extra) && library_variant(self, extra))
+			g_string_append_printf(css, "\n/* %s */\n@layer ls-look {\n%s}\n", extra, file_text(self, file));
+	}
 	/* Extra look values the site wears bring their own styles. */
 	{
 		JsonObject *look = member_object(plan, "look");
@@ -6390,8 +7018,10 @@ taste_page(LsComponents *self, JsonObject *plan, const gchar *path, const gchar 
 		}
 		names = classes != NULL ? g_strsplit(classes, " ", -1) : NULL;
 		for (i = 0; names != NULL && names[i] != NULL; i++) {
-			/* A visual sequence wears its world's own frame. */
-			g_autoptr(GList) axes = member_object(plan, "visual") == NULL ? json_object_get_members(self->looks) : NULL;
+			/* A visual sequence wears its world's own frame, and a preset's
+			 * look is part of its reviewed design. */
+			g_autoptr(GList) axes = member_object(plan, "visual") == NULL && member_object(plan, "design") == NULL
+				? json_object_get_members(self->looks) : NULL;
 			GList *axis;
 			for (axis = axes; axis != NULL; axis = axis->next) {
 				g_autofree gchar *prefix = g_strdup_printf("look-%s-", (const gchar *)axis->data);

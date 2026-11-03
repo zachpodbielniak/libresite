@@ -1,0 +1,144 @@
+/* SPDX-License-Identifier: AGPL-3.0-or-later */
+/* Design primitives and section shells for sites that wear a preset
+ * (docs/components.org, "Presets and the picker"). Every value is a design
+ * token from ls_design_css(); the layout variants in COMPONENT--VARIANT.css
+ * own arrangement only. Space and type steps follow the Radix Themes scales
+ * and the three radii follow daisyUI's split (MIT, docs/credits.org). */
+
+body.design {
+	--max-width: var(--container);
+	--gutter: clamp(1.25rem, 5cqi, 2.5rem);
+	--section-space: var(--section-y);
+	background: var(--bg);
+	color: var(--fg);
+	font-size: 1.0625rem;
+	line-height: 1.6;
+}
+.design h1, .design h2, .design h3 { color: inherit; text-wrap: balance; }
+.design h1 { font-size: var(--text-9); line-height: 1.06; }
+.design h2 { font-size: var(--text-8); line-height: 1.12; }
+.design h3 { font-size: var(--text-5); line-height: 1.25; letter-spacing: -0.01em; }
+.design .prose { color: inherit; }
+.design .muted { color: var(--muted-fg); }
+
+/* Kicker: small caps text, or a pill on the soft primary. */
+.design .kicker {
+	font-family: var(--font-body); font-size: var(--text-1); font-weight: 600; line-height: 1.4;
+	letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted-fg); margin: 0 0 var(--space-4);
+}
+.design.kicker--pill .kicker {
+	display: inline-block; padding: 0.4em 0.9em; border-radius: var(--radius-badge);
+	background: var(--primary-soft); color: var(--primary-text); letter-spacing: 0.08em;
+}
+
+/* Accent phrase: words marked *like this* in a heading. */
+.design.accent--colour .em { font-style: normal; color: var(--primary-text); }
+.design.accent--italic .em { font-family: var(--font-accent); font-style: italic; font-weight: 400; letter-spacing: 0; }
+.design :is(.tone-photo, .tone-inverse) .em { color: inherit; }
+.design.accent--colour :is(.tone-brand, .hero__card) .em { color: var(--brand-accent); }
+
+/* Heading block: kicker, heading, lede, actions; start-aligned. */
+.design .section-head { max-width: 46rem; margin-bottom: var(--space-8); }
+.design .section-head h2 { margin-bottom: var(--space-4); }
+.design .section-head .prose { font-size: var(--text-4); color: var(--muted-fg); }
+
+/* Button: one solid primary, an outline, a text link with an arrow. */
+.design .button {
+	min-height: 48px; padding: 0.8em 1.45em; border: 1.5px solid var(--primary); border-radius: var(--radius-control);
+	background: var(--primary); color: var(--primary-fg); box-shadow: var(--shadow-1);
+	font-family: var(--font-body); font-size: var(--text-3); font-weight: 600; letter-spacing: 0; text-transform: none;
+}
+.design .button:hover { background: var(--primary-hover); border-color: var(--primary-hover); color: var(--primary-fg); }
+.design :is(.button--outline, .button--ghost) { background: transparent; color: var(--fg); border-color: currentColor; box-shadow: none; }
+.design :is(.button--outline, .button--ghost):hover { background: var(--fg); border-color: var(--fg); color: var(--bg); }
+.design .link-arrow, .design .services__more a {
+	display: inline-flex; align-items: center; gap: 0.4em; min-height: 44px; font-weight: 600;
+	color: var(--primary-text); text-decoration: none;
+}
+.design .link-arrow::after, .design .services__more a::after { content: "\2192"; }
+.design .link-arrow:hover, .design .services__more a:hover { text-decoration: underline; }
+
+/* Card and photo: one radius, flat or raised by the preset's depth. */
+.design .card, .design .services__card, .design .services__group, .design .reviews__item, .design .contact__card {
+	border-radius: var(--radius-box); background: var(--bg); color: var(--fg); box-shadow: var(--shadow-2);
+}
+.design main figure { margin: 0; }
+.design main figure img { border-radius: var(--radius-box); }
+
+/* Rating line and tick list. */
+.design .rating { display: inline-flex; align-items: center; gap: var(--space-2); font-weight: 600; }
+.design .ticks { list-style: none; padding: 0; margin: 0; display: grid; gap: var(--space-2); }
+.design .ticks li { position: relative; padding-left: 1.6em; }
+.design .ticks li::before { content: "\2713"; position: absolute; left: 0; color: var(--highlight); font-weight: 700; }
+
+/* Section shell and tones. A tone swaps the working colours inside it, so
+ * every primitive keeps its AA pairs. */
+.design main > .block { padding-block: var(--section-y); }
+.design main > .block + .block { padding-top: var(--section-y); }
+.design main > .tone-default + .tone-default { padding-top: 0; }
+.design .tone-surface { background: var(--surface); --paper: var(--surface); }
+.design :is(.tone-inverse, .tone-brand) {
+	--paper: var(--inverse); --ink: var(--inverse-fg); --fg: var(--inverse-fg); --muted: var(--inverse-muted);
+	--muted-fg: var(--inverse-muted); --line: var(--inverse-line); --primary-text: var(--inverse-fg);
+	background: var(--inverse); color: var(--inverse-fg);
+}
+.design .tone-brand {
+	--paper: var(--brand); --ink: var(--brand-fg); --fg: var(--brand-fg); --muted: var(--brand-muted);
+	--muted-fg: var(--brand-muted); --line: var(--brand-line); --primary-text: var(--brand-fg);
+	background: var(--brand); color: var(--brand-fg);
+}
+
+/* Header: wordmark left, task-named links, one button right. */
+.design .site-header { background: var(--bg); border-bottom: 1px solid var(--line); }
+.design .site-header__inner { padding-block: var(--space-3); gap: var(--space-3) var(--space-6); }
+.design .brand { font-family: var(--font-display); font-size: var(--text-5); font-weight: 700; letter-spacing: -0.01em; color: var(--fg); }
+.design .site-header__tagline { display: none; }
+.design .site-nav { gap: var(--space-2) var(--space-6); }
+.design .site-nav ul { gap: var(--space-1) var(--space-5); }
+.design .site-nav a:not(.button) { font-family: var(--font-body); font-size: var(--text-3); font-weight: 500; color: var(--fg); }
+.design .site-nav a[aria-current="page"] { border-bottom-color: var(--primary); }
+.design .site-nav .button { min-height: 44px; padding: 0.55em 1.1em; font-size: var(--text-2); }
+
+/* Utility header: a top row with the phone and the quote; links below. */
+.design .site-header__utility { background: var(--surface); border-bottom: 1px solid var(--line); }
+.design .site-header__utility-inner { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: var(--space-3); padding-block: var(--space-2); }
+.design .site-header__phone {
+	display: inline-flex; align-items: center; min-height: 44px; padding: 0 1.1em; border-radius: var(--radius-control);
+	background: var(--brand); color: var(--brand-fg); font-weight: 600; font-size: var(--text-2); text-decoration: none;
+	font-variant-numeric: tabular-nums;
+}
+.design .site-header__phone:hover { background: var(--brand-hover); color: var(--brand-fg); }
+.design .site-header__utility .button--outline { color: var(--fg); }
+.design.header--utility .site-nav a:not(.button) { font-size: var(--text-2); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+
+/* The phone's action bar keeps the one primary action; wide screens have
+ * it in the header. */
+.design .action-bar { background: var(--bg); border-top: 1px solid var(--line); padding: var(--space-2) 0; }
+.design .action-bar .button { width: 100%; }
+@media (min-width: 48rem) {
+	.design .action-bar { display: none; }
+}
+
+/* Footer: columns on the inverse colour, or one simple band on the surface. */
+.design .site-footer { margin-top: 0; padding-block: var(--space-8) var(--space-6); border-top: 0; font-size: var(--text-2); }
+.design .site-footer .brand { font-size: var(--text-6); margin-bottom: var(--space-3); }
+.design .site-footer__contact { display: flex; flex-direction: column; gap: 0; margin: 0 0 var(--space-4); }
+.design .site-footer__contact a { font-weight: 600; text-decoration: none; }
+.design .site-footer__contact a:hover { text-decoration: underline; }
+.design .site-footer__photos { margin: var(--space-6) auto 0; font-size: var(--text-1); line-height: 1.5; }
+.design.footer--columns .site-footer {
+	--ink: var(--inverse-fg); --fg: var(--inverse-fg); --muted: var(--inverse-muted); --muted-fg: var(--inverse-muted);
+	--line: var(--inverse-line); --accent-text: var(--inverse-fg);
+	background: var(--inverse); color: var(--inverse-fg);
+}
+.design.footer--columns .site-footer :is(.brand, a, .site-footer__social a) { color: var(--inverse-fg); }
+.design.footer--columns .site-footer :is(.site-footer__photos, .site-footer__credit) { color: var(--inverse-muted); padding-top: var(--space-4); border-top: 1px solid var(--inverse-line); }
+.design.footer--columns .site-footer nav ul { flex-direction: column; gap: 0; }
+@media (min-width: 48rem) {
+	.design.footer--columns .site-footer__inner { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: var(--space-8); }
+}
+.design.footer--simple .site-footer { background: var(--surface); color: var(--fg); border-top: 1px solid var(--line); }
+.design.footer--simple .site-footer :is(.site-footer__photos, .site-footer__credit) { color: var(--muted-fg); }
+@media (min-width: 48rem) {
+	.design.footer--simple .site-footer__inner { grid-template-columns: minmax(0, 1fr) minmax(0, auto); align-items: center; }
+}

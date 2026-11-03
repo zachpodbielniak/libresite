@@ -1,0 +1,15 @@
+<div class="wrap">
+{{#heading}}<div class="section-head">
+<{{htag}} id="{{id}}-h">{{{heading_html}}}</{{htag}}>
+{{#intro}}<div class="prose">{{{intro}}}</div>
+{{/intro}}</div>
+{{/heading}}<ul class="services__rows" role="list">
+{{#items}}<li class="services__row">
+<div class="services__row-head"><{{subtag}} class="services__name">{{#link}}<a href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{name}}</a>{{/link}}{{^link}}{{name}}{{/link}}</{{subtag}}>
+{{#price}}<p class="services__price">{{price}}</p>
+{{/price}}</div>
+{{#summary}}<div class="services__summary prose">{{{summary}}}</div>
+{{/summary}}{{#duration}}<p class="services__duration">{{duration}}</p>
+{{/duration}}</li>
+{{/items}}</ul>
+</div>

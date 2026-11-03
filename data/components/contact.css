@@ -1,0 +1,15 @@
+/* contact: the supplied details beside one clear next step. Layout only. */
+.contact__inner { display: grid; gap: var(--space-7); align-items: start; }
+.contact__lead .prose { font-size: var(--text-4); color: var(--muted-fg); }
+.contact__title { margin-bottom: var(--space-4); }
+.contact__card { padding: var(--space-6); border: 1px solid var(--line); }
+.contact__direct { display: grid; gap: 0; margin: 0 0 var(--space-4); font-size: var(--text-5); font-weight: 600; }
+.contact__direct a { display: inline-flex; align-items: center; min-height: 44px; text-decoration: none; overflow-wrap: anywhere; }
+.contact__direct a:hover { text-decoration: underline; }
+.contact__items { display: grid; gap: var(--space-4); margin: 0; }
+.contact__items > div { display: grid; gap: var(--space-1); }
+.contact__items dt { font-size: var(--text-1); font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted-fg); }
+.contact__items dd { margin: 0; }
+@container (min-width: 52rem) {
+	.contact__inner { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-8); }
+}

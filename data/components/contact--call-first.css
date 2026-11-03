@@ -1,0 +1,5 @@
+/* contact/call-first: a large call button first, the details beside it
+ * (the target plumber in the quality audit). Layout only. */
+.contact--call-first .contact__call { margin: var(--space-5) 0 0; }
+.contact--call-first .contact__phone { min-height: 60px; padding: 0.9em 1.6em; font-size: var(--text-5); }
+.contact--call-first .contact__number { font-variant-numeric: tabular-nums; }
