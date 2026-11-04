@@ -113,9 +113,9 @@ test_service_pages(void){
 	g_autoptr(JsonObject) names = design_for(components, thin, "lindholm", NULL);
 	const gchar *rich_routes[] = {"index.html", "services.html", "emergency-repairs.html", "drain-cleaning.html",
 		"water-heaters.html", "sump-pumps.html", "bathroom-and-kitchen-plumbing.html", "about.html",
-		"service-area.html", "contact.html"};
+		"service-area.html", "questions.html", "book.html", "contact.html"};
 	const gchar *thin_routes[] = {"index.html", "services.html", "furnace-repair.html", "ac-repair.html",
-		"installation.html", "maintenance.html", "contact.html"};
+		"installation.html", "maintenance.html", "questions.html", "book.html", "contact.html"};
 	guint i;
 	g_assert_cmpuint(json_array_get_length(json_object_get_array_member(full, "pages")), ==, G_N_ELEMENTS(rich_routes));
 	for (i = 0; i < G_N_ELEMENTS(rich_routes); i++)
@@ -130,6 +130,16 @@ test_service_pages(void){
 		g_assert_nonnull(page_of(names, thin_routes[i]));
 	g_assert_null(page_of(names, "about.html"));
 	g_assert_null(page_of(names, "service-area.html"));
+	/* A Questions page answers from general truths; a Booking page holds
+	 * the supplied booking calendar, so it comes only with a booking page. */
+	g_assert_cmpstr(ls_string(page_of(full, "questions.html"), "kind"), ==, "general");
+	g_assert_cmpstr(ls_string(page_of(full, "book.html"), "kind"), ==, "form");
+	{
+		g_autoptr(JsonObject) unbooked = design_for(components, "{\"brand\": {\"name\": \"Quiet Co\"},"
+			" \"offers\": [{\"id\": \"a\", \"name\": \"One\"}]}", "evergreen", NULL);
+		g_assert_nonnull(page_of(unbooked, "questions.html"));
+		g_assert_null(page_of(unbooked, "book.html"));
+	}
 }
 
 /* The supplied facts the builder reads from the order, word for word. */
@@ -225,7 +235,7 @@ static const gchar home_page[] =
 	"{\"component\": \"areas\", \"variant\": \"columns\", \"content\": {\"heading\": \"Where we work\"}},"
 	"{\"component\": \"faq\", \"variant\": \"list\", \"content\": {\"heading\": \"Questions\","
 	" \"items\": [{\"question\": \"Do you answer at night?\", \"answer\": \"Emergency calls are answered 24/7.\"},"
-	" {\"question\": \"Question 2?\", \"answer\": \"A general answer.\"}, {\"question\": \"Question 3?\", \"answer\": \"A general answer.\"}, {\"question\": \"Question 4?\", \"answer\": \"A general answer.\"}, {\"question\": \"Question 5?\", \"answer\": \"A general answer.\"}, {\"question\": \"Question 6?\", \"answer\": \"A general answer.\"}, {\"question\": \"Question 7?\", \"answer\": \"A general answer.\"}, {\"question\": \"Question 8?\", \"answer\": \"A general answer.\"}]}},"
+	" {\"question\": \"Question 2?\", \"answer\": \"A general answer.\"}, {\"question\": \"Question 3?\", \"answer\": \"A general answer.\"}, {\"question\": \"Question 4?\", \"answer\": \"A general answer.\"}, {\"question\": \"Question 5?\", \"answer\": \"A general answer.\"}, {\"question\": \"Question 6?\", \"answer\": \"A general answer.\"}, {\"question\": \"Question 7?\", \"answer\": \"A general answer.\"}, {\"question\": \"Question 8?\", \"answer\": \"A general answer.\"}, {\"question\": \"Question 9?\", \"answer\": \"A general answer.\"}, {\"question\": \"Question 10?\", \"answer\": \"A general answer.\"}]}},"
 	"{\"component\": \"cta\", \"variant\": \"band\", \"content\": {\"heading\": \"Water where it should not be?\","
 	" \"actions\": [{\"href\": \"index.html\", \"label\": \"Somewhere\"}]}}]}";
 
@@ -258,7 +268,7 @@ test_navigation(void){
 	/* The plan's pages are the design's, in its order; the writer's own
 	 * extra pages are gone. */
 	planned = json_object_get_array_member(json_node_get_object(plan), "pages");
-	g_assert_cmpuint(json_array_get_length(planned), ==, 10);
+	g_assert_cmpuint(json_array_get_length(planned), ==, 12);
 	for (i = 0; i < json_array_get_length(planned); i++) {
 		JsonObject *entry = json_array_get_object_element(planned, i);
 		const gchar *path = ls_string(entry, "path");
@@ -405,7 +415,7 @@ test_home_depth(void){
 		g_autoptr(JsonObject) rich_design = design_for(components, rich, "evergreen", NULL);
 		g_assert_true(ls_components_apply_theme(components, rich_plan, "evergreen", &error));
 		g_assert_true(ls_components_apply_design(components, rich_plan, rich_design));
-		g_assert_cmpuint(ls_components_home_questions(rich_plan), ==, 8);
+		g_assert_cmpuint(ls_components_home_questions(rich_plan), ==, 10);
 	}
 	/* A supplied description is enough on its own. */
 	{
@@ -454,6 +464,15 @@ test_service_depth(void){
 			" \"body\": \"We work from one shop.\"}}]}");
 		g_assert_false(ls_components_check_page(components, plan, "contact.html", about, &error));
 		g_assert_nonnull(strstr(error->message, "steps"));
+		g_clear_error(&error);
+	}
+	/* The site gate's banned filler is refused before publication. */
+	{
+		g_autoptr(JsonNode) filler = parse("{\"path\": \"contact.html\", \"sections\": [{\"component\":"
+			" \"page-header\", \"variant\": \"plain\", \"content\": {\"heading\": \"Contact\","
+			" \"lede\": \"AC repair is one of the four services we list.\"}}]}");
+		g_assert_false(ls_components_check_page(components, plan, "contact.html", filler, &error));
+		g_assert_nonnull(strstr(error->message, "one of the four services"));
 		g_clear_error(&error);
 	}
 	/* Pages that are not a service's keep their freedom. */

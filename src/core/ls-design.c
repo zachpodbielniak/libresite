@@ -821,13 +821,14 @@ add_page(JsonArray *pages, const gchar *path, const gchar *kind, const gchar *ti
 
 /* The pages of an order with offers: home, the services, one page for every supplied
  * service, About with a supplied year, Service area with supplied towns,
- * and contact. */
+ * Questions, Booking with a supplied booking page, and contact. */
 static JsonArray *
 site_pages(JsonObject *site, Content *content){
 	JsonArray *pages = json_array_new();
 	JsonArray *offers = array_of(site, "offers");
 	g_autoptr(GHashTable) taken = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
-	const gchar *fixed[] = {"index", "services", "about", "service-area", "contact", "404", "privacy", "terms"};
+	const gchar *fixed[] = {"index", "services", "about", "service-area", "questions", "book", "contact", "404",
+		"privacy", "terms"};
 	guint i, count = 0;
 	for (i = 0; i < G_N_ELEMENTS(fixed); i++)
 		g_hash_table_add(taken, g_strdup(fixed[i]));
@@ -869,6 +870,11 @@ site_pages(JsonObject *site, Content *content){
 		add_page(pages, "about.html", "about", "About", NULL);
 	if (content->towns > 0)
 		add_page(pages, "service-area.html", "visit", "Service area", NULL);
+	/* Questions about the services, answered from supplied facts and
+	 * general truths; and the supplied booking calendar on a page of its own. */
+	add_page(pages, "questions.html", "general", "Questions", NULL);
+	if (content->booking)
+		add_page(pages, "book.html", "form", "Booking", NULL);
 	add_page(pages, "contact.html", "contact", "Contact", NULL);
 	return pages;
 }

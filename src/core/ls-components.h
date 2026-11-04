@@ -292,7 +292,7 @@ gboolean ls_components_design_home(LsComponents *self, JsonNode *plan, JsonNode 
  * ls_components_home_questions:
  * @plan: (transfer none) (nullable): the site plan, borrowed
  *
- * The fewest questions the FAQ on a designed home must hold: eight, or twelve
+ * The fewest questions the FAQ on a designed home must hold: ten, or twelve
  * when the home shows none of the order's own facts (no trust strip,
  * process, about, area, gallery or reviews). The page check holds the
  * home to it and the home writer is told it.

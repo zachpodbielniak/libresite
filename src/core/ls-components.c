@@ -3699,6 +3699,10 @@ page_description(JsonObject *plan, JsonObject *entry){
 		g_string_printf(out, "The towns %s serves, its hours and how to arrange a visit.", name);
 	else if (g_strcmp0(kind, "contact") == 0)
 		g_string_printf(out, "How to reach %s and ask about any of its services.", name);
+	else if (g_strcmp0(kind, "form") == 0)
+		g_string_printf(out, "Book a time with %s online: choose an open day and time, then send your details.", name);
+	else if (g_strcmp0(kind, "general") == 0)
+		g_string_printf(out, "Common questions about the services of %s, with plain, general answers.", name);
 	else
 		g_string_printf(out, "%s: its services, where it works and how to get in touch.", name);
 	if (out->len < 50)
@@ -4935,7 +4939,7 @@ check_page_into(LsComponents *self, Problems *problems, JsonNode *plan_node, con
 	scope_clear(&scope);
 }
 
-#define HOME_QUESTIONS 8
+#define HOME_QUESTIONS 10
 #define BARE_HOME_QUESTIONS 12
 
 /* Sentences in @text: full stops, question and exclamation marks that end
@@ -5031,6 +5035,49 @@ check_home_depth(Problems *problems, JsonNode *plan_node, const gchar *path, Jso
 
 #define SERVICE_QUESTIONS 3
 
+/* The first string under @node that @filler matches, or NULL. */
+static const gchar *
+filler_in(JsonNode *node, GRegex *filler){
+	if (node == NULL)
+		return NULL;
+	if (JSON_NODE_HOLDS_VALUE(node) && json_node_get_value_type(node) == G_TYPE_STRING)
+		return g_regex_match(filler, json_node_get_string(node), 0, NULL) ? json_node_get_string(node) : NULL;
+	if (JSON_NODE_HOLDS_ARRAY(node)) {
+		JsonArray *array = json_node_get_array(node);
+		guint i;
+		for (i = 0; i < json_array_get_length(array); i++) {
+			const gchar *hit = filler_in(json_array_get_element(array, i), filler);
+			if (hit != NULL)
+				return hit;
+		}
+	} else if (JSON_NODE_HOLDS_OBJECT(node)) {
+		g_autoptr(GList) keys = json_object_get_members(json_node_get_object(node));
+		GList *key;
+		for (key = keys; key != NULL; key = key->next) {
+			const gchar *hit = filler_in(json_object_get_member(json_node_get_object(node), key->data), filler);
+			if (hit != NULL)
+				return hit;
+		}
+	}
+	return NULL;
+}
+
+/* On a preset site the lines the site gate bans as filler ("one of the
+ * four services", "ask us about a ...") are refused before publication. */
+static void
+check_filler(Problems *problems, JsonNode *plan_node, JsonNode *page){
+	JsonObject *plan = plan_node != NULL && JSON_NODE_HOLDS_OBJECT(plan_node) ? json_node_get_object(plan_node) : NULL;
+	g_autoptr(GRegex) filler = NULL;
+	const gchar *hit;
+	if (member_object(plan, "design") == NULL || page == NULL)
+		return;
+	filler = g_regex_new("example business|for demonstration|\\bends here\\b|\\bone of the (?:\\d+|[a-z]+) services\\b|"
+		"\\bask us about an? [a-z]", G_REGEX_CASELESS, 0, NULL);
+	hit = filler_in(page, filler);
+	if (hit != NULL)
+		problem(problems, "\"%.120s\" is filler; say something specific and true about the service instead", hit);
+}
+
 /* On a preset site a heading that promises a process ("how it works",
  * "how a job goes", "our process") heads a list of two or more steps, as
  * the site gate asks of every published page. */
@@ -5106,6 +5153,7 @@ ls_components_check_page(LsComponents *self, JsonNode *plan, const gchar *path, 
 	check_home_depth(&problems, plan, path, page);
 	check_service_depth(&problems, plan, path, page);
 	check_promised_steps(&problems, plan, page);
+	check_filler(&problems, plan, page);
 	subject = g_strdup_printf("The %s specification", path);
 	okay = finish(&problems, subject, error);
 	g_ptr_array_unref(problems.messages);
