@@ -698,17 +698,19 @@ static const gchar rich_home[] =
 	"{\"component\": \"cta\", \"variant\": \"band\", \"content\": {\"heading\": \"Call us or write\"}}]}";
 
 /* Composes the rich order on @preset with @type set to @variant (a home
- * section, or the header or footer layout); returns the home page and,
- * in @css, the stylesheet. */
-static gchar *
-compose_with(LsComponents *components, const gchar *preset, const gchar *type, const gchar *variant, gchar **css){
+ * section, or the header or footer layout; NULL for the picker's own),
+ * with the page specifications of @extra (a JSON object by route, or NULL)
+ * in place of the default answers, each page through the pages step's own
+ * fixes; returns the bundle and, in @plan_out, the plan. */
+static JsonNode *
+compose_site(LsComponents *components, const gchar *preset, const gchar *type, const gchar *variant,
+	const gchar *extra, JsonNode **plan_out){
 	g_autoptr(GError) error = NULL;
-	g_autofree gchar *plan_text = NULL, *bundle = NULL, *home = NULL;
-	g_autoptr(JsonNode) plan = NULL, pages = NULL, composed = NULL;
+	g_autofree gchar *plan_text = NULL, *bundle = NULL;
+	g_autoptr(JsonNode) plan = NULL, pages = NULL, more = extra != NULL ? parse(extra) : NULL;
 	g_autoptr(JsonNode) site = parse(rich);
 	g_autoptr(JsonNode) photos = parse(eight_photos);
 	g_autoptr(JsonObject) design = NULL;
-	JsonArray *files;
 	guint i;
 	g_assert_true(g_file_get_contents("tests/fixtures/composed/plan.json", &plan_text, NULL, NULL));
 	plan = parse(plan_text);
@@ -721,7 +723,7 @@ compose_with(LsComponents *components, const gchar *preset, const gchar *type, c
 	design = ls_design_new(block(components), themes_of(components), json_node_get_object(site), preset,
 		json_node_get_array(photos), &error);
 	g_assert_no_error(error);
-	if (!ls_design_set_layout(block(components), design, type, variant, &error))
+	if (type != NULL && !ls_design_set_layout(block(components), design, type, variant, &error))
 		g_error("%s/%s: %s", type, variant, error->message);
 	g_assert_true(ls_components_apply_theme(components, plan, preset, &error));
 	g_assert_no_error(error);
@@ -739,22 +741,58 @@ compose_with(LsComponents *components, const gchar *preset, const gchar *type, c
 				" \"content\": {\"items\": [{\"question\": \"One?\", \"answer\": \"Yes.\"}, {\"question\": \"Two?\","
 				" \"answer\": \"Yes.\"}, {\"question\": \"Three?\", \"answer\": \"Yes.\"}]}}]}", route,
 				ls_string(json_array_get_object_element(planned, i), "title"));
-			if (!g_str_equal(route, "index.html"))
+			if (more != NULL && json_object_has_member(json_node_get_object(more), route))
+				json_object_set_member(json_node_get_object(pages), route,
+					json_node_copy(json_object_get_member(json_node_get_object(more), route)));
+			else if (!g_str_equal(route, "index.html"))
 				json_object_set_member(json_node_get_object(pages), route, parse(text));
 		}
 	}
+	/* Every page as the pages step accepts it: the home is the design's
+	 * list, each photo shows once, and each page of a photo site shows one. */
 	{
-		JsonNode *page = json_object_get_member(json_node_get_object(pages), "index.html");
-		ls_components_apply_opening(components, plan, "index.html", page);
-		ls_components_design_home(components, plan, page);
-		ls_components_spread_photos(components, plan, page);
-		if (!ls_components_check_page(components, plan, "index.html", page, &error))
-			g_error("%s/%s: %s", type, variant, error->message);
+		JsonArray *planned = json_object_get_array_member(json_node_get_object(plan), "pages");
+		for (i = 0; i < json_array_get_length(planned); i++) {
+			const gchar *route = ls_string(json_array_get_object_element(planned, i), "path");
+			JsonNode *page = json_object_get_member(json_node_get_object(pages), route);
+			if (g_str_equal(route, "index.html")) {
+				ls_components_apply_opening(components, plan, route, page);
+				ls_components_design_home(components, plan, page);
+			}
+			ls_components_spread_photos(components, plan, page);
+			ls_components_ensure_photo(components, plan, route, page);
+			if (!ls_components_check_page(components, plan, route, page, &error))
+				g_error("%s/%s %s: %s", type, variant, route, error->message);
+		}
 	}
 	bundle = ls_components_compose(components, plan, json_node_get_object(pages), NULL, &error);
 	if (bundle == NULL)
 		g_error("%s/%s: %s", type, variant, error->message);
-	composed = parse(bundle);
+	if (plan_out != NULL)
+		*plan_out = g_steal_pointer(&plan);
+	return parse(bundle);
+}
+
+/* The file at @path in a composed bundle. */
+static const gchar *
+file_in(JsonNode *bundle, const gchar *path){
+	JsonArray *files = json_object_get_array_member(json_node_get_object(bundle), "files");
+	guint i;
+	for (i = 0; i < json_array_get_length(files); i++)
+		if (g_str_equal(ls_string(json_array_get_object_element(files, i), "path"), path))
+			return ls_string(json_array_get_object_element(files, i), "content");
+	return NULL;
+}
+
+/* Composes the rich order on @preset with @type set to @variant (a home
+ * section, or the header or footer layout); returns the home page and,
+ * in @css, the stylesheet. */
+static gchar *
+compose_with(LsComponents *components, const gchar *preset, const gchar *type, const gchar *variant, gchar **css){
+	g_autoptr(JsonNode) composed = compose_site(components, preset, type, variant, NULL, NULL);
+	JsonArray *files;
+	g_autofree gchar *home = NULL;
+	guint i;
 	files = json_object_get_array_member(json_node_get_object(composed), "files");
 	for (i = 0; i < json_array_get_length(files); i++) {
 		JsonObject *file = json_array_get_object_element(files, i);
@@ -913,6 +951,33 @@ test_supplied_facts(void){
 	}
 }
 
+/* A writer may give services photos in a layout that draws none (slice 3's
+ * roofer): the page still shows a supplied photo, and the composed site
+ * passes the taste rules instead of failing the build. */
+static void
+test_photo_every_page(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(JsonNode) plan = NULL, bundle = NULL;
+	g_autoptr(GString) problems = g_string_new(NULL);
+	const gchar *services;
+	bundle = compose_site(components, "evergreen", NULL, NULL,
+		"{\"services.html\": {\"path\": \"services.html\", \"sections\": ["
+		"{\"component\": \"page-header\", \"variant\": \"plain\", \"content\": {\"heading\": \"Services\"}},"
+		"{\"component\": \"services\", \"variant\": \"rows\", \"content\": {\"heading\": \"What we fix\","
+		" \"items\": [{\"name\": \"Emergency repairs\", \"summary\": \"Burst pipes and leaks.\", \"art\": {\"src\": \"assets/a.jpg\", \"alt\": \"A job photo.\"}},"
+		" {\"name\": \"Drain cleaning\", \"summary\": \"Kitchen and main lines.\", \"art\": {\"src\": \"assets/b.jpg\", \"alt\": \"A job photo.\"}},"
+		" {\"name\": \"Water heaters\", \"summary\": \"Tank and tankless.\", \"art\": {\"src\": \"assets/c.jpg\", \"alt\": \"A job photo.\"}}]}},"
+		"{\"component\": \"faq\", \"variant\": \"list\", \"content\": {\"items\": [{\"question\": \"One?\","
+		" \"answer\": \"Yes.\"}, {\"question\": \"Two?\", \"answer\": \"Yes.\"}, {\"question\": \"Three?\","
+		" \"answer\": \"Yes.\"}]}}]}}", &plan);
+	services = file_in(bundle, "services.html");
+	g_assert_nonnull(services);
+	if (strstr(services, "src=\"assets/") == NULL)
+		g_error("services.html shows no supplied photo:\n%s", strstr(services, "<main"));
+	if (!ls_components_check_taste(components, plan, bundle, problems))
+		g_error("taste: %s", problems->str);
+}
+
 int
 main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
@@ -929,5 +994,6 @@ main(int argc, char **argv){
 	g_test_add_func("/design/spread", test_spread);
 	g_test_add_func("/design/new-variants", test_new_variants);
 	g_test_add_func("/design/supplied-facts", test_supplied_facts);
+	g_test_add_func("/design/photo-every-page", test_photo_every_page);
 	return g_test_run();
 }

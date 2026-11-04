@@ -932,7 +932,7 @@ Visible copy never says "illustrative". Talk of stock photographs or visual refe
 
 ** Photos on every page
 
-A page of a photo site that shows no supplied photo gets one: a full-width photo section after its opening, the photo picked from the route (=ls_components_ensure_photo()=). A directory shows its letter index only over six letters or more.
+A page of a photo site that shows no supplied photo gets one: a full-width photo section after its opening, the photo picked from the route (=ls_components_ensure_photo()=). A photo counts only where the section's layout draws it: a writer may give each service a photo in a layout without pictures, and that page still gets its photo section. The photo it gets is one the page does not name, so no photo shows twice. =/design/photo-every-page= covers the slice 3 roofer, whose build failed this way. A directory shows its letter index only over six letters or more.
 
 ** Checks
 

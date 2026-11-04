@@ -7512,27 +7512,52 @@ photoless_route(const gchar *path){
 	return g_strcmp0(path, "404.html") == 0 || g_strcmp0(path, "privacy.html") == 0 || g_strcmp0(path, "terms.html") == 0;
 }
 
-/* Whether @node, anywhere inside, shows one of @plan's supplied photos. */
+/* Whether @node, anywhere inside, shows one of @plan's supplied photos. A
+ * photo counts only under a slot that @markup draws ({{#slot}}), so a
+ * writer's photo in a layout without pictures does not count; NULL markup
+ * counts every photo. @slot is the member that holds @node. */
 static gboolean
-shows_photo(JsonObject *plan, JsonNode *node){
+shows_photo(JsonObject *plan, JsonNode *node, const gchar *markup, const gchar *slot){
 	if (node == NULL)
 		return FALSE;
 	if (JSON_NODE_HOLDS_ARRAY(node)) {
 		JsonArray *list = json_node_get_array(node);
 		guint i;
 		for (i = 0; i < json_array_get_length(list); i++)
-			if (shows_photo(plan, json_array_get_element(list, i)))
+			if (shows_photo(plan, json_array_get_element(list, i), markup, slot))
 				return TRUE;
 	} else if (JSON_NODE_HOLDS_OBJECT(node)) {
 		JsonObject *object = json_node_get_object(node);
 		g_autoptr(GList) members = NULL;
 		GList *member;
-		if (ls_string(object, "src") != NULL && plan_photo(plan, ls_string(object, "src")) != NULL)
-			return TRUE;
+		if (ls_string(object, "src") != NULL && plan_photo(plan, ls_string(object, "src")) != NULL) {
+			g_autofree gchar *open = slot != NULL ? g_strdup_printf("{{#%s}}", slot) : NULL;
+			if (markup == NULL || (open != NULL && strstr(markup, open) != NULL))
+				return TRUE;
+		}
 		members = json_object_get_members(object);
 		for (member = members; member != NULL; member = member->next)
-			if (shows_photo(plan, json_object_get_member(object, member->data)))
+			if (shows_photo(plan, json_object_get_member(object, member->data), markup, member->data))
 				return TRUE;
+	}
+	return FALSE;
+}
+
+/* Whether a page's @sections show a supplied photo where their markup
+ * (the variant's own template, else the component's) draws it. */
+static gboolean
+sections_show_photo(LsComponents *self, JsonObject *plan, JsonArray *sections){
+	guint i;
+	for (i = 0; sections != NULL && i < json_array_get_length(sections); i++) {
+		JsonNode *node = json_array_get_element(sections, i);
+		JsonObject *section = JSON_NODE_HOLDS_OBJECT(node) ? json_node_get_object(node) : NULL;
+		const gchar *component = ls_string(section, "component"), *variant = ls_string(section, "variant");
+		g_autofree gchar *own = component != NULL && variant != NULL ? g_strdup_printf("%s--%s.html", component, variant) : NULL;
+		g_autofree gchar *base = component != NULL ? g_strconcat(component, ".html", NULL) : NULL;
+		const gchar *markup = own != NULL && file_text(self, own) != NULL ? file_text(self, own)
+			: base != NULL ? file_text(self, base) : NULL;
+		if (section != NULL && shows_photo(plan, json_object_get_member(section, "content"), markup, NULL))
+			return TRUE;
 	}
 	return FALSE;
 }
@@ -7550,7 +7575,7 @@ ls_components_ensure_photo(LsComponents *self, JsonNode *plan_node, const gchar 
 	sections = member_array(json_node_get_object(page), "sections");
 	if (photos == NULL || json_array_get_length(photos) == 0 || sections == NULL ||
 		json_array_get_length(sections) == 0 || json_array_get_length(sections) >= MAX_SECTIONS ||
-		shows_photo(plan, json_object_get_member(json_node_get_object(page), "sections")))
+		sections_show_photo(self, plan, sections))
 		return FALSE;
 	/* The page's place in the plan picks the photo, so neighbouring inner
 	 * pages differ, from those the home page's visual sequence does not
@@ -7559,11 +7584,22 @@ ls_components_ensure_photo(LsComponents *self, JsonNode *plan_node, const gchar 
 		JsonObject *media = member_object(plan, "media");
 		g_autoptr(GPtrArray) spare = g_ptr_array_new();
 		guint i;
+		g_autoptr(GPtrArray) unshown = g_ptr_array_new();
+		g_autofree gchar *spec = ls_json_encode(json_object_get_member(json_node_get_object(page), "sections"));
 		for (i = 0; i < json_array_get_length(photos); i++) {
 			const gchar *candidate = ls_string(json_array_get_object_element(photos, i), "path");
+			g_autofree gchar *quoted = g_strdup_printf("\"%s\"", candidate != NULL ? candidate : "");
 			if (media == NULL || (g_strcmp0(candidate, ls_string(media, "hero")) != 0 &&
 				g_strcmp0(candidate, ls_string(media, "detail")) != 0 && g_strcmp0(candidate, ls_string(media, "proof")) != 0))
 				g_ptr_array_add(spare, json_array_get_object_element(photos, i));
+			/* A photo the page names in a slot it does not draw stays
+			 * out, so it can never show twice. */
+			if (strstr(spec, quoted) == NULL)
+				g_ptr_array_add(unshown, json_array_get_object_element(photos, i));
+		}
+		if (unshown->len > 0 && unshown->len < json_array_get_length(photos)) {
+			g_ptr_array_set_size(spare, 0);
+			g_ptr_array_extend(spare, unshown, NULL, NULL);
 		}
 		photo = spare->len > 0 ? g_ptr_array_index(spare, page_place(plan, path) % spare->len)
 			: json_array_get_object_element(photos, page_place(plan, path) % json_array_get_length(photos));
