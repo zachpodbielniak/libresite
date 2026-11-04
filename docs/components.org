@@ -3,8 +3,8 @@
 #+authors: Zach Podbielniak
 #+categories: libresite
 #+created: 2026-09-28T16:00:00-04:00
-#+updated: 2026-11-03T21:00:00-05:00
-#+version: 0.7.0
+#+updated: 2026-11-03T23:00:00-05:00
+#+version: 0.8.0
 
 * Why it exists
 
@@ -126,21 +126,36 @@ A site is built the way component libraries build pages: tokens, then primitives
 
 ** Presets
 
-A preset is a theme in =themes.yaml= with a =design= block. Each is read from one real site's measured palette and fonts (colour values and arrangement only; no code, photos or words). The first slice has three:
+A preset is a theme in =themes.yaml= with a =design= block. Each is read from one real site's measured palette and fonts (colour values and arrangement only; no code, photos or words). There are 16, one for each site that section 3.2 of the component-library proposal names:
 
 | Preset | From | Colours | Type | Shape | Fits |
 |--------+------+---------+------+-------+------|
 | evergreen | Evergreen Home Heating & Energy | white, deep green =#163e31=, cream =#f6f4ed=, leaf =#72ab03= | Manrope | control 5 px, box 8 px | trades |
-| press | PRESS Modern Massage | cream =#f4f1ec=, dark brown, forest button =#295135= | Inter, one PT Serif italic phrase | control 2 px | wellness |
 | lindholm | Lindholm Roofing | white, royal blue =#0939b2=, navy =#001427=, orange pill =#ef7d05= | Work Sans | pill, box 20 px | trades |
+| veterans | Veterans Contracting | warm off-white, charcoal =#272c30=, blue pill =#0540f2= | light Roboto, Source Sans 3 | pill, box 12 px | trades |
+| highlands | Highlands Landscaping | white, forest =#193f16=, sage button | Spectral with an italic accent, Figtree | 4 px | outdoor, trades |
+| guin | Guin Service | off-white, deep teal =#12353c=, green band =#208545=, orange button | Barlow, Open Sans | 6 px, raised | trades |
+| weleave | We Leave Clean | white, near-black, lime button =#b4ff5c= with a black label | Be Vietnam Pro | 8 px, box 16 px | cleaning |
+| electrified | Electrified Garage | warm off-white, ink =#18202a=, orange pill =#fc5017= | Montserrat, Open Sans, JetBrains Mono labels | pill | auto |
+| press | PRESS Modern Massage | cream =#f4f1ec=, dark brown, forest button =#295135= | Inter, one PT Serif italic phrase | control 2 px | wellness |
+| glenwood | Glenwood South Barberstudio | off-white, black, dark red pill =#92211d= | Mulish, Quicksand | pill | wellness |
+| gleamery | The Gleamery | warm white, charcoal, mint surface =#dbf6e9=, rust =#963f36= | Hanken Grotesk, Inter | pill, box 16 px | clinic, wellness |
+| village | Village Dental | off-white, navy =#052639=, gold button =#e7ca71= | Noto Serif, Karla | square | clinic, professional |
+| harte | Harte Law | white, deep navy =#001a33=, light blue button =#afd2eb= | Public Sans | square | professional |
+| littlefish | Little Fish Accounting | warm white, charcoal, peach button =#f2b297=, teal =#427d7c= | Raleway, Quicksand, one Sacramento script word | square, circle photo frame | professional |
+| zinc | Zinc Cafe & Bar | white, navy =#101f36=, red detail =#922024= | EB Garamond, Jost | square | food |
+| mission | Mission Bowling Club | white, black, red button =#d32f2f=, navy band =#2c4270= | Montserrat in capitals | 12 px | events, food |
+| tulip | Table & Tulip | warm grey =#f2f0ec=, near-black, steel blue =#40748d= | Ovo, Karla | square | retail, food |
+
+Where a reference uses a licensed face, the preset names the nearest open-licensed face (Bunny Fonts) and its source line says so. Highlands' sage button is darkened from =#5d8e66= to =#54805c= so its white label passes AA.
 
 The =design= block holds:
 - =source=: the real site and what was read from it.
 - =fits=: the sectors it suits. This weights the default choice. It never forbids a preset.
 - =words=: owner style words that choose it, such as /clean/, /modern/ and /trustworthy/ for evergreen.
 - =roles=: the colour roles the plan tokens do not carry: =brand=, =brand_fg=, =inverse=, =inverse_fg=, =highlight=, =photo_primary= and =photo_primary_fg=.
-- =kicker= (=caps= or =pill=), =accent= (=colour= or =italic=) and =font_accent=: the primitives' personality.
-- =shape=: =control=, =box= and =badge= radii in px (daisyUI's three-radius split), =depth= (0 or 1) and the photo =scrim= (0.2 to 0.8).
+- =kicker= (=caps= or =pill=), =accent= (=colour=, =italic= or =script=), =font_accent= and =font_label= (the face of kickers and small labels): the primitives' personality.
+- =shape=: =control=, =box= and =badge= radii in px (daisyUI's three-radius split), =depth= (0 or 1), the photo =scrim= (0.2 to 0.8) and an optional photo =frame= (=box= or =circle=).
 - =prefer=: the variant each section type prefers, or a list tried in order.
 
 Presets load as themes, so =ls_components_apply_theme()= and the theme load checks apply to them. At load, each preset also builds a design for an empty order, and that design must pass =ls_design_check()=.
@@ -164,30 +179,34 @@ Each variant is =COMPONENT--VARIANT.html= and =COMPONENT--VARIANT.css=. The buil
 
 | Type | Variants | Arrangement from |
 |------+----------+------------------|
-| hero | photo-start, photo-center, split-card | Evergreen, PRESS and Table & Tulip; Mission Bowling, Highlands and Glenwood South; Lindholm |
-| services | photo-cards, price-list, sublinks | The Gleamery and Mission Bowling; PRESS; Lindholm |
+| hero | photo-start, photo-center, split-card, split-frame, text-first, photo-pair | Evergreen, PRESS and Table & Tulip; Mission Bowling, Highlands and Glenwood South; Lindholm; Little Fish and Alyssa Nikole; We Leave Clean; Maple and June |
+| services | photo-cards, price-list, sublinks, round-photos, feature-rows | The Gleamery and Mission Bowling; PRESS; Lindholm; Glenwood South; Heath and the Evergreen feature row |
 | reviews | card-grid, quote-headline | Highlands; PRESS |
 | contact | split, call-first | Harte Law and Lindholm; the target plumber of the quality audit |
-| facts (trust strip) | strip | Evergreen and Mission Bowling |
-| steps (process) | numbered-row, expect | Evergreen; Veterans and Electrified |
-| about | history, photo-story | Heath and Guin; Alyssa Nikole and Highlands |
-| areas (area and hours) | town-list, address-band | Lindholm and Highlands; Nosotros |
+| facts (trust strip) | strip, band, logos, rating | Evergreen and Mission Bowling; Guin; PRESS and Harte Law; We Leave Clean and The Gleamery |
+| steps (process) | numbered-row, expect, three-steps | Evergreen; Veterans and Electrified; Emily's Maids and We Leave Clean |
+| about | history, photo-story, owner-letter | Heath and Guin; Alyssa Nikole and Highlands; Emily's Maids |
+| areas (area and hours) | town-list, address-band, location-blocks, shop-chooser | Lindholm and Highlands; Nosotros; Zinc Cafe; Electrified Garage |
 | gallery | featured | Maple and June, Table & Tulip and Veterans |
-| faq | questions, side-heading | Veterans and Portland Strength; Harte Law |
-| cta (closing call) | closing-band, promise | Mission Bowling and Evergreen; PRESS and Veterans |
-| header | bar, utility | Mission Bowling, Glenwood South and Village Dental; Lindholm |
-| footer | columns, simple | Evergreen and Lindholm; Glenwood South and Maple and June |
+| faq | questions, side-heading, two-column | Veterans and Portland Strength; Harte Law; the Tailwind Plus FAQ arrangement (taxonomy only) |
+| cta (closing call) | closing-band, promise, photo-band | Mission Bowling and Evergreen; PRESS and Veterans; Highlands |
+| header | bar, utility, split, over-photo | Mission Bowling, Glenwood South and Village Dental; Lindholm; Little Fish and Table & Tulip; Glenwood South and Emily's Maids |
+| footer | columns, simple, centered | Evergreen and Lindholm; Glenwood South and Maple and June; Zinc Cafe |
 
-The catalog's =library= block names the source of every variant, its layout =family=, what content it =needs= (=photos=, =items=, =item_photos=, =quotes=, =phone=, =action=, =facts=, =steps=, =towns=, =history=, =place=, =own_photos=) and, for the footer and fixed-tone sections, its =tone=. The spec names list, split and band for FAQ and closing variants; the catalog calls them =questions=, =side-heading= and =closing-band=, because =faq/list=, =faq/split= and =cta/band= already name the older variants that unthemed sites wear. =reviews= and =contact= are new components; the hero and services variants extend those components. A library variant without its markup or styles, a sector without an action or home, or a named colour that is not =#rrggbb= fails the load.
+The split header sets the wordmark centered with the links in a row under it, as Little Fish and Table & Tulip do; it does not split the links either side of the name. The header over a photo lies clear over the home page's full-bleed opening only; every other page keeps the plain bar, and an open phone menu gets the page ground behind it.
+
+The catalog's =library= block names the source of every variant, its layout =family=, what content it =needs= (=photos=, =items=, =item_photos=, =quotes=, =phone=, =action=, =facts=, =steps=, =towns=, =history=, =place=, =own_photos=, =press=, =rating=, =locations=, =spare_photos= and, for the header, =over_photo=) and, for the footer and fixed-tone sections, its =tone=. The spec names list, split and band for FAQ and closing variants; the catalog calls them =questions=, =side-heading= and =closing-band=, because =faq/list=, =faq/split= and =cta/band= already name the older variants that unthemed sites wear. =reviews= and =contact= are new components; the hero and services variants extend those components. A library variant without its markup or styles, a sector without an action or home, or a named colour that is not =#rrggbb= fails the load.
 
 ** How the picker chooses
 
 The plan step runs the picker for every order whose plan step names no theme. The same order always gives the same site.
 
-1. Sector and home. The words of the business name, tagline, brief and offer names choose a sector (=trades=, =wellness=, else =any=). The sector gives the home's section types in order and the primary action: trades call, wellness book, any books when a booking page is supplied. The action falls back to the call, then the quote page, when its fact is missing. A section enters the home only when its content exists.
-2. Preset. The owner's words come first: =site.style=, =site.brand.colors=, =site.brand.tone= and the "Colours:", "Colors:" and "Style:" sentences of =site.requirements= (=ls_design_owner_words()=). The preset whose words match most wins. Without a match, a stable FNV-1a hash of the business name picks one; presets that fit the sector weigh 6, the others 1. Presets that =site.avoid= fingerprints name leave that hash pick unless every preset is avoided. The fingerprint now records its =preset=. The owner's first named colour (=library.colors=; neutral words do not count) then replaces every role tied to the preset's brand colour, before contrast repair.
-3. Variants. Content filters each type's variants: photo cards need one photo per card after the opening's; call-first needs a phone and the call action; the utility header needs a phone; reviews need supplied quotes (=site.reviews=). The preset's preferred variant weighs 6, the others 1, and the hash picks. Without a photo, the home opens on =library.fallback_opening=.
-4. Clash rules (=ls_design_check_home()=). No two adjacent sections share the surface or inverse tone (the footer counts), at most one brand tone in any three sections, and no two adjacent sections of one layout family. A later section moves to another family's variant when one is eligible. The hero keeps its own ground; the others alternate between the page and the surface.
+1. Sector and home. The words of the business name, tagline, brief and offer names choose a sector: =trades=, =outdoor=, =cleaning=, =auto=, =wellness=, =clinic=, =professional=, =food=, =events=, =retail=, else =any=. The sector gives the home's section types in order and the primary action: trades, outdoor work, professionals, food and shops call; cleaning, auto, wellness, clinics and venues book; any books when a booking page is supplied. The action falls back to the call, then the quote page, when its fact is missing. A sector may list other =orders= of the same section types (hero first); the hash picks the home or one of them, so two plumbers do not stack their sections the same way. A section enters the home only when its content exists.
+2. Preset. The owner's words come first: =site.style=, =site.brand.colors=, =site.brand.tone= and the "Colours:", "Colors:" and "Style:" sentences of =site.requirements= (=ls_design_owner_words()=). The presets whose words match most are the candidates; neutral colour words (=library.neutral=: white, cream, grey and the like) match none. Without a match, every preset is: those that fit the sector weigh 10, the others 1, so the trade weights the pick and never forbids a preset. Presets that =site.avoid= fingerprints name leave the candidates unless that leaves none, and a stable FNV-1a hash of the business name picks one. So the owner's words still win when they fit one preset best, and choose between presets they fit equally. The fingerprint records its =preset= and its home opening. The owner's first named colour (=library.colors=; neutral words do not count) then replaces every role tied to the preset's brand colour, before contrast repair.
+3. Variants. Content filters each type's variants: photo cards, round photos and feature rows need a photo for every service that no earlier section shows; the photo pair needs two photos; the closing photo band needs one photo left over; call-first needs a phone and the call action; the utility header needs a phone and the call as the primary action, since its phone pill would otherwise be a second primary button; reviews need supplied quotes (=site.reviews=); the press strip, the rating line and the shop chooser need =site.press=, =site.rating= and two or more =site.locations=; the owner letter needs one of the owner's own photos. The preset's preferred variant weighs 6, the others 1, and the hash picks. An opening that a nearby site in =site.avoid= wears leaves the pick unless it is the only one. Without a photo, the home opens on =library.fallback_opening=. The header is picked after the home, because the header over a photo needs a full-bleed opening.
+4. Clash rules (=ls_design_check_home()=). No two adjacent sections share the surface or inverse tone (the footer counts), at most one brand tone in any three sections, and no two adjacent sections of one layout family. A later section moves to another family's variant when one is eligible, a brand band too close to another moves to a variant of another tone (the closing call keeps its band), and each section is checked again for the photos it shows after those before it. The hero keeps its own ground; the others alternate between the page and the surface.
+
+=ls_design_set_layout()= sets one home section's layout, or the header or footer layout, on a finished design and gives the home its tones again. It refuses an unknown layout, a section the home does not have, the header over a photo without a full-bleed opening and any broken clash rule, and leaves the design as it was.
 
 The result is the plan's builder-owned =design= member: the preset, its source, sector and action, the header and footer layouts, the home sections with their variants and tones, the repaired colour roles, the owner colour words applied, the primitives and the shape. =ls_components_apply_design()= writes it with the plan tokens and the home opening. The plan prompt receives the opening and the home sections; the home writer receives the plan.
 
@@ -214,6 +233,7 @@ A service page's path is the slug of the offer's name. A slug that another page 
 
 =ls_design_facts()= reads the facts the builder places word for word:
 - =since=: the year after "since" in the tagline, the brief or the requirements.
+- =press=, =rating= and =locations=: =site.press= (1 to 8 press or certification names), =site.rating= (={score, count, source}=, a score from 1 to 5) and =site.locations= (1 to 4 ={name, address, hours, phone}=), copied as supplied. The recipe refuses any other shape.
 - =address=: =contact.address=.
 - =hours=, =area= and =process=: the "Hours:", "Service area:" and "process, in order:" sentences that the order form writes into =site.requirements=. A value ends at the next label, at a fixed instruction sentence of the form, or at a doubled full stop. The towns split at commas and "and"; the steps split at their numbers.
 
@@ -222,9 +242,13 @@ These facts decide which home sections show, in this order: hero, trust strip, s
 | Section | Shows when | Who writes what |
 |---------+------------+-----------------|
 | facts/strip | two or more facts of year, towns, hours and address | the builder writes every item |
+| facts/band | a starting year and two or more services | the builder writes the year and the service names |
+| facts/logos | supplied press names | the builder writes the names as supplied |
+| facts/rating | a supplied rating | the builder writes the score, the count and the source |
 | steps | two or more process steps | the writer gives the heading; the builder writes the steps |
 | about | a starting year | the writer gives the heading and the body from supplied facts; the builder adds the year |
 | areas | towns, or hours or an address | the writer gives the heading; the builder writes towns, hours and address |
+| areas/location-blocks, areas/shop-chooser | a supplied place, or two or more shops for the chooser | the builder writes each place's name, address, hours and call |
 | gallery/featured | three or more photos that are not stock | the builder places the photos with their alt text as captions |
 | reviews | supplied quotes | the builder places the quotes |
 | faq | one or more offers | the writer answers from supplied facts and general truths |
@@ -257,7 +281,7 @@ A preset site's footer credits every supplied photo with a =credit=. Photos mark
 
 ** Checks
 
-- =tests/test-ls-design.c=: the presets and variants load through the catalog with their sources; the hash is fixed; the same order gives the same design; owner words first; contrast repair; eligibility; the clash rules over two hundred businesses; =site.avoid=; and a composed preset site.
+- =tests/test-ls-design.c=: all 16 presets load through the catalog and name their reference site; every variant names its source; the hash is fixed; the same order gives the same design; owner words first; every preset keeps AA under three orders, one with a pale owner colour; eligibility; the clash rules over two hundred businesses; =site.avoid=, also within owner-word ties; same-trade businesses in one town get another preset and another hero; eighty businesses of each of five trades spread over at least four presets, four heroes and two section orders, with the fitting presets weighing most; every new variant renders on a composed site with its styles and the supplied facts it shows; the recipe refuses malformed press names, ratings and shops; and a composed preset site.
 - Preset sites run the taste checks except the look-default check. They write no signature layer.
 
 * Structure
