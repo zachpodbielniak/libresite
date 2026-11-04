@@ -3,7 +3,7 @@
 #+authors: Zach Podbielniak
 #+categories: libresite
 #+created: 2026-09-28T16:00:00-04:00
-#+updated: 2026-11-03T23:00:00-05:00
+#+updated: 2026-11-04T23:00:00-05:00
 #+version: 0.8.0
 
 * Why it exists
@@ -179,7 +179,7 @@ Each variant is =COMPONENT--VARIANT.html= and =COMPONENT--VARIANT.css=. The buil
 
 | Type | Variants | Arrangement from |
 |------+----------+------------------|
-| hero | photo-start, photo-center, split-card, split-frame, text-first, photo-pair | Evergreen, PRESS and Table & Tulip; Mission Bowling, Highlands and Glenwood South; Lindholm; Little Fish and Alyssa Nikole; We Leave Clean; Maple and June |
+| hero | photo-start, photo-center, split-card, split-frame, text-first, photo-pair; fullscreen, split-screen, offset-card, collage, big-type, thumb-strip, form, stats-bar (see [[*Skeletons, motion and overlays][skeletons, motion and overlays]]) | Evergreen, PRESS and Table & Tulip; Mission Bowling, Highlands and Glenwood South; Lindholm; Little Fish and Alyssa Nikole; We Leave Clean; Maple and June |
 | services | photo-cards, price-list, sublinks, round-photos, feature-rows | The Gleamery and Mission Bowling; PRESS; Lindholm; Glenwood South; Heath and the Evergreen feature row |
 | reviews | card-grid, quote-headline | Highlands; PRESS |
 | contact | split, call-first | Harte Law and Lindholm; the target plumber of the quality audit |
@@ -190,8 +190,8 @@ Each variant is =COMPONENT--VARIANT.html= and =COMPONENT--VARIANT.css=. The buil
 | gallery | featured | Maple and June, Table & Tulip and Veterans |
 | faq | questions, side-heading, two-column | Veterans and Portland Strength; Harte Law; the Tailwind Plus FAQ arrangement (taxonomy only) |
 | cta (closing call) | closing-band, promise, photo-band | Mission Bowling and Evergreen; PRESS and Veterans; Highlands |
-| header | bar, utility, split, over-photo | Mission Bowling, Glenwood South and Village Dental; Lindholm; Little Fish and Table & Tulip; Glenwood South and Emily's Maids |
-| footer | columns, simple, centered | Evergreen and Lindholm; Glenwood South and Maple and June; Zinc Cafe |
+| header | bar, utility, split, over-photo; centered-split, transparent-solid, shrink, drawer, overlay, pill, rail (see below) | Mission Bowling, Glenwood South and Village Dental; Lindholm; Little Fish and Table & Tulip; Glenwood South and Emily's Maids |
+| footer | columns, simple, centered; big-cta, mega, minimal, split-form, wordmark (see below) | Evergreen and Lindholm; Glenwood South and Maple and June; Zinc Cafe |
 
 The split header sets the wordmark centered with the links in a row under it, as Little Fish and Table & Tulip do; it does not split the links either side of the name. The header over a photo lies clear over the home page's full-bleed opening only; every other page keeps the plain bar, and an open phone menu gets the page ground behind it.
 
@@ -209,6 +209,124 @@ The plan step runs the picker for every order whose plan step names no theme. Th
 =ls_design_set_layout()= sets one home section's layout, or the header or footer layout, on a finished design and gives the home its tones again. It refuses an unknown layout, a section the home does not have, the header over a photo without a full-bleed opening and any broken clash rule, and leaves the design as it was.
 
 The result is the plan's builder-owned =design= member: the preset, its source, sector and action, the header and footer layouts, the home sections with their variants and tones, the repaired colour roles, the owner colour words applied, the primitives and the shape. =ls_components_apply_design()= writes it with the plan tokens and the home opening. The plan prompt receives the opening and the home sections; the home writer receives the plan.
+
+** Skeletons, motion and overlays
+
+Slice 4 adds variety to the page skeleton, not only to colour. Every layout below comes from a named real site or library in the slice 4 research (=RESEARCH.org= in the quality notes, with a screenshot of each). We copied layout ideas only, never code, images or copy.
+
+The design holds three more builder-owned members: =skeleton= (where the home's sections sit), =motion= (=none=, =calm= or =lively=) and =overlays= (a list). Designs of older sites have none of them and read as the stack, no motion and no overlays. The body carries =skeleton--NAME=, =motion--LEVEL= and one =overlay--NAME= class for each overlay.
+
+*** How the picker chooses them
+
+- The header, footer, skeleton and motion level are weighted by trade alone: a layout whose =fits= lists the sector weighs =weights.variant_fit= (3), every other one 1. The preset's =prefer= no longer weighs the header and footer.
+- The owner's words come first, as for the preset. Each layout lists =words=; the layouts whose words the owner uses most are the candidates. Neutral colour words never count.
+- =site.avoid= now also carries the =skeleton= and =header= of a nearby site (the fingerprint records them, with the =footer= and =motion= for the record). A skeleton, header or opening that a nearby site wears leaves the pick, even when the owner's words named it, while another one fits. So two businesses of one trade in one town differ in skeleton, header and hero, not only in preset.
+- An overlay shows when its =needs= are met and a stable hash of the business name falls within its =share= (a percentage). The lightbox always shows when the home has the owner's own work.
+- A =stats-bar= opening carries the trust facts, so the home then has no trust strip.
+
+=ls_design_set_layout()= also takes the types =skeleton=, =motion= and =overlay=. It refuses an unknown name and a placement component, which is a section variant.
+
+*** Rules every layout keeps
+
+- Motion is CSS and a small script (=motion.js=), no library. All of it sits inside =prefers-reduced-motion: no-preference=; the script does nothing for reduced motion. Content is visible without the script and before it runs: the script hides only content below the first screen (class =is-pending=) and shows it as it scrolls in. Counters end on the number as written in the page. No scroll-jacking, no parallax that moves text, no slider that moves on its own. Hover lift also shows on keyboard focus.
+- The drawer and overlay menus, the quote dialog and the lightbox: the rest of the page is inert while they are open, Tab stays inside, Escape and a close button shut them, and the focus goes back to what opened them. Dialogs are native =dialog= elements. Without the script the menu links stay in the bar, the quote links lead to the form's page and photos open on their own.
+- The badge never covers the words or the call: on a phone it sits in a line under the opening. The sticky bar holds the same action as the header button, so the first screen keeps one primary action. The quote form in the opening has an outline send button for the same reason.
+- Variants carry layout only; tones still alternate; one solid button per section. Nothing turns, outlines its text or wears a texture.
+- The mega footer links to directions on OpenStreetMap; it embeds no map, so nothing loads from another site until the visitor follows the link.
+
+*** Headers
+
+| Header | Source | Fits |
+|-+-+-|
+| =bar= | Mission Bowling Club, Glenwood South and Village Dental: wordmark left, task-named links, one button right (HyperUI headers, MIT). | - |
+| =utility= | Lindholm Roofing: a top row with the phone and the quote action, the service links below. | trades, outdoor |
+| =split= | Little Fish Accounting and Table & Tulip: the wordmark centered with the links in a row under it. | retail, food, wellness |
+| =over-photo= | Glenwood South Barberstudio and Emily's Maids: the bar laid clear over the opening photo. | wellness, events |
+| =centered-split= | Cedar Ridge Landscaping: the logo centred in the bar with the links split either side (research H5). | outdoor, retail, food, cleaning |
+| =transparent-solid= | Husk Nashville and Ruschmeyers: the bar clear over the full-screen photo, solid once the page scrolls (research H6, H7). | events, wellness, outdoor, food |
+| =shrink= | Lilia and Evergreen Home Heating: a bar held at the top that gets slimmer once the page scrolls (research H8). | trades, clinic, professional, auto |
+| =drawer= | Lindholm Roofing and Table & Tulip: a Menu button opens the links in a panel from the side (research H9, H10). | wellness, retail, professional |
+| =overlay= | Harte Law and Husk Nashville: the Menu button opens the links over the whole screen (research H11, H12). | events, food, auto |
+| =pill= | Cal.com: a rounded bar floating clear of the page edges (research H13). | cleaning, clinic, auto, trades |
+| =rail= | The Squarespace Wells template demo: the name and links in a column fixed at the left (research H14). | professional, retail, wellness |
+
+*** Heroes
+
+| Hero | Source | Fits |
+|-+-+-|
+| =photo-start= | Evergreen Home Heating & Energy, PRESS Modern Massage and Table & Tulip: a full-bleed photo with a fade from the left and left-aligned words. | - |
+| =photo-center= | Mission Bowling Club, Highlands Landscaping and Glenwood South Barberstudio: a full-bleed photo, a scrim and a centered heading (HyperUI banners, MIT, for the arrangement). | - |
+| =split-card= | Lindholm Roofing: the words in a rounded royal-blue card, a rounded crew photo beside it. | - |
+| =split-frame= | Little Fish Accounting and Alyssa Nikole Photography: the words on the page ground beside one framed photo, a circle at Little Fish (Preline hero sections, MIT, for the structure). | - |
+| =text-first= | We Leave Clean: centered words and two actions first, then one wide rounded photo on the first screen (HyperUI banners, MIT, for the structure). | - |
+| =photo-pair= | Maple and June: two full-height photos side by side with no words over them; the words follow. | - |
+| =fullscreen= | Highlands Landscaping & Fencing: the photo fills the first screen with the words and one button on it (slice 4 research R1). | outdoor, events, food, wellness |
+| =split-screen= | Maple and June: the first screen split edge to edge into two full-height halves (research R2); here one half holds the words. | clinic, professional, wellness |
+| =offset-card= | Lindholm Roofing: a rounded photo with a text card overlapping its edge (research O1), used as the opening. | trades, cleaning, professional |
+| =collage= | Alyssa Nikole Photography: three overlapping real photos beside the headline, none of them turned (research R3). | food, wellness, retail, outdoor |
+| =big-type= | Electrified Garage: a very large headline across the page with the picture beside it (research R4). | auto, trades, professional |
+| =thumb-strip= | Flowbite gallery "Featured image" (MIT, layout only): one large photo over a row of smaller ones, in place of a slider (research R5). | outdoor, trades, retail |
+| =form= | Veterans Contracting and Post Haste: the photo opening with the estimate or contact form in a card beside the words (research R6, R7). | trades, cleaning, outdoor |
+| =stats-bar= | Mission Bowling Club: the photo opening with a bar of facts (location, capacity, age) along its foot (research R8). | trades, professional, clinic |
+
+*** Footers
+
+| Footer | Source | Fits |
+|-+-+-|
+| =columns= | Evergreen Home Heating and Lindholm Roofing: name and contact, then link columns, on the inverse colour (HyperUI footers, MIT). | trades, outdoor, auto |
+| =simple= | Glenwood South Barberstudio and Maple and June: name, one line of links and contact on the surface colour (HyperUI footers, MIT). | wellness, cleaning, clinic |
+| =centered= | Zinc Cafe & Bar: the name, hours, address and links centered on the page ground (HyperUI footers, MIT). | food, retail, events |
+| =big-cta= | AREA 17: a very large line and one action above a thin footer row (research F1); here the large line is the phone number. | trades, auto, cleaning |
+| =mega= | Good Vibes Garage: a dark band of columns with the address, hours and contact (research F3); a directions link stands in for the map. | food, clinic, retail, trades |
+| =minimal= | Sqirl: the footer is one line of links (research F4). | professional, wellness |
+| =split-form= | Zinc Cafe & Bar: the links at one side of the band and a form at the other (research F5). | trades, professional |
+| =wordmark= | Ghia: the links on a dark band with the name set across almost the full width (research F6). | events, food, wellness, retail |
+
+*** Page skeletons
+
+| Skeleton | Source | Fits |
+|-+-+-|
+| =stack= | Mission Bowling Club and Evergreen Home Heating: full-width bands one under the other, the slice 3 arrangement. | trades |
+| =alternating= | Zinc Cafe & Bar: rows whose photo and words swap sides down the page (research S1). | trades, cleaning, outdoor, food |
+| =bento= | Cuberto: tiles of different widths in one grid (research S2); Tailwind Plus Bento Grids for the taxonomy only. | cleaning, auto, clinic, food |
+| =sticky-side= | Heath Ceramics and AREA 17: one column held in view while the content beside it scrolls (research S3). | professional, clinic |
+| =asymmetric= | Wolff Olins: sections staggered in uneven columns down the page (research S4). | wellness, retail, auto |
+| =overlap= | Lindholm Roofing: sections as panels that overlap the edge of the one before (research S5). | wellness, clinic, events |
+| =magazine= | Pentagram: short pieces paired in columns under rules, long ones at full width (research S7). | professional, food, retail |
+| =column= | Maple and June: one narrow column of words with photos breaking out wide (research S8). | wellness, professional, retail |
+
+*** Overlays and placement components
+
+| Overlay | Source | Needs |
+|-+-+-|
+| =announcement= | We Leave Clean and PRESS Modern Massage: a thin strip above the header with one line and one link (research O10, O11). | facts |
+| =badge= | Denver Biscuit Co.: a round award badge on the opening photo (research O3); here one supplied fact. | badge |
+| =sticky-bar= | Village Dental: the main action held in view at the foot of the screen (research O4). | phone |
+| =modal-form= | Emily's Maids and PRESS Modern Massage: the quote or booking form opens over the page (research O5, O6). | form |
+| =lightbox= | PhotoSwipe (MIT, layout only): a photo opens large over a dark ground with previous, next and close (research O7). | gallery |
+| =card-overlap= | Lindholm Roofing and Village Dental: a text card overlapping a photo (research O1, O2). | the section variant =areas/card-over-photo= |
+| =scroll-strip= | Blue Bottle Coffee: a row of cards that scrolls sideways (research S6). | the section variant =reviews/strip= |
+
+*** Motion levels
+
+| Level | Source | Fits |
+|-+-+-|
+| =none= | The reduced-motion paths of Adrian's Landscaping and The Gleamery: everything shows at once and nothing moves (research M1, M8). | professional |
+| =calm= | Adrian's Landscaping (fade and rise, M1), The Collaborative (header colour change, M3), Mission Bowling Club (hover lift, M7) and The Gleamery (smooth anchors, M8). | clinic, trades, cleaning, outdoor, professional |
+| =lively= | The calm level plus Flow Ninja (staggered reveal, M2), Dakota Pro Landscape Services (slow zoom, M4) and Drain Terrier Plumbing (counters, M5). | events, food, wellness, auto, retail |
+
+
+Not adopted from the research: the before-and-after slider (it needs before and after photos no order supplies), the map with an overlay card (it needs an embedded map) and the marquee (moving text without a pause control).
+
+*** Checks
+
+=tests/test-ls-design.c=: =/design/layout-library= counts at least 8 headers, 10 heroes, 6 skeletons, 6 footers, 6 overlays and the 3 motion levels, each with a source and its styles; =/design/layout-picks= checks owner words and the design check; =/design/layout-neighbours= checks that same-trade neighbours differ in skeleton, header and hero and that a recipe takes the new fingerprint back; =/design/layout-spread= checks variety over 80 businesses of five trades; =/design/layout-render= renders every new layout with its styles, checks that motion hides nothing on its own and that the menus and dialogs keep their keyboard contracts; =/design/gallery= composes a site for every layout from realistic pages (=tests/fixtures/gallery/=) and checks the taste rules and that each opening shows a photo. With =LS_GALLERY_OUTPUT= set it writes each site there as =NN-TYPE-NAME/=:
+
+#+begin_src sh
+LS_GALLERY_OUTPUT="$PWD/build/gallery" build/release/test-ls-design -p /design/gallery
+#+end_src
+
+The written sites name =assets/photos/gallery-N.jpg=; copy photos of the sizes in =tests/fixtures/gallery/photos.json= there before opening them in a browser.
 
 ** The home page
 
@@ -266,7 +384,8 @@ The page check refuses a thin answer and sends the reason back to its writer:
 - The home needs its FAQ with ten or more questions. A home without a trust strip, process, about, area, gallery or reviews (an order of names only) needs twelve or more.
 - Every service on the home needs a summary. A service without a supplied description needs three or more general sentences.
 - A service page needs a text or article section on what the work involves, and three or more questions.
-- On a preset site, a heading that promises a process ("how it works", "our process") heads two or more steps. The site gate asks the same of the published page.
+- On a preset site, a heading that promises a process ("how it works", "our process") heads two or more steps. Questions do not count as steps. The site gate asks the same of the published page.
+- On a preset site, a heading that promises opening hours ("hours", "when we're open") gives the hours in its own section, as the site gate asks.
 - On a preset site, the lines the site gate bans as filler ("one of the four services", "ask us about a ...") are refused before publication.
 
 =ls_components_home_questions()= gives the home's minimum, and the home writer receives it as TASK =home_questions=, so the writer knows the count before the check applies it. These are counts of questions and sentences, not word quotas. Each question and each sentence must still come from supplied facts or general truths.
