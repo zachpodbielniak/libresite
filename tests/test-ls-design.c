@@ -982,6 +982,14 @@ test_new_variants(void){
 		g_assert_nonnull(strstr(pair, "100svh - 30rem"));
 		g_assert_nonnull(strstr(pair, ".hero--photo-pair .hero__title { max-width: 30ch; }"));
 	}
+	/* The pill header keeps the name and the menu on one row on a phone,
+	 * and rounds fully only on wider screens (slice 4's dentist). */
+	{
+		g_autofree gchar *kit = NULL;
+		g_assert_true(g_file_get_contents("data/components/design.css", &kit, NULL, NULL));
+		g_assert_nonnull(strstr(kit, ".design.header--pill .site-header__inner:not(:has(.site-nav.is-open)) { flex-wrap: nowrap; }"));
+		g_assert_null(strstr(kit, "border-radius: 999px; background: var(--bg); box-shadow: var(--shadow-3), 0 0 0 1px var(--line);"));
+	}
 	/* The over-photo header needs a full-bleed opening. */
 	{
 		g_autoptr(JsonObject) design = design_for(components, rich, "lindholm", eight_photos);
