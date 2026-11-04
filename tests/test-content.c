@@ -168,7 +168,8 @@ test_facts(void){
 /* A home section enters only with its content: the thin order has no
  * trust strip, process, about, area, gallery or reviews, but keeps its
  * services, the general FAQ and the closing call band; the rich order
- * gains the strip, the process, the about and the area; a gallery needs
+ * gains the strip (or an opening that carries it), the process, the about
+ * and the area; a gallery needs
  * the owner's own photos, never stock ones. */
 static void
 test_sections_gated(void){
@@ -184,8 +185,11 @@ test_sections_gated(void){
 	g_assert_true(home_has(names, "services"));
 	g_assert_true(home_has(names, "faq"));
 	g_assert_true(home_has(names, "cta"));
+	/* The trust facts show as a strip, or in the opening's own stats bar. */
 	for (i = 0; i < G_N_ELEMENTS(present); i++)
-		g_assert_true(home_has(full, present[i]));
+		if (!home_has(full, present[i]) && !(g_str_equal(present[i], "facts") && g_strcmp0(ls_string(
+			json_array_get_object_element(json_object_get_array_member(full, "home"), 0), "variant"), "stats-bar") == 0))
+			g_error("the rich home has no %s", present[i]);
 	g_assert_false(home_has(full, "gallery"));
 	g_assert_false(home_has(full, "reviews"));
 	g_assert_true(home_has(owned, "gallery"));
@@ -465,6 +469,33 @@ test_service_depth(void){
 		g_assert_false(ls_components_check_page(components, plan, "contact.html", about, &error));
 		g_assert_nonnull(strstr(error->message, "steps"));
 		g_clear_error(&error);
+	}
+	/* Questions are not steps: an FAQ headed as a process is sent back,
+	 * as the site gate counts only listed steps (slice 4's law firm). */
+	{
+		g_autoptr(JsonNode) asked = parse("{\"path\": \"questions.html\", \"sections\": [{\"component\":"
+			" \"page-header\", \"variant\": \"plain\", \"content\": {\"heading\": \"Questions\"}},"
+			" {\"component\": \"faq\", \"variant\": \"list\", \"content\": {\"heading\": \"How we work\", \"items\": ["
+			"{\"question\": \"One?\", \"answer\": \"Yes.\"}, {\"question\": \"Two?\", \"answer\": \"Yes.\"}]}}]}");
+		g_assert_false(ls_components_check_page(components, plan, "questions.html", asked, &error));
+		g_assert_nonnull(strstr(error->message, "steps"));
+		g_clear_error(&error);
+	}
+	/* A heading that promises opening hours gives them in its own section
+	 * (slice 4's dentist: "Where we are and when we're open" over an
+	 * opening with no hours). */
+	{
+		g_autoptr(JsonNode) hours = parse("{\"path\": \"contact.html\", \"sections\": [{\"component\":"
+			" \"page-header\", \"variant\": \"plain\", \"content\": {\"heading\": \"Where we are and when we're open\","
+			" \"lede\": \"We serve Madison and Dane County.\"}}]}");
+		g_autoptr(JsonNode) given = parse("{\"path\": \"contact.html\", \"sections\": [{\"component\":"
+			" \"page-header\", \"variant\": \"plain\", \"content\": {\"heading\": \"Our hours\","
+			" \"lede\": \"Open Mon-Thu 8am-5pm, Fri 8am-1pm.\"}}]}");
+		g_assert_false(ls_components_check_page(components, plan, "contact.html", hours, &error));
+		g_assert_nonnull(strstr(error->message, "hours"));
+		g_clear_error(&error);
+		ls_components_check_page(components, plan, "contact.html", given, &error);
+		g_assert_no_error(error);
 	}
 	/* The site gate's banned filler is refused before publication. */
 	{

@@ -1,0 +1,18 @@
+/* skeleton/bento: the home's middle sections become tiles of a bento
+ * grid, side by side and of different widths; the opening, the services,
+ * the questions and the close stay full width. A lone tile fills its row.
+ * Each tile is its own container, so its content lays out for the tile.
+ * Placement only. */
+.design.skeleton--bento.page--kind-home main > .block:not(:first-child) { border-radius: var(--radius-box); }
+@media (min-width: 64rem) {
+	.design.skeleton--bento.page--kind-home main { display: flex; flex-wrap: wrap; align-items: stretch; gap: var(--space-4); padding: 0 var(--space-4) var(--space-4); }
+	.design.skeleton--bento.page--kind-home main > * { flex: 1 1 100%; min-width: 0; }
+	.design.skeleton--bento.page--kind-home main > .block:first-child { flex-basis: calc(100% + 2 * var(--space-4)); margin-inline: calc(var(--space-4) * -1); border-radius: 0; }
+	.design.skeleton--bento.page--kind-home main > :is(.facts, .steps, .about, .areas, .reviews, .gallery):not(:first-child) {
+		flex: 1 1 28rem; container-type: inline-size; padding-block: var(--space-8);
+	}
+	.design.skeleton--bento.page--kind-home main > :is(.about, .reviews, .gallery):not(:first-child) { flex-grow: 2; }
+	.design.skeleton--bento.page--kind-home main > .block:not(:first-child):not(.tone-surface, .tone-inverse, .tone-brand, .tone-photo) { background: var(--surface); }
+	.design.skeleton--bento.page--kind-home main > :is(.facts, .steps, .about, .areas, .reviews, .gallery):not(:first-child) > .wrap { width: auto; margin-inline: var(--space-7); }
+	.design.skeleton--bento.page--kind-home main > .block + .block { padding-top: var(--space-8); }
+}

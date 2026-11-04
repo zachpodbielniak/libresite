@@ -28,7 +28,13 @@
 </head>
 <body class="page page--{{slug}} page--kind-{{kind}} {{look_classes}}">
 <a class="skip-link" href="#main">{{skip_label}}</a>
-<header class="site-header">
+{{#announcement}}<div class="announce" role="region" aria-label="{{region_label}}">
+<div class="wrap announce__inner">
+<p class="announce__text"><strong>{{label}}</strong> {{text}}{{#href}} <a href="{{href}}">{{link_label}}</a>{{/href}}</p>
+<button class="announce__close" type="button" aria-label="{{dismiss_label}}" hidden>&times;</button>
+</div>
+</div>
+{{/announcement}}<header class="site-header">
 {{#header_utility}}<div class="site-header__utility">
 <div class="wrap site-header__utility-inner">
 {{#call}}<a class="site-header__phone" href="{{tel}}">{{phone}}</a>
@@ -40,8 +46,9 @@
 {{#tagline}}<p class="site-header__tagline">{{tagline}}</p>
 {{/tagline}}<button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" hidden>{{menu_label}}</button>
 <nav class="site-nav" id="site-nav" aria-label="{{nav_label}}">
-<ul>
-{{#nav}}<li{{#has_children}} class="site-nav__group{{#in_section}} is-section{{/in_section}}"{{/has_children}}><a href="{{href}}"{{#current}} aria-current="page"{{/current}}>{{label}}</a>{{#has_children}}
+{{#nav_close}}<button class="nav-close" type="button" aria-controls="site-nav" hidden>{{nav_close}}</button>
+{{/nav_close}}<ul>
+{{#nav}}<li{{#has_children}} class="site-nav__group{{#in_section}} is-section{{/in_section}}"{{/has_children}}{{#split}} data-split{{/split}}><a href="{{href}}"{{#current}} aria-current="page"{{/current}}>{{label}}</a>{{#has_children}}
 <ul class="site-nav__menu">
 {{#children}}<li><a href="{{href}}"{{#current}} aria-current="page"{{/current}}>{{label}}</a></li>
 {{/children}}</ul>
@@ -73,10 +80,34 @@
 {{#call}}<a class="button action-bar__call" href="{{tel}}">{{call_label}} <span class="action-bar__number">{{phone}}</span></a>
 {{/call}}{{#book}}<a class="button action-bar__book" href="{{href}}">{{label}}</a>
 {{/book}}{{#quote}}<a class="button action-bar__quote" href="{{href}}">{{label}}</a>
-{{/quote}}</div>
+{{/quote}}{{#bar_phone}}<a class="action-bar__phone" href="{{tel}}">{{phone}}</a>
+{{/bar_phone}}</div>
 </nav>
 {{/actions}}</main>
-<footer class="site-footer">
+{{#quote_dialog}}<dialog class="quote-dialog" id="quote-dialog" aria-labelledby="quote-dialog-h">
+<div class="quote-dialog__head">
+<h2 id="quote-dialog-h">{{title}}</h2>
+<button class="dialog-close" type="button" aria-label="{{close_label}}">&times;</button>
+</div>
+{{{form_html}}}</dialog>
+{{/quote_dialog}}{{#lightbox}}<dialog class="lightbox" id="lightbox" aria-label="{{label}}">
+<figure class="lightbox__figure"></figure>
+<div class="lightbox__controls">
+<button class="lightbox__prev" type="button">{{previous}}</button>
+<button class="lightbox__next" type="button">{{next}}</button>
+<button class="lightbox__close dialog-close" type="button">{{close}}</button>
+</div>
+</dialog>
+{{/lightbox}}<footer class="site-footer">
+{{#footer_big}}<div class="wrap site-footer__big">
+<p class="site-footer__lead">{{lead}}</p>
+<p class="site-footer__reach"><a class="site-footer__number" href="{{tel}}">{{phone}}</a>{{#email}}
+<a class="site-footer__mail" href="mailto:{{email}}">{{email}}</a>{{/email}}</p>
+</div>
+{{/footer_big}}{{#footer_form}}<div class="wrap site-footer__form">
+<h2 class="site-footer__form-title" id="footer-form-h">{{title}}</h2>
+{{{html}}}</div>
+{{/footer_form}}
 {{#has_sitemap}}<div class="wrap"><ul class="site-footer__map" role="list">
 {{#sitemap}}<li><a href="{{href}}"{{#current}} aria-current="page"{{/current}}>{{label}}</a></li>
 {{/sitemap}}</ul></div>
@@ -86,7 +117,8 @@
 {{#footer_contact}}<p class="site-footer__contact"><a href="{{tel}}">{{phone}}</a>{{#email}}
 <a href="mailto:{{email}}">{{email}}</a>{{/email}}</p>
 {{/footer_contact}}{{#footer_place}}<p class="site-footer__place">{{#address}}<span>{{address}}</span>{{/address}}{{#hours}}<br><span>{{hours}}</span>{{/hours}}</p>
-{{/footer_place}}{{#footer_note}}<div class="site-footer__note prose">{{{footer_note}}}</div>
+{{#directions}}<p class="site-footer__directions"><a href="{{href}}" rel="noopener">{{label}}</a></p>
+{{/directions}}{{/footer_place}}{{#footer_note}}<div class="site-footer__note prose">{{{footer_note}}}</div>
 {{/footer_note}}{{#has_social}}<ul class="site-footer__social" role="list" aria-label="{{social_label}}">
 {{#social}}<li><a href="{{url}}" rel="me noopener">{{#icon}}<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path fill="currentColor" d="{{icon}}"/></svg>{{/icon}}<span class="visually-hidden">{{label}}</span></a></li>
 {{/social}}</ul>
@@ -97,7 +129,8 @@
 {{/footer_links}}</ul>
 </nav>
 </div>
-{{#photo_credits}}<p class="wrap site-footer__photos">{{photo_credits}}</p>
+{{#footer_wordmark}}<p class="wrap site-footer__wordmark" aria-hidden="true">{{wordmark}}</p>
+{{/footer_wordmark}}{{#photo_credits}}<p class="wrap site-footer__photos">{{photo_credits}}</p>
 {{/photo_credits}}{{#credit}}<p class="wrap site-footer__credit"><a href="{{url}}" rel="noopener">{{text}}</a></p>
 {{/credit}}</footer>
 </body>

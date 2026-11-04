@@ -1,0 +1,19 @@
+/* hero/collage: the words beside three overlapping photos, square to the
+ * page; nothing is turned. Layout only. */
+.design main > .hero--collage { padding-block: var(--space-7) var(--space-8); }
+.hero--collage .hero__inner { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-7); align-items: center; }
+.hero--collage .hero__title { max-width: 16ch; margin-bottom: var(--space-5); font-size: var(--text-9); }
+.hero--collage .hero__lede { max-width: 34rem; font-size: var(--text-4); line-height: 1.55; color: var(--muted-fg); }
+.hero--collage .hero__collage { position: relative; aspect-ratio: 5 / 4; }
+.hero--collage .hero__photo { position: absolute; margin: 0; }
+.hero--collage .hero__photo--main { top: 0; left: 0; width: 70%; height: 78%; }
+.hero--collage .hero__photo:nth-child(2) { right: 0; bottom: 0; width: 46%; height: 54%; z-index: 1; }
+.hero--collage .hero__photo:nth-child(3) { left: 10%; bottom: 0; width: 30%; height: 32%; z-index: 2; }
+.design main > .block.hero--collage .hero__photo img:is([src]) { width: 100%; height: 100%; max-height: none; object-fit: cover; border-radius: var(--radius-box); }
+.hero--collage .hero__photo:not(.hero__photo--main) img { box-shadow: 0 0 0 6px var(--bg); }
+.hero--collage .hero__phone { margin: var(--space-4) 0 0; font-size: var(--text-3); }
+.hero--collage .hero__phone a { font-weight: 600; }
+@container (min-width: 56rem) {
+	.hero--collage .hero__inner { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: var(--space-9); }
+	.design main > .hero--collage { padding-block: var(--space-8) var(--space-9); }
+}

@@ -296,6 +296,14 @@ components:
       split-frame: The words on the page ground beside one framed photo, a circle on some designs. Needs a photo.
       text-first: Centered words and the actions first, then one wide rounded photo on the first screen. Needs a photo.
       photo-pair: Two full-height photos side by side with no words over them; the words follow under them. Needs two photos.
+      fullscreen: The photo fills the whole first screen under a scrim; the words sit low on the left. Needs a photo.
+      split-screen: The screen split in half edge to edge, the words on one side and the photo filling the other. Needs a photo.
+      offset-card: A large photo set to one side with a card of words overlapping its edge. Needs a photo.
+      collage: The words beside three overlapping photos. Needs three photos.
+      big-type: A very large headline across the page with one small photo beside the lede. Needs a photo.
+      thumb-strip: One large photo with a still row of three more under it; nothing moves on its own. Needs four photos.
+      form: The words over the photo with the supplied quote form in a card beside them. Needs a photo and a supplied form.
+      stats-bar: A full-bleed photo with a bar of the supplied facts along its foot. Needs a photo and two facts.
     slots:
       kicker: {type: text, max: 80, note: "Short label above the heading; omit rather than repeat the site name."}
       heading: {type: text, required: true, max: 140}
@@ -303,6 +311,8 @@ components:
       actions: {type: links, max_items: 2, note: "The first link is the primary action."}
       art: {type: image, note: "Required by split and banner."}
       pair: {type: image, note: "photo-pair: the builder's second photo."}
+      photos: {type: items, max_items: 3, note: "collage and thumb-strip: the builder's further photos.", fields: {art: {type: image}}}
+      stats: {type: items, max_items: 4, note: "stats-bar: the supplied facts, from the builder.", fields: {label: {type: text, required: true, max: 40}, value: {type: text, required: true, max: 80}}}
   text:
     summary: A block of prose.
     variants:
@@ -1202,6 +1212,7 @@ components:
       address-band: 'The supplied address, hours and towns in one band. The builder fills the facts.'
       location-blocks: 'One block per supplied place with its address, hours and the call. The builder fills the facts.'
       shop-chooser: 'Two to four supplied shops side by side, each with its address, hours and phone. The builder fills the facts.'
+      card-over-photo: 'A wide photo with a card of the supplied towns, hours and address overlapping its foot. The builder fills the facts and the photo.'
     slots:
       heading: {type: text, max: 140}
       intro: {type: rich, max: 600}
@@ -1238,6 +1249,7 @@ components:
     variants:
       card-grid: Many short quotes with names, three a row.
       quote-headline: Each quote led by a short headline taken word for word from it.
+      strip: The quotes in one row that scrolls sideways by touch, trackpad or keyboard; nothing moves on its own.
     slots:
       heading: {type: text, max: 140}
       intro: {type: rich, max: 400}
@@ -1858,7 +1870,7 @@ default:
 # variant's arrangement comes from, the owner colour words it knows and the
 # words that tell a business's sector. Presets live in themes.yaml.
 library:
-  weights: {prefer: 6, fit: 10, other: 1}
+  weights: {prefer: 6, fit: 10, other: 1, variant_fit: 3}
   fallback_opening: hero/centered
   # Sectors: the words that name a trade, its primary action, its home
   # sections in order, and other orders the trade allows; the hash picks
@@ -1956,6 +1968,53 @@ library:
       source: 'Maple and June: two full-height photos side by side with no words over them; the words follow.'
       family: pair
       needs: {photos: 2}
+    hero/fullscreen:
+      source: 'Highlands Landscaping & Fencing: the photo fills the first screen with the words and one button on it (slice 4 research R1).'
+      family: bleed
+      words: [dramatic, immersive, premium, bold]
+      fits: [outdoor, events, food, wellness]
+      needs: {photos: 1}
+    hero/split-screen:
+      source: 'Maple and June: the first screen split edge to edge into two full-height halves (research R2); here one half holds the words.'
+      family: split
+      words: [clean, airy]
+      fits: [clinic, professional, wellness]
+      needs: {photos: 1}
+    hero/offset-card:
+      source: 'Lindholm Roofing: a rounded photo with a text card overlapping its edge (research O1), used as the opening.'
+      family: offset
+      words: [warm, friendly, approachable]
+      fits: [trades, cleaning, professional]
+      needs: {photos: 1}
+    hero/collage:
+      source: 'Alyssa Nikole Photography: three overlapping real photos beside the headline, none of them turned (research R3).'
+      family: split
+      words: [creative, playful, artistic]
+      fits: [food, wellness, retail, outdoor]
+      needs: {photos: 3}
+    hero/big-type:
+      source: 'Electrified Garage: a very large headline across the page with the picture beside it (research R4).'
+      family: stack
+      words: [confident, no-nonsense, editorial, straightforward]
+      fits: [auto, trades, professional]
+      needs: {photos: 1}
+    hero/thumb-strip:
+      source: 'Flowbite gallery "Featured image" (MIT, layout only): one large photo over a row of smaller ones, in place of a slider (research R5).'
+      family: stack
+      words: [portfolio, craft, crafted]
+      fits: [outdoor, trades, retail]
+      needs: {photos: 4}
+    hero/form:
+      source: 'Veterans Contracting and Post Haste: the photo opening with the estimate or contact form in a card beside the words (research R6, R7).'
+      family: bleed
+      fits: [trades, cleaning, outdoor]
+      needs: {photos: 1, form: true}
+    hero/stats-bar:
+      source: 'Mission Bowling Club: the photo opening with a bar of facts (location, capacity, age) along its foot (research R8).'
+      family: bleed
+      words: [established, trustworthy, family]
+      fits: [trades, professional, clinic]
+      needs: {photos: 1, facts: 2}
     services/photo-cards:
       source: 'The Gleamery, Mission Bowling Club and Portland Strength Collective: photo, title, one line and one link per card (HyperUI cards and shadcn/ui card, MIT, for the structure).'
       family: cards
@@ -1984,6 +2043,10 @@ library:
       source: 'PRESS Modern Massage: each review led by a short headline pulled from it.'
       family: quotes
       needs: {quotes: [1, 6]}
+    reviews/strip:
+      source: 'Blue Bottle Coffee: one row of cards that scrolls sideways by touch (research S6).'
+      family: strip
+      needs: {quotes: [3, 12]}
     contact/split:
       source: 'Harte Law and Lindholm Roofing contact sections: details and one action beside a card (HyperUI contact forms, MIT, for the structure).'
       family: split
@@ -2052,6 +2115,10 @@ library:
       source: 'Electrified Garage ("Two shops, not one regional phone queue"): two or three shops side by side.'
       family: places
       needs: {locations: 2}
+    areas/card-over-photo:
+      source: 'Lindholm Roofing and Village Dental: a text card overlapping a wide photo (research O1, O2).'
+      family: overlap
+      needs: {place: true, spare_photos: 1}
     gallery/featured:
       source: 'Maple and June, Table & Tulip and Veterans Contracting: two to four named projects, photo and caption.'
       family: grid
@@ -2088,25 +2155,175 @@ library:
       needs: {}
     header/utility:
       source: 'Lindholm Roofing: a top row with the phone and the quote action, the service links below.'
+      fits: [trades, outdoor]
       needs: {phone: true, action: call}
     header/split:
       source: 'Little Fish Accounting and Table & Tulip: the wordmark centered with the links in a row under it.'
+      fits: [retail, food, wellness]
       needs: {}
     header/over-photo:
       source: 'Glenwood South Barberstudio and Emily''s Maids: the bar laid clear over the opening photo.'
+      fits: [wellness, events]
       needs: {over_photo: true}
+    header/centered-split:
+      source: 'Cedar Ridge Landscaping: the logo centred in the bar with the links split either side (research H5).'
+      words: [elegant, classic, boutique, natural]
+      fits: [outdoor, retail, food, cleaning]
+      needs: {}
+    header/transparent-solid:
+      source: 'Husk Nashville and Ruschmeyers: the bar clear over the full-screen photo, solid once the page scrolls (research H6, H7).'
+      words: [premium, dramatic, immersive]
+      fits: [events, wellness, outdoor, food]
+      needs: {over_photo: true}
+    header/shrink:
+      source: 'Lilia and Evergreen Home Heating: a bar held at the top that gets slimmer once the page scrolls (research H8).'
+      words: [professional, precise]
+      fits: [trades, clinic, professional, auto]
+      needs: {}
+    header/drawer:
+      source: 'Lindholm Roofing and Table & Tulip: a Menu button opens the links in a panel from the side (research H9, H10).'
+      words: [minimal, simple, quiet]
+      fits: [wellness, retail, professional]
+      needs: {}
+    header/overlay:
+      source: 'Harte Law and Husk Nashville: the Menu button opens the links over the whole screen (research H11, H12).'
+      words: [bold, editorial, creative]
+      fits: [events, food, auto]
+      needs: {}
+    header/pill:
+      source: 'Cal.com: a rounded bar floating clear of the page edges (research H13).'
+      words: [friendly, fresh]
+      fits: [cleaning, clinic, auto, trades]
+      needs: {}
+    header/rail:
+      source: 'The Squarespace Wells template demo: the name and links in a column fixed at the left (research H14).'
+      words: [artistic, gallery, portfolio]
+      fits: [professional, retail, wellness]
+      needs: {}
     footer/columns:
       source: 'Evergreen Home Heating and Lindholm Roofing: name and contact, then link columns, on the inverse colour (HyperUI footers, MIT).'
       tone: inverse
+      fits: [trades, outdoor, auto]
       needs: {}
     footer/simple:
       source: 'Glenwood South Barberstudio and Maple and June: name, one line of links and contact on the surface colour (HyperUI footers, MIT).'
       tone: surface
+      fits: [wellness, cleaning, clinic]
       needs: {}
     footer/centered:
       source: 'Zinc Cafe & Bar: the name, hours, address and links centered on the page ground (HyperUI footers, MIT).'
       tone: default
+      fits: [food, retail, events]
       needs: {}
+    footer/big-cta:
+      source: 'AREA 17: a very large line and one action above a thin footer row (research F1); here the large line is the phone number.'
+      tone: inverse
+      words: [bold, confident, no-nonsense]
+      fits: [trades, auto, cleaning]
+      needs: {phone: true}
+    footer/mega:
+      source: 'Good Vibes Garage: a dark band of columns with the address, hours and contact (research F3); a directions link stands in for the map.'
+      tone: inverse
+      words: [established, family, local]
+      fits: [food, clinic, retail, trades]
+      needs: {place: true}
+    footer/minimal:
+      source: 'Sqirl: the footer is one line of links (research F4).'
+      tone: default
+      words: [minimal, simple, quiet]
+      fits: [professional, wellness]
+      needs: {}
+    footer/split-form:
+      source: 'Zinc Cafe & Bar: the links at one side of the band and a form at the other (research F5).'
+      tone: surface
+      fits: [trades, professional]
+      needs: {form: true}
+    footer/wordmark:
+      source: 'Ghia: the links on a dark band with the name set across almost the full width (research F6).'
+      tone: inverse
+      words: [striking, editorial]
+      fits: [events, food, wellness, retail]
+      needs: {}
+  # Page skeletons: where the home's sections sit, not their colours. A
+  # skeleton is a stylesheet, skeleton--NAME.css, on the home page.
+  skeletons:
+    stack:
+      source: 'Mission Bowling Club and Evergreen Home Heating: full-width bands one under the other, the slice 3 arrangement.'
+      words: [clean, straightforward, trustworthy, honest]
+      fits: [trades]
+    alternating:
+      source: 'Zinc Cafe & Bar: rows whose photo and words swap sides down the page (research S1).'
+      words: [warm, friendly, welcoming]
+      fits: [trades, cleaning, outdoor, food]
+    bento:
+      source: 'Cuberto: tiles of different widths in one grid (research S2); Tailwind Plus Bento Grids for the taxonomy only.'
+      words: [fresh, playful]
+      fits: [cleaning, auto, clinic, food]
+    sticky-side:
+      source: 'Heath Ceramics and AREA 17: one column held in view while the content beside it scrolls (research S3).'
+      words: [serious, precise, thorough]
+      fits: [professional, clinic]
+    asymmetric:
+      source: 'Wolff Olins: sections staggered in uneven columns down the page (research S4).'
+      words: [creative, artistic, confident]
+      fits: [wellness, retail, auto]
+    overlap:
+      source: 'Lindholm Roofing: sections as panels that overlap the edge of the one before (research S5).'
+      words: [premium, polished, luxury]
+      fits: [wellness, clinic, events]
+    magazine:
+      source: 'Pentagram: short pieces paired in columns under rules, long ones at full width (research S7).'
+      words: [editorial, classic, established]
+      fits: [professional, food, retail]
+    column:
+      source: 'Maple and June: one narrow column of words with photos breaking out wide (research S8).'
+      words: [minimal, simple, quiet, elegant]
+      fits: [wellness, professional, retail]
+  # Motion levels. All motion stops for reduced motion, and content is
+  # visible before any script runs: a script only adds motion.
+  motion:
+    none:
+      source: 'The reduced-motion paths of Adrian''s Landscaping and The Gleamery: everything shows at once and nothing moves (research M1, M8).'
+      words: [serious, quiet, sober, no-nonsense]
+      fits: [professional]
+    calm:
+      source: 'Adrian''s Landscaping (fade and rise, M1), The Collaborative (header colour change, M3), Mission Bowling Club (hover lift, M7) and The Gleamery (smooth anchors, M8).'
+      words: [calm, warm, soft, clean, trustworthy, gentle, approachable]
+      fits: [clinic, trades, cleaning, outdoor, professional]
+    lively:
+      source: 'The calm level plus Flow Ninja (staggered reveal, M2), Dakota Pro Landscape Services (slow zoom, M4) and Drain Terrier Plumbing (counters, M5).'
+      words: [bold, playful, fun, lively, energetic, vibrant]
+      fits: [events, food, wellness, auto, retail]
+  # Overlays and placement components. An overlay sits over or beside the
+  # page and has overlay--NAME.css; a placement component is a section
+  # variant (variant). share: the percent of eligible sites that wear it.
+  overlays:
+    announcement:
+      source: 'We Leave Clean and PRESS Modern Massage: a thin strip above the header with one line and one link (research O10, O11).'
+      share: 35
+      needs: {facts: 1}
+    badge:
+      source: 'Denver Biscuit Co.: a round award badge on the opening photo (research O3); here one supplied fact.'
+      share: 45
+      needs: {badge: true}
+    sticky-bar:
+      source: 'Village Dental: the main action held in view at the foot of the screen (research O4).'
+      share: 35
+      needs: {phone: true}
+    modal-form:
+      source: 'Emily''s Maids and PRESS Modern Massage: the quote or booking form opens over the page (research O5, O6).'
+      share: 60
+      needs: {form: true}
+    lightbox:
+      source: 'PhotoSwipe (MIT, layout only): a photo opens large over a dark ground with previous, next and close (research O7).'
+      share: 100
+      needs: {gallery: true}
+    card-overlap:
+      source: 'Lindholm Roofing and Village Dental: a text card overlapping a photo (research O1, O2).'
+      variant: areas/card-over-photo
+    scroll-strip:
+      source: 'Blue Bottle Coffee: a row of cards that scrolls sideways (research S6).'
+      variant: reviews/strip
   # Owner colour words and the colours they set; neutral words leave the
   # preset's colours as they are.
   neutral: [white, cream, ivory, beige, grey, gray, silver, light, dark, and]

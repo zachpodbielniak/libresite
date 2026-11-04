@@ -49,6 +49,44 @@
     <file>components/hero--text-first.css</file>
     <file>components/hero--photo-pair.html</file>
     <file>components/hero--photo-pair.css</file>
+    <file>components/hero--fullscreen.html</file>
+    <file>components/hero--fullscreen.css</file>
+    <file>components/hero--split-screen.html</file>
+    <file>components/hero--split-screen.css</file>
+    <file>components/hero--offset-card.html</file>
+    <file>components/hero--offset-card.css</file>
+    <file>components/hero--collage.html</file>
+    <file>components/hero--collage.css</file>
+    <file>components/hero--big-type.html</file>
+    <file>components/hero--big-type.css</file>
+    <file>components/hero--thumb-strip.html</file>
+    <file>components/hero--thumb-strip.css</file>
+    <file>components/hero--form.html</file>
+    <file>components/hero--form.css</file>
+    <file>components/hero--stats-bar.html</file>
+    <file>components/hero--stats-bar.css</file>
+    <file>components/reviews--strip.html</file>
+    <file>components/reviews--strip.css</file>
+    <file>components/areas--card-over-photo.html</file>
+    <file>components/areas--card-over-photo.css</file>
+    <file>components/header.js</file>
+    <file>components/motion.css</file>
+    <file>components/motion.js</file>
+    <file>components/overlay--announcement.css</file>
+    <file>components/overlay--badge.css</file>
+    <file>components/overlay--lightbox.css</file>
+    <file>components/overlay--modal-form.css</file>
+    <file>components/overlay--sticky-bar.css</file>
+    <file>components/overlay.js</file>
+    <file>components/quote-form.html</file>
+    <file>components/skeleton--alternating.css</file>
+    <file>components/skeleton--asymmetric.css</file>
+    <file>components/skeleton--bento.css</file>
+    <file>components/skeleton--column.css</file>
+    <file>components/skeleton--magazine.css</file>
+    <file>components/skeleton--overlap.css</file>
+    <file>components/skeleton--stack.css</file>
+    <file>components/skeleton--sticky-side.css</file>
     <file>components/services--round-photos.html</file>
     <file>components/services--round-photos.css</file>
     <file>components/services--feature-rows.html</file>

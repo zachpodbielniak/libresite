@@ -184,3 +184,158 @@ body.design {
 .design.footer--centered .site-footer nav ul { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-1) var(--space-5); }
 .design.footer--centered .site-footer__social { justify-content: center; }
 .design.footer--centered .site-footer :is(.site-footer__photos, .site-footer__credit) { color: var(--muted-fg); text-align: center; }
+
+/* Centred split header: the name in the middle, the first half of the
+ * links at the left and the rest with the button at the right. Narrower
+ * screens keep the bar. */
+@media (min-width: 72rem) {
+	.design.header--centered-split .site-header__inner { position: relative; justify-content: flex-start; padding-block: var(--space-4); }
+	.design.header--centered-split .brand { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); max-width: 20rem; text-align: center; justify-content: center; }
+	.design.header--centered-split .site-nav { flex: 1 1 auto; }
+	.design.header--centered-split .site-nav > ul { flex: 1 1 auto; }
+	.design.header--centered-split .site-nav > ul > [data-split] { margin-inline-end: auto; }
+}
+
+/* Header that turns solid: clear over the home's full-screen photo, held at
+ * the top while the page scrolls, and solid once it has (header.js). The
+ * other pages keep the plain bar. */
+.design.header--transparent-solid.page--kind-home .site-header { position: absolute; inset: 0 0 auto; z-index: 30; background: linear-gradient(180deg, rgb(0 0 0 / 0.55), rgb(0 0 0 / 0)); border-bottom: 0; }
+.design.header--transparent-solid.page--kind-home.header-fixed .site-header { position: fixed; }
+.design.header--transparent-solid.page--kind-home .site-header:not(.is-scrolled) :is(.brand, .site-nav > ul > li > a, .nav-toggle) { color: #ffffff; }
+.design.header--transparent-solid.page--kind-home .site-header:not(.is-scrolled) .nav-toggle { border-color: #ffffff; background: transparent; }
+.design.header--transparent-solid.page--kind-home .site-header:not(.is-scrolled) .site-nav a[aria-current="page"] { border-bottom-color: #ffffff; }
+.design.header--transparent-solid.page--kind-home .site-header:not(.is-scrolled) .button { background: var(--photo-primary); border-color: var(--photo-primary); color: var(--photo-primary-fg); }
+.design.header--transparent-solid.page--kind-home .site-header .site-nav__menu a { color: var(--fg); }
+.design.header--transparent-solid.page--kind-home .site-header.is-scrolled { background: var(--bg); box-shadow: var(--shadow-2), 0 1px 0 var(--line); }
+.design.header--transparent-solid.page--kind-home main > .block:first-child { padding-top: calc(var(--section-y) + 5rem); }
+.design.header--transparent-solid.page--kind-home main > .block:first-child:is(.hero--stats-bar, .hero--split-screen) { padding-top: 0; }
+@media (max-width: 47.99rem) {
+	.design.header--transparent-solid.page--kind-home .site-header:has(.nav-toggle[aria-expanded="true"]) { background: var(--bg); }
+	.design.header--transparent-solid.page--kind-home .site-header:has(.nav-toggle[aria-expanded="true"]) :is(.brand, .site-nav a, .nav-toggle) { color: var(--fg); }
+	.design.header--transparent-solid.page--kind-home .site-header:has(.nav-toggle[aria-expanded="true"]) .nav-toggle { border-color: var(--fg); }
+}
+html:has(body.design:is(.header--transparent-solid, .header--shrink, .header--pill)) { scroll-padding-top: 6rem; }
+
+/* Sticky header that shrinks: on wider screens the bar stays at the top
+ * and gets slimmer, with a shadow, once the page has scrolled (header.js). */
+@media (min-width: 48rem) {
+	.design.header--shrink .site-header { position: sticky; top: 0; z-index: 30; }
+	.design.header--shrink .site-header.is-scrolled { box-shadow: var(--shadow-2); }
+	.design.header--shrink .site-header.is-scrolled .site-header__inner { padding-block: var(--space-1); }
+	.design.header--shrink .site-header.is-scrolled .brand { font-size: var(--text-4); }
+}
+
+/* Drawer and overlay menus: with the script, a Menu button on every
+ * screen opens the links in a panel from the right (drawer) or over the
+ * whole screen (overlay); the button stays in the bar. Without the script
+ * the links stay in the bar. */
+.design.header--drawer .site-header .nav-close, .design.header--overlay .site-header .nav-close {
+	display: none; min-width: 44px; min-height: 44px; padding: 0 1em; border: 1px solid var(--fg); border-radius: var(--radius-control);
+	background: var(--bg); color: var(--fg); font: 600 var(--text-2) var(--font-body); cursor: pointer;
+}
+.js .design:is(.header--drawer, .header--overlay) .nav-toggle { display: inline-flex; align-items: center; order: 3; border-color: var(--fg); color: var(--fg); }
+.js .design:is(.header--drawer, .header--overlay) .site-header__inner { flex-wrap: nowrap; }
+.js .design:is(.header--drawer, .header--overlay) .brand { margin-inline-end: auto; }
+.js .design:is(.header--drawer, .header--overlay) .site-nav { display: flex; flex: 0 0 auto; flex-basis: auto; flex-direction: row; align-items: center; }
+.js .design:is(.header--drawer, .header--overlay) .site-nav > ul {
+	position: fixed; z-index: 60; top: 0; right: 0; bottom: 0; display: flex; flex-direction: column; flex-wrap: nowrap; gap: var(--space-2);
+	width: min(24rem, 100%); margin: 0; padding: 5rem var(--space-6) var(--space-6); overflow-y: auto;
+	background: var(--bg); color: var(--fg); box-shadow: var(--shadow-3); visibility: hidden; transform: translateX(100%);
+}
+.js .design.header--overlay .site-nav > ul { left: 0; width: auto; align-items: center; justify-content: center; transform: none; opacity: 0; }
+.js .design.header--overlay .site-nav > ul > li > a:not(.button) { font-family: var(--font-display); font-size: var(--text-7); }
+.js .design:is(.header--drawer, .header--overlay) .site-nav.is-open > ul { visibility: visible; transform: none; opacity: 1; }
+.js .design:is(.header--drawer, .header--overlay) .site-nav.is-open .nav-close { display: inline-flex; align-items: center; position: fixed; z-index: 61; top: var(--space-4); right: var(--space-4); }
+.js .design:is(.header--drawer, .header--overlay) .site-nav__menu { position: static; display: flex; flex-direction: column; padding: 0 0 0 var(--space-4); border: 0; box-shadow: none; background: transparent; }
+@media (max-width: 47.99rem) {
+	.js .design:is(.header--drawer, .header--overlay) .site-nav > .button { display: none; }
+}
+@media (prefers-reduced-motion: no-preference) {
+	.js .design:is(.header--drawer, .header--overlay) .site-nav > ul { transition: transform 260ms ease, opacity 200ms ease, visibility 0s linear 260ms; }
+	.js .design:is(.header--drawer, .header--overlay) .site-nav.is-open > ul { transition: transform 260ms ease, opacity 200ms ease, visibility 0s; }
+}
+
+/* Floating pill header: the bar is a rounded pill clear of the page edges
+ * and held near the top while the page scrolls. */
+.design.header--pill .site-header { position: sticky; top: var(--space-3); z-index: 30; background: transparent; border-bottom: 0; }
+.design.header--pill .site-header__inner {
+	width: min(100% - 2 * var(--space-3), var(--container)); margin-top: var(--space-3); padding: var(--space-2) var(--space-3) var(--space-2) var(--space-5);
+	border-radius: 999px; background: var(--bg); box-shadow: var(--shadow-3), 0 0 0 1px var(--line);
+}
+.design.header--pill .site-header__inner:has(.site-nav.is-open) { border-radius: var(--radius-box); }
+
+/* Left rail: on wide screens the header is a column fixed at the left,
+ * the name at the top, the links down the side and the button at the foot;
+ * the page sits beside it. */
+@media (min-width: 64rem) {
+	body.design.header--rail { padding-left: 15rem; }
+	.design.header--rail .site-header { position: fixed; z-index: 30; top: 0; bottom: 0; left: 0; width: 15rem; overflow-y: auto; border-bottom: 0; border-right: 1px solid var(--line); }
+	.design.header--rail .site-header__inner { width: auto; height: 100%; margin: 0; padding: var(--space-6) var(--space-5); flex-direction: column; flex-wrap: nowrap; align-items: stretch; justify-content: flex-start; }
+	.design.header--rail .site-nav { flex: 1 1 auto; flex-direction: column; align-items: stretch; justify-content: space-between; gap: var(--space-6); }
+	.design.header--rail .site-nav > ul { flex-direction: column; flex-wrap: nowrap; gap: 0; }
+	.design.header--rail .site-nav__menu { position: static; display: flex; flex-direction: column; min-width: 0; padding: 0 0 0 var(--space-3); border: 0; box-shadow: none; background: transparent; }
+	.design.header--rail .site-nav .button { align-self: stretch; }
+}
+
+/* Big call footer: the phone number set large on the inverse colour, the
+ * email beside it, then the name and the links. */
+.design.footer--big-cta .site-footer, .design.footer--mega .site-footer, .design.footer--wordmark .site-footer {
+	--ink: var(--inverse-fg); --fg: var(--inverse-fg); --muted: var(--inverse-muted); --muted-fg: var(--inverse-muted);
+	--line: var(--inverse-line); --accent-text: var(--inverse-fg);
+	background: var(--inverse); color: var(--inverse-fg);
+}
+.design:is(.footer--big-cta, .footer--mega, .footer--wordmark) .site-footer :is(.brand, a, .site-footer__social a) { color: var(--inverse-fg); }
+.design:is(.footer--big-cta, .footer--mega, .footer--wordmark) .site-footer :is(.site-footer__photos, .site-footer__credit) { color: var(--inverse-muted); }
+.design.footer--big-cta .site-footer__big { padding-bottom: var(--space-8); margin-bottom: var(--space-7); border-bottom: 1px solid var(--inverse-line); }
+.design.footer--big-cta .site-footer__lead { margin: 0 0 var(--space-3); font-family: var(--font-label); font-size: var(--text-2); font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--inverse-muted); }
+.design.footer--big-cta .site-footer__reach { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-3) var(--space-8); margin: 0; }
+.design.footer--big-cta .site-footer__number { font-family: var(--font-display); font-size: clamp(2.25rem, 8cqi, 5.5rem); font-weight: var(--heading-weight); line-height: 1.05; letter-spacing: -0.02em; text-decoration: none; font-variant-numeric: tabular-nums; }
+.design.footer--big-cta .site-footer__mail { font-size: var(--text-5); }
+.design.footer--big-cta .site-footer :is(.site-footer__number, .site-footer__mail):hover { text-decoration: underline; }
+@media (min-width: 48rem) {
+	.design.footer--big-cta .site-footer__inner { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: var(--space-8); }
+	.design.footer--big-cta .site-footer nav ul { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-5); }
+}
+
+/* Mega footer: the name and contact, the address with a directions link,
+ * the hours, and every page, in columns on the inverse colour. */
+.design.footer--mega .site-footer { padding-block: var(--space-9) var(--space-6); }
+.design.footer--mega .site-footer__place { margin: 0 0 var(--space-3); padding: var(--space-5); border: 1px solid var(--inverse-line); border-radius: var(--radius-box); color: var(--inverse-fg); }
+.design.footer--mega .site-footer__directions { margin: 0 0 var(--space-4); }
+.design.footer--mega .site-footer__directions a { font-weight: 600; }
+.design.footer--mega .site-footer nav ul { display: block; columns: 2 10rem; column-gap: var(--space-6); }
+.design.footer--mega .site-footer nav li { break-inside: avoid; }
+@media (min-width: 48rem) {
+	.design.footer--mega .site-footer__inner { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-9); }
+}
+
+/* Minimal footer: one line of the name, the contact and the links on the
+ * page ground. */
+.design.footer--minimal .site-footer { padding-block: var(--space-6); background: var(--bg); color: var(--fg); border-top: 1px solid var(--line); }
+.design.footer--minimal .site-footer__inner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3) var(--space-6); }
+.design.footer--minimal .site-footer__inner > div { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--space-2) var(--space-5); }
+.design.footer--minimal .site-footer .brand { margin: 0; font-size: var(--text-4); }
+.design.footer--minimal .site-footer__contact { flex-direction: row; flex-wrap: wrap; gap: var(--space-2) var(--space-4); margin: 0; }
+.design.footer--minimal .site-footer nav ul { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); }
+.design.footer--minimal .site-footer :is(.site-footer__photos, .site-footer__credit) { margin-top: var(--space-4); color: var(--muted-fg); }
+
+/* Split footer with a form: the supplied quote form beside the name and
+ * links, on the surface colour. */
+.design.footer--split-form .site-footer { background: var(--surface); color: var(--fg); border-top: 1px solid var(--line); }
+.design.footer--split-form .site-footer__form { margin-bottom: var(--space-7); }
+.design.footer--split-form .site-footer__form-title { margin: 0 0 var(--space-4); font-size: var(--text-6); }
+.design.footer--split-form .site-footer__form .form__form { display: grid; gap: var(--space-3); }
+.design.footer--split-form .site-footer :is(.site-footer__photos, .site-footer__credit) { color: var(--muted-fg); }
+@media (min-width: 56rem) {
+	.design.footer--split-form .site-footer { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+	.design.footer--split-form .site-footer > * { grid-column: 1 / -1; }
+	.design.footer--split-form .site-footer__form { grid-column: 2; grid-row: 1; width: auto; margin: 0 var(--gutter) 0 0; }
+	.design.footer--split-form .site-footer__inner { grid-column: 1; grid-row: 1; width: auto; margin: 0 0 0 var(--gutter); }
+}
+
+/* Wordmark footer: the links on a dark band, then the business name set
+ * as large as the page allows. */
+.design.footer--wordmark .site-footer__wordmark {
+	margin-block: var(--space-8) var(--space-4); font-family: var(--font-display); font-size: clamp(3rem, 13cqi, 12rem);
+	font-weight: var(--heading-weight); line-height: 0.92; letter-spacing: -0.04em; overflow-wrap: break-word; text-wrap: balance;
+}

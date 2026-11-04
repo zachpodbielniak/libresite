@@ -1,0 +1,16 @@
+/* hero/thumb-strip: one large photo with a still row of three more under
+ * it, in place of a slider: nothing moves on its own. Layout only. */
+.design main > .hero--thumb-strip { padding-block: var(--space-7) var(--space-8); }
+.hero--thumb-strip .hero__inner { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-6); align-items: center; }
+.hero--thumb-strip .hero__title { max-width: 16ch; margin-bottom: var(--space-5); font-size: var(--text-9); }
+.hero--thumb-strip .hero__lede { max-width: 34rem; font-size: var(--text-4); line-height: 1.55; color: var(--muted-fg); }
+.hero--thumb-strip .hero__photo { margin: 0; }
+.design main > .block.hero--thumb-strip .hero__photo--main img:is([src]) { width: 100%; aspect-ratio: 4 / 3; height: auto; max-height: none; object-fit: cover; border-radius: var(--radius-box); }
+.hero--thumb-strip .hero__thumbs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-3); margin: var(--space-3) 0 0; padding: 0; list-style: none; }
+.design main > .block.hero--thumb-strip .hero__thumbs img { width: 100%; aspect-ratio: 1 / 1; height: auto; max-height: none; object-fit: cover; border-radius: var(--radius-box); }
+.hero--thumb-strip .hero__phone { margin: var(--space-4) 0 0; font-size: var(--text-3); }
+.hero--thumb-strip .hero__phone a { font-weight: 600; }
+@container (min-width: 56rem) {
+	.hero--thumb-strip .hero__inner { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--space-9); }
+	.design main > .block.hero--thumb-strip .hero__photo--main img:is([src]) { aspect-ratio: 16 / 10; }
+}

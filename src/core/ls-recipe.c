@@ -460,7 +460,8 @@ avoid_list(JsonObject *site, GError **error){
 		JsonNode *entry = json_array_get_element(list, i);
 		JsonObject *fp = JSON_NODE_HOLDS_OBJECT(entry) ? json_node_get_object(entry) : NULL;
 		JsonNode *version = fp != NULL ? json_object_get_member(fp, "v") : NULL;
-		if (fp == NULL || !ls_object_keys(fp, "|v|look|genes|colors|fonts|home|signature|preset|", NULL) ||
+		if (fp == NULL || !ls_object_keys(fp, "|v|look|genes|colors|fonts|home|signature|preset|skeleton|header|footer|motion|",
+			NULL) ||
 			version == NULL || !JSON_NODE_HOLDS_VALUE(version) ||
 			json_node_get_value_type(version) != G_TYPE_INT64 || json_node_get_int(version) != 1)
 			goto invalid;
@@ -469,7 +470,7 @@ avoid_list(JsonObject *site, GError **error){
 invalid:
 	g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID,
 		"site.avoid needs up to 500 site fingerprints as the builder writes them: objects with v: 1 and only "
-		"look, genes, colors, fonts, home, signature and preset");
+		"look, genes, colors, fonts, home, signature, preset, skeleton, header, footer and motion");
 	return FALSE;
 }
 

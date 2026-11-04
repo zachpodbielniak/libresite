@@ -1,0 +1,16 @@
+/* skeleton/sticky-side: on wide screens the closing call becomes a side
+ * column that stays in view while the other sections scroll beside it;
+ * the opening stays full width. Each scrolling section is its own
+ * container, so its content lays out for its column. Placement only. */
+@media (min-width: 64rem) {
+	.design.skeleton--sticky-side.page--kind-home main { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); align-items: start; }
+	.design.skeleton--sticky-side.page--kind-home main > * { grid-column: 1 / -1; min-width: 0; }
+	.design.skeleton--sticky-side.page--kind-home main > .block:not(:first-child) { grid-column: 2; container-type: inline-size; }
+	.design.skeleton--sticky-side.page--kind-home main > .block:not(:first-child) > .wrap { width: min(100% - 2 * var(--space-8), var(--container)); }
+	.design.skeleton--sticky-side.page--kind-home main > .cta:not(:first-child) {
+		grid-column: 1; grid-row: 2 / span 40; position: sticky; top: var(--space-6); align-self: start;
+		margin: var(--space-6); padding-block: var(--space-8); border-radius: var(--radius-box);
+	}
+	.design.skeleton--sticky-side.page--kind-home main > .cta:not(:first-child) > .wrap { width: auto; margin-inline: var(--space-6); }
+	.design.skeleton--sticky-side.page--kind-home:is(.header--shrink, .header--pill) main > .cta:not(:first-child) { top: 6rem; }
+}

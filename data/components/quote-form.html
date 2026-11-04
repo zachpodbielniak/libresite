@@ -1,0 +1,29 @@
+<div class="form__sent" role="status" aria-live="polite" tabindex="-1" data-form-sent hidden>
+<p class="form__sent-message">{{sent}}</p>
+<p class="form__sent-actions">{{#sent_call}}<a class="button form__sent-call" href="{{tel}}">{{call_label}} <span class="form__sent-number">{{phone}}</span></a>
+{{/sent_call}}<a class="form__sent-again" href="#{{form_id}}" data-form-again>{{send_another_label}}</a></p>
+</div>
+<form class="form__form quote-form" id="{{form_id}}" aria-labelledby="{{labelledby}}" action="{{target}}" method="post" data-endpoint-form data-sending="{{sending}}" data-failed="{{send_failed}}" data-error-invalid="{{error_invalid}}">
+{{#fields}}{{#is_checkbox}}<div class="field field--check">
+<input type="checkbox" id="{{fid}}" name="{{name}}" value="yes"{{#required}} required{{/required}} aria-describedby="{{describedby}}">
+<label for="{{fid}}">{{label}}{{#required}} <span class="required">({{required_label}})</span>{{/required}}</label>
+{{#hint}}<p class="hint" id="{{fid}}-hint">{{hint}}</p>
+{{/hint}}<p class="field-error" id="{{fid}}-error" data-field-error></p>
+</div>
+{{/is_checkbox}}{{^is_checkbox}}<div class="field">
+<label for="{{fid}}">{{label}}{{#required}} <span class="required">({{required_label}})</span>{{/required}}</label>
+{{#hint}}<p class="hint" id="{{fid}}-hint">{{hint}}</p>
+{{/hint}}{{#is_textarea}}<textarea id="{{fid}}" name="{{name}}" rows="3"{{#required}} required{{/required}}{{#maxlength}} maxlength="{{maxlength}}"{{/maxlength}} aria-describedby="{{describedby}}"></textarea>
+{{/is_textarea}}{{#is_select}}<select id="{{fid}}" name="{{name}}"{{#required}} required{{/required}} aria-describedby="{{describedby}}">
+{{#options}}<option value="{{value}}">{{label}}</option>
+{{/options}}</select>
+{{/is_select}}{{#is_input}}<input type="{{type}}" id="{{fid}}" name="{{name}}"{{#required}} required{{/required}}{{#maxlength}} maxlength="{{maxlength}}"{{/maxlength}}{{#autocomplete}} autocomplete="{{autocomplete}}"{{/autocomplete}} aria-describedby="{{describedby}}">
+{{/is_input}}<p class="field-error" id="{{fid}}-error" data-field-error></p>
+</div>
+{{/is_checkbox}}{{/fields}}{{#honeypot}}<div class="form__trap" aria-hidden="true"><label>Leave this field empty <input type="text" name="{{honeypot}}" tabindex="-1" autocomplete="off"></label></div>
+{{/honeypot}}<div class="form__summary" role="alert" data-form-summary hidden></div>
+<div class="form__actions">
+<button class="button{{#quiet}} button--outline{{/quiet}}" type="submit">{{submit}}</button>
+</div>
+<p class="form__status" role="status" data-form-status></p>
+</form>

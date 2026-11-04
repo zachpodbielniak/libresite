@@ -1,0 +1,13 @@
+/* skeleton/asymmetric: on wide screens the sections stagger. One section
+ * puts its heading in a narrow column at the left and its content in a
+ * wide one; the next holds its content to the left two thirds; and so on.
+ * Placement only. */
+@container (min-width: 60rem) {
+	.design.skeleton--asymmetric.page--kind-home main > .block:not(:first-child):not(.cta):nth-of-type(even) > .wrap:has(> .section-head) {
+		display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: var(--space-5) var(--space-9); align-items: start;
+	}
+	.design.skeleton--asymmetric.page--kind-home main > .block:not(:first-child):not(.cta):nth-of-type(even) > .wrap > .section-head { grid-column: 1; grid-row: 1 / span 6; margin: 0; }
+	.design.skeleton--asymmetric.page--kind-home main > .block:not(:first-child):not(.cta):nth-of-type(even) > .wrap > :not(.section-head) { grid-column: 2; }
+	.design.skeleton--asymmetric.page--kind-home main > .block:not(:first-child):not(.cta):nth-of-type(odd) > .wrap { padding-right: 30%; }
+	.design.skeleton--asymmetric.page--kind-home main > .block:not(:first-child):not(.cta):nth-of-type(even) > .wrap:not(:has(> .section-head)) { padding-left: 30%; }
+}

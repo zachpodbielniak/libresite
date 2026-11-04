@@ -697,6 +697,29 @@ static const gchar rich_home[] =
 	" {\"question\": \"Q9?\", \"answer\": \"A general answer.\"}, {\"question\": \"Q10?\", \"answer\": \"A general answer.\"}]}},"
 	"{\"component\": \"cta\", \"variant\": \"band\", \"content\": {\"heading\": \"Call us or write\"}}]}";
 
+/* The component gallery's realistic pages and photos, while it is built. */
+static gchar *gallery_pages = NULL;
+static gchar *gallery_photos = NULL;
+
+/* A live form as the platform supplies it, three supplied reviews, and a
+ * contact page whose form section the quote action leads to. */
+static const gchar supplied_form[] =
+	"{\"action\": \"/api/forms/quote\", \"honeypot\": \"website\", \"fields\": ["
+	"{\"name\": \"name\", \"label\": \"Your name\", \"required\": true, \"autocomplete\": \"name\"},"
+	"{\"name\": \"phone\", \"label\": \"Phone\", \"type\": \"tel\", \"required\": true, \"autocomplete\": \"tel\"},"
+	"{\"name\": \"job\", \"label\": \"What needs doing?\", \"type\": \"textarea\", \"maxlength\": 2000}]}";
+static const gchar supplied_reviews[] =
+	"[{\"quote\": \"They came the same evening and found the leak behind the dishwasher.\", \"name\": \"Dana R.\", \"source\": \"Google\"},"
+	" {\"quote\": \"Clear price before they started, and the basement was cleaner than before.\", \"name\": \"Marcus T.\", \"source\": \"Google\"},"
+	" {\"quote\": \"Our water heater was replaced in a morning. Friendly and quick.\", \"name\": \"Priya S.\", \"source\": \"Facebook\"}]";
+static const gchar contact_form_page[] =
+	"{\"path\": \"contact.html\", \"sections\": [{\"component\": \"page-header\", \"variant\": \"plain\","
+	" \"content\": {\"heading\": \"Contact\"}}, {\"component\": \"form\", \"variant\": \"stacked\", \"id\": \"quote\","
+	" \"content\": {\"heading\": \"Ask for a quote\", \"mode\": \"endpoint\", \"fields\": [{\"name\": \"name\","
+	" \"label\": \"Your name\"}], \"submit\": \"Send\"}}, {\"component\": \"faq\", \"variant\": \"list\","
+	" \"content\": {\"items\": [{\"question\": \"One?\", \"answer\": \"Yes.\"}, {\"question\": \"Two?\","
+	" \"answer\": \"Yes.\"}, {\"question\": \"Three?\", \"answer\": \"Yes.\"}]}}]}";
+
 /* Composes the rich order on @preset with @type set to @variant (a home
  * section, or the header or footer layout; NULL for the picker's own),
  * with the page specifications of @extra (a JSON object by route, or NULL)
@@ -707,14 +730,38 @@ compose_site(LsComponents *components, const gchar *preset, const gchar *type, c
 	const gchar *extra, JsonNode **plan_out){
 	g_autoptr(GError) error = NULL;
 	g_autofree gchar *plan_text = NULL, *bundle = NULL;
-	g_autoptr(JsonNode) plan = NULL, pages = NULL, more = extra != NULL ? parse(extra) : NULL;
+	g_autoptr(JsonNode) plan = NULL, pages = NULL;
+	g_autoptr(JsonNode) more = extra != NULL ? parse(extra) : gallery_pages != NULL ? parse(gallery_pages) : NULL;
 	g_autoptr(JsonNode) site = parse(rich);
-	g_autoptr(JsonNode) photos = parse(eight_photos);
+	g_autoptr(JsonNode) photos = parse(gallery_photos != NULL ? gallery_photos : eight_photos);
 	g_autoptr(JsonObject) design = NULL;
+	/* Layouts built on a supplied form, supplied reviews or the owner's
+	 * own photos get them. */
+	gboolean form = gallery_pages != NULL || (g_strcmp0(type, "overlay") == 0 && g_strcmp0(variant, "modal-form") == 0) ||
+		(g_strcmp0(type, "hero") == 0 && g_strcmp0(variant, "form") == 0) ||
+		(g_strcmp0(type, "footer") == 0 && g_strcmp0(variant, "split-form") == 0);
+	gboolean reviews = gallery_pages != NULL || g_strcmp0(type, "reviews") == 0;
+	gboolean own = g_strcmp0(type, "overlay") == 0 && g_strcmp0(variant, "lightbox") == 0;
 	guint i;
 	g_assert_true(g_file_get_contents("tests/fixtures/composed/plan.json", &plan_text, NULL, NULL));
 	plan = parse(plan_text);
 	pages = parse("{}");
+	if (gallery_pages != NULL) {
+		json_object_set_string_member(json_node_get_object(plan), "name", "Hartwell Plumbing");
+		json_object_set_string_member(json_node_get_object(plan), "tagline", "Family plumbing in Fairport since 1998");
+		json_object_set_string_member(json_object_get_object_member(json_node_get_object(plan), "brand"), "wordmark",
+			"Hartwell Plumbing");
+	}
+	if (form) {
+		json_object_set_member(json_node_get_object(site), "form", parse(supplied_form));
+		json_object_set_member(json_node_get_object(plan), "form", parse(supplied_form));
+	}
+	if (reviews) {
+		json_object_set_member(json_node_get_object(site), "reviews", parse(supplied_reviews));
+		json_object_set_member(json_node_get_object(plan), "reviews", parse(supplied_reviews));
+	}
+	for (i = 0; own && i < json_array_get_length(json_node_get_array(photos)); i++)
+		json_object_remove_member(json_array_get_object_element(json_node_get_array(photos), i), "stock");
 	json_object_set_member(json_node_get_object(pages), "index.html", parse(rich_home));
 	json_object_set_member(json_node_get_object(plan), "photos", json_node_copy(photos));
 	json_object_set_member(json_node_get_object(plan), "contact", parse("{\"phone\": \"585-555-0141\","
@@ -723,6 +770,40 @@ compose_site(LsComponents *components, const gchar *preset, const gchar *type, c
 	design = ls_design_new(block(components), themes_of(components), json_node_get_object(site), preset,
 		json_node_get_array(photos), &error);
 	g_assert_no_error(error);
+	/* A trust strip asked for under an opening that carries the facts in
+	 * its own bar: the opening steps back to a plain photo and the strip
+	 * returns under it. */
+	if (g_strcmp0(type, "facts") == 0 && variant_of(design, "facts") == NULL) {
+		JsonArray *home = json_object_get_array_member(design, "home");
+		JsonObject *strip = json_object_new();
+		if (g_strcmp0(variant_of(design, "hero"), "stats-bar") == 0)
+			json_object_set_string_member(json_array_get_object_element(home, 0), "variant", "photo-start");
+		json_object_set_string_member(strip, "component", "facts");
+		json_object_set_string_member(strip, "variant", "strip");
+		json_object_set_string_member(strip, "tone", "default");
+		json_array_add_object_element(home, strip);
+		{
+			/* After the opening. */
+			guint k = json_array_get_length(home) - 1;
+			JsonNode *moved = json_node_copy(json_array_get_element(home, k));
+			JsonArray *rebuilt = json_array_new();
+			guint m;
+			for (m = 0; m < k; m++) {
+				json_array_add_element(rebuilt, json_node_copy(json_array_get_element(home, m)));
+				if (m == 0)
+					json_array_add_element(rebuilt, json_node_copy(moved));
+			}
+			json_node_unref(moved);
+			json_object_set_array_member(design, "home", rebuilt);
+		}
+	}
+	/* A gallery page shows its one layout on the plainest of the rest: the
+	 * stacked skeleton, calm motion and no other overlay. */
+	if (gallery_pages != NULL) {
+		json_object_set_string_member(design, "skeleton", "stack");
+		json_object_set_string_member(design, "motion", "calm");
+		json_object_set_array_member(design, "overlays", json_array_new());
+	}
 	if (type != NULL && !ls_design_set_layout(block(components), design, type, variant, &error))
 		g_error("%s/%s: %s", type, variant, error->message);
 	g_assert_true(ls_components_apply_theme(components, plan, preset, &error));
@@ -744,6 +825,8 @@ compose_site(LsComponents *components, const gchar *preset, const gchar *type, c
 			if (more != NULL && json_object_has_member(json_node_get_object(more), route))
 				json_object_set_member(json_node_get_object(pages), route,
 					json_node_copy(json_object_get_member(json_node_get_object(more), route)));
+			else if (form && g_str_equal(route, "contact.html"))
+				json_object_set_member(json_node_get_object(pages), route, parse(contact_form_page));
 			else if (!g_str_equal(route, "index.html"))
 				json_object_set_member(json_node_get_object(pages), route, parse(text));
 		}
@@ -978,6 +1061,382 @@ test_photo_every_page(void){
 		g_error("taste: %s", problems->str);
 }
 
+/* ---- Slice 4: skeletons, headers, heroes, footers, overlays, motion ---- */
+
+/* The layouts of @type in the library block: "header", "hero" and "footer"
+ * are variants; "skeletons", "overlays" and "motion" are blocks of their own. */
+static guint
+count_of(LsComponents *components, const gchar *type){
+	JsonObject *library_block = block(components);
+	guint count = 0;
+	if (json_object_has_member(library_block, type) && JSON_NODE_HOLDS_OBJECT(json_object_get_member(library_block, type))) {
+		JsonObject *entries = json_object_get_object_member(library_block, type);
+		g_autoptr(GList) names = json_object_get_members(entries);
+		GList *name;
+		for (name = names; name != NULL; name = name->next) {
+			JsonObject *entry = json_object_get_object_member(entries, name->data);
+			if (ls_string(entry, "source") == NULL || strlen(ls_string(entry, "source")) < 20 ||
+				strstr(ls_string(entry, "source"), "TODO") != NULL)
+				g_error("%s %s names no source", type, (const gchar *)name->data);
+			count++;
+		}
+	} else {
+		JsonObject *variants = json_object_get_object_member(library_block, "variants");
+		g_autoptr(GList) names = json_object_get_members(variants);
+		g_autofree gchar *prefix = g_strconcat(type, "/", NULL);
+		GList *name;
+		for (name = names; name != NULL; name = name->next) {
+			const gchar *source = ls_string(json_object_get_object_member(variants, name->data), "source");
+			if (!g_str_has_prefix(name->data, prefix))
+				continue;
+			if (strstr(source, "TODO") != NULL)
+				g_error("%s names no source", (const gchar *)name->data);
+			count++;
+		}
+	}
+	return count;
+}
+
+static gboolean
+file_exists_in_library(const gchar *name){
+	g_autofree gchar *path = g_build_filename("data/components", name, NULL);
+	return g_file_test(path, G_FILE_TEST_IS_REGULAR);
+}
+
+/* The library has at least eight headers, ten heroes, six page skeletons,
+ * six footers, six overlay or placement components and the three motion
+ * levels; each names its source and brings its styles. */
+static void
+test_layout_library(void){
+	g_autoptr(LsComponents) components = library();
+	JsonObject *library_block = block(components);
+	const gchar *levels[] = {"none", "calm", "lively"};
+	guint i;
+	g_assert_cmpuint(count_of(components, "header"), >=, 8);
+	g_assert_cmpuint(count_of(components, "hero"), >=, 10);
+	g_assert_cmpuint(count_of(components, "footer"), >=, 6);
+	g_assert_cmpuint(count_of(components, "skeletons"), >=, 6);
+	g_assert_cmpuint(count_of(components, "overlays"), >=, 6);
+	g_assert_cmpuint(count_of(components, "motion"), ==, 3);
+	for (i = 0; i < G_N_ELEMENTS(levels); i++)
+		g_assert_true(json_object_has_member(json_object_get_object_member(library_block, "motion"), levels[i]));
+	{
+		JsonObject *skeletons = json_object_get_object_member(library_block, "skeletons");
+		g_autoptr(GList) names = json_object_get_members(skeletons);
+		GList *name;
+		for (name = names; name != NULL; name = name->next) {
+			g_autofree gchar *css = g_strdup_printf("skeleton--%s.css", (const gchar *)name->data);
+			if (!file_exists_in_library(css))
+				g_error("skeleton %s has no %s", (const gchar *)name->data, css);
+		}
+	}
+	{
+		JsonObject *overlays = json_object_get_object_member(library_block, "overlays");
+		g_autoptr(GList) names = json_object_get_members(overlays);
+		GList *name;
+		for (name = names; name != NULL; name = name->next) {
+			JsonObject *entry = json_object_get_object_member(overlays, name->data);
+			const gchar *pair = ls_string(entry, "variant");
+			g_autofree gchar *css = g_strdup_printf("overlay--%s.css", (const gchar *)name->data);
+			/* A placement component is a section variant; an overlay has
+			 * its own styles. */
+			if (pair != NULL)
+				g_assert_nonnull(json_object_get_object_member(json_object_get_object_member(library_block, "variants"), pair));
+			else if (!file_exists_in_library(css))
+				g_error("overlay %s has no %s", (const gchar *)name->data, css);
+		}
+	}
+	g_assert_true(file_exists_in_library("motion.js"));
+	g_assert_true(file_exists_in_library("motion.css"));
+}
+
+/* Every design names its skeleton, motion level and overlays; the owner's
+ * words choose them first; ls_design_check refuses unknown ones. */
+static void
+test_layout_picks(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(JsonObject) design = design_for(components, rich, "evergreen", eight_photos);
+	g_autoptr(GString) why = g_string_new(NULL);
+	const gchar *cases[][3] = {
+		{"playful, bold and lively", "motion", "lively"}, {"calm and warm", "motion", "calm"},
+		{"serious, no-nonsense", "motion", "none"}, {"editorial and classic", "skeleton", "magazine"},
+		{"minimal, simple, elegant", "skeleton", "column"}};
+	guint i;
+	g_assert_nonnull(ls_string(design, "skeleton"));
+	g_assert_nonnull(ls_string(design, "motion"));
+	g_assert_nonnull(json_object_get_array_member(design, "overlays"));
+	g_assert_true(ls_design_check(block(components), design, why));
+	for (i = 0; i < G_N_ELEMENTS(cases); i++) {
+		g_autofree gchar *site = g_strdup_printf("{\"brand\": {\"name\": \"Hartwell Plumbing\", \"tagline\": \"Plumbing\"},"
+			" \"contact\": {\"phone\": \"585-555-0141\"}, \"offers\": [{\"id\": \"a\", \"name\": \"One\"},"
+			" {\"id\": \"b\", \"name\": \"Two\"}], \"style\": \"%s\"}", cases[i][0]);
+		g_autoptr(JsonObject) worded = design_for(components, site, "evergreen", four_photos);
+		if (g_strcmp0(ls_string(worded, cases[i][1]), cases[i][2]) != 0)
+			g_error("\"%s\" gave %s %s, not %s", cases[i][0], cases[i][1], ls_string(worded, cases[i][1]), cases[i][2]);
+	}
+	json_object_set_string_member(design, "skeleton", "spiral");
+	g_assert_false(ls_design_check(block(components), design, why));
+	g_assert_nonnull(strstr(why->str, "skeleton"));
+	json_object_set_string_member(design, "skeleton", "stack");
+	json_object_set_string_member(design, "motion", "frantic");
+	g_string_truncate(why, 0);
+	g_assert_false(ls_design_check(block(components), design, why));
+	g_assert_nonnull(strstr(why->str, "motion"));
+}
+
+/* An avoid entry as the builder's fingerprint writes it, with the
+ * skeleton and header too. */
+static gchar *
+fingerprint_of(JsonObject *design){
+	return g_strdup_printf("[{\"v\": 1, \"preset\": \"%s\", \"skeleton\": \"%s\", \"header\": \"%s\","
+		" \"home\": [\"hero/%s\"]}]", ls_string(design, "preset"), ls_string(design, "skeleton"),
+		ls_string(design, "header"), variant_of(design, "hero"));
+}
+
+/* Two businesses of one trade in one town differ in skeleton, header and
+ * hero, not only in preset; the same order beside itself too, even when
+ * the owner's words pick one skeleton. The fingerprint records them. */
+static void
+test_layout_neighbours(void){
+	g_autoptr(LsComponents) components = library();
+	const gchar *orders[] = {plumber, rich, salon};
+	guint i;
+	for (i = 0; i < G_N_ELEMENTS(orders); i++) {
+		g_autoptr(JsonObject) first = design_for(components, orders[i], NULL, eight_photos);
+		g_autofree gchar *avoid = fingerprint_of(first);
+		g_autoptr(JsonNode) site = parse(orders[i]);
+		g_autoptr(JsonNode) photos = parse(eight_photos);
+		g_autoptr(GError) error = NULL;
+		g_autofree gchar *picked = NULL;
+		g_autoptr(JsonObject) second = NULL;
+		json_object_set_member(json_node_get_object(site), "avoid", parse(avoid));
+		picked = ls_design_pick_preset(block(components), themes_of(components), json_node_get_object(site));
+		second = ls_design_new(block(components), themes_of(components), json_node_get_object(site), picked,
+			json_node_get_array(photos), &error);
+		g_assert_no_error(error);
+		if (g_strcmp0(ls_string(first, "skeleton"), ls_string(second, "skeleton")) == 0 ||
+			g_strcmp0(ls_string(first, "header"), ls_string(second, "header")) == 0 ||
+			g_strcmp0(variant_of(first, "hero"), variant_of(second, "hero")) == 0)
+			g_error("order %u and its neighbour share skeleton %s/%s, header %s/%s or hero %s/%s", i,
+				ls_string(first, "skeleton"), ls_string(second, "skeleton"), ls_string(first, "header"),
+				ls_string(second, "header"), variant_of(first, "hero"), variant_of(second, "hero"));
+	}
+	/* The fingerprint carries the skeleton and the header. */
+	{
+		g_autoptr(JsonNode) plan = NULL;
+		g_autoptr(JsonNode) bundle = compose_site(components, "evergreen", NULL, NULL, NULL, &plan);
+		g_autoptr(JsonObject) fp = ls_components_fingerprint(components, plan, NULL);
+		JsonObject *design = json_object_get_object_member(json_node_get_object(plan), "design");
+		g_assert_nonnull(bundle);
+		g_assert_cmpstr(ls_string(fp, "skeleton"), ==, ls_string(design, "skeleton"));
+		g_assert_cmpstr(ls_string(fp, "header"), ==, ls_string(design, "header"));
+	}
+	/* A recipe takes the fingerprint back as site.avoid. */
+	{
+		g_autoptr(GError) error = NULL;
+		g_autoptr(LsRecipe) recipe = ls_recipe_new("version: 1\nname: test\nsite: {brief: hi, avoid: [{v: 1, preset: evergreen,"
+			" skeleton: bento, header: drawer, footer: mega, motion: calm, home: [hero/fullscreen]}]}\n"
+			"pipeline: {steps: [{id: a, type: frontend}]}", &error);
+		g_assert_no_error(error);
+		g_assert_nonnull(recipe);
+	}
+}
+
+/* Businesses of each trade spread over the new layouts. */
+static void
+test_layout_spread(void){
+	g_autoptr(LsComponents) components = library();
+	const gchar *trades[] = {"Plumbing", "Dental", "Law", "Bakery", "Salon"};
+	const gchar *kinds[] = {"skeleton", "header", "hero", "footer", "motion"};
+	const guint least[] = {5, 6, 7, 5, 2};
+	guint t, k;
+	for (t = 0; t < G_N_ELEMENTS(trades); t++) {
+		GHashTable *seen[G_N_ELEMENTS(kinds)];
+		guint i;
+		for (k = 0; k < G_N_ELEMENTS(kinds); k++)
+			seen[k] = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+		for (i = 0; i < 80; i++) {
+			g_autofree gchar *site = g_strdup_printf("{\"brand\": {\"name\": \"Example %u %s\", \"tagline\":"
+				" \"%s since 1998\"}, \"contact\": {\"phone\": \"585-555-0141\", \"address\": \"1 Main Street, Fairport, NY 14450\"},"
+				" \"offers\": [{\"id\": \"a\", \"name\": \"One\"}, {\"id\": \"b\", \"name\": \"Two\"}, {\"id\": \"c\", \"name\": \"Three\"}],"
+				" \"requirements\": \"Hours: Mon-Fri 9am-5pm. Service area: Fairport and Webster.\"}", i, trades[t], trades[t]);
+			g_autoptr(JsonObject) design = design_for(components, site, NULL, four_photos);
+			g_autoptr(GString) broken = g_string_new(NULL);
+			for (k = 0; k < G_N_ELEMENTS(kinds); k++)
+			{
+				const gchar *value = g_str_equal(kinds[k], "hero") ? variant_of(design, "hero") : ls_string(design, kinds[k]);
+				g_hash_table_add(seen[k], g_strdup(value != NULL ? value : "(none)"));
+			}
+			if (!ls_design_check(block(components), design, broken))
+				g_error("%s: %s", site, broken->str);
+		}
+		for (k = 0; k < G_N_ELEMENTS(kinds); k++)
+			if (g_hash_table_size(seen[k]) < least[k])
+				g_error("%s: %u %ss over 80 businesses, need %u", trades[t], g_hash_table_size(seen[k]), kinds[k], least[k]);
+		for (k = 0; k < G_N_ELEMENTS(kinds); k++)
+			g_hash_table_unref(seen[k]);
+	}
+}
+
+/* Every new header, hero, footer, skeleton, overlay and motion level
+ * renders on a preset site with its styles; overlays keep their
+ * keyboard contracts; motion never hides content without its script and
+ * stops for reduced motion. */
+static void
+test_layout_render(void){
+	g_autoptr(LsComponents) components = library();
+	const gchar *added[][3] = {
+		{"header", "centered-split", "header--centered-split"}, {"header", "transparent-solid", "header--transparent-solid"},
+		{"header", "shrink", "header--shrink"}, {"header", "drawer", "header--drawer"}, {"header", "overlay", "header--overlay"},
+		{"header", "pill", "header--pill"}, {"header", "rail", "header--rail"},
+		{"hero", "fullscreen", "hero--fullscreen"}, {"hero", "split-screen", "hero--split-screen"},
+		{"hero", "offset-card", "hero--offset-card"}, {"hero", "collage", "hero--collage"},
+		{"hero", "big-type", "hero--big-type"}, {"hero", "thumb-strip", "hero--thumb-strip"},
+		{"hero", "form", "hero--form"}, {"hero", "stats-bar", "hero--stats-bar"},
+		{"footer", "big-cta", "footer--big-cta"}, {"footer", "mega", "footer--mega"}, {"footer", "minimal", "footer--minimal"},
+		{"footer", "split-form", "footer--split-form"}, {"footer", "wordmark", "footer--wordmark"},
+		{"skeleton", "alternating", "skeleton--alternating"}, {"skeleton", "bento", "skeleton--bento"},
+		{"skeleton", "sticky-side", "skeleton--sticky-side"}, {"skeleton", "asymmetric", "skeleton--asymmetric"},
+		{"skeleton", "overlap", "skeleton--overlap"}, {"skeleton", "magazine", "skeleton--magazine"},
+		{"skeleton", "column", "skeleton--column"}, {"skeleton", "stack", "skeleton--stack"},
+		{"overlay", "announcement", "class=\"announce"}, {"overlay", "badge", "class=\"hero__badge"},
+		{"overlay", "sticky-bar", "overlay--sticky-bar"}, {"overlay", "modal-form", "<dialog class=\"quote-dialog"},
+		{"overlay", "lightbox", "data-lightbox"},
+		{"areas", "card-over-photo", "areas--card-over-photo"}, {"reviews", "strip", "reviews--strip"},
+		{"motion", "calm", "motion--calm"}, {"motion", "lively", "motion--lively"}, {"motion", "none", "motion--none"}};
+	guint i;
+	for (i = 0; i < G_N_ELEMENTS(added); i++) {
+		g_autoptr(JsonNode) plan = NULL;
+		g_autoptr(JsonNode) bundle = compose_site(components, "evergreen", added[i][0], added[i][1], NULL, &plan);
+		const gchar *home = file_in(bundle, "index.html"), *css = file_in(bundle, "styles.css");
+		const gchar *js = file_in(bundle, "site.js");
+		g_autoptr(GString) problems = g_string_new(NULL);
+		g_autofree gchar *rule = NULL;
+		if (strstr(home, added[i][2]) == NULL)
+			g_error("%s/%s: no %s on the home page", added[i][0], added[i][1], added[i][2]);
+		rule = g_strdup_printf(".%s--%s", added[i][0], added[i][1]);
+		if (!g_str_equal(added[i][1], "none") && !g_str_equal(added[i][1], "stack") && strstr(css, rule) == NULL)
+			g_error("%s/%s has no styles (%s)", added[i][0], added[i][1], rule);
+		if (!ls_components_check_taste(components, plan, bundle, problems))
+			g_error("%s/%s: %s", added[i][0], added[i][1], problems->str);
+		/* No gimmicks: nothing turns, outlines its text or wears a texture. */
+		g_assert_null(strstr(strstr(css, "/* design */"), "rotate("));
+		g_assert_null(strstr(strstr(css, "/* design */"), "-webkit-text-stroke"));
+		/* Motion: only with the script, only without reduced motion. */
+		if (g_str_equal(added[i][0], "motion")) {
+			gboolean moving = !g_str_equal(added[i][1], "none");
+			g_assert_true((strstr(js, "prefers-reduced-motion: reduce") != NULL) == moving);
+			g_assert_true((strstr(js, "is-pending") != NULL) == moving);
+		}
+	}
+	/* The motion styles hide nothing on their own: a hidden state needs the
+	 * class the script adds, inside the no-preference query. */
+	{
+		g_autofree gchar *motion = NULL;
+		const gchar *at;
+		g_assert_true(g_file_get_contents("data/components/motion.css", &motion, NULL, NULL));
+		g_assert_true(g_str_has_prefix(strstr(motion, "@media"), "@media (prefers-reduced-motion: no-preference)"));
+		for (at = strstr(motion, "opacity: 0;"); at != NULL; at = strstr(at + 1, "opacity: 0;")) {
+			const gchar *rule = g_strrstr_len(motion, at - motion, "}");
+			g_autofree gchar *selector = g_strndup(rule != NULL ? rule : motion, (gsize)(at - (rule != NULL ? rule : motion)));
+			if (strstr(selector, ".is-pending") == NULL)
+				g_error("motion.css hides content without the script's class: %s", selector);
+		}
+	}
+	/* Overlays: the drawer and the dialogs answer Escape, trap focus and
+	 * give it back; the lightbox and the quote form are dialogs. */
+	{
+		g_autoptr(JsonNode) plan = NULL;
+		g_autoptr(JsonNode) bundle = compose_site(components, "evergreen", "header", "drawer", NULL, &plan);
+		const gchar *js = file_in(bundle, "site.js"), *home = file_in(bundle, "index.html");
+		g_assert_nonnull(strstr(js, "\"Escape\""));
+		g_assert_nonnull(strstr(js, "inert"));
+		g_assert_nonnull(strstr(js, "focus()"));
+		g_assert_nonnull(strstr(home, "aria-controls=\"site-nav\""));
+	}
+	{
+		g_autoptr(JsonNode) plan = NULL;
+		g_autoptr(JsonNode) bundle = compose_site(components, "evergreen", "overlay", "modal-form", NULL, &plan);
+		const gchar *home = file_in(bundle, "index.html");
+		const gchar *dialog = strstr(home, "<dialog class=\"quote-dialog");
+		g_assert_nonnull(dialog);
+		g_assert_nonnull(strstr(dialog, "aria-labelledby="));
+		g_assert_nonnull(strstr(dialog, "class=\"dialog-close"));
+		/* Without the script the quote link still leads to the form. */
+		g_assert_nonnull(strstr(home, "data-dialog=\"quote-dialog\""));
+	}
+}
+
+/* The component gallery: every header, hero, skeleton, footer, overlay and
+ * motion level on a composed site that passes the taste rules. With
+ * LS_GALLERY_OUTPUT set, each site is written there as DIR/NN-NAME/. */
+static void
+test_gallery(void){
+	g_autoptr(LsComponents) components = library();
+	const gchar *output = g_getenv("LS_GALLERY_OUTPUT");
+	const gchar *types[] = {"header", "hero", "footer", "skeletons", "overlays", "motion"};
+	guint t, n = 0;
+	g_assert_true(g_file_get_contents("tests/fixtures/gallery/pages.json", &gallery_pages, NULL, NULL));
+	g_assert_true(g_file_get_contents("tests/fixtures/gallery/photos.json", &gallery_photos, NULL, NULL));
+	for (t = 0; t < G_N_ELEMENTS(types); t++) {
+		JsonObject *library_block = block(components);
+		g_autoptr(GList) names = NULL;
+		GList *name;
+		const gchar *type = g_str_equal(types[t], "skeletons") ? "skeleton" : g_str_equal(types[t], "overlays") ? "overlay" : types[t];
+		if (json_object_has_member(library_block, types[t]))
+			names = json_object_get_members(json_object_get_object_member(library_block, types[t]));
+		else {
+			g_autoptr(GList) all = json_object_get_members(json_object_get_object_member(library_block, "variants"));
+			GList *pair;
+			g_autofree gchar *prefix = g_strconcat(types[t], "/", NULL);
+			for (pair = all; pair != NULL; pair = pair->next)
+				if (g_str_has_prefix(pair->data, prefix))
+					names = g_list_append(names, (gchar *)pair->data + strlen(prefix));
+		}
+		for (name = names; name != NULL; name = name->next) {
+			g_autoptr(JsonNode) plan = NULL;
+			g_autoptr(JsonNode) bundle = NULL;
+			g_autoptr(GString) problems = g_string_new(NULL);
+			const gchar *placed = g_str_equal(type, "overlay") ? ls_string(json_object_get_object_member(
+				json_object_get_object_member(library_block, "overlays"), name->data), "variant") : NULL;
+			/* A placement component is a section variant. */
+			if (placed != NULL) {
+				g_autofree gchar *section = g_strndup(placed, (gsize)(strchr(placed, '/') - placed));
+				bundle = compose_site(components, "evergreen", section, strchr(placed, '/') + 1, NULL, &plan);
+			} else
+				bundle = compose_site(components, "evergreen", type, name->data, NULL, &plan);
+			if (!ls_components_check_taste(components, plan, bundle, problems))
+				g_error("%s/%s: %s", type, (const gchar *)name->data, problems->str);
+			/* The opening shows a supplied photo. */
+			{
+				const gchar *main = strstr(file_in(bundle, "index.html"), "<main");
+				const gchar *end = main != NULL ? strstr(main, "</section>") : NULL;
+				g_autofree gchar *opening = end != NULL ? g_strndup(main, (gsize)(end - main)) : NULL;
+				if (opening == NULL || strstr(opening, "<img src=\"assets/photos/") == NULL)
+					g_error("%s/%s: the opening shows no photo", type, (const gchar *)name->data);
+			}
+			n++;
+			if (output != NULL) {
+				JsonArray *files = json_object_get_array_member(json_node_get_object(bundle), "files");
+				g_autofree gchar *dir = g_strdup_printf("%s/%02u-%s-%s", output, n, type, (const gchar *)name->data);
+				guint f;
+				for (f = 0; f < json_array_get_length(files); f++) {
+					JsonObject *file = json_array_get_object_element(files, f);
+					g_autofree gchar *path = g_build_filename(dir, ls_string(file, "path"), NULL);
+					g_autofree gchar *parent = g_path_get_dirname(path);
+					if (ls_string(file, "encoding") != NULL)
+						continue;
+					g_assert_cmpint(g_mkdir_with_parents(parent, 0755), ==, 0);
+					g_assert_true(g_file_set_contents(path, ls_string(file, "content"), -1, NULL));
+				}
+			}
+		}
+	}
+	g_assert_cmpuint(n, >=, 8 + 10 + 6 + 6 + 6 + 3);
+	g_clear_pointer(&gallery_pages, g_free);
+	g_clear_pointer(&gallery_photos, g_free);
+}
+
 int
 main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
@@ -995,5 +1454,11 @@ main(int argc, char **argv){
 	g_test_add_func("/design/new-variants", test_new_variants);
 	g_test_add_func("/design/supplied-facts", test_supplied_facts);
 	g_test_add_func("/design/photo-every-page", test_photo_every_page);
+	g_test_add_func("/design/layout-library", test_layout_library);
+	g_test_add_func("/design/layout-picks", test_layout_picks);
+	g_test_add_func("/design/layout-neighbours", test_layout_neighbours);
+	g_test_add_func("/design/layout-spread", test_layout_spread);
+	g_test_add_func("/design/layout-render", test_layout_render);
+	g_test_add_func("/design/gallery", test_gallery);
 	return g_test_run();
 }

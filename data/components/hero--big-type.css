@@ -1,0 +1,14 @@
+/* hero/big-type: a very large headline across the page, then one small
+ * photo beside the lede and the actions. Layout only. */
+.design main > .hero--big-type { padding-block: var(--space-8); }
+.hero--big-type .hero__title { max-width: none; margin: 0 0 var(--space-7); font-size: clamp(2.75rem, 7cqi, 7rem); line-height: 1; letter-spacing: -0.03em; }
+.hero--big-type .hero__row { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-6); align-items: end; }
+.hero--big-type .hero__photo { margin: 0; }
+.design main > .block.hero--big-type .hero__photo img:is([src]) { width: 100%; aspect-ratio: 16 / 10; height: auto; max-height: none; object-fit: cover; border-radius: var(--radius-box); }
+.hero--big-type .hero__lede { max-width: 36rem; font-size: var(--text-5); line-height: 1.5; color: var(--muted-fg); }
+.hero--big-type .hero__phone { margin: var(--space-4) 0 0; font-size: var(--text-3); }
+.hero--big-type .hero__phone a { font-weight: 600; }
+@container (min-width: 56rem) {
+	.hero--big-type .hero__row { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--space-9); }
+	.design main > .block.hero--big-type .hero__photo img:is([src]) { aspect-ratio: 4 / 3; }
+}

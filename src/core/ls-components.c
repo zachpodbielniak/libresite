@@ -1274,6 +1274,74 @@ taste_gimmick(LsComponents *self, const gchar *pair){
 	return taste_banned(self, "openings", pair) || taste_banned(self, "variants", pair);
 }
 
+/* The page skeletons, motion levels and overlays of the library block
+ * (docs/components.org, "Skeletons, motion and overlays"): each names its
+ * source, its owner words and the sectors it fits, and brings its styles;
+ * a placement overlay names a library section variant instead. Optional,
+ * so archived libraries load as before. */
+static gboolean
+load_layout_blocks(LsComponents *self, GChecksum *digest, JsonObject *library, GError **error){
+	const gchar *blocks[] = {"skeletons", "motion", "overlays"};
+	guint b;
+	for (b = 0; b < G_N_ELEMENTS(blocks); b++) {
+		JsonObject *entries = member_object(library, blocks[b]);
+		g_autoptr(GList) names = NULL;
+		GList *item;
+		if (!json_object_has_member(library, blocks[b]))
+			continue;
+		if (entries == NULL)
+			return catalog_invalid(error, blocks[b], "library layout blocks are maps of named entries");
+		names = json_object_get_members(entries);
+		for (item = names; item != NULL; item = item->next) {
+			JsonObject *entry = member_object(entries, item->data);
+			const gchar *variant = ls_string(entry, "variant");
+			g_autofree gchar *style = NULL, *text = NULL;
+			if (entry == NULL || !ls_object_keys(entry, "|source|words|fits|needs|share|variant|", NULL) ||
+				ls_string(entry, "source") == NULL || strlen(ls_string(entry, "source")) < 20 ||
+				(json_object_has_member(entry, "needs") && member_object(entry, "needs") == NULL) ||
+				(json_object_has_member(entry, "words") && member_array(entry, "words") == NULL) ||
+				(json_object_has_member(entry, "fits") && member_array(entry, "fits") == NULL))
+				return catalog_invalid(error, item->data, "library layouts need a source, and words and fits as lists");
+			if (g_str_equal(blocks[b], "motion") && !g_str_equal(item->data, "none") && !g_str_equal(item->data, "calm") &&
+				!g_str_equal(item->data, "lively"))
+				return catalog_invalid(error, item->data, "motion levels are none, calm and lively");
+			if (variant != NULL) {
+				if (!g_str_equal(blocks[b], "overlays") || member_object(member_object(library, "variants"), variant) == NULL)
+					return catalog_invalid(error, item->data, "a placement overlay names a library section variant");
+				continue;
+			}
+			if (g_str_equal(blocks[b], "motion"))
+				continue;
+			style = g_strdup_printf("%s--%s.css", g_str_equal(blocks[b], "skeletons") ? "skeleton" : "overlay",
+				(const gchar *)item->data);
+			text = load_resource(self, digest, style, TRUE, error);
+			if (text == NULL)
+				return FALSE;
+		}
+		/* Motion brings one stylesheet and one script for every level. */
+		if (g_str_equal(blocks[b], "motion")) {
+			const gchar *files[] = {"motion.css", "motion.js"};
+			guint f;
+			for (f = 0; f < G_N_ELEMENTS(files); f++) {
+				g_autofree gchar *text = load_resource(self, digest, files[f], TRUE, error);
+				if (text == NULL)
+					return FALSE;
+			}
+		}
+	}
+	/* The scripts of the headers and overlays that move or open. */
+	if (json_object_has_member(library, "overlays")) {
+		const gchar *files[] = {"header.js", "overlay.js", "quote-form.html"};
+		guint f;
+		for (f = 0; f < G_N_ELEMENTS(files); f++) {
+			g_autofree gchar *text = load_resource(self, digest, files[f], TRUE, error);
+			if (text == NULL)
+				return FALSE;
+		}
+	}
+	return TRUE;
+}
+
 /* The library block (docs/components.org, "Presets and the picker"): every
  * variant names its source and brings its own markup and styles, sectors
  * list real section types and one primary action, named colours are
@@ -1286,7 +1354,8 @@ load_library(LsComponents *self, GChecksum *digest, JsonObject *root, GError **e
 	GList *item;
 	if (!json_object_has_member(root, "library"))
 		return TRUE;
-	if (library == NULL || !ls_object_keys(library, "|weights|fallback_opening|sectors|variants|neutral|colors|", NULL) ||
+	if (library == NULL || !ls_object_keys(library,
+		"|weights|fallback_opening|sectors|variants|neutral|colors|skeletons|motion|overlays|", NULL) ||
 		(variants = member_object(library, "variants")) == NULL || (sectors = member_object(library, "sectors")) == NULL ||
 		(colors = member_object(library, "colors")) == NULL)
 		return catalog_invalid(error, "library", "needs weights, fallback_opening, sectors, variants, neutral and colors");
@@ -1298,7 +1367,7 @@ load_library(LsComponents *self, GChecksum *digest, JsonObject *root, GError **e
 		const gchar *slash = strchr(pair, '/');
 		JsonObject *entry = member_object(variants, pair);
 		g_autofree gchar *component = slash != NULL ? g_strndup(pair, (gsize)(slash - pair)) : NULL;
-		if (component == NULL || entry == NULL || !ls_object_keys(entry, "|source|family|needs|tone|", NULL) ||
+		if (component == NULL || entry == NULL || !ls_object_keys(entry, "|source|family|needs|tone|words|fits|", NULL) ||
 			ls_string(entry, "source") == NULL || strlen(ls_string(entry, "source")) < 12 ||
 			(json_object_has_member(entry, "needs") && member_object(entry, "needs") == NULL))
 			return catalog_invalid(error, pair, "library variants are component/variant with a source and needs");
@@ -1366,6 +1435,8 @@ load_library(LsComponents *self, GChecksum *digest, JsonObject *root, GError **e
 		if (kit == NULL)
 			return FALSE;
 	}
+	if (!load_layout_blocks(self, digest, library, error))
+		return FALSE;
 	self->library = library;
 	return TRUE;
 }
@@ -2129,6 +2200,39 @@ place_view(const gchar *name, const gchar *address, const gchar *hours, const gc
 	return place;
 }
 
+/* The trust strip's facts, word for word: the starting year, the number
+ * of towns served, the first sentence of the hours and the town of the
+ * address. */
+static JsonArray *
+strip_facts(JsonObject *plan){
+	JsonObject *facts = member_object(member_object(plan, "design"), "facts");
+	JsonArray *area = member_array(facts, "area");
+	JsonArray *items = json_array_new();
+	if (ls_string(facts, "since") != NULL)
+		add_fact(items, plan_ui(plan, "since"), ls_string(facts, "since"));
+	if (area != NULL) {
+		g_autofree gchar *count = g_strdup_printf("%u", json_array_get_length(area));
+		add_fact(items, plan_ui(plan, "towns"), count);
+	}
+	if (ls_string(facts, "hours") != NULL) {
+		/* The first sentence of the hours fits the strip. */
+		const gchar *hours = ls_string(facts, "hours");
+		const gchar *stop = strstr(hours, ". ");
+		g_autofree gchar *first = stop != NULL ? g_strndup(hours, (gsize)(stop - hours)) : g_strdup(hours);
+		add_fact(items, plan_ui(plan, "hours"), first);
+	}
+	if (ls_string(facts, "address") != NULL) {
+		/* "Street, [Suite,] Town, State Zip": the town is the part
+		 * before the state. */
+		g_auto(GStrv) parts = g_strsplit(ls_string(facts, "address"), ",", -1);
+		guint n = g_strv_length(parts);
+		g_autofree gchar *town = n >= 3 ? g_strstrip(g_strdup(parts[n - 2]))
+			: g_strdup(ls_string(facts, "address"));
+		add_fact(items, plan_ui(plan, "based_in"), town);
+	}
+	return items;
+}
+
 /* The order's facts and own photos in a designed home section, word for
  * word, in place of anything the writer put there. FALSE when the section
  * has too little left to show. */
@@ -2186,29 +2290,7 @@ fill_from_facts(JsonObject *plan, const gchar *type, const gchar *variant, JsonO
 		return json_array_get_length(items) == 1;
 	}
 	if (g_strcmp0(type, "facts") == 0) {
-		JsonArray *items = json_array_new();
-		if (ls_string(facts, "since") != NULL)
-			add_fact(items, plan_ui(plan, "since"), ls_string(facts, "since"));
-		if (area != NULL) {
-			g_autofree gchar *count = g_strdup_printf("%u", json_array_get_length(area));
-			add_fact(items, plan_ui(plan, "towns"), count);
-		}
-		if (ls_string(facts, "hours") != NULL) {
-			/* The first sentence of the hours fits the strip. */
-			const gchar *hours = ls_string(facts, "hours");
-			const gchar *stop = strstr(hours, ". ");
-			g_autofree gchar *first = stop != NULL ? g_strndup(hours, (gsize)(stop - hours)) : g_strdup(hours);
-			add_fact(items, plan_ui(plan, "hours"), first);
-		}
-		if (ls_string(facts, "address") != NULL) {
-			/* "Street, [Suite,] Town, State Zip": the town is the part
-			 * before the state. */
-			g_auto(GStrv) parts = g_strsplit(ls_string(facts, "address"), ",", -1);
-			guint n = g_strv_length(parts);
-			g_autofree gchar *town = n >= 3 ? g_strstrip(g_strdup(parts[n - 2]))
-				: g_strdup(ls_string(facts, "address"));
-			add_fact(items, plan_ui(plan, "based_in"), town);
-		}
+		JsonArray *items = strip_facts(plan);
 		json_object_set_array_member(content, "items", items);
 		if (json_object_has_member(content, "intro"))
 			json_object_remove_member(content, "intro");
@@ -2427,6 +2509,26 @@ ls_components_design_home(LsComponents *self, JsonNode *plan_node, JsonNode *pag
 					json_object_set_object_member(content, slot, photo_art(photo));
 			}
 		}
+		/* The collage's and the strip's further photos and the stats bar's
+		 * facts: supplied photos and facts, from the builder. */
+		if (g_strcmp0(type, "hero") == 0 && (g_strcmp0(ls_string(entry, "variant"), "collage") == 0 ||
+			g_strcmp0(ls_string(entry, "variant"), "thumb-strip") == 0)) {
+			JsonArray *more = json_array_new();
+			guint want = g_strcmp0(ls_string(entry, "variant"), "collage") == 0 ? 2 : 3;
+			JsonObject *photo;
+			while (json_array_get_length(more) < want && (photo = next_free(photos, &next_photo, used)) != NULL) {
+				JsonObject *item = json_object_new();
+				json_object_set_object_member(item, "art", photo_art(photo));
+				json_array_add_object_element(more, item);
+			}
+			json_object_set_array_member(content, "photos", more);
+		}
+		if (g_strcmp0(type, "hero") == 0 && g_strcmp0(ls_string(entry, "variant"), "stats-bar") == 0) {
+			JsonArray *stats = strip_facts(plan);
+			while (json_array_get_length(stats) > 4)
+				json_array_remove_element(stats, json_array_get_length(stats) - 1);
+			json_object_set_array_member(content, "stats", stats);
+		}
 		/* The builder draws the phone and email; a writer's row repeating
 		 * either is dropped. */
 		if (g_strcmp0(type, "contact") == 0 && member_array(content, "items") != NULL) {
@@ -2449,6 +2551,12 @@ ls_components_design_home(LsComponents *self, JsonNode *plan_node, JsonNode *pag
 			json_object_unref(content);
 			json_object_unref(section);
 			continue;
+		}
+		/* The photo the area card lies over. */
+		if (g_strcmp0(type, "areas") == 0 && g_strcmp0(ls_string(entry, "variant"), "card-over-photo") == 0) {
+			JsonObject *photo = next_free(photos, &next_photo, used);
+			if (photo != NULL)
+				json_object_set_object_member(content, "art", photo_art(photo));
 		}
 		/* The builder draws the opening's, the contact's and the closing
 		 * call's actions. */
@@ -2667,7 +2775,7 @@ static const gchar *const ui_keys[] = {"skip", "menu", "nav", "footer_nav", "con
 	"checklist_yes", "checklist_no", "close", "ingredients", "method", "social", "share", "copy_link", "copied",
 	"sending", "sent", "send_failed", "call", "quote", "quick_actions", "send_another", "book", "since", "hours",
 	"address", "towns", "all_services", "based_in", "how_it_works", "where_we_work", "own_work", "reviews_on",
-	"mentioned_in", "our_places"};
+	"mentioned_in", "our_places", "announcement", "dismiss", "directions"};
 static const gchar *const ui_defaults[] = {"Skip to content", "Menu", "Primary", "Footer", "Contents",
 	"Filter entries", "{n} entry shown", "{n} entries shown", "required", "Clear", "Preview",
 	"Download text file", "Fill in this field.", "Check this entry.", "{n} fields need attention.",
@@ -2676,7 +2784,7 @@ static const gchar *const ui_defaults[] = {"Skip to content", "Menu", "Primary",
 	"Sending your message.", "Thank you. Your message was sent.", "Your message was not sent. Please try again.",
 	"Call", "Request a quote", "Get in touch", "Send another message", "Book online", "In business since", "Hours",
 	"Address", "Towns served", "All services", "Based in", "How it works", "Where we work", "Our work",
-	"{n} reviews on {source}", "Mentioned in", "Where to find us"};
+	"{n} reviews on {source}", "Mentioned in", "Where to find us", "Notice", "Dismiss", "Get directions"};
 /* An interface string for @plan: its own ui text, else the default. */
 static const gchar *
 plan_ui(JsonObject *plan, const gchar *key){
@@ -4413,9 +4521,15 @@ ls_components_fingerprint(LsComponents *self, JsonNode *plan, JsonNode *home){
 			json_array_add_string_element(rest, component);
 	}
 	fp = fingerprint_new(member_object(root, "look"), tokens, tokens, opening, rest);
-	/* The preset, so a nearby order can avoid it (site.avoid). */
-	if (member_object(root, "design") != NULL && ls_string(member_object(root, "design"), "preset") != NULL)
-		json_object_set_string_member(fp, "preset", ls_string(member_object(root, "design"), "preset"));
+	/* The preset, the page skeleton and the header, so a nearby order can
+	 * avoid them (site.avoid); the footer and motion level for the record. */
+	{
+		const gchar *keys[] = {"preset", "skeleton", "header", "footer", "motion"};
+		guint k;
+		for (k = 0; k < G_N_ELEMENTS(keys); k++)
+			if (member_object(root, "design") != NULL && ls_string(member_object(root, "design"), keys[k]) != NULL)
+				json_object_set_string_member(fp, keys[k], ls_string(member_object(root, "design"), keys[k]));
+	}
 	if (ls_string(root, "signature") != NULL)
 		json_object_set_array_member(fp, "signature", signature_shingles(ls_string(root, "signature")));
 	return fp;
@@ -5253,11 +5367,40 @@ check_promised_steps(Problems *problems, JsonNode *plan_node, JsonNode *page){
 		JsonObject *content = member_object(section, "content");
 		JsonArray *items = member_array(content, "items");
 		const gchar *heading = ls_string(content, "heading");
+		/* Questions are not steps: the gate counts listed steps only. */
 		if (heading == NULL || !g_regex_match(promise, heading, 0, NULL) ||
-			(items != NULL && json_array_get_length(items) >= 2))
+			(items != NULL && json_array_get_length(items) >= 2 && g_strcmp0(ls_string(section, "component"), "faq") != 0))
 			continue;
 		problem(problems, "section %u heading \"%s\" promises a process, so the section lists two or more steps "
 			"(use the steps component), or the heading says what the section holds instead", i + 1, heading);
+	}
+}
+
+/* On a preset site a heading that promises opening hours gives them in its
+ * own section, as the site gate asks of a published page. */
+static void
+check_promised_hours(Problems *problems, JsonNode *plan_node, JsonNode *page){
+	JsonObject *plan = plan_node != NULL && JSON_NODE_HOLDS_OBJECT(plan_node) ? json_node_get_object(plan_node) : NULL;
+	JsonArray *sections = page != NULL && JSON_NODE_HOLDS_OBJECT(page)
+		? member_array(json_node_get_object(page), "sections") : NULL;
+	g_autoptr(GRegex) promise = NULL, given = NULL;
+	guint i;
+	if (member_object(plan, "design") == NULL || sections == NULL)
+		return;
+	promise = g_regex_new("\\bhours\\b|\\bopening times\\b|\\bwhen we(?: are|'re) open\\b", G_REGEX_CASELESS, 0, NULL);
+	given = g_regex_new("\\b\\d{1,2}(?::\\d{2})?\\s*(?:am|pm|a\\.m\\.|p\\.m\\.)|\\b\\d{1,2}:\\d{2}\\b|24/7|24 hours|\\bclosed\\b",
+		G_REGEX_CASELESS, 0, NULL);
+	for (i = 0; i < json_array_get_length(sections); i++) {
+		JsonNode *node = json_array_get_element(sections, i);
+		JsonObject *section = JSON_NODE_HOLDS_OBJECT(node) ? json_node_get_object(node) : NULL;
+		const gchar *heading = ls_string(member_object(section, "content"), "heading");
+		g_autofree gchar *text = NULL;
+		if (heading == NULL || !g_regex_match(promise, heading, 0, NULL))
+			continue;
+		text = ls_json_encode(json_object_get_member(section, "content"));
+		if (!g_regex_match(given, text, 0, NULL))
+			problem(problems, "section %u heading \"%s\" promises opening hours, so the section gives the supplied "
+				"hours, or the heading says what the section holds instead", i + 1, heading);
 	}
 }
 
@@ -5308,6 +5451,7 @@ ls_components_check_page(LsComponents *self, JsonNode *plan, const gchar *path, 
 	check_home_depth(&problems, plan, path, page);
 	check_service_depth(&problems, plan, path, page);
 	check_promised_steps(&problems, plan, page);
+	check_promised_hours(&problems, plan, page);
 	check_filler(&problems, plan, page);
 	subject = g_strdup_printf("The %s specification", path);
 	okay = finish(&problems, subject, error);
@@ -5333,6 +5477,9 @@ typedef struct {
 } Render;
 
 static void derived_filter(Render *render, JsonObject *view, const gchar *field);
+static gboolean design_overlay(JsonObject *plan, const gchar *name);
+static gchar *quote_form_html(Render *render, const gchar *id, const gchar *labelledby, gboolean quiet);
+static JsonObject *badge_view(Render *render);
 
 static const gchar *
 ui_text(Render *render, const gchar *key){
@@ -5983,6 +6130,196 @@ render_template(Render *render, const gchar *name, JsonObject *view){
 	return text != NULL ? text : g_strdup("");
 }
 
+/* Whether the plan's design wears the overlay @name. */
+static gboolean
+design_overlay(JsonObject *plan, const gchar *name){
+	JsonArray *overlays = member_array(member_object(plan, "design"), "overlays");
+	guint i;
+	for (i = 0; overlays != NULL && i < json_array_get_length(overlays); i++)
+		if (g_strcmp0(json_array_get_string_element(overlays, i), name) == 0)
+			return TRUE;
+	return FALSE;
+}
+
+/* The supplied live form as a compact quote form with the form script's
+ * hooks, labelled by @labelledby; a @quiet submit is an outline, so the
+ * first screen keeps one solid action. NULL without a supplied form. */
+static gchar *
+quote_form_html(Render *render, const gchar *id, const gchar *labelledby, gboolean quiet){
+	g_autoptr(JsonObject) empty = json_object_new();
+	g_autoptr(JsonObject) content = supplied_form_content(render->plan, empty);
+	g_autoptr(JsonObject) view = NULL;
+	guint k;
+	if (content == NULL)
+		return NULL;
+	view = json_object_new();
+	form_view(render, view, content, id);
+	for (k = 0; k < G_N_ELEMENTS(ui_keys); k++) {
+		g_autofree gchar *ui_name = g_strconcat(ui_keys[k], "_label", NULL);
+		json_object_set_string_member(view, ui_name, ui_text(render, ui_keys[k]));
+	}
+	json_object_set_string_member(view, "target", ls_string(content, "target"));
+	json_object_set_string_member(view, "labelledby", labelledby);
+	json_object_set_string_member(view, "submit", ui_text(render, "quote"));
+	json_object_set_string_member(view, "error_invalid", ui_text(render, "error_invalid"));
+	json_object_set_boolean_member(view, "quiet", quiet);
+	/* The form's styles and script come with it. */
+	g_hash_table_add(render->used, g_strdup("form"));
+	return render_template(render, "quote-form.html", view);
+}
+
+/* The badge on the opening photo: the supplied rating, else the year the
+ * business started; NULL with neither. */
+static JsonObject *
+badge_view(Render *render){
+	JsonObject *facts = member_object(member_object(render->plan, "design"), "facts");
+	JsonObject *rating = member_object(facts, "rating"), *badge;
+	if (rating != NULL && ls_string(rating, "source") != NULL) {
+		gchar score[G_ASCII_DTOSTR_BUF_SIZE];
+		g_autofree gchar *count = g_strdup_printf("%" G_GINT64_FORMAT, json_object_get_int_member(rating, "count"));
+		g_autofree gchar *with_count = replace_all(plan_ui(render->plan, "reviews_on"), "{n}", count);
+		g_autofree gchar *label = replace_all(with_count, "{source}", ls_string(rating, "source"));
+		badge = json_object_new();
+		json_object_set_string_member(badge, "value", g_ascii_formatd(score, sizeof score, "%.1f",
+			json_object_get_double_member(rating, "score")));
+		json_object_set_string_member(badge, "label", label);
+		return badge;
+	}
+	if (ls_string(facts, "since") == NULL)
+		return NULL;
+	badge = json_object_new();
+	json_object_set_string_member(badge, "value", ls_string(facts, "since"));
+	json_object_set_string_member(badge, "label", plan_ui(render->plan, "since"));
+	return badge;
+}
+
+/* The planned page whose path is @path, or NULL. */
+static JsonObject *
+planned_page(JsonObject *plan, const gchar *path){
+	JsonArray *pages = member_array(plan, "pages");
+	guint i;
+	for (i = 0; pages != NULL && i < json_array_get_length(pages); i++)
+		if (g_strcmp0(ls_string(json_array_get_object_element(pages, i), "path"), path) == 0)
+			return json_array_get_object_element(pages, i);
+	return NULL;
+}
+
+/* The announcement bar: one supplied fact, word for word, and the page
+ * that tells more; the hours first, then the towns, then the year. */
+static JsonObject *
+announcement_view(Render *render){
+	JsonObject *facts = member_object(member_object(render->plan, "design"), "facts");
+	JsonArray *area = member_array(facts, "area");
+	JsonObject *view = json_object_new(), *target = NULL;
+	g_autofree gchar *text = NULL;
+	const gchar *label = NULL;
+	if (ls_string(facts, "hours") != NULL) {
+		const gchar *hours = ls_string(facts, "hours"), *stop = strstr(hours, ". ");
+		text = stop != NULL ? g_strndup(hours, (gsize)(stop - hours)) : g_strdup(hours);
+		label = ui_text(render, "hours");
+		target = planned_page(render->plan, "contact.html");
+	} else if (area != NULL && json_array_get_length(area) > 0) {
+		GString *towns = g_string_new(NULL);
+		guint i, n = MIN(json_array_get_length(area), 4);
+		for (i = 0; i < n; i++)
+			g_string_append_printf(towns, "%s%s", i == 0 ? "" : i + 1 == n && n == json_array_get_length(area) ? " and " : ", ",
+				json_array_get_string_element(area, i));
+		text = g_string_free(towns, FALSE);
+		label = ui_text(render, "towns");
+		target = planned_page(render->plan, "service-area.html");
+	} else if (ls_string(facts, "since") != NULL) {
+		text = g_strdup(ls_string(facts, "since"));
+		label = ui_text(render, "since");
+		target = planned_page(render->plan, "about.html");
+	}
+	if (text == NULL) {
+		json_object_unref(view);
+		return NULL;
+	}
+	json_object_set_string_member(view, "label", label);
+	json_object_set_string_member(view, "text", text);
+	json_object_set_string_member(view, "region_label", ui_text(render, "announcement"));
+	json_object_set_string_member(view, "dismiss_label", ui_text(render, "dismiss"));
+	if (target != NULL && g_strcmp0(ls_string(target, "path"), render->page_path) != 0) {
+		json_object_set_string_member(view, "href", ls_string(target, "path"));
+		json_object_set_string_member(view, "link_label", ls_string(target, "title"));
+	}
+	return view;
+}
+
+/* The header, footer and overlay views of a design's layouts on one page. */
+static void
+design_layout_views(Render *render, JsonObject *view, JsonArray *nav){
+	JsonObject *design = member_object(render->plan, "design");
+	JsonObject *facts = member_object(design, "facts");
+	const gchar *header = ls_string(design, "header"), *footer = ls_string(design, "footer");
+	/* Drawer and overlay menus close from inside, as well as by Escape. */
+	if (g_strcmp0(header, "drawer") == 0 || g_strcmp0(header, "overlay") == 0)
+		json_object_set_string_member(view, "nav_close", ui_text(render, "close"));
+	/* The centred name sits after the first half of the links. */
+	if (g_strcmp0(header, "centered-split") == 0 && json_array_get_length(nav) >= 2)
+		json_object_set_boolean_member(json_array_get_object_element(nav, (json_array_get_length(nav) + 1) / 2 - 1),
+			"split", TRUE);
+	if (g_strcmp0(footer, "big-cta") == 0) {
+		JsonObject *big = call_view(render->plan);
+		if (big != NULL) {
+			json_object_set_string_member(big, "lead", ui_text(render, "quick_actions"));
+			json_object_set_object_member(view, "footer_big", big);
+		}
+	}
+	if (g_strcmp0(footer, "mega") == 0 && (ls_string(facts, "address") != NULL || ls_string(facts, "hours") != NULL)) {
+		JsonObject *place = json_object_new();
+		if (ls_string(facts, "address") != NULL) {
+			g_autofree gchar *query = g_uri_escape_string(ls_string(facts, "address"), NULL, FALSE);
+			g_autofree gchar *href = g_strconcat("https://www.openstreetmap.org/search?query=", query, NULL);
+			JsonObject *directions = json_object_new();
+			json_object_set_string_member(place, "address", ls_string(facts, "address"));
+			json_object_set_string_member(directions, "href", href);
+			json_object_set_string_member(directions, "label", ui_text(render, "directions"));
+			json_object_set_object_member(place, "directions", directions);
+		}
+		if (ls_string(facts, "hours") != NULL)
+			json_object_set_string_member(place, "hours", ls_string(facts, "hours"));
+		json_object_set_object_member(view, "footer_place", place);
+	}
+	if (g_strcmp0(footer, "wordmark") == 0)
+		json_object_set_boolean_member(view, "footer_wordmark", TRUE);
+	if (g_strcmp0(footer, "split-form") == 0) {
+		g_autofree gchar *html = quote_form_html(render, "footer", "footer-form-h", FALSE);
+		if (html != NULL) {
+			JsonObject *form = json_object_new();
+			json_object_set_string_member(form, "title", ui_text(render, "quote"));
+			json_object_set_string_member(form, "html", html);
+			json_object_set_object_member(view, "footer_form", form);
+		}
+	}
+	if (design_overlay(render->plan, "announcement")) {
+		JsonObject *announcement = announcement_view(render);
+		if (announcement != NULL)
+			json_object_set_object_member(view, "announcement", announcement);
+	}
+	if (design_overlay(render->plan, "lightbox")) {
+		JsonObject *box = json_object_new();
+		json_object_set_string_member(box, "label", ui_text(render, "own_work"));
+		json_object_set_string_member(box, "previous", ui_text(render, "previous"));
+		json_object_set_string_member(box, "next", ui_text(render, "next"));
+		json_object_set_string_member(box, "close", ui_text(render, "close"));
+		json_object_set_object_member(view, "lightbox", box);
+	}
+	/* The quote form opens over the page from every link to it; without
+	 * the script those links still lead to the form's own page. */
+	if (design_overlay(render->plan, "modal-form") && render->quote != NULL) {
+		g_autofree gchar *html = quote_form_html(render, "dialog", "quote-dialog-h", FALSE);
+		if (html != NULL) {
+			JsonObject *dialog = json_object_new();
+			json_object_set_string_member(dialog, "title", ui_text(render, "quote"));
+			json_object_set_string_member(dialog, "close_label", ui_text(render, "close"));
+			json_object_set_string_member(dialog, "form_html", html);
+			json_object_set_object_member(view, "quote_dialog", dialog);
+		}
+	}
+}
+
 /* Renders each section into @pieces and collects in-page contents entries
  * (headed sections after the opening, and article parts) into @toc. */
 static gint
@@ -6477,7 +6814,24 @@ render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArra
 		if (tone == NULL && member_object(render->plan, "design") != NULL && g_str_equal(name, "cta") &&
 			g_str_equal(variant, "closing-band"))
 			tone = "brand";
+		/* The hero's quote form; the gallery's photos open larger. */
+		if (member_object(render->plan, "design") != NULL && i == 0 && g_str_equal(name, "hero") &&
+			g_str_equal(variant, "form")) {
+			g_autofree gchar *labelled_by = g_strconcat(id, "-h", NULL);
+			g_autofree gchar *form_html = quote_form_html(render, id, labelled_by, TRUE);
+			if (form_html != NULL)
+				json_object_set_string_member(view, "form_html", form_html);
+		}
+		if (g_str_equal(name, "gallery") && design_overlay(render->plan, "lightbox"))
+			json_object_set_boolean_member(view, "lightbox", TRUE);
 		inner = render_template(render, file, view);
+		/* A badge of one supplied fact on the home's opening photo. */
+		if (i == 0 && g_str_equal(name, "hero") && design_overlay(render->plan, "badge") &&
+			g_strcmp0(render->page_path, "index.html") == 0) {
+			JsonObject *badge = badge_view(render);
+			if (badge != NULL)
+				json_object_set_object_member(wrapper, "badge", badge);
+		}
 		if (tone != NULL)
 			json_object_set_string_member(wrapper, "tone", tone);
 		json_object_set_string_member(wrapper, "component", name);
@@ -6654,9 +7008,18 @@ render_page(Render *render, const gchar *path, const gchar *title, const gchar *
 		 * primitives on the body. */
 		if (member_object(plan, "design") != NULL) {
 			JsonObject *design = member_object(plan, "design");
-			gchar *more = g_strdup_printf("%s design design--%s header--%s footer--%s kicker--%s accent--%s", classes,
-				ls_string(design, "preset"), ls_string(design, "header"), ls_string(design, "footer"),
-				ls_string(design, "kicker"), ls_string(design, "accent"));
+			JsonArray *overlays = member_array(design, "overlays");
+			GString *extra = g_string_new(NULL);
+			gchar *more;
+			guint o;
+			for (o = 0; overlays != NULL && o < json_array_get_length(overlays); o++)
+				g_string_append_printf(extra, " overlay--%s", json_array_get_string_element(overlays, o));
+			more = g_strdup_printf("%s design design--%s header--%s footer--%s kicker--%s accent--%s skeleton--%s "
+				"motion--%s%s", classes, ls_string(design, "preset"), ls_string(design, "header"),
+				ls_string(design, "footer"), ls_string(design, "kicker"), ls_string(design, "accent"),
+				ls_string(design, "skeleton") != NULL ? ls_string(design, "skeleton") : "stack",
+				ls_string(design, "motion") != NULL ? ls_string(design, "motion") : "none", extra->str);
+			g_string_free(extra, TRUE);
 			g_free(classes);
 			classes = more;
 		}
@@ -6721,6 +7084,7 @@ render_page(Render *render, const gchar *path, const gchar *title, const gchar *
 			if (contact != NULL)
 				json_object_set_object_member(view, "footer_contact", contact);
 		}
+		design_layout_views(render, view, nav);
 		/* The centered footer adds the supplied address and hours. */
 		if (g_strcmp0(ls_string(design, "footer"), "centered") == 0) {
 			JsonObject *facts = member_object(design, "facts");
@@ -6769,6 +7133,13 @@ render_page(Render *render, const gchar *path, const gchar *title, const gchar *
 				json_object_set_string_member(link, "href", render->quote);
 				json_object_set_string_member(link, "label", ui_text(render, "quote"));
 				json_object_set_object_member(bar, "quote", link);
+			}
+			/* The wide sticky bar adds the phone as a line beside a button
+			 * that is not the call. */
+			if (call == NULL && design_overlay(plan, "sticky-bar")) {
+				JsonObject *line = call_view(plan);
+				if (line != NULL)
+					json_object_set_object_member(bar, "bar_phone", line);
 			}
 			json_object_set_object_member(view, "actions", bar);
 			g_hash_table_add(render->used, g_strdup("call"));
@@ -6903,6 +7274,14 @@ render_page(Render *render, const gchar *path, const gchar *title, const gchar *
 			json_object_set_string_member(view, "font_href", fonts);
 			json_object_set_array_member(view, "font_preloads", font_preloads(plan));
 		}
+	}
+	/* Every link to the live form opens the quote dialog, when there is one. */
+	if (json_object_has_member(view, "quote_dialog") && render->quote != NULL) {
+		g_autofree gchar *html = render_template(render, "layout.html", view);
+		g_autofree gchar *escaped = ls_template_escape(render->quote);
+		g_autofree gchar *needle = g_strdup_printf("href=\"%s\"", escaped);
+		g_autofree gchar *with = g_strdup_printf("href=\"%s\" data-dialog=\"quote-dialog\"", escaped);
+		return replace_all(html, needle, with);
 	}
 	return render_template(render, "layout.html", view);
 }
@@ -7443,6 +7822,31 @@ ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages
 	/* A design's primitives and section shells lead over the stock look. */
 	if (member_object(plan, "design") != NULL && file_text(self, "design.css") != NULL)
 		g_string_append_printf(css, "\n/* design */\n@layer ls-look {\n%s}\n", file_text(self, "design.css"));
+	/* The design's page skeleton, overlays and motion, with their scripts. */
+	if (member_object(plan, "design") != NULL) {
+		JsonObject *design = member_object(plan, "design");
+		JsonArray *overlays = member_array(design, "overlays");
+		const gchar *header = ls_string(design, "header"), *motion = ls_string(design, "motion");
+		g_autofree gchar *skeleton = g_strdup_printf("skeleton--%s.css", ls_string(design, "skeleton") != NULL
+			? ls_string(design, "skeleton") : "stack");
+		if (file_text(self, skeleton) != NULL)
+			g_string_append_printf(css, "\n/* %s */\n@layer ls-look {\n%s}\n", skeleton, file_text(self, skeleton));
+		for (i = 0; overlays != NULL && i < json_array_get_length(overlays); i++) {
+			g_autofree gchar *overlay = g_strdup_printf("overlay--%s.css", json_array_get_string_element(overlays, i));
+			if (file_text(self, overlay) != NULL)
+				g_string_append_printf(css, "\n/* %s */\n@layer ls-look {\n%s}\n", overlay, file_text(self, overlay));
+		}
+		if (motion != NULL && !g_str_equal(motion, "none") && file_text(self, "motion.css") != NULL) {
+			g_string_append_printf(css, "\n/* motion */\n@layer ls-look {\n%s}\n", file_text(self, "motion.css"));
+			g_string_append_printf(js, "\n%s", file_text(self, "motion.js"));
+		}
+		if ((g_strcmp0(header, "drawer") == 0 || g_strcmp0(header, "overlay") == 0 ||
+			g_strcmp0(header, "transparent-solid") == 0 || g_strcmp0(header, "shrink") == 0) &&
+			file_text(self, "header.js") != NULL)
+			g_string_append_printf(js, "\n%s", file_text(self, "header.js"));
+		if (overlays != NULL && json_array_get_length(overlays) > 0 && file_text(self, "overlay.js") != NULL)
+			g_string_append_printf(js, "\n%s", file_text(self, "overlay.js"));
+	}
 	/* Library variants own layout and lead over the primitives they arrange. */
 	for (i = 0; i < self->extras->len; i++) {
 		const gchar *extra = g_ptr_array_index(self->extras, i);

@@ -1,0 +1,21 @@
+/* overlay/modal-form: the supplied quote form in a dialog that opens over
+ * the page from every link to the form (overlay.js); Escape and the close
+ * button shut it and the focus goes back to the link. */
+.design.overlay--modal-form .quote-dialog {
+	width: min(36rem, 100% - 2rem); max-height: calc(100svh - 2rem); padding: 0; overflow: auto;
+	border: 0; border-radius: var(--radius-box); background: var(--bg); color: var(--fg); box-shadow: var(--shadow-3);
+}
+.design.overlay--modal-form .quote-dialog::backdrop { background: rgb(0 0 0 / 0.55); }
+.design.overlay--modal-form .quote-dialog__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-4); padding: var(--space-5) var(--space-5) 0 var(--space-6); }
+.design.overlay--modal-form .quote-dialog__head h2 { margin: 0; font-size: var(--text-6); }
+.design.overlay--modal-form .quote-dialog .form__form, .design .quote-dialog .form__sent { display: grid; gap: var(--space-3); padding: var(--space-5) var(--space-6) var(--space-6); }
+.design.overlay--modal-form .quote-dialog .form__sent[hidden] { display: none; }
+.design.overlay--modal-form .dialog-close {
+	display: inline-grid; place-items: center; min-width: 44px; min-height: 44px; padding: 0;
+	border: 1px solid var(--line); border-radius: var(--radius-control); background: var(--bg); color: var(--fg); font-size: var(--text-5); cursor: pointer;
+}
+.design.overlay--modal-form .dialog-close:hover { background: var(--surface); }
+@media (prefers-reduced-motion: no-preference) {
+	.design.overlay--modal-form .quote-dialog[open] { animation: ls-dialog-in 220ms ease-out; }
+	@keyframes ls-dialog-in { from { opacity: 0; transform: translateY(1rem); } }
+}
