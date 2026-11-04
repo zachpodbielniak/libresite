@@ -211,6 +211,16 @@ test_tap_targets(void){
 	g_assert_nonnull(strstr(css, ".field--check label { display: flex; align-items: center; min-height: 44px; }"));
 }
 
+/* A breadcrumb link is a 44px tap target while the current page is plain
+ * text, so the trail centres its items: the link text, the separator and
+ * the current page share one line instead of the link sitting lower. */
+static void
+test_crumbs_one_line(void){
+	g_autofree gchar *css = read_file("data/components/page-header.css");
+	g_assert_nonnull(strstr(css, ".crumbs ol { display: flex; flex-wrap: wrap; align-items: center;"));
+	g_assert_nonnull(strstr(css, ".crumbs li { display: inline-flex; align-items: center; }"));
+}
+
 /* WCAG contrast of two #rrggbb colours. */
 static gdouble
 contrast_of(const gchar *a, const gchar *b){
@@ -404,6 +414,7 @@ main(int argc, char **argv){
 	g_test_add_func("/mobile/fitter", test_fitter);
 	g_test_add_func("/mobile/link-lines", test_link_lines);
 	g_test_add_func("/mobile/tap-targets", test_tap_targets);
+	g_test_add_func("/mobile/crumbs-one-line", test_crumbs_one_line);
 	g_test_add_func("/mobile/danger", test_danger);
 	g_test_add_func("/mobile/accent-surface", test_accent_surface);
 	g_test_add_func("/mobile/fonts-and-photos", test_fonts_and_photos);
