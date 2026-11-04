@@ -145,5 +145,6 @@ body.design {
 .design.footer--simple .site-footer { background: var(--surface); color: var(--fg); border-top: 1px solid var(--line); }
 .design.footer--simple .site-footer :is(.site-footer__photos, .site-footer__credit) { color: var(--muted-fg); }
 @media (min-width: 48rem) {
-	.design.footer--simple .site-footer__inner { grid-template-columns: minmax(0, 1fr) minmax(0, auto); align-items: center; }
+	.design.footer--simple .site-footer__inner { grid-template-columns: minmax(14rem, 1fr) minmax(0, 2fr); align-items: start; }
+	.design.footer--simple .site-footer nav ul { display: grid; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); gap: 0 var(--space-5); }
 }

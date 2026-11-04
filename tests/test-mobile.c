@@ -211,6 +211,17 @@ test_tap_targets(void){
 	g_assert_nonnull(strstr(css, ".field--check label { display: flex; align-items: center; min-height: 44px; }"));
 }
 
+/* The simple footer gives the business column a fixed share and lays the
+ * page links out as a wrapping grid, so a site with many pages never
+ * squeezes the name into one word per line. */
+static void
+test_simple_footer_columns(void){
+	g_autofree gchar *css = read_file("data/components/design.css");
+	g_assert_nonnull(strstr(css, ".design.footer--simple .site-footer__inner { grid-template-columns: minmax(14rem, 1fr) minmax(0, 2fr); align-items: start; }"));
+	g_assert_nonnull(strstr(css, ".design.footer--simple .site-footer nav ul { display: grid; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); gap: 0 var(--space-5); }"));
+	g_assert_null(strstr(css, "grid-template-columns: minmax(0, 1fr) minmax(0, auto); align-items: center;"));
+}
+
 /* A breadcrumb link is a 44px tap target while the current page is plain
  * text, so the trail centres its items: the link text, the separator and
  * the current page share one line instead of the link sitting lower. */
@@ -415,6 +426,7 @@ main(int argc, char **argv){
 	g_test_add_func("/mobile/link-lines", test_link_lines);
 	g_test_add_func("/mobile/tap-targets", test_tap_targets);
 	g_test_add_func("/mobile/crumbs-one-line", test_crumbs_one_line);
+	g_test_add_func("/mobile/simple-footer-columns", test_simple_footer_columns);
 	g_test_add_func("/mobile/danger", test_danger);
 	g_test_add_func("/mobile/accent-surface", test_accent_surface);
 	g_test_add_func("/mobile/fonts-and-photos", test_fonts_and_photos);
