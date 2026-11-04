@@ -250,6 +250,8 @@ test_sticky_bar_rests(void){
 	g_assert_nonnull(strstr(css, ".design.overlay--sticky-bar .site-footer { padding-bottom: calc(var(--space-6) + 4rem); }"));
 	g_assert_nonnull(strstr(js, "IntersectionObserver"));
 	g_assert_nonnull(strstr(js, "is-resting"));
+	/* It also rests over the opening, which already holds the call. */
+	g_assert_nonnull(strstr(js, "main > :first-child, main > .cta:last-of-type, .site-footer"));
 }
 
 /* A breadcrumb link is a 44px tap target while the current page is plain
