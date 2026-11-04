@@ -11,7 +11,7 @@
 	.design.overlay--sticky-bar .site-footer { padding-bottom: calc(var(--space-6) + 4rem); }
 	.design.overlay--sticky-bar .action-bar__inner {
 		display: flex; align-items: center; justify-content: center; gap: var(--space-5); width: max-content; max-width: calc(100% - 2 * var(--gutter));
-		margin-inline: auto; padding: var(--space-2) var(--space-2) var(--space-2) var(--space-5); border-radius: 999px;
+		margin-inline: auto; padding: var(--space-2) var(--space-2) var(--space-2) var(--space-5); border-radius: calc(var(--radius-control) + var(--space-2));
 		background: var(--inverse); color: var(--inverse-fg); box-shadow: var(--shadow-3); pointer-events: auto;
 	}
 	.design.overlay--sticky-bar .action-bar__inner:not(:has(.action-bar__phone:not([hidden]))) { padding: 0; background: transparent; box-shadow: none; }

@@ -248,6 +248,9 @@ test_sticky_bar_rests(void){
 	g_assert_nonnull(strstr(css, ".design.overlay--sticky-bar .action-bar.is-resting { opacity: 0; visibility: hidden; }"));
 	g_assert_nonnull(strstr(css, ".design.overlay--sticky-bar .action-bar__inner:not(:has(.action-bar__phone:not([hidden]))) { padding: 0; background: transparent; box-shadow: none; }"));
 	g_assert_nonnull(strstr(css, ".design.overlay--sticky-bar .site-footer { padding-bottom: calc(var(--space-6) + 4rem); }"));
+	/* The ring follows the preset's button corners: no round ring around a square button. */
+	g_assert_null(strstr(css, "border-radius: 999px"));
+	g_assert_nonnull(strstr(css, "border-radius: calc(var(--radius-control) + var(--space-2));"));
 	g_assert_nonnull(strstr(js, "IntersectionObserver"));
 	g_assert_nonnull(strstr(js, "is-resting"));
 	/* It also rests over the opening, which already holds the call. */
