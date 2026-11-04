@@ -206,6 +206,8 @@ An order with offers fixes the site's pages (=design.pages=). The builder makes 
 | one page per offer, such as =drain-cleaning.html= | detail | always, up to 16 offers |
 | =about.html= | about | the order gives a starting year ("since 1998") |
 | =service-area.html= | visit | the order gives the towns it serves |
+| =questions.html= | general | always: questions about each service, answered from supplied facts and general truths |
+| =book.html= | form | the order supplies a booking page; the builder puts the live booking calendar there |
 | =contact.html= | contact | always |
 
 A service page's path is the slug of the offer's name. A slug that another page uses gets a =service-= prefix or a number. An order with only a brief has no =design.pages=, and the plan chooses its pages as before.
@@ -232,15 +234,16 @@ Stock photos never fill a gallery or the about photo, so they never pass for the
 
 =ls_components_apply_design()= makes the design's pages the plan's pages, in the design's order. A page that the writer planned keeps its brief and its description (when 50 to 160 characters long). A service page keeps the offer's name as its title. The builder writes a description for a page that has none. Pages that the design does not list are removed.
 
-The builder also writes the navigation: a Services link with "All services" and every service page under it (up to 8 links), then About, Service area and Contact. Wide screens show the services as a drop-down menu; the phone menu shows every link. The footer lists every page of the design, then privacy and terms. The plan's =nav=, =action= and =footer.links= are replaced. On the home, each service name links to its own page.
+The builder also writes the navigation: a Services link with "All services" and every service page under it (up to 8 links), then About, Service area, Questions, Booking and Contact. Wide screens show the services as a drop-down menu; the phone menu shows every link. The footer lists every page of the design, then privacy and terms. The plan's =nav=, =action= and =footer.links= are replaced. On the home, each service name links to its own page.
 
-Each service writer receives TASK =service=: the offer as supplied. The page stage asks for a page header, a general "What it involves" text, a checklist of common signs, three or four questions and the closing call. The prompts permit general, true information about a kind of work (=spec_system=, GENERAL KNOWLEDGE). They forbid claims of this business's own methods, prices, timings, guarantees, licences, staff or results.
+Each service writer receives TASK =service=: the offer as supplied. The page stage asks for a page header, a general "What it involves" text, a checklist of common signs, three or four questions and the closing call. The prompts permit general, true information about a kind of work (=spec_system=, GENERAL KNOWLEDGE). They forbid claims of this business's own methods, prices, timings, guarantees, licences, staff or results. An order's rule against extrapolating from a service name governs statements about the work this business does; the prompt says that general information worded as general does not break it, so even a names-only order gets a general description of each service.
 
 The page check refuses a thin answer and sends the reason back to its writer:
-- The home needs its FAQ with eight or more questions. A home without a trust strip, process, about, area, gallery or reviews (an order of names only) needs twelve or more.
+- The home needs its FAQ with ten or more questions. A home without a trust strip, process, about, area, gallery or reviews (an order of names only) needs twelve or more.
 - Every service on the home needs a summary. A service without a supplied description needs three or more general sentences.
 - A service page needs a text or article section on what the work involves, and three or more questions.
 - On a preset site, a heading that promises a process ("how it works", "our process") heads two or more steps. The site gate asks the same of the published page.
+- On a preset site, the lines the site gate bans as filler ("one of the four services", "ask us about a ...") are refused before publication.
 
 =ls_components_home_questions()= gives the home's minimum, and the home writer receives it as TASK =home_questions=, so the writer knows the count before the check applies it. These are counts of questions and sentences, not word quotas. Each question and each sentence must still come from supplied facts or general truths.
 
