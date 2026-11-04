@@ -15,5 +15,8 @@
 @container (min-width: 48rem) {
 	.hero--photo-pair .hero__pair { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 	.hero--photo-pair .hero__half + .hero__half { display: block; }
+	/* The words run under both photos: a long headline takes fewer lines. */
+	.hero--photo-pair .hero__text { max-width: 62rem; }
+	.hero--photo-pair .hero__title { max-width: 30ch; }
 	.design main > .block.hero--photo-pair .hero__half img:is([src]) { aspect-ratio: auto; height: max(12rem, min(30rem, 40cqi, 100svh - 30rem)); }
 }

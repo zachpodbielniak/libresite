@@ -980,6 +980,7 @@ test_new_variants(void){
 		g_autofree gchar *pair = NULL;
 		g_assert_true(g_file_get_contents("data/components/hero--photo-pair.css", &pair, NULL, NULL));
 		g_assert_nonnull(strstr(pair, "100svh - 30rem"));
+		g_assert_nonnull(strstr(pair, ".hero--photo-pair .hero__title { max-width: 30ch; }"));
 	}
 	/* The over-photo header needs a full-bleed opening. */
 	{
