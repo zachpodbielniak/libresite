@@ -974,6 +974,13 @@ test_new_variants(void){
 		g_assert_nonnull(strstr(strip, "Fairport"));
 		g_assert_null(strstr(strip, "Suite 2"));
 	}
+	/* The photo pair leaves room on the first screen for a long headline
+	 * without the page script (slice 4's roofer: four lines of capitals). */
+	{
+		g_autofree gchar *pair = NULL;
+		g_assert_true(g_file_get_contents("data/components/hero--photo-pair.css", &pair, NULL, NULL));
+		g_assert_nonnull(strstr(pair, "100svh - 30rem"));
+	}
 	/* The over-photo header needs a full-bleed opening. */
 	{
 		g_autoptr(JsonObject) design = design_for(components, rich, "lindholm", eight_photos);

@@ -481,6 +481,17 @@ test_service_depth(void){
 		g_assert_nonnull(strstr(error->message, "steps"));
 		g_clear_error(&error);
 	}
+	/* Steps in a layout that draws no list are sent back too (slice 4's
+	 * law firm put three steps in a facts list). */
+	{
+		g_autoptr(JsonNode) facts = parse("{\"path\": \"questions.html\", \"sections\": [{\"component\":"
+			" \"page-header\", \"variant\": \"plain\", \"content\": {\"heading\": \"Questions\"}},"
+			" {\"component\": \"facts\", \"variant\": \"list\", \"content\": {\"heading\": \"How it works\", \"items\": ["
+			"{\"label\": \"Step 1\", \"value\": \"Call.\"}, {\"label\": \"Step 2\", \"value\": \"Visit.\"}]}}]}");
+		g_assert_false(ls_components_check_page(components, plan, "questions.html", facts, &error));
+		g_assert_nonnull(strstr(error->message, "steps"));
+		g_clear_error(&error);
+	}
 	/* A heading that promises opening hours gives them in its own section
 	 * (slice 4's dentist: "Where we are and when we're open" over an
 	 * opening with no hours). */

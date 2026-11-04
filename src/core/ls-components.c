@@ -5351,7 +5351,7 @@ check_filler(Problems *problems, JsonNode *plan_node, JsonNode *page){
  * "how a job goes", "our process") heads a list of two or more steps, as
  * the site gate asks of every published page. */
 static void
-check_promised_steps(Problems *problems, JsonNode *plan_node, JsonNode *page){
+check_promised_steps(LsComponents *self, Problems *problems, JsonNode *plan_node, JsonNode *page){
 	JsonObject *plan = plan_node != NULL && JSON_NODE_HOLDS_OBJECT(plan_node) ? json_node_get_object(plan_node) : NULL;
 	JsonArray *sections = page != NULL && JSON_NODE_HOLDS_OBJECT(page)
 		? member_array(json_node_get_object(page), "sections") : NULL;
@@ -5367,9 +5367,16 @@ check_promised_steps(Problems *problems, JsonNode *plan_node, JsonNode *page){
 		JsonObject *content = member_object(section, "content");
 		JsonArray *items = member_array(content, "items");
 		const gchar *heading = ls_string(content, "heading");
-		/* Questions are not steps: the gate counts listed steps only. */
+		const gchar *component = ls_string(section, "component"), *variant = ls_string(section, "variant");
+		g_autofree gchar *own = g_strdup_printf("%s--%s.html", component != NULL ? component : "", variant != NULL ? variant : "");
+		g_autofree gchar *base = g_strconcat(component != NULL ? component : "", ".html", NULL);
+		const gchar *markup = file_text(self, own) != NULL ? file_text(self, own) : file_text(self, base);
+		/* Steps count only where the layout lists its items; questions and
+		 * label-and-value rows are not steps, as the gate counts listed
+		 * steps only. */
+		gboolean listed = markup != NULL && strstr(markup, "<li") != NULL && g_strcmp0(component, "faq") != 0;
 		if (heading == NULL || !g_regex_match(promise, heading, 0, NULL) ||
-			(items != NULL && json_array_get_length(items) >= 2 && g_strcmp0(ls_string(section, "component"), "faq") != 0))
+			(items != NULL && json_array_get_length(items) >= 2 && listed))
 			continue;
 		problem(problems, "section %u heading \"%s\" promises a process, so the section lists two or more steps "
 			"(use the steps component), or the heading says what the section holds instead", i + 1, heading);
@@ -5450,7 +5457,7 @@ ls_components_check_page(LsComponents *self, JsonNode *plan, const gchar *path, 
 	check_page_into(self, &problems, plan, path, page, FALSE);
 	check_home_depth(&problems, plan, path, page);
 	check_service_depth(&problems, plan, path, page);
-	check_promised_steps(&problems, plan, page);
+	check_promised_steps(self, &problems, plan, page);
 	check_promised_hours(&problems, plan, page);
 	check_filler(&problems, plan, page);
 	subject = g_strdup_printf("The %s specification", path);

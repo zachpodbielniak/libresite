@@ -384,7 +384,7 @@ The page check refuses a thin answer and sends the reason back to its writer:
 - The home needs its FAQ with ten or more questions. A home without a trust strip, process, about, area, gallery or reviews (an order of names only) needs twelve or more.
 - Every service on the home needs a summary. A service without a supplied description needs three or more general sentences.
 - A service page needs a text or article section on what the work involves, and three or more questions.
-- On a preset site, a heading that promises a process ("how it works", "our process") heads two or more steps. Questions do not count as steps. The site gate asks the same of the published page.
+- On a preset site, a heading that promises a process ("how it works", "our process") heads two or more steps in a layout that lists them. Questions and label-and-value rows do not count as steps. The site gate asks the same of the published page.
 - On a preset site, a heading that promises opening hours ("hours", "when we're open") gives the hours in its own section, as the site gate asks.
 - On a preset site, the lines the site gate bans as filler ("one of the four services", "ask us about a ...") are refused before publication.
 

@@ -15,5 +15,5 @@
 @container (min-width: 48rem) {
 	.hero--photo-pair .hero__pair { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 	.hero--photo-pair .hero__half + .hero__half { display: block; }
-	.design main > .block.hero--photo-pair .hero__half img:is([src]) { aspect-ratio: auto; height: max(14rem, min(36rem, 46cqi, 100svh - 22rem)); }
+	.design main > .block.hero--photo-pair .hero__half img:is([src]) { aspect-ratio: auto; height: max(12rem, min(30rem, 40cqi, 100svh - 30rem)); }
 }
