@@ -1323,12 +1323,33 @@ load_library(LsComponents *self, GChecksum *digest, JsonObject *root, GError **e
 		JsonArray *home = member_array(sector, "home");
 		const gchar *action = ls_string(sector, "action");
 		guint i;
-		if (sector == NULL || !ls_object_keys(sector, "|words|action|home|", NULL) || home == NULL ||
-			action == NULL || (!g_str_equal(action, "call") && !g_str_equal(action, "book") && !g_str_equal(action, "quote")))
-			return catalog_invalid(error, item->data, "library sectors need words, an action (call, book or quote) and home");
+		JsonArray *orders = member_array(sector, "orders");
+		guint o;
+		if (sector == NULL || !ls_object_keys(sector, "|words|action|home|orders|", NULL) || home == NULL ||
+			action == NULL || (!g_str_equal(action, "call") && !g_str_equal(action, "book") && !g_str_equal(action, "quote")) ||
+			(json_object_has_member(sector, "orders") && orders == NULL))
+			return catalog_invalid(error, item->data, "library sectors need words, an action (call, book or quote), home "
+				"and optional orders");
 		for (i = 0; i < json_array_get_length(home); i++)
 			if (member_object(self->components, json_array_get_string_element(home, i)) == NULL)
 				return catalog_invalid(error, item->data, "library homes list catalog components");
+		/* Another order holds the same section types, hero first. */
+		for (o = 0; orders != NULL && o < json_array_get_length(orders); o++) {
+			JsonNode *node = json_array_get_element(orders, o);
+			JsonArray *order = JSON_NODE_HOLDS_ARRAY(node) ? json_node_get_array(node) : NULL;
+			guint k, m;
+			if (order == NULL || json_array_get_length(order) == 0 ||
+				g_strcmp0(json_array_get_string_element(order, 0), "hero") != 0)
+				return catalog_invalid(error, item->data, "library orders are lists of home sections, hero first");
+			for (k = 0; k < json_array_get_length(order); k++) {
+				gboolean known = FALSE;
+				for (m = 0; m < json_array_get_length(home); m++)
+					known = known || g_strcmp0(json_array_get_string_element(order, k),
+						json_array_get_string_element(home, m)) == 0;
+				if (!known)
+					return catalog_invalid(error, item->data, "library orders hold only the sector's home sections");
+			}
+		}
 	}
 	if (member_object(sectors, "any") == NULL)
 		return catalog_invalid(error, "library", "sectors need an any sector");
@@ -2060,12 +2081,52 @@ own_photo(JsonObject *plan, GHashTable *used){
 	return NULL;
 }
 
+static JsonObject *photo_art(JsonObject *photo);
+
+/* The next of @photos from *@at that no section shows yet, marked used. */
+static JsonObject *
+next_free(GPtrArray *photos, guint *at, GHashTable *used){
+	while (*at < photos->len) {
+		JsonObject *photo = g_ptr_array_index(photos, (*at)++);
+		if (!g_hash_table_contains(used, ls_string(photo, "path"))) {
+			g_hash_table_add(used, (gpointer)ls_string(photo, "path"));
+			return photo;
+		}
+	}
+	return NULL;
+}
+
 static JsonObject *
 photo_art(JsonObject *photo){
 	JsonObject *art = json_object_new();
 	json_object_set_string_member(art, "src", ls_string(photo, "path"));
 	json_object_set_string_member(art, "alt", ls_string(photo, "alt") != NULL ? ls_string(photo, "alt") : "");
 	return art;
+}
+
+static gchar *replace_all(const gchar *text, const gchar *needle, const gchar *value);
+
+/* One supplied place for the area section: its name, address, hours and
+ * the call. */
+static JsonObject *
+place_view(const gchar *name, const gchar *address, const gchar *hours, const gchar *phone){
+	JsonObject *place = json_object_new();
+	json_object_set_string_member(place, "name", name != NULL ? name : "");
+	if (address != NULL)
+		json_object_set_string_member(place, "address", address);
+	if (hours != NULL)
+		json_object_set_string_member(place, "hours", hours);
+	{
+		g_autofree gchar *tel = phone != NULL ? ls_phone_tel(phone) : NULL;
+		if (tel != NULL) {
+			JsonObject *link = json_object_new();
+			json_object_set_string_member(place, "phone", phone);
+			json_object_set_string_member(link, "href", tel);
+			json_object_set_string_member(link, "label", phone);
+			json_object_set_object_member(place, "link", link);
+		}
+	}
+	return place;
 }
 
 /* The order's facts and own photos in a designed home section, word for
@@ -2076,6 +2137,54 @@ fill_from_facts(JsonObject *plan, const gchar *type, const gchar *variant, JsonO
 	JsonObject *facts = member_object(member_object(plan, "design"), "facts");
 	JsonArray *area = member_array(facts, "area"), *process = member_array(facts, "process");
 	guint i;
+	if (g_strcmp0(type, "facts") == 0 && g_strcmp0(variant, "band") == 0) {
+		/* The year set large, the services as ticks. */
+		JsonArray *items = json_array_new(), *ticks = json_array_new();
+		JsonArray *pages = member_array(member_object(plan, "design"), "pages");
+		if (ls_string(facts, "since") != NULL)
+			add_fact(items, plan_ui(plan, "since"), ls_string(facts, "since"));
+		for (i = 0; pages != NULL && i < json_array_get_length(pages); i++) {
+			JsonObject *page = json_array_get_object_element(pages, i);
+			if (g_strcmp0(ls_string(page, "kind"), "detail") == 0 && json_array_get_length(ticks) < 16) {
+				JsonObject *tick = json_object_new();
+				json_object_set_string_member(tick, "name", ls_string(page, "title"));
+				json_array_add_object_element(ticks, tick);
+			}
+		}
+		json_object_set_array_member(content, "items", items);
+		json_object_set_array_member(content, "ticks", ticks);
+		if (json_object_has_member(content, "intro"))
+			json_object_remove_member(content, "intro");
+		return json_array_get_length(items) >= 1 && json_array_get_length(ticks) >= 2;
+	}
+	if (g_strcmp0(type, "facts") == 0 && g_strcmp0(variant, "logos") == 0) {
+		/* The supplied press and certification names, as written. */
+		JsonArray *items = json_array_new(), *press = member_array(facts, "press");
+		for (i = 0; press != NULL && i < json_array_get_length(press) && i < 8; i++)
+			add_fact(items, plan_ui(plan, "mentioned_in"), json_array_get_string_element(press, i));
+		json_object_set_array_member(content, "items", items);
+		json_object_set_string_member(content, "heading", plan_ui(plan, "mentioned_in"));
+		if (json_object_has_member(content, "intro"))
+			json_object_remove_member(content, "intro");
+		return json_array_get_length(items) >= 1;
+	}
+	if (g_strcmp0(type, "facts") == 0 && g_strcmp0(variant, "rating") == 0) {
+		/* The supplied rating, its count and its source, nothing more. */
+		JsonObject *rating = member_object(facts, "rating");
+		JsonArray *items = json_array_new();
+		if (rating != NULL && ls_string(rating, "source") != NULL) {
+			gchar score[G_ASCII_DTOSTR_BUF_SIZE];
+			g_autofree gchar *count = g_strdup_printf("%" G_GINT64_FORMAT, json_object_get_int_member(rating, "count"));
+			g_autofree gchar *with_count = replace_all(plan_ui(plan, "reviews_on"), "{n}", count);
+			g_autofree gchar *label = replace_all(with_count, "{source}", ls_string(rating, "source"));
+			add_fact(items, label, g_ascii_formatd(score, sizeof score, "%.1f",
+				json_object_get_double_member(rating, "score")));
+		}
+		json_object_set_array_member(content, "items", items);
+		if (json_object_has_member(content, "intro"))
+			json_object_remove_member(content, "intro");
+		return json_array_get_length(items) == 1;
+	}
 	if (g_strcmp0(type, "facts") == 0) {
 		JsonArray *items = json_array_new();
 		if (ls_string(facts, "since") != NULL)
@@ -2092,8 +2201,11 @@ fill_from_facts(JsonObject *plan, const gchar *type, const gchar *variant, JsonO
 			add_fact(items, plan_ui(plan, "hours"), first);
 		}
 		if (ls_string(facts, "address") != NULL) {
+			/* "Street, [Suite,] Town, State Zip": the town is the part
+			 * before the state. */
 			g_auto(GStrv) parts = g_strsplit(ls_string(facts, "address"), ",", -1);
-			g_autofree gchar *town = g_strv_length(parts) >= 3 ? g_strstrip(g_strdup(parts[1]))
+			guint n = g_strv_length(parts);
+			g_autofree gchar *town = n >= 3 ? g_strstrip(g_strdup(parts[n - 2]))
 				: g_strdup(ls_string(facts, "address"));
 			add_fact(items, plan_ui(plan, "based_in"), town);
 		}
@@ -2136,6 +2248,27 @@ fill_from_facts(JsonObject *plan, const gchar *type, const gchar *variant, JsonO
 			json_object_set_string_member(content, "hours", ls_string(facts, "hours"));
 		if (ls_string(facts, "address") != NULL)
 			json_object_set_string_member(content, "address", ls_string(facts, "address"));
+		if (json_object_has_member(content, "places"))
+			json_object_remove_member(content, "places");
+		/* One block per supplied shop, else one for the business itself. */
+		if (g_strcmp0(variant, "location-blocks") == 0 || g_strcmp0(variant, "shop-chooser") == 0) {
+			JsonArray *places = json_array_new(), *shops = member_array(facts, "locations");
+			JsonObject *contact = member_object(plan, "contact");
+			for (i = 0; shops != NULL && i < json_array_get_length(shops) && i < 4; i++) {
+				JsonObject *shop = json_array_get_object_element(shops, i);
+				json_array_add_object_element(places, place_view(ls_string(shop, "name"), ls_string(shop, "address"),
+					ls_string(shop, "hours"), ls_string(shop, "phone") != NULL ? ls_string(shop, "phone")
+					: ls_string(contact, "phone")));
+			}
+			if (json_array_get_length(places) == 0 && (ls_string(facts, "address") != NULL ||
+				ls_string(facts, "hours") != NULL))
+				json_array_add_object_element(places, place_view(ls_string(plan, "name"), ls_string(facts, "address"),
+					ls_string(facts, "hours"), ls_string(contact, "phone")));
+			json_object_set_array_member(content, "places", places);
+			if (ls_string(content, "heading") == NULL)
+				json_object_set_string_member(content, "heading", plan_ui(plan, "our_places"));
+			return json_array_get_length(places) >= (g_strcmp0(variant, "shop-chooser") == 0 ? 2u : 1u);
+		}
 		if (ls_string(content, "heading") == NULL)
 			json_object_set_string_member(content, "heading", plan_ui(plan, "where_we_work"));
 		return json_object_has_member(content, "items") || json_object_has_member(content, "hours") ||
@@ -2163,11 +2296,16 @@ fill_from_facts(JsonObject *plan, const gchar *type, const gchar *variant, JsonO
 			json_object_remove_member(content, "since");
 		if (ls_string(facts, "since") != NULL)
 			json_object_set_string_member(content, "since", ls_string(facts, "since"));
-		if (g_strcmp0(variant, "photo-story") == 0) {
+		if (json_object_has_member(content, "signature"))
+			json_object_remove_member(content, "signature");
+		if (g_strcmp0(variant, "photo-story") == 0 || g_strcmp0(variant, "owner-letter") == 0) {
 			JsonObject *photo = own_photo(plan, used);
 			if (photo != NULL)
 				json_object_set_object_member(content, "art", photo_art(photo));
 		}
+		/* The letter is signed with the business's own name. */
+		if (g_strcmp0(variant, "owner-letter") == 0 && ls_string(plan, "name") != NULL)
+			json_object_set_string_member(content, "signature", ls_string(plan, "name"));
 		return ls_string(content, "heading") != NULL && ls_string(content, "body") != NULL;
 	}
 	return TRUE;
@@ -2265,14 +2403,28 @@ ls_components_design_home(LsComponents *self, JsonNode *plan_node, JsonNode *pag
 						}
 					}
 				}
-				if ((g_strcmp0(ls_string(entry, "variant"), "photo-cards") == 0 ||
-					g_strcmp0(ls_string(entry, "variant"), "sublinks") == 0) && next_photo < photos->len) {
-					JsonObject *photo = g_ptr_array_index(photos, next_photo++), *art = json_object_new();
-					g_hash_table_add(used, (gpointer)ls_string(photo, "path"));
-					json_object_set_string_member(art, "src", ls_string(photo, "path"));
-					json_object_set_string_member(art, "alt", ls_string(photo, "alt") != NULL ? ls_string(photo, "alt") : "");
-					json_object_set_object_member(item, "art", art);
+				if (g_strcmp0(ls_string(entry, "variant"), "photo-cards") == 0 ||
+					g_strcmp0(ls_string(entry, "variant"), "sublinks") == 0 ||
+					g_strcmp0(ls_string(entry, "variant"), "round-photos") == 0 ||
+					g_strcmp0(ls_string(entry, "variant"), "feature-rows") == 0) {
+					JsonObject *photo = next_free(photos, &next_photo, used);
+					if (photo != NULL)
+						json_object_set_object_member(item, "art", photo_art(photo));
 				}
+			}
+		}
+		/* The opening's second photo and the closing band's photo: supplied
+		 * photos no earlier section shows. */
+		{
+			const gchar *slot = g_strcmp0(type, "hero") == 0 && g_strcmp0(ls_string(entry, "variant"), "photo-pair") == 0
+				? "pair" : g_strcmp0(type, "cta") == 0 && g_strcmp0(ls_string(entry, "variant"), "photo-band") == 0
+				? "art" : NULL;
+			if (slot != NULL) {
+				JsonObject *photo = next_free(photos, &next_photo, used);
+				if (json_object_has_member(content, slot) && g_str_equal(slot, "pair"))
+					json_object_remove_member(content, slot);
+				if (photo != NULL)
+					json_object_set_object_member(content, slot, photo_art(photo));
 			}
 		}
 		/* The builder draws the phone and email; a writer's row repeating
@@ -2514,7 +2666,8 @@ static const gchar *const ui_keys[] = {"skip", "menu", "nav", "footer_nav", "con
 	"error_invalid", "error_summary", "breadcrumb", "pager", "previous", "next", "letters", "scroll",
 	"checklist_yes", "checklist_no", "close", "ingredients", "method", "social", "share", "copy_link", "copied",
 	"sending", "sent", "send_failed", "call", "quote", "quick_actions", "send_another", "book", "since", "hours",
-	"address", "towns", "all_services", "based_in", "how_it_works", "where_we_work", "own_work"};
+	"address", "towns", "all_services", "based_in", "how_it_works", "where_we_work", "own_work", "reviews_on",
+	"mentioned_in", "our_places"};
 static const gchar *const ui_defaults[] = {"Skip to content", "Menu", "Primary", "Footer", "Contents",
 	"Filter entries", "{n} entry shown", "{n} entries shown", "required", "Clear", "Preview",
 	"Download text file", "Fill in this field.", "Check this entry.", "{n} fields need attention.",
@@ -2522,7 +2675,8 @@ static const gchar *const ui_defaults[] = {"Skip to content", "Menu", "Primary",
 	"Not included", "Close", "Ingredients", "Method", "Follow us", "Share this page", "Copy link", "Link copied",
 	"Sending your message.", "Thank you. Your message was sent.", "Your message was not sent. Please try again.",
 	"Call", "Request a quote", "Get in touch", "Send another message", "Book online", "In business since", "Hours",
-	"Address", "Towns served", "All services", "Based in", "How it works", "Where we work", "Our work"};
+	"Address", "Towns served", "All services", "Based in", "How it works", "Where we work", "Our work",
+	"{n} reviews on {source}", "Mentioned in", "Where to find us"};
 /* An interface string for @plan: its own ui text, else the default. */
 static const gchar *
 plan_ui(JsonObject *plan, const gchar *key){
@@ -3529,7 +3683,8 @@ check_preset(Problems *problems, LsComponents *self, JsonObject *theme, const gc
 		problem(problems, "presets need the catalog's library block");
 		return;
 	}
-	if (design == NULL || !ls_object_keys(design, "|source|fits|words|roles|kicker|accent|font_accent|shape|prefer|", NULL) ||
+	if (design == NULL || !ls_object_keys(design, "|source|fits|words|roles|kicker|accent|font_accent|font_label|shape|prefer|",
+		NULL) ||
 		ls_string(design, "source") == NULL || member_array(design, "fits") == NULL ||
 		member_array(design, "words") == NULL || member_object(design, "roles") == NULL || prefer == NULL) {
 		problem(problems, "a preset's design needs source, fits, words, roles, shape and prefer");
@@ -6047,7 +6202,11 @@ static guint count_words(const gchar *text);
 /* On a preset site every closing call is one of the design's, so the
  * builder's buttons sit on a tone made for them. */
 static const gchar *
-design_variant(JsonObject *plan, const gchar *name, const gchar *variant){
+design_variant(JsonObject *plan, const gchar *name, const gchar *variant, JsonObject *content){
+	/* The photo band only with the photo the builder gave it. */
+	if (member_object(plan, "design") != NULL && g_strcmp0(name, "cta") == 0 &&
+		g_strcmp0(variant, "photo-band") == 0 && member_object(content, "art") != NULL)
+		return variant;
 	if (member_object(plan, "design") != NULL && g_strcmp0(name, "cta") == 0 &&
 		g_strcmp0(variant, "closing-band") != 0 && g_strcmp0(variant, "promise") != 0)
 		return "closing-band";
@@ -6071,7 +6230,7 @@ render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArra
 		JsonObject *content = supplied != NULL ? supplied : member_object(section, "content");
 		g_autoptr(GList) variants = json_object_get_members(member_object(component, "variants"));
 		const gchar *variant = design_variant(render->plan, name, calm_variant(render->self, render->plan, component, name,
-			ls_string(section, "variant") != NULL ? ls_string(section, "variant") : (const gchar *)variants->data));
+			ls_string(section, "variant") != NULL ? ls_string(section, "variant") : (const gchar *)variants->data), content);
 		const gchar *id = g_ptr_array_index(ids, i);
 		g_autoptr(JsonObject) view = json_object_new();
 		g_autoptr(JsonObject) wrapper = json_object_new();
@@ -6561,6 +6720,18 @@ render_page(Render *render, const gchar *path, const gchar *title, const gchar *
 			JsonObject *contact = call_view(plan);
 			if (contact != NULL)
 				json_object_set_object_member(view, "footer_contact", contact);
+		}
+		/* The centered footer adds the supplied address and hours. */
+		if (g_strcmp0(ls_string(design, "footer"), "centered") == 0) {
+			JsonObject *facts = member_object(design, "facts");
+			if (ls_string(facts, "address") != NULL || ls_string(facts, "hours") != NULL) {
+				JsonObject *place = json_object_new();
+				if (ls_string(facts, "address") != NULL)
+					json_object_set_string_member(place, "address", ls_string(facts, "address"));
+				if (ls_string(facts, "hours") != NULL)
+					json_object_set_string_member(place, "hours", ls_string(facts, "hours"));
+				json_object_set_object_member(view, "footer_place", place);
+			}
 		}
 	} else if (member_object(plan, "action") != NULL) {
 		JsonObject *action = link_view(member_object(plan, "action"),

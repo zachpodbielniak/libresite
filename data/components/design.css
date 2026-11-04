@@ -21,9 +21,10 @@ body.design {
 .design .prose { color: inherit; }
 .design .muted { color: var(--muted-fg); }
 
-/* Kicker: small caps text, or a pill on the soft primary. */
+/* Kicker: small caps text in the label face, or a pill on the soft
+ * primary. */
 .design .kicker {
-	font-family: var(--font-body); font-size: var(--text-1); font-weight: 600; line-height: 1.4;
+	font-family: var(--font-label); font-size: var(--text-1); font-weight: 600; line-height: 1.4;
 	letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted-fg); margin: 0 0 var(--space-4);
 }
 .design.kicker--pill .kicker {
@@ -34,6 +35,7 @@ body.design {
 /* Accent phrase: words marked *like this* in a heading. */
 .design.accent--colour .em { font-style: normal; color: var(--primary-text); }
 .design.accent--italic .em { font-family: var(--font-accent); font-style: italic; font-weight: 400; letter-spacing: 0; }
+.design.accent--script .em { font-family: var(--font-accent); font-style: normal; font-weight: 400; font-size: 1.25em; line-height: 1; letter-spacing: 0; text-transform: none; color: var(--primary-text); }
 .design :is(.tone-photo, .tone-inverse) .em { color: inherit; }
 .design.accent--colour :is(.tone-brand, .hero__card) .em { color: var(--brand-accent); }
 
@@ -115,6 +117,31 @@ body.design {
 .design .site-header__utility .button--outline { color: var(--fg); }
 .design.header--utility .site-nav a:not(.button) { font-size: var(--text-2); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
 
+/* Split header: the wordmark centered with the links in a row under it
+ * (Little Fish, Table & Tulip). */
+@media (min-width: 48rem) {
+	.design.header--split .site-header__inner { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; padding-block: var(--space-5) var(--space-3); }
+	.design.header--split .brand { font-size: var(--text-6); }
+	.design.header--split .site-nav { justify-content: center; }
+	.design.header--split .site-nav > ul { justify-content: center; }
+}
+
+/* Header over the photo: on the home page the bar lies clear over a
+ * full-bleed opening, white on the photo's own scrim (Glenwood South,
+ * Emily's Maids). Every other page keeps the plain bar. */
+.design.header--over-photo.page--kind-home .site-header { position: absolute; inset: 0 0 auto; z-index: 5; background: linear-gradient(180deg, rgb(0 0 0 / 0.55), rgb(0 0 0 / 0)); border-bottom: 0; }
+.design.header--over-photo.page--kind-home .site-header :is(.brand, .site-nav > ul > li > a, .nav-toggle) { color: #ffffff; }
+.design.header--over-photo.page--kind-home .site-header .nav-toggle { border-color: #ffffff; background: transparent; }
+.design.header--over-photo.page--kind-home .site-header .site-nav a[aria-current="page"] { border-bottom-color: #ffffff; }
+.design.header--over-photo.page--kind-home .site-header .button { background: var(--photo-primary); border-color: var(--photo-primary); color: var(--photo-primary-fg); }
+.design.header--over-photo.page--kind-home main > .block:first-child { padding-top: calc(var(--section-y) + 5rem); }
+.design.header--over-photo.page--kind-home .site-header .site-nav__menu a { color: var(--fg); }
+@media (max-width: 47.99rem) {
+	.design.header--over-photo.page--kind-home .site-header:has(.nav-toggle[aria-expanded="true"]) { background: var(--bg); }
+	.design.header--over-photo.page--kind-home .site-header:has(.nav-toggle[aria-expanded="true"]) :is(.brand, .site-nav a, .nav-toggle) { color: var(--fg); }
+	.design.header--over-photo.page--kind-home .site-header:has(.nav-toggle[aria-expanded="true"]) .nav-toggle { border-color: var(--fg); }
+}
+
 /* The phone's action bar keeps the one primary action; wide screens have
  * it in the header. */
 .design .action-bar { background: var(--bg); border-top: 1px solid var(--line); padding: var(--space-2) 0; }
@@ -148,3 +175,12 @@ body.design {
 	.design.footer--simple .site-footer__inner { grid-template-columns: minmax(14rem, 1fr) minmax(0, 2fr); align-items: start; }
 	.design.footer--simple .site-footer nav ul { display: grid; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); gap: 0 var(--space-5); }
 }
+/* Centered footer: the name, the place, the links and the credits, centered
+ * on the page ground (Zinc Cafe & Bar). */
+.design.footer--centered .site-footer { background: var(--bg); color: var(--fg); border-top: 1px solid var(--line); text-align: center; }
+.design.footer--centered .site-footer__inner { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; gap: var(--space-5); }
+.design.footer--centered .site-footer__contact { align-items: center; }
+.design.footer--centered .site-footer__place { margin: 0 0 var(--space-3); color: var(--muted-fg); }
+.design.footer--centered .site-footer nav ul { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-1) var(--space-5); }
+.design.footer--centered .site-footer__social { justify-content: center; }
+.design.footer--centered .site-footer :is(.site-footer__photos, .site-footer__credit) { color: var(--muted-fg); text-align: center; }

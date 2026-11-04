@@ -1,0 +1,17 @@
+<div class="wrap">
+{{#heading}}<div class="section-head">
+<{{htag}} id="{{id}}-h">{{{heading_html}}}</{{htag}}>
+{{#intro}}<div class="prose">{{{intro}}}</div>
+{{/intro}}</div>
+{{/heading}}<ul class="services__features" role="list">
+{{#items}}<li class="services__feature">
+{{#art}}<figure class="services__photo"><img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}"{{#srcset}} srcset="{{srcset}}" sizes="(max-width: 48rem) 100vw, 50vw"{{/srcset}} loading="lazy" decoding="async"></figure>
+{{/art}}<div class="services__body">
+<{{subtag}} class="services__name">{{name}}</{{subtag}}>
+{{#summary}}<div class="services__summary prose">{{{summary}}}</div>
+{{/summary}}{{#price}}<p class="services__price">{{price}}</p>
+{{/price}}{{#link}}<p class="services__more"><a href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{label}}</a></p>
+{{/link}}</div>
+</li>
+{{/items}}</ul>
+</div>

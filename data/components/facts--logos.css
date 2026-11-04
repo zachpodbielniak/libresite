@@ -1,0 +1,8 @@
+/* facts/logos: a row of the press and certification names the order
+ * supplies (PRESS Modern Massage, Harte Law). Layout only. */
+.facts--logos.block { padding-block: var(--space-6); border-bottom: 1px solid var(--line); }
+.facts--logos .facts__logos { display: grid; gap: var(--space-3); justify-items: center; text-align: center; }
+.facts--logos .facts__heading { margin: 0; font-family: var(--font-label); font-size: var(--text-1); font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted-fg); }
+.facts--logos .facts__names { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-2) var(--space-7); margin: 0; padding: 0; list-style: none; }
+.facts--logos .facts__names li p { margin: 0; }
+.facts--logos .facts__names li { font-family: var(--font-display); font-size: var(--text-5); font-weight: var(--heading-weight); color: var(--muted-fg); }

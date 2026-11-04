@@ -85,7 +85,8 @@
 <p class="brand">{{wordmark}}</p>
 {{#footer_contact}}<p class="site-footer__contact"><a href="{{tel}}">{{phone}}</a>{{#email}}
 <a href="mailto:{{email}}">{{email}}</a>{{/email}}</p>
-{{/footer_contact}}{{#footer_note}}<div class="site-footer__note prose">{{{footer_note}}}</div>
+{{/footer_contact}}{{#footer_place}}<p class="site-footer__place">{{#address}}<span>{{address}}</span>{{/address}}{{#hours}}<br><span>{{hours}}</span>{{/hours}}</p>
+{{/footer_place}}{{#footer_note}}<div class="site-footer__note prose">{{{footer_note}}}</div>
 {{/footer_note}}{{#has_social}}<ul class="site-footer__social" role="list" aria-label="{{social_label}}">
 {{#social}}<li><a href="{{url}}" rel="me noopener">{{#icon}}<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path fill="currentColor" d="{{icon}}"/></svg>{{/icon}}<span class="visually-hidden">{{label}}</span></a></li>
 {{/social}}</ul>

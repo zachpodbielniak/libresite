@@ -121,6 +121,27 @@ JsonObject *ls_design_new(JsonObject *library, JsonObject *themes, JsonObject *s
 	JsonArray *photos, GError **error);
 
 /**
+ * ls_design_set_layout:
+ * @library: the catalog's library block
+ * @design: a design from ls_design_new(), changed in place
+ * @type: a home section type, such as "hero", or "header" or "footer"
+ * @variant: a library variant of @type
+ * @error: return location for an error
+ *
+ * Sets the layout of the home section of @type (or the header or footer
+ * layout) to @variant, then gives the home its tones again. Content is not
+ * checked again: the caller chooses a layout its content suits. The header
+ * over a photo needs a full-bleed opening, and the clash rules of
+ * ls_design_check_home() must still hold.
+ *
+ * Returns: whether @design now uses @variant; %FALSE with @error set, and
+ *   @design unchanged, when @variant is unknown, @type is not on the home
+ *   or a rule breaks
+ */
+gboolean ls_design_set_layout(JsonObject *library, JsonObject *design, const gchar *type, const gchar *variant,
+	GError **error);
+
+/**
  * ls_design_check_home:
  * @library: the catalog's library block
  * @home: a design's home sections

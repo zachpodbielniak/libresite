@@ -1,0 +1,19 @@
+/* cta/photo-band: the closing line and the one primary action over a wide
+ * photo under a scrim (Highlands Landscaping). Layout only. */
+.cta--photo-band {
+	position: relative; isolation: isolate; text-align: center;
+	background: var(--inverse); color: var(--inverse-fg);
+	--ink: var(--inverse-fg); --fg: var(--inverse-fg); --muted: var(--inverse-muted); --muted-fg: var(--inverse-fg);
+}
+.design main > .cta--photo-band.block { padding-block: clamp(4.5rem, 10cqi, 8rem); }
+.cta--photo-band .cta__media { position: absolute; inset: 0; z-index: -1; margin: 0; }
+.design main > .block.cta--photo-band .cta__media img:is([src]) { width: 100%; height: 100%; max-height: none; object-fit: cover; border-radius: 0; }
+.cta--photo-band .cta__media::after { content: ""; position: absolute; inset: 0; background: rgb(0 0 0 / calc(var(--scrim) + 0.05)); }
+.cta--photo-band .cta__inner { display: grid; justify-items: center; gap: var(--space-4); max-width: 44rem; }
+.cta--photo-band .cta__title { margin: 0; }
+.cta--photo-band .prose { font-size: var(--text-4); }
+.cta--photo-band .actions { justify-content: center; margin: 0; }
+.cta--photo-band .button:not(.button--outline) { background: var(--photo-primary); border-color: var(--photo-primary); color: var(--photo-primary-fg); }
+.cta--photo-band .button:not(.button--outline):hover { background: var(--photo-primary-hover); border-color: var(--photo-primary-hover); }
+.cta--photo-band .cta__direct { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-1) var(--space-5); margin: 0; }
+.cta--photo-band .cta__direct a { display: inline-flex; align-items: center; min-height: 44px; color: inherit; font-weight: 600; overflow-wrap: anywhere; }

@@ -416,6 +416,16 @@ ls_design_facts(JsonObject *site){
 				json_array_unref(steps);
 		}
 	}
+	/* Press and certification names, the rating and the shops are copied
+	 * as supplied; the recipe has already checked their shape. */
+	{
+		const gchar *copied[] = {"press", "rating", "locations"};
+		for (i = 0; i < G_N_ELEMENTS(copied); i++) {
+			JsonNode *node = site != NULL ? json_object_get_member(site, copied[i]) : NULL;
+			if (node != NULL && (JSON_NODE_HOLDS_ARRAY(node) || JSON_NODE_HOLDS_OBJECT(node)))
+				json_object_set_member(facts, copied[i], json_node_copy(node));
+		}
+	}
 	return facts;
 }
 
@@ -453,14 +463,50 @@ weighted(GArray *choices, const gchar *name, const gchar *salt){
 	return g_array_index(choices, Choice, choices->len - 1).name;
 }
 
+/* Whether a nearby site in site.avoid wears @value as its @key, or, for
+ * the opening, as the first entry of its home. */
+static gboolean
+avoided(JsonObject *site, const gchar *key, const gchar *value){
+	JsonArray *avoid = array_of(site, "avoid");
+	guint a;
+	for (a = 0; avoid != NULL && a < json_array_get_length(avoid); a++) {
+		JsonObject *near = JSON_NODE_HOLDS_OBJECT(json_array_get_element(avoid, a))
+			? json_array_get_object_element(avoid, a) : NULL;
+		JsonArray *home = array_of(near, "home");
+		if (g_str_equal(key, "opening")) {
+			if (home != NULL && json_array_get_length(home) > 0 &&
+				JSON_NODE_HOLDS_VALUE(json_array_get_element(home, 0)) &&
+				g_strcmp0(json_array_get_string_element(home, 0), value) == 0)
+				return TRUE;
+		} else if (g_strcmp0(str_of(near, key), value) == 0)
+			return TRUE;
+	}
+	return FALSE;
+}
+
+/* The choices no nearby site wears, or all of them when every one is worn. */
+static GArray *
+unworn(GArray *choices, JsonObject *site, const gchar *key, const gchar *prefix){
+	GArray *fresh = g_array_new(FALSE, FALSE, sizeof(Choice));
+	guint i;
+	for (i = 0; i < choices->len; i++) {
+		Choice *choice = &g_array_index(choices, Choice, i);
+		g_autofree gchar *value = g_strconcat(prefix, choice->name, NULL);
+		if (!avoided(site, key, value))
+			g_array_append_val(fresh, *choice);
+	}
+	if (fresh->len == 0)
+		g_array_append_vals(fresh, choices->data, choices->len);
+	return fresh;
+}
+
 gchar *
 ls_design_pick_preset(JsonObject *library, JsonObject *themes, JsonObject *site){
 	g_autoptr(GList) names = themes != NULL ? json_object_get_members(themes) : NULL;
 	g_autoptr(GPtrArray) words = ls_design_owner_words(site);
 	g_autoptr(GArray) matched = g_array_new(FALSE, FALSE, sizeof(Choice));
 	g_autoptr(GArray) all = g_array_new(FALSE, FALSE, sizeof(Choice));
-	g_autoptr(GArray) fresh = g_array_new(FALSE, FALSE, sizeof(Choice));
-	JsonArray *avoid = array_of(site, "avoid");
+	g_autoptr(GArray) fresh = NULL;
 	const gchar *sector = sector_of(library, site);
 	guint best = 0;
 	GList *name;
@@ -471,22 +517,13 @@ ls_design_pick_preset(JsonObject *library, JsonObject *themes, JsonObject *site)
 		guint score = 0, i;
 		if (design == NULL)
 			continue;
+		/* Neutral colour words (white, cream, light ...) name no preset. */
 		for (i = 0; list != NULL && i < json_array_get_length(list); i++)
-			score += has_word(words, json_array_get_string_element(list, i)) ? 1 : 0;
+			score += has_word(words, json_array_get_string_element(list, i)) &&
+				!list_has(array_of(library, "neutral"), json_array_get_string_element(list, i)) ? 1 : 0;
 		choice.name = name->data;
 		choice.weight = list_has(array_of(design, "fits"), sector) ? weight(library, "fit") : weight(library, "other");
 		g_array_append_val(all, choice);
-		/* Nearby sites' presets (site.avoid) leave the hash pick. */
-		{
-			gboolean avoided = FALSE;
-			guint a;
-			for (a = 0; avoid != NULL && a < json_array_get_length(avoid); a++)
-				if (JSON_NODE_HOLDS_OBJECT(json_array_get_element(avoid, a)) &&
-					g_strcmp0(str_of(json_array_get_object_element(avoid, a), "preset"), name->data) == 0)
-					avoided = TRUE;
-			if (!avoided)
-				g_array_append_val(fresh, choice);
-		}
 		if (score > 0 && score >= best) {
 			if (score > best)
 				g_array_set_size(matched, 0);
@@ -497,9 +534,11 @@ ls_design_pick_preset(JsonObject *library, JsonObject *themes, JsonObject *site)
 	}
 	if (all->len == 0)
 		return NULL;
-	/* The owner's words win; otherwise the hash picks among the presets no
-	 * nearby site wears, or among all when every one is worn. */
-	return g_strdup(weighted(matched->len > 0 ? matched : fresh->len > 0 ? fresh : all, business_name(site), "preset"));
+	/* The owner's words win; among presets they fit equally, and otherwise
+	 * among all by the hash, the presets nearby sites (site.avoid) wear
+	 * leave the pick unless every one is worn. */
+	fresh = unworn(matched->len > 0 ? matched : all, site, "preset", "");
+	return g_strdup(weighted(fresh, business_name(site), "preset"));
 }
 
 typedef struct {
@@ -514,6 +553,11 @@ typedef struct {
 	gboolean history;	/* a supplied year the business started */
 	gboolean place;	/* supplied hours or an address */
 	guint own_photos;	/* supplied photos that are not stock */
+	guint press;	/* supplied press and certification names */
+	gboolean rating;	/* a supplied rating */
+	guint locations;	/* supplied shops */
+	guint free;	/* supplied photos no earlier home section shows */
+	const gchar *opening;	/* the opening's layout family, once chosen */
 	const gchar *action;	/* the design's primary action, once chosen */
 } Content;
 
@@ -542,6 +586,12 @@ content_of(JsonObject *site, JsonArray *photos, JsonObject *facts){
 		if (photo != NULL && !(flag != NULL && JSON_NODE_HOLDS_VALUE(flag) && json_node_get_boolean(flag)))
 			content.own_photos++;
 	}
+	content.press = array_of(facts, "press") != NULL ? json_array_get_length(array_of(facts, "press")) : 0;
+	content.rating = object_of(facts, "rating") != NULL;
+	content.locations = array_of(facts, "locations") != NULL ? json_array_get_length(array_of(facts, "locations")) : 0;
+	content.place = content.place || content.locations > 0;
+	content.free = content.photos;
+	content.opening = NULL;
 	content.action = NULL;
 	return content;
 }
@@ -583,12 +633,20 @@ eligible(JsonObject *library, const gchar *pair, Content *content){
 		short_of(needs, "towns", content->towns) || short_of(needs, "own_photos", content->own_photos) ||
 		wants(needs, "history", content->history) || wants(needs, "place", content->place))
 		return FALSE;
+	/* Supplied press names, a rating and two or more shops. */
+	if (short_of(needs, "press", content->press) || wants(needs, "rating", content->rating) ||
+		short_of(needs, "locations", content->locations) || short_of(needs, "spare_photos", content->free))
+		return FALSE;
+	/* The header lies over the opening only when the opening is a
+	 * full-bleed photo. */
+	if (wants(needs, "over_photo", g_strcmp0(content->opening, "bleed") == 0))
+		return FALSE;
 	/* A layout built around one action shows only where that action leads. */
 	if (json_object_has_member(needs, "action") && g_strcmp0(str_of(needs, "action"), content->action) != 0)
 		return FALSE;
 	/* One photo for every card, after the opening's. */
 	if (json_object_has_member(needs, "item_photos") && json_object_get_boolean_member(needs, "item_photos") &&
-		(content->photos < 1 || content->photos - 1 < content->items))
+		content->free < content->items)
 		return FALSE;
 	return in_range(needs, "items", content->items) && in_range(needs, "quotes", content->quotes) &&
 		(!json_object_has_member(needs, "quotes") || content->quotes > 0);
@@ -671,6 +729,47 @@ separate_families(JsonObject *library, JsonObject *design, JsonArray *home, Cont
 		}
 		if (pick != NULL)
 			json_object_set_string_member(here, "variant", pick);
+	}
+}
+
+static const gchar *
+own_tone(JsonObject *library, JsonObject *section){
+	g_autofree gchar *pair = g_strdup_printf("%s/%s", str_of(section, "component"), str_of(section, "variant"));
+	/* Library strings outlive the pair. */
+	return str_of(object_of(object_of(library, "variants"), pair), "tone");
+}
+
+/* At most one brand band in any three sections: a brand-toned section
+ * close before another takes the heaviest eligible variant of another
+ * tone; the closing call keeps its band. */
+static void
+space_brands(JsonObject *library, JsonObject *design, JsonArray *home, Content *content){
+	guint i, j, n = json_array_get_length(home);
+	for (i = 0; i < n; i++) {
+		JsonObject *here = json_array_get_object_element(home, i);
+		gboolean crowded = FALSE;
+		if (g_strcmp0(own_tone(library, here), "brand") != 0 || g_strcmp0(str_of(here, "component"), "cta") == 0)
+			continue;
+		for (j = i + 1; j < MIN(n, i + 3); j++)
+			crowded = crowded || g_strcmp0(own_tone(library, json_array_get_object_element(home, j)), "brand") == 0;
+		for (j = i >= 2 ? i - 2 : 0; j < i; j++)
+			crowded = crowded || g_strcmp0(own_tone(library, json_array_get_object_element(home, j)), "brand") == 0;
+		if (crowded) {
+			g_autoptr(GArray) choices = choices_for(library, design, str_of(here, "component"), content);
+			const gchar *pick = NULL;
+			gint64 heaviest = 0;
+			for (j = 0; j < choices->len; j++) {
+				Choice *choice = &g_array_index(choices, Choice, j);
+				g_autofree gchar *pair = g_strdup_printf("%s/%s", str_of(here, "component"), choice->name);
+				if (g_strcmp0(str_of(object_of(object_of(library, "variants"), pair), "tone"), "brand") != 0 &&
+					choice->weight > heaviest) {
+					heaviest = choice->weight;
+					pick = choice->name;
+				}
+			}
+			if (pick != NULL)
+				json_object_set_string_member(here, "variant", pick);
+		}
 	}
 }
 
@@ -879,10 +978,100 @@ site_pages(JsonObject *site, Content *content){
 	return pages;
 }
 
+/* The variant the hash picks for @type; an opening nearby sites wear
+ * (site.avoid) leaves the pick unless every eligible one is worn. */
 static const gchar *
-layout_pick(JsonObject *library, JsonObject *design, const gchar *type, Content *content, const gchar *name){
+layout_pick(JsonObject *library, JsonObject *design, const gchar *type, Content *content, JsonObject *site){
 	g_autoptr(GArray) choices = choices_for(library, design, type, content);
-	return weighted(choices, name, type);
+	g_autoptr(GArray) fresh = NULL;
+	if (!g_str_equal(type, "hero"))
+		return weighted(choices, business_name(site), type);
+	fresh = unworn(choices, site, "opening", "hero/");
+	return weighted(fresh, business_name(site), type);
+}
+
+/* How many supplied photos a home section shows: the opening one or two, a
+ * card or row per service, service groups while photos last, the closing
+ * band one, and the owner's own in the gallery and the story. */
+static guint
+photos_used(const gchar *component, const gchar *variant, Content *content){
+	if (g_strcmp0(component, "hero") == 0)
+		return g_strcmp0(variant, "photo-pair") == 0 ? MIN(2, content->free) : MIN(1, content->free);
+	if (g_strcmp0(component, "services") == 0 && (g_strcmp0(variant, "photo-cards") == 0 ||
+		g_strcmp0(variant, "round-photos") == 0 || g_strcmp0(variant, "feature-rows") == 0 ||
+		g_strcmp0(variant, "sublinks") == 0))
+		return MIN(content->items, content->free);
+	if (g_strcmp0(component, "cta") == 0 && g_strcmp0(variant, "photo-band") == 0)
+		return MIN(1, content->free);
+	/* The owner's own photos: up to four in the gallery, one in a story. */
+	if (g_strcmp0(component, "gallery") == 0)
+		return MIN(4, content->free);
+	if (g_strcmp0(component, "about") == 0 && (g_strcmp0(variant, "photo-story") == 0 ||
+		g_strcmp0(variant, "owner-letter") == 0))
+		return MIN(1, content->free);
+	return 0;
+}
+
+/* Walks the home as the builder fills it: each section must still have the
+ * photos it shows after the ones before it, else it takes the heaviest
+ * eligible variant that does. Leaves content->free at what is left. */
+static void
+settle_photos(JsonObject *library, JsonObject *design, JsonArray *home, Content *content){
+	guint i, j;
+	content->free = content->photos;
+	for (i = 0; i < json_array_get_length(home); i++) {
+		JsonObject *section = json_array_get_object_element(home, i);
+		const gchar *component = str_of(section, "component");
+		g_autofree gchar *pair = g_strdup_printf("%s/%s", component, str_of(section, "variant"));
+		if (i > 0 && object_of(object_of(library, "variants"), pair) != NULL && !eligible(library, pair, content)) {
+			g_autoptr(GArray) choices = choices_for(library, design, component, content);
+			const gchar *before = i > 0 ? family_of(library, str_of(json_array_get_object_element(home, i - 1),
+				"component"), str_of(json_array_get_object_element(home, i - 1), "variant")) : NULL;
+			const gchar *pick = NULL;
+			gint64 heaviest = 0;
+			for (j = 0; j < choices->len; j++) {
+				Choice *choice = &g_array_index(choices, Choice, j);
+				gint64 w = choice->weight * (g_strcmp0(family_of(library, component, choice->name), before) != 0 ? 2 : 1);
+				if (w > heaviest) {
+					heaviest = w;
+					pick = choice->name;
+				}
+			}
+			if (pick != NULL)
+				json_object_set_string_member(section, "variant", pick);
+		}
+		content->free -= photos_used(component, str_of(section, "variant"), content);
+	}
+}
+
+/* The home's section types in order: the sector's home or one of the other
+ * orders it allows, by the hash. */
+static JsonArray *
+home_order(JsonObject *sector, JsonObject *site){
+	JsonArray *orders = array_of(sector, "orders");
+	g_autoptr(GArray) choices = g_array_new(FALSE, FALSE, sizeof(Choice));
+	g_autofree gchar **labels = NULL;
+	const gchar *picked;
+	guint i, n = orders != NULL ? json_array_get_length(orders) : 0;
+	if (n == 0)
+		return array_of(sector, "home");
+	labels = g_new0(gchar *, n + 2);
+	for (i = 0; i <= n; i++) {
+		Choice choice;
+		labels[i] = g_strdup_printf("%u", i);
+		choice.name = labels[i];
+		choice.weight = 1;
+		g_array_append_val(choices, choice);
+	}
+	picked = weighted(choices, business_name(site), "order");
+	i = (guint)g_ascii_strtoull(picked, NULL, 10);
+	{
+		JsonArray *out = i == 0 ? array_of(sector, "home") : json_array_get_array_element(orders, i - 1);
+		guint k;
+		for (k = 0; k <= n; k++)
+			g_free(labels[k]);
+		return out;
+	}
 }
 
 JsonObject *
@@ -894,7 +1083,7 @@ ls_design_new(JsonObject *library, JsonObject *themes, JsonObject *site, const g
 	JsonArray *home, *types, *applied;
 	g_autoptr(JsonObject) facts = ls_design_facts(site);
 	Content content = content_of(site, photos, facts);
-	const gchar *sector_name = sector_of(library, site), *action, *name = business_name(site);
+	const gchar *sector_name = sector_of(library, site), *action;
 	guint i;
 	g_return_val_if_fail(error == NULL || *error == NULL, NULL);
 	if (preset_design == NULL) {
@@ -914,13 +1103,14 @@ ls_design_new(JsonObject *library, JsonObject *themes, JsonObject *site, const g
 		action = "quote";
 	content.action = action;
 	json_object_set_string_member(design, "action", action);
-	json_object_set_string_member(design, "header", layout_pick(library, preset_design, "header", &content, name));
-	json_object_set_string_member(design, "footer", layout_pick(library, preset_design, "footer", &content, name));
+	/* The footer first, as before; the header after the opening, which it
+	 * may lie over. */
+	json_object_set_string_member(design, "footer", layout_pick(library, preset_design, "footer", &content, site));
 	home = json_array_new();
-	types = array_of(sector, "home");
+	types = home_order(sector, site);
 	for (i = 0; types != NULL && i < json_array_get_length(types); i++) {
 		const gchar *type = json_array_get_string_element(types, i);
-		const gchar *variant = layout_pick(library, preset_design, type, &content, name);
+		const gchar *variant = layout_pick(library, preset_design, type, &content, site);
 		if (variant == NULL && g_str_equal(type, "hero")) {
 			/* Without a photo the home opens on the plain opening. */
 			const gchar *fallback = str_of(library, "fallback_opening");
@@ -929,10 +1119,23 @@ ls_design_new(JsonObject *library, JsonObject *themes, JsonObject *site, const g
 				add_section(home, "hero", slash + 1);
 			continue;
 		}
-		if (variant != NULL)
+		if (variant != NULL) {
 			add_section(home, type, variant);
+			content.free -= photos_used(type, variant, &content);
+		}
 	}
-	separate_families(library, preset_design, home, &content);
+	/* Families apart and every section's photos there, twice, since each
+	 * move may unsettle the other. */
+	for (i = 0; i < 2; i++) {
+		separate_families(library, preset_design, home, &content);
+		space_brands(library, preset_design, home, &content);
+		settle_photos(library, preset_design, home, &content);
+	}
+	if (json_array_get_length(home) > 0) {
+		JsonObject *first = json_array_get_object_element(home, 0);
+		content.opening = family_of(library, str_of(first, "component"), str_of(first, "variant"));
+	}
+	json_object_set_string_member(design, "header", layout_pick(library, preset_design, "header", &content, site));
 	assign_tones(library, home, str_of(design, "footer"));
 	json_object_set_array_member(design, "home", home);
 	json_object_set_object_member(design, "facts", json_object_ref(facts));
@@ -949,6 +1152,8 @@ ls_design_new(JsonObject *library, JsonObject *themes, JsonObject *site, const g
 		? str_of(preset_design, "accent") : "colour");
 	if (str_of(preset_design, "font_accent") != NULL)
 		json_object_set_string_member(design, "font_accent", str_of(preset_design, "font_accent"));
+	if (str_of(preset_design, "font_label") != NULL)
+		json_object_set_string_member(design, "font_label", str_of(preset_design, "font_label"));
 	{
 		JsonObject *shape = json_object_new(), *given = object_of(preset_design, "shape");
 		const gchar *keys[] = {"control", "box", "badge", "depth"};
@@ -958,9 +1163,67 @@ ls_design_new(JsonObject *library, JsonObject *themes, JsonObject *site, const g
 				? json_object_get_int_member(given, keys[k]) : 0);
 		json_object_set_double_member(shape, "scrim", given != NULL && json_object_has_member(given, "scrim")
 			? json_object_get_double_member(given, "scrim") : 0.55);
+		json_object_set_string_member(shape, "frame", str_of(given, "frame") != NULL ? str_of(given, "frame") : "box");
 		json_object_set_object_member(design, "shape", shape);
 	}
 	return design;
+}
+
+gboolean
+ls_design_set_layout(JsonObject *library, JsonObject *design, const gchar *type, const gchar *variant,
+	GError **error){
+	g_autofree gchar *pair = NULL;
+	g_autoptr(JsonNode) before = NULL;
+	g_autoptr(GString) why = g_string_new(NULL);
+	JsonArray *home = array_of(design, "home");
+	JsonObject *first = home != NULL && json_array_get_length(home) > 0 ? json_array_get_object_element(home, 0) : NULL;
+	gboolean layout = g_strcmp0(type, "header") == 0 || g_strcmp0(type, "footer") == 0;
+	guint i;
+	g_return_val_if_fail(error == NULL || *error == NULL, FALSE);
+	pair = g_strdup_printf("%s/%s", type != NULL ? type : "", variant != NULL ? variant : "");
+	if (design == NULL || home == NULL || object_of(object_of(library, "variants"), pair) == NULL) {
+		g_set_error(error, LS_ERROR, LS_ERROR_INVALID, "'%s' is not a library layout", pair);
+		return FALSE;
+	}
+	/* A deep copy to restore when a rule breaks. */
+	{
+		g_autoptr(JsonNode) wrap = json_node_new(JSON_NODE_OBJECT);
+		g_autofree gchar *text = NULL;
+		json_node_set_object(wrap, design);
+		text = ls_json_encode(wrap);
+		before = ls_json_parse(text, NULL);
+	}
+	if (layout)
+		json_object_set_string_member(design, type, variant);
+	else {
+		JsonObject *section = NULL;
+		for (i = 0; section == NULL && i < json_array_get_length(home); i++)
+			if (g_strcmp0(str_of(json_array_get_object_element(home, i), "component"), type) == 0)
+				section = json_array_get_object_element(home, i);
+		if (section == NULL) {
+			g_set_error(error, LS_ERROR, LS_ERROR_INVALID, "the home has no %s section", type);
+			return FALSE;
+		}
+		json_object_set_string_member(section, "variant", variant);
+	}
+	/* The header over a photo needs a full-bleed opening. */
+	if (g_strcmp0(str_of(design, "header"), "over-photo") == 0 && (first == NULL ||
+		g_strcmp0(family_of(library, str_of(first, "component"), str_of(first, "variant")), "bleed") != 0))
+		g_string_append(why, "the header lies over the opening only when the opening is a full-bleed photo\n");
+	assign_tones(library, home, str_of(design, "footer"));
+	if (why->len == 0)
+		ls_design_check_home(library, home, str_of(design, "footer"), why);
+	if (why->len > 0) {
+		JsonObject *old = json_node_get_object(before);
+		g_autoptr(GList) keys = json_object_get_members(old);
+		GList *key;
+		for (key = keys; key != NULL; key = key->next)
+			json_object_set_member(design, key->data, json_node_copy(json_object_get_member(old, key->data)));
+		g_set_error(error, LS_ERROR, LS_ERROR_INVALID, "%s/%s breaks a design rule: %s", type, variant,
+			g_strstrip(why->str));
+		return FALSE;
+	}
+	return TRUE;
 }
 
 /* ---- Checks --------------------------------------------------------------- */
@@ -1016,10 +1279,10 @@ ls_design_check(JsonObject *library, JsonObject *design, GString *why){
 	gsize start = why->len;
 	guint i;
 	if (design == NULL || !ls_object_keys(design,
-		"|preset|source|sector|action|header|footer|home|roles|colors|kicker|accent|font_accent|shape|facts|pages|",
+		"|preset|source|sector|action|header|footer|home|roles|colors|kicker|accent|font_accent|font_label|shape|facts|pages|",
 		NULL)) {
 		g_string_append(why, "design may only have preset, source, sector, action, header, footer, home, roles, "
-			"colors, kicker, accent, font_accent, shape, facts and pages\n");
+			"colors, kicker, accent, font_accent, font_label, shape, facts and pages\n");
 		return FALSE;
 	}
 	/* Older designs have no pages or facts; newer ones list routes the
@@ -1039,8 +1302,9 @@ ls_design_check(JsonObject *library, JsonObject *design, GString *why){
 				g_string_append_printf(why, "design.pages[%u] must be {path, kind, title, optional offer and described}\n", i);
 		}
 		if (json_object_has_member(design, "facts") && (facts == NULL ||
-			!ls_object_keys(facts, "|since|hours|address|area|process|", NULL)))
-			g_string_append(why, "design.facts may only have since, hours, address, area and process\n");
+			!ls_object_keys(facts, "|since|hours|address|area|process|press|rating|locations|", NULL)))
+			g_string_append(why, "design.facts may only have since, hours, address, area, process, press, rating and "
+				"locations\n");
 	}
 	if (str_of(design, "preset") == NULL)
 		g_string_append(why, "design.preset must name a preset\n");
@@ -1061,11 +1325,21 @@ ls_design_check(JsonObject *library, JsonObject *design, GString *why){
 		!g_str_equal(str_of(design, "kicker"), "pill")))
 		g_string_append(why, "design.kicker must be caps or pill\n");
 	if (str_of(design, "accent") == NULL || (!g_str_equal(str_of(design, "accent"), "colour") &&
-		!g_str_equal(str_of(design, "accent"), "italic")))
-		g_string_append(why, "design.accent must be colour or italic\n");
-	if (str_of(design, "font_accent") != NULL && (strpbrk(str_of(design, "font_accent"), "{};<>\\") != NULL ||
-		strlen(str_of(design, "font_accent")) > 120))
-		g_string_append(why, "design.font_accent must be a plain font stack\n");
+		!g_str_equal(str_of(design, "accent"), "italic") && !g_str_equal(str_of(design, "accent"), "script")))
+		g_string_append(why, "design.accent must be colour, italic or script\n");
+	{
+		const gchar *stacks[] = {"font_accent", "font_label"};
+		guint f;
+		for (f = 0; f < G_N_ELEMENTS(stacks); f++)
+			if (str_of(design, stacks[f]) != NULL && (strpbrk(str_of(design, stacks[f]), "{};<>\\") != NULL ||
+				strlen(str_of(design, stacks[f])) > 120))
+				g_string_append_printf(why, "design.%s must be a plain font stack\n", stacks[f]);
+	}
+	if (g_strcmp0(str_of(design, "header"), "over-photo") == 0 && home != NULL && json_array_get_length(home) > 0 &&
+		JSON_NODE_HOLDS_OBJECT(json_array_get_element(home, 0)) &&
+		g_strcmp0(family_of(library, str_of(json_array_get_object_element(home, 0), "component"),
+			str_of(json_array_get_object_element(home, 0), "variant")), "bleed") != 0)
+		g_string_append(why, "design.header over-photo needs a full-bleed photo opening\n");
 	if (home == NULL || json_array_get_length(home) == 0 || json_array_get_length(home) > 12)
 		g_string_append(why, "design.home must list 1 to 12 sections\n");
 	for (i = 0; home != NULL && i < json_array_get_length(home); i++) {
@@ -1096,9 +1370,11 @@ ls_design_check(JsonObject *library, JsonObject *design, GString *why){
 		json_object_get_int_member(shape, "box") > 32 || json_object_get_int_member(shape, "badge") < 0 ||
 		json_object_get_int_member(shape, "badge") > 999 || json_object_get_int_member(shape, "depth") < 0 ||
 		json_object_get_int_member(shape, "depth") > 1 || json_object_get_double_member(shape, "scrim") < 0.2 ||
-		json_object_get_double_member(shape, "scrim") > 0.8)
-		g_string_append(why, "design.shape needs control 0 to 999, box 0 to 32, badge 0 to 999, depth 0 or 1 and "
-			"scrim 0.2 to 0.8\n");
+		json_object_get_double_member(shape, "scrim") > 0.8 ||
+		(json_object_has_member(shape, "frame") && g_strcmp0(str_of(shape, "frame"), "circle") != 0 &&
+		g_strcmp0(str_of(shape, "frame"), "box") != 0))
+		g_string_append(why, "design.shape needs control 0 to 999, box 0 to 32, badge 0 to 999, depth 0 or 1, "
+			"scrim 0.2 to 0.8 and an optional frame of circle or box\n");
 	if (why->len == start && home != NULL) {
 		g_autoptr(GString) clash = g_string_new(NULL);
 		if (!ls_design_check_home(library, home, str_of(design, "footer"), clash))
@@ -1153,6 +1429,8 @@ ls_design_css(JsonObject *design){
 	}
 	g_string_append_printf(out, "\t--font-accent: %s;\n", str_of(design, "font_accent") != NULL
 		? str_of(design, "font_accent") : "var(--font-display)");
+	g_string_append_printf(out, "\t--font-label: %s;\n", str_of(design, "font_label") != NULL
+		? str_of(design, "font_label") : "var(--font-body)");
 	for (i = 0; i < G_N_ELEMENTS(steps); i++)
 		g_string_append_printf(out, "\t--text-%u: %s;\n", i + 1, steps[i]);
 	for (i = 0; i < G_N_ELEMENTS(space); i++)
@@ -1162,6 +1440,11 @@ ls_design_css(JsonObject *design){
 	add_px(out, "radius-control", shape != NULL ? json_object_get_int_member(shape, "control") : 4);
 	add_px(out, "radius-box", shape != NULL ? json_object_get_int_member(shape, "box") : 8);
 	add_px(out, "radius-badge", shape != NULL ? json_object_get_int_member(shape, "badge") : 999);
+	/* A framed photo is a circle on some presets, else the box radius. */
+	if (g_strcmp0(str_of(shape, "frame"), "circle") == 0)
+		g_string_append(out, "\t--radius-frame: 50%;\n");
+	else
+		g_string_append(out, "\t--radius-frame: var(--radius-box);\n");
 	if (shape != NULL && json_object_get_int_member(shape, "depth") > 0)
 		g_string_append(out, "\t--shadow-1: 0 1px 2px rgb(16 24 40 / 0.06);\n"
 			"\t--shadow-2: 0 4px 16px rgb(16 24 40 / 0.08);\n\t--shadow-3: 0 12px 32px rgb(16 24 40 / 0.12);\n");

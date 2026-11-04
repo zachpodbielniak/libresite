@@ -293,12 +293,16 @@ components:
       photo-start: A full-bleed photo fading from the left; kicker, headline, lede and actions sit left over the fade. Needs a photo.
       photo-center: A full-bleed photo under a soft scrim; a short centered headline, a lede and one action. Needs a photo.
       split-card: The words in a rounded card of the brand colour, a rounded photo beside it. Needs a photo.
+      split-frame: The words on the page ground beside one framed photo, a circle on some designs. Needs a photo.
+      text-first: Centered words and the actions first, then one wide rounded photo on the first screen. Needs a photo.
+      photo-pair: Two full-height photos side by side with no words over them; the words follow under them. Needs two photos.
     slots:
       kicker: {type: text, max: 80, note: "Short label above the heading; omit rather than repeat the site name."}
       heading: {type: text, required: true, max: 140}
       lede: {type: rich, max: 800}
       actions: {type: links, max_items: 2, note: "The first link is the primary action."}
       art: {type: image, note: "Required by split and banner."}
+      pair: {type: image, note: "photo-pair: the builder's second photo."}
   text:
     summary: A block of prose.
     variants:
@@ -444,10 +448,12 @@ components:
       underline: The title runs into a long accent rule leading to the actions.
       closing-band: 'The closing call on the brand colour: one line, the one primary action, the phone and the email. The builder draws the actions.'
       promise: 'A quiet promise line and the one primary action on the page ground. The builder draws the actions.'
+      photo-band: 'The closing line and the one primary action over a wide photo under a scrim. The builder draws the actions and the photo.'
     slots:
       heading: {type: text, required: true, max: 140}
       body: {type: rich, max: 800}
       actions: {type: links, min_items: 1, max_items: 2}
+      art: {type: image, note: "photo-band: the builder's photo."}
   faq:
     summary: Questions with expandable answers.
     variants:
@@ -460,6 +466,7 @@ components:
       ruled: Large questions between heavy rules.
       questions: Native expanding rows, one question each, in one readable column.
       side-heading: The heading and a short line on the left, the questions on the right.
+      two-column: Native expanding rows in two columns on wide screens.
     slots:
       heading: {type: text, max: 140}
       intro: {type: rich, max: 400}
@@ -481,6 +488,9 @@ components:
       ledger: A two-column table of ruled rows.
       ribbon: The facts in one painted strip.
       strip: 'One row of two to four supplied facts under the opening, divided by rules. The builder fills it from the order.'
+      band: 'The supplied starting year set large on the brand colour with the services as ticks. The builder fills it from the order.'
+      logos: 'A row of the press and certification names the order supplies. The builder fills it from the order.'
+      rating: 'The supplied rating, its count and its source in one line. The builder fills it from the order.'
     slots:
       heading: {type: text, max: 140}
       intro: {type: rich, max: 800}
@@ -491,6 +501,7 @@ components:
         fields:
           label: {type: text, required: true, max: 60}
           value: {type: rich, required: true, max: 400}
+      ticks: {type: items, max_items: 16, fields: {name: {type: text, required: true, max: 80}}, note: "band: the supplied services, from the builder."}
   pricing:
     summary: Offer tiers or packages with prices supplied by the client.
     variants:
@@ -916,6 +927,7 @@ components:
       cards: Each step a painted card.
       numbered-row: 'The owner''s steps numbered in a row on wide screens. The builder fills the steps word for word.'
       expect: 'The owner''s steps as plain ruled rows of what to expect. The builder fills the steps word for word.'
+      three-steps: 'The owner''s steps centered side by side, each under a large number. The builder fills the steps word for word.'
     slots:
       heading: {type: text, max: 140}
       intro: {type: rich, max: 600}
@@ -1163,6 +1175,8 @@ components:
       photo-cards: One card per service with its photo, name, one line and one link; three or four a row.
       price-list: Ruled rows of name, one short line and the supplied price and duration; two columns on wide screens.
       sublinks: One card per group of services with a short line and the services as a list of links.
+      round-photos: A round photo above each service's name and one line, three a row.
+      feature-rows: One row per service, its photo and its words, the sides alternating.
     slots:
       heading: {type: text, max: 140}
       intro: {type: rich, max: 600}
@@ -1186,6 +1200,8 @@ components:
       map: A drawn map with the business at the center and the places in rings around it.
       town-list: 'The supplied towns in columns under one line, the hours and address beside them. The builder fills the facts.'
       address-band: 'The supplied address, hours and towns in one band. The builder fills the facts.'
+      location-blocks: 'One block per supplied place with its address, hours and the call. The builder fills the facts.'
+      shop-chooser: 'Two to four supplied shops side by side, each with its address, hours and phone. The builder fills the facts.'
     slots:
       heading: {type: text, max: 140}
       intro: {type: rich, max: 600}
@@ -1194,6 +1210,16 @@ components:
       note: {type: rich, max: 400}
       hours: {type: text, max: 400, note: "town-list and address-band: the supplied hours, from the builder."}
       address: {type: text, max: 200, note: "town-list and address-band: the supplied address, from the builder."}
+      places:
+        type: items
+        max_items: 4
+        note: "location-blocks and shop-chooser: the supplied places, from the builder."
+        fields:
+          name: {type: text, required: true, max: 60}
+          address: {type: text, max: 200}
+          hours: {type: text, max: 200}
+          phone: {type: text, max: 40}
+          link: {type: link}
   contact-card:
     summary: The supplied ways to get in touch, in one block with clear actions.
     variants:
@@ -1229,6 +1255,7 @@ components:
     variants:
       history: 'The supplied starting year set large beside a short story.'
       photo-story: 'One of the owner''s own photos beside a short story and one link.'
+      owner-letter: 'A short letter from the business beside one of the owner''s own photos, signed with the business name.'
     slots:
       kicker: {type: text, max: 80}
       heading: {type: text, required: true, max: 140}
@@ -1236,6 +1263,7 @@ components:
       since: {type: text, max: 12, note: "history: the supplied year, from the builder."}
       link: {type: link}
       art: {type: image, note: "photo-story: the builder gives it one of the owner's own photos."}
+      signature: {type: text, max: 80, note: "owner-letter: the business name, from the builder."}
   contact:
     summary: How to reach the business, on the home page. The supplied details beside one clear next step; the builder draws the phone and the primary action.
     variants:
@@ -1830,17 +1858,75 @@ default:
 # variant's arrangement comes from, the owner colour words it knows and the
 # words that tell a business's sector. Presets live in themes.yaml.
 library:
-  weights: {prefer: 6, fit: 6, other: 1}
+  weights: {prefer: 6, fit: 10, other: 1}
   fallback_opening: hero/centered
+  # Sectors: the words that name a trade, its primary action, its home
+  # sections in order, and other orders the trade allows; the hash picks
+  # one of home and orders. A section shows only when its content exists.
   sectors:
     trades:
-      words: [plumber, plumbers, plumbing, drain, drains, heating, hvac, furnace, boiler, roof, roofer, roofing, gutters, electric, electrician, electrical, landscaping, landscaper, contractor, contracting, handyman, painter, painting]
+      words: [plumber, plumbers, plumbing, drain, drains, heating, cooling, hvac, furnace, boiler, roof, roofer, roofing, gutters, electric, electrician, electrical, contractor, contracting, handyman, painter, painting, remodeling, siding]
       action: call
       home: [hero, facts, services, steps, about, areas, gallery, reviews, faq, cta]
+      orders:
+      - [hero, facts, services, about, steps, reviews, areas, gallery, faq, cta]
+      - [hero, services, facts, steps, gallery, reviews, about, areas, faq, cta]
+    outdoor:
+      words: [landscaping, landscaper, landscape, lawn, garden, gardening, fencing, hardscape, tree, trees, patio]
+      action: call
+      home: [hero, facts, services, gallery, steps, about, areas, reviews, faq, cta]
+      orders:
+      - [hero, services, areas, gallery, reviews, about, steps, faq, cta]
+    cleaning:
+      words: [cleaning, cleaners, cleaner, maid, maids, housekeeping, janitorial]
+      action: book
+      home: [hero, facts, services, steps, reviews, about, areas, faq, cta]
+      orders:
+      - [hero, services, steps, facts, reviews, areas, about, faq, cta]
+    auto:
+      words: [auto, garage, mechanic, mechanics, car, cars, brakes, tires, tyres, vehicle, vehicles, tesla]
+      action: book
+      home: [hero, facts, services, steps, areas, about, reviews, faq, cta]
+      orders:
+      - [hero, services, steps, areas, facts, reviews, about, faq, cta]
     wellness:
-      words: [salon, hair, haircut, spa, massage, barber, barbershop, nails, beauty, wellness, stylist, studio, skin, facial]
+      words: [salon, hair, haircut, cuts, colour, color, balayage, blowouts, spa, massage, barber, barbershop, nails, beauty, wellness, stylist, studio, skin, facial, yoga, pilates]
       action: book
       home: [hero, facts, services, steps, about, areas, gallery, reviews, faq, cta]
+      orders:
+      - [hero, services, gallery, reviews, about, steps, areas, faq, cta]
+      - [hero, facts, services, reviews, gallery, about, areas, faq, cta]
+    clinic:
+      words: [dental, dentist, dentists, dentistry, teeth, clinic, medical, doctor, physio, physiotherapy, chiropractic, chiropractor, optometrist, orthodontics, veterinary]
+      action: book
+      home: [hero, facts, services, about, steps, reviews, areas, faq, cta]
+      orders:
+      - [hero, services, facts, steps, about, reviews, areas, faq, cta]
+    professional:
+      words: [law, lawyer, lawyers, attorney, attorneys, legal, probate, estate, trusts, wills, accounting, accountant, accountants, bookkeeping, tax, taxes, consulting, consultant, coaching, financial, insurance]
+      action: call
+      home: [hero, facts, about, services, steps, reviews, areas, faq, cta]
+      orders:
+      - [hero, services, facts, about, reviews, steps, areas, faq, cta]
+      - [hero, facts, services, steps, about, areas, reviews, faq, cta]
+    food:
+      words: [bakery, bakers, baker, bread, pastries, pastry, cakes, cake, cafe, coffee, restaurant, kitchen, catering, deli, pizzeria, bistro, diner, brunch, breakfast]
+      action: call
+      home: [hero, services, about, areas, gallery, reviews, facts, faq, cta]
+      orders:
+      - [hero, facts, services, gallery, areas, reviews, about, faq, cta]
+    events:
+      words: [bar, bowling, venue, events, lounge, brewery, taproom, club, arcade, theatre, theater]
+      action: book
+      home: [hero, facts, services, gallery, reviews, areas, faq, cta]
+      orders:
+      - [hero, services, facts, reviews, gallery, areas, faq, cta]
+    retail:
+      words: [florist, flowers, floral, boutique, shop, store, gifts, books, bookshop, jewellery, jewelry, ceramics]
+      action: call
+      home: [hero, services, gallery, about, areas, reviews, facts, faq, cta]
+      orders:
+      - [hero, facts, gallery, services, areas, about, reviews, faq, cta]
     any:
       words: []
       action: book
@@ -1858,6 +1944,18 @@ library:
       source: 'Lindholm Roofing: the words in a rounded royal-blue card, a rounded crew photo beside it.'
       family: split
       needs: {photos: 1}
+    hero/split-frame:
+      source: 'Little Fish Accounting and Alyssa Nikole Photography: the words on the page ground beside one framed photo, a circle at Little Fish (Preline hero sections, MIT, for the structure).'
+      family: split
+      needs: {photos: 1}
+    hero/text-first:
+      source: 'We Leave Clean: centered words and two actions first, then one wide rounded photo on the first screen (HyperUI banners, MIT, for the structure).'
+      family: stack
+      needs: {photos: 1}
+    hero/photo-pair:
+      source: 'Maple and June: two full-height photos side by side with no words over them; the words follow.'
+      family: pair
+      needs: {photos: 2}
     services/photo-cards:
       source: 'The Gleamery, Mission Bowling Club and Portland Strength Collective: photo, title, one line and one link per card (HyperUI cards and shadcn/ui card, MIT, for the structure).'
       family: cards
@@ -1870,6 +1968,14 @@ library:
       source: 'Lindholm Roofing: one card per service group with the services as links.'
       family: cards
       needs: {items: [4, 24]}
+    services/round-photos:
+      source: 'Glenwood South Barberstudio: round photos with the service name under each, three a row.'
+      family: cards
+      needs: {items: [2, 6], item_photos: true}
+    services/feature-rows:
+      source: 'Heath Ceramics (the maker story) and Evergreen Home Heating (the Mitsubishi feature): one row per service, its photo and words, alternating sides.'
+      family: rows
+      needs: {items: [2, 5], item_photos: true}
     reviews/card-grid:
       source: 'Highlands Landscaping: many short quotes with names, three a row (HyperUI testimonials, MIT, for the structure).'
       family: cards
@@ -1891,6 +1997,21 @@ library:
       family: strip
       tone: default
       needs: {facts: 2}
+    facts/band:
+      source: 'Guin Service ("66 years of experience"): one large supplied number on the brand colour with the services as ticks.'
+      family: band
+      tone: brand
+      needs: {history: true, items: [2, 16]}
+    facts/logos:
+      source: 'PRESS Modern Massage (press logos) and Harte Law (award names): a row of supplied press and certification names (HyperUI logo clouds, MIT, for the structure).'
+      family: strip
+      tone: default
+      needs: {press: 1}
+    facts/rating:
+      source: 'We Leave Clean ("1000+ reviews") and The Gleamery: the supplied rating, its count and its source in one line.'
+      family: strip
+      tone: default
+      needs: {rating: true}
     steps/numbered-row:
       source: 'Evergreen Home Heating "The right system": numbered steps in a row (HyperUI sections, MIT, for the structure).'
       family: steps
@@ -1898,6 +2019,10 @@ library:
     steps/expect:
       source: 'Veterans Contracting and Electrified Garage: what to expect as plain rows.'
       family: rows
+      needs: {steps: 2}
+    steps/three-steps:
+      source: 'Emily''s Maids ("Get your home clean in 3 steps") and We Leave Clean: three short steps centered side by side.'
+      family: steps
       needs: {steps: 2}
     about/history:
       source: 'Heath Ceramics and Guin Service: the since-year line beside a short story.'
@@ -1907,6 +2032,10 @@ library:
       source: 'Alyssa Nikole and the Highlands Landscaping intro: a large photo beside a short story and one button (HyperUI sections, MIT, for the structure).'
       family: split
       needs: {history: true, own_photos: 2}
+    about/owner-letter:
+      source: 'Emily''s Maids ("Message from the owner"): a portrait beside a short letter and a signature line.'
+      family: story
+      needs: {history: true, own_photos: 1}
     areas/town-list:
       source: 'Lindholm Roofing and Highlands Landscaping: the supplied towns in columns under one line.'
       family: columns
@@ -1915,6 +2044,14 @@ library:
       source: 'Nosotros: the address and hours in one band.'
       family: band
       needs: {place: true}
+    areas/location-blocks:
+      source: 'Zinc Cafe & Bar: one block per place with its address, hours and actions.'
+      family: places
+      needs: {place: true}
+    areas/shop-chooser:
+      source: 'Electrified Garage ("Two shops, not one regional phone queue"): two or three shops side by side.'
+      family: places
+      needs: {locations: 2}
     gallery/featured:
       source: 'Maple and June, Table & Tulip and Veterans Contracting: two to four named projects, photo and caption.'
       family: grid
@@ -1927,6 +2064,10 @@ library:
       source: 'Harte Law: the heading and lede on the left, the questions on the right (HyperUI FAQs, MIT, for the structure).'
       family: split
       needs: {items: [1, 24]}
+    faq/two-column:
+      source: 'Tailwind Plus FAQ sections (taxonomy only): the questions in two columns (HyperUI FAQs, MIT, for the structure).'
+      family: list
+      needs: {items: [4, 24]}
     cta/closing-band:
       source: 'Mission Bowling Club ("Ready to bowl?") and Evergreen Home Heating: one line and one button on the brand colour (HyperUI CTAs, MIT, for the structure).'
       family: band
@@ -1937,12 +2078,23 @@ library:
       family: close
       tone: default
       needs: {}
+    cta/photo-band:
+      source: 'Highlands Landscaping ("Bring your outdoor vision to life"): the closing line and one button over a wide photo under a scrim.'
+      family: bleed
+      tone: photo
+      needs: {spare_photos: 1}
     header/bar:
       source: 'Mission Bowling Club, Glenwood South and Village Dental: wordmark left, task-named links, one button right (HyperUI headers, MIT).'
       needs: {}
     header/utility:
       source: 'Lindholm Roofing: a top row with the phone and the quote action, the service links below.'
-      needs: {phone: true}
+      needs: {phone: true, action: call}
+    header/split:
+      source: 'Little Fish Accounting and Table & Tulip: the wordmark centered with the links in a row under it.'
+      needs: {}
+    header/over-photo:
+      source: 'Glenwood South Barberstudio and Emily''s Maids: the bar laid clear over the opening photo.'
+      needs: {over_photo: true}
     footer/columns:
       source: 'Evergreen Home Heating and Lindholm Roofing: name and contact, then link columns, on the inverse colour (HyperUI footers, MIT).'
       tone: inverse
@@ -1950,6 +2102,10 @@ library:
     footer/simple:
       source: 'Glenwood South Barberstudio and Maple and June: name, one line of links and contact on the surface colour (HyperUI footers, MIT).'
       tone: surface
+      needs: {}
+    footer/centered:
+      source: 'Zinc Cafe & Bar: the name, hours, address and links centered on the page ground (HyperUI footers, MIT).'
+      tone: default
       needs: {}
   # Owner colour words and the colours they set; neutral words leave the
   # preset's colours as they are.

@@ -296,6 +296,85 @@ invalid:
 		"characters and name up to 80, source and headline optional, up to 80 each");
 	return FALSE;
 }
+/* A supplied string of 1 to @max characters that is not only spaces. */
+static gboolean
+short_text(JsonNode *node, glong max){
+	const gchar *text = node != NULL && JSON_NODE_HOLDS_VALUE(node) && json_node_get_value_type(node) == G_TYPE_STRING
+		? json_node_get_string(node) : NULL;
+	return text != NULL && strspn(text, " \t\n") < strlen(text) && g_utf8_strlen(text, -1) <= max;
+}
+
+/* Supplied press and certification names the trust strip shows as
+ * written. Never generated. */
+static gboolean
+press_list(JsonObject *site, GError **error){
+	JsonNode *node = json_object_get_member(site, "press");
+	JsonArray *names = node != NULL && JSON_NODE_HOLDS_ARRAY(node) ? json_node_get_array(node) : NULL;
+	guint i;
+	if (names == NULL || json_array_get_length(names) == 0 || json_array_get_length(names) > 8)
+		goto invalid;
+	for (i = 0; i < json_array_get_length(names); i++)
+		if (!short_text(json_array_get_element(names, i), 80))
+			goto invalid;
+	return TRUE;
+invalid:
+	g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID,
+		"site.press needs 1 to 8 names of press or certifications that name the business, up to 80 characters each");
+	return FALSE;
+}
+
+/* A supplied rating: its score out of five, how many reviews it counts and
+ * where they are. Shown word for word; never generated. */
+static gboolean
+rating_object(JsonObject *site, GError **error){
+	JsonNode *node = json_object_get_member(site, "rating");
+	JsonObject *rating = node != NULL && JSON_NODE_HOLDS_OBJECT(node) ? json_node_get_object(node) : NULL;
+	JsonNode *score = rating != NULL ? json_object_get_member(rating, "score") : NULL;
+	JsonNode *count = rating != NULL ? json_object_get_member(rating, "count") : NULL;
+	if (rating == NULL || !ls_object_keys(rating, "|score|count|source|", NULL) || score == NULL ||
+		!JSON_NODE_HOLDS_VALUE(score) || (json_node_get_value_type(score) != G_TYPE_DOUBLE &&
+		json_node_get_value_type(score) != G_TYPE_INT64) || json_node_get_double(score) < 1 ||
+		json_node_get_double(score) > 5 || count == NULL || !JSON_NODE_HOLDS_VALUE(count) ||
+		json_node_get_value_type(count) != G_TYPE_INT64 || json_node_get_int(count) < 1 ||
+		json_node_get_int(count) > 10000000 || !short_text(json_object_get_member(rating, "source"), 40))
+		goto invalid;
+	return TRUE;
+invalid:
+	g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID,
+		"site.rating needs {score, count, source}: a score from 1 to 5, a whole count of reviews from 1 and the "
+		"source the reviews are on, up to 40 characters");
+	return FALSE;
+}
+
+/* Supplied shops: each with its name and address, and optional hours and
+ * phone. Never generated. */
+static gboolean
+location_list(JsonObject *site, GError **error){
+	JsonNode *node = json_object_get_member(site, "locations");
+	JsonArray *places = node != NULL && JSON_NODE_HOLDS_ARRAY(node) ? json_node_get_array(node) : NULL;
+	guint i;
+	if (places == NULL || json_array_get_length(places) == 0 || json_array_get_length(places) > 4)
+		goto invalid;
+	for (i = 0; i < json_array_get_length(places); i++) {
+		JsonNode *entry = json_array_get_element(places, i);
+		JsonObject *place = JSON_NODE_HOLDS_OBJECT(entry) ? json_node_get_object(entry) : NULL;
+		g_autofree gchar *tel = NULL;
+		if (place == NULL || !ls_object_keys(place, "|name|address|hours|phone|", NULL) ||
+			!short_text(json_object_get_member(place, "name"), 60) ||
+			!short_text(json_object_get_member(place, "address"), 200) ||
+			(json_object_has_member(place, "hours") && !short_text(json_object_get_member(place, "hours"), 200)))
+			goto invalid;
+		if (json_object_has_member(place, "phone") && (tel = ls_phone_tel(ls_string(place, "phone"))) == NULL)
+			goto invalid;
+	}
+	return TRUE;
+invalid:
+	g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID,
+		"site.locations needs 1 to 4 {name, address, hours, phone} entries: a name up to 60 characters, an address "
+		"up to 200, optional hours up to 200 and an optional phone number");
+	return FALSE;
+}
+
 /* Supplied social profiles: https addresses the builder links and shows
  * with the network's icon. Never generated. */
 static gboolean
@@ -403,7 +482,7 @@ validate_site(JsonObject *site, GError **error){
 	guint i;
 	if (!ls_object_keys(site,
 		"|brief|audience|style|stack|frontend|backend|database|requirements|pages|offers|contact|brand|copy_lock|languages|"
-		"photos|media|social|avoid|form|modules|credit|booking|demo|reviews|",
+		"photos|media|social|avoid|form|modules|credit|booking|demo|reviews|press|rating|locations|",
 		error))
 		return FALSE;
 	if (!json_object_has_member(site, "brief")) {
@@ -463,6 +542,15 @@ validate_site(JsonObject *site, GError **error){
 					"without spaces, quotes, angle brackets, ? or #");
 				return FALSE;
 			}
+		} else if (g_str_equal(key, "press")) {
+			if (!press_list(site, error))
+				return FALSE;
+		} else if (g_str_equal(key, "rating")) {
+			if (!rating_object(site, error))
+				return FALSE;
+		} else if (g_str_equal(key, "locations")) {
+			if (!location_list(site, error))
+				return FALSE;
 		} else if (g_str_equal(key, "reviews")) {
 			if (!review_list(site, error))
 				return FALSE;

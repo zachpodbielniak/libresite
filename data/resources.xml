@@ -43,6 +43,34 @@
     <file>components/reviews.css</file>
     <file>components/facts--strip.html</file>
     <file>components/facts--strip.css</file>
+    <file>components/hero--split-frame.html</file>
+    <file>components/hero--split-frame.css</file>
+    <file>components/hero--text-first.html</file>
+    <file>components/hero--text-first.css</file>
+    <file>components/hero--photo-pair.html</file>
+    <file>components/hero--photo-pair.css</file>
+    <file>components/services--round-photos.html</file>
+    <file>components/services--round-photos.css</file>
+    <file>components/services--feature-rows.html</file>
+    <file>components/services--feature-rows.css</file>
+    <file>components/facts--band.html</file>
+    <file>components/facts--band.css</file>
+    <file>components/facts--logos.html</file>
+    <file>components/facts--logos.css</file>
+    <file>components/facts--rating.html</file>
+    <file>components/facts--rating.css</file>
+    <file>components/steps--three-steps.html</file>
+    <file>components/steps--three-steps.css</file>
+    <file>components/about--owner-letter.html</file>
+    <file>components/about--owner-letter.css</file>
+    <file>components/areas--location-blocks.html</file>
+    <file>components/areas--location-blocks.css</file>
+    <file>components/areas--shop-chooser.html</file>
+    <file>components/areas--shop-chooser.css</file>
+    <file>components/faq--two-column.html</file>
+    <file>components/faq--two-column.css</file>
+    <file>components/cta--photo-band.html</file>
+    <file>components/cta--photo-band.css</file>
     <file>components/steps--numbered-row.html</file>
     <file>components/steps--numbered-row.css</file>
     <file>components/steps--expect.html</file>

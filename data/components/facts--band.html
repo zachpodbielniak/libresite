@@ -1,0 +1,7 @@
+<div class="wrap facts__band">
+{{#heading}}<h2 class="visually-hidden" id="{{id}}-h">{{heading}}</h2>
+{{/heading}}{{#items}}<p class="facts__big"><span class="facts__value">{{{value}}}</span> <span class="facts__label">{{label}}</span></p>
+{{/items}}{{#has_ticks}}<ul class="ticks facts__ticks" role="list">
+{{#ticks}}<li>{{name}}</li>
+{{/ticks}}</ul>
+{{/has_ticks}}</div>

@@ -1,0 +1,12 @@
+/* areas/shop-chooser: two to four supplied shops side by side, each
+ * with its address, hours and phone (Electrified Garage). Layout only. */
+.areas--shop-chooser .areas__blocks { display: grid; gap: var(--space-6); grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); margin: 0; padding: 0; list-style: none; }
+.areas--shop-chooser .areas__block { display: grid; gap: var(--space-4); align-content: start; padding: var(--space-6); border: 1px solid var(--line); border-radius: var(--radius-box); background: var(--bg); }
+.areas--shop-chooser .areas__name { margin: 0; font-size: var(--text-6); }
+.areas--shop-chooser .areas__details { display: grid; gap: var(--space-3); margin: 0; }
+.areas--shop-chooser .areas__details dt { font-family: var(--font-label); font-size: var(--text-1); font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted-fg); }
+.areas--shop-chooser .areas__details dd { margin: var(--space-1) 0 0; }
+.areas--shop-chooser .areas__call { margin: 0; }
+.areas--shop-chooser .areas__towns-line { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-4); margin: var(--space-6) 0 0; }
+.areas--shop-chooser .areas__towns-label { font-weight: 600; }
+.areas--shop-chooser .areas__town:not(:last-child)::after { content: ","; }
