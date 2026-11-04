@@ -82,6 +82,19 @@ const contrast = el => {
 };
 (async () => {
   await document.fonts.ready;
+  /* An entrance must not make the home heading or lede look like a one-letter
+   * column. Sample the curtain mid-wipe, not only its settled end state. */
+  if (innerWidth <= 390 && document.body.classList.contains("kit-curtain")) {
+    const hero = document.querySelector("main > .hero:first-child");
+    if (hero) for (const el of hero.querySelectorAll(".hero__title, .hero__lede")) {
+      const motion = el.getAnimations().find(a => a.effect && getComputedStyle(el).animationName.includes("kit-curtain-wipe"));
+      if (motion) motion.currentTime = 400;
+      const clip = getComputedStyle(el).clipPath;
+      const right = clip.match(/^inset\([^ ]+\s+(?:calc\()?([\d.]+)%/);
+      if (right && Number(right[1]) > 25) say(`hero text visibly clipped ${Math.round(Number(right[1]))}%`, el);
+      if (motion) motion.cancel();
+    }
+  }
   /* Walk down the page as a visitor would, letting reveals and lazy
    * pictures arrive, then back to the top. */
   for (let y = 0; y <= document.documentElement.scrollHeight; y += innerHeight / 2) { scrollTo(0, y); await sleep(80); }
