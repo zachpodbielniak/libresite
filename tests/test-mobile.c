@@ -235,6 +235,23 @@ test_asymmetric_thirds(void){
 	g_assert_nonnull(strstr(css, ".wrap:not(:has(> .section-head)) > * { max-width: calc(200% / 3); margin-inline-start: calc(100% / 3); }"));
 }
 
+/* On wide screens the sticky bar floats over the page instead of taking a
+ * slot in it, steps aside when the closing band or the footer is in view,
+ * and wears no dark ring around a lone button (Ben, 2026-11-04: Polar Air
+ * showed a third "Call" in its own row under the closing band). */
+static void
+test_sticky_bar_rests(void){
+	g_autofree gchar *css = read_file("data/components/overlay--sticky-bar.css");
+	g_autofree gchar *js = read_file("data/components/overlay.js");
+	g_assert_null(strstr(css, "position: sticky"));
+	g_assert_nonnull(strstr(css, "position: fixed; inset: auto 0 var(--space-4) 0;"));
+	g_assert_nonnull(strstr(css, ".design.overlay--sticky-bar .action-bar.is-resting { opacity: 0; visibility: hidden; }"));
+	g_assert_nonnull(strstr(css, ".design.overlay--sticky-bar .action-bar__inner:not(:has(.action-bar__phone:not([hidden]))) { padding: 0; background: transparent; box-shadow: none; }"));
+	g_assert_nonnull(strstr(css, ".design.overlay--sticky-bar .site-footer { padding-bottom: calc(var(--space-6) + 4rem); }"));
+	g_assert_nonnull(strstr(js, "IntersectionObserver"));
+	g_assert_nonnull(strstr(js, "is-resting"));
+}
+
 /* A breadcrumb link is a 44px tap target while the current page is plain
  * text, so the trail centres its items: the link text, the separator and
  * the current page share one line instead of the link sitting lower. */
@@ -441,6 +458,7 @@ main(int argc, char **argv){
 	g_test_add_func("/mobile/crumbs-one-line", test_crumbs_one_line);
 	g_test_add_func("/mobile/simple-footer-columns", test_simple_footer_columns);
 	g_test_add_func("/mobile/asymmetric-thirds", test_asymmetric_thirds);
+	g_test_add_func("/mobile/sticky-bar-rests", test_sticky_bar_rests);
 	g_test_add_func("/mobile/danger", test_danger);
 	g_test_add_func("/mobile/accent-surface", test_accent_surface);
 	g_test_add_func("/mobile/fonts-and-photos", test_fonts_and_photos);

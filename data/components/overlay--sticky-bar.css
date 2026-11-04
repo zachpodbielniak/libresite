@@ -1,15 +1,21 @@
 /* overlay/sticky-bar: on wider screens too, the one primary action stays in
- * reach in a slim bar held at the foot of the screen, with the phone as a
- * line beside a button that is not the call. On a phone it is the action
- * bar every site has. */
+ * reach in a slim bar floating at the foot of the screen, with the phone as
+ * a line beside a button that is not the call. It floats over the page
+ * rather than taking a slot in it, and overlay.js sets it resting (hidden)
+ * while the closing band or the footer is in view, so it never repeats
+ * them. A lone button wears no ring. On a phone it is the action bar every
+ * site has. */
 @media (min-width: 48rem) {
-	.design.overlay--sticky-bar .action-bar { display: block; position: sticky; bottom: var(--space-4); z-index: 20; padding: 0; background: transparent; border-top: 0; pointer-events: none; }
+	.design.overlay--sticky-bar .action-bar { display: block; position: fixed; inset: auto 0 var(--space-4) 0; z-index: 20; margin: 0; padding: 0; background: transparent; border-top: 0; pointer-events: none; transition: opacity 0.2s, visibility 0.2s; }
+	.design.overlay--sticky-bar .action-bar.is-resting { opacity: 0; visibility: hidden; }
+	.design.overlay--sticky-bar .site-footer { padding-bottom: calc(var(--space-6) + 4rem); }
 	.design.overlay--sticky-bar .action-bar__inner {
 		display: flex; align-items: center; justify-content: center; gap: var(--space-5); width: max-content; max-width: calc(100% - 2 * var(--gutter));
 		margin-inline: auto; padding: var(--space-2) var(--space-2) var(--space-2) var(--space-5); border-radius: 999px;
 		background: var(--inverse); color: var(--inverse-fg); box-shadow: var(--shadow-3); pointer-events: auto;
 	}
-	.design.overlay--sticky-bar .action-bar .button { width: auto; }
+	.design.overlay--sticky-bar .action-bar__inner:not(:has(.action-bar__phone:not([hidden]))) { padding: 0; background: transparent; box-shadow: none; }
+	.design.overlay--sticky-bar .action-bar .button { width: auto; box-shadow: var(--shadow-3); }
 	.design.overlay--sticky-bar .action-bar__phone { color: var(--inverse-fg); font-weight: 600; text-decoration: none; font-variant-numeric: tabular-nums; }
 	.design.overlay--sticky-bar .action-bar__phone:hover { text-decoration: underline; }
 }

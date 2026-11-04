@@ -4,8 +4,23 @@
  * owner's photos. Dialogs are native: the page behind is inert, Escape
  * closes them and the focus goes back to what opened them. Without this
  * script the bar stays, the links lead to the form's page and the photos
- * open on their own. */
+ * open on their own. The wide sticky bar rests while the closing band or
+ * the footer is in view; without this script it simply stays. */
 (function () {
+	var action = document.querySelector(".design.overlay--sticky-bar .action-bar");
+	if (action && "IntersectionObserver" in window && window.matchMedia("(min-width: 48rem)").matches) {
+		var ends = Array.prototype.slice.call(document.querySelectorAll("main > .cta:last-of-type, .site-footer"));
+		var seen = [];
+		var watch = new IntersectionObserver(function (entries) {
+			entries.forEach(function (entry) {
+				var at = seen.indexOf(entry.target);
+				if (entry.isIntersecting && at < 0) seen.push(entry.target);
+				if (!entry.isIntersecting && at >= 0) seen.splice(at, 1);
+			});
+			action.classList.toggle("is-resting", seen.length > 0);
+		});
+		ends.forEach(function (end) { watch.observe(end); });
+	}
 	var bar = document.querySelector(".announce");
 	if (bar) {
 		var key = "ls-announce:" + bar.textContent.replace(/\s+/g, " ").trim();
