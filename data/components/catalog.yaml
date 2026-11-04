@@ -2310,6 +2310,8 @@ library:
       source: 'Village Dental: the main action held in view at the foot of the screen (research O4).'
       share: 35
       needs: {phone: true}
+      # These headers already keep the action in view; a second bar doubles it.
+      not_headers: [rail, pill, shrink, transparent-solid]
     modal-form:
       source: 'Emily''s Maids and PRESS Modern Massage: the quote or booking form opens over the page (research O5, O6).'
       share: 60

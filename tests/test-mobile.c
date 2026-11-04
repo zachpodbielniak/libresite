@@ -222,6 +222,19 @@ test_simple_footer_columns(void){
 	g_assert_null(strstr(css, "grid-template-columns: minmax(0, 1fr) minmax(0, auto); align-items: center;"));
 }
 
+/* The asymmetric skeleton holds a section's content to two thirds of the
+ * section itself. A percentage padding on the wrap measured the whole
+ * page instead, and squeezed the salon's questions into a third of their
+ * column (Ben, 2026-11-04). */
+static void
+test_asymmetric_thirds(void){
+	g_autofree gchar *css = read_file("data/components/skeleton--asymmetric.css");
+	g_assert_null(strstr(css, "padding-right: 30%"));
+	g_assert_null(strstr(css, "padding-left: 30%"));
+	g_assert_nonnull(strstr(css, ":nth-of-type(odd) > .wrap > * { max-width: calc(200% / 3); }"));
+	g_assert_nonnull(strstr(css, ".wrap:not(:has(> .section-head)) > * { max-width: calc(200% / 3); margin-inline-start: calc(100% / 3); }"));
+}
+
 /* A breadcrumb link is a 44px tap target while the current page is plain
  * text, so the trail centres its items: the link text, the separator and
  * the current page share one line instead of the link sitting lower. */
@@ -427,6 +440,7 @@ main(int argc, char **argv){
 	g_test_add_func("/mobile/tap-targets", test_tap_targets);
 	g_test_add_func("/mobile/crumbs-one-line", test_crumbs_one_line);
 	g_test_add_func("/mobile/simple-footer-columns", test_simple_footer_columns);
+	g_test_add_func("/mobile/asymmetric-thirds", test_asymmetric_thirds);
 	g_test_add_func("/mobile/danger", test_danger);
 	g_test_add_func("/mobile/accent-surface", test_accent_surface);
 	g_test_add_func("/mobile/fonts-and-photos", test_fonts_and_photos);

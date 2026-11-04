@@ -1,6 +1,8 @@
 /* skeleton/asymmetric: on wide screens the sections stagger. One section
  * puts its heading in a narrow column at the left and its content in a
  * wide one; the next holds its content to the left two thirds; and so on.
+ * The thirds are of the section's own column, set on its children: a
+ * percentage padding on the wrap would measure the whole page instead.
  * Placement only. */
 @container (min-width: 60rem) {
 	.design.skeleton--asymmetric.page--kind-home main > .block:not(:first-child):not(.cta):nth-of-type(even) > .wrap:has(> .section-head) {
@@ -8,6 +10,6 @@
 	}
 	.design.skeleton--asymmetric.page--kind-home main > .block:not(:first-child):not(.cta):nth-of-type(even) > .wrap > .section-head { grid-column: 1; grid-row: 1 / span 6; margin: 0; }
 	.design.skeleton--asymmetric.page--kind-home main > .block:not(:first-child):not(.cta):nth-of-type(even) > .wrap > :not(.section-head) { grid-column: 2; }
-	.design.skeleton--asymmetric.page--kind-home main > .block:not(:first-child):not(.cta):nth-of-type(odd) > .wrap { padding-right: 30%; }
-	.design.skeleton--asymmetric.page--kind-home main > .block:not(:first-child):not(.cta):nth-of-type(even) > .wrap:not(:has(> .section-head)) { padding-left: 30%; }
+	.design.skeleton--asymmetric.page--kind-home main > .block:not(:first-child):not(.cta):nth-of-type(odd) > .wrap > * { max-width: calc(200% / 3); }
+	.design.skeleton--asymmetric.page--kind-home main > .block:not(:first-child):not(.cta):nth-of-type(even) > .wrap:not(:has(> .section-head)) > * { max-width: calc(200% / 3); margin-inline-start: calc(100% / 3); }
 }

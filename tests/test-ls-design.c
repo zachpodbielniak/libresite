@@ -1296,6 +1296,34 @@ test_layout_spread(void){
 	}
 }
 
+/* A floating action bar never doubles a header that already keeps the
+ * action in view: the rail, the pill, the shrinking bar and the bar that
+ * turns solid on scroll (Ben, 2026-11-04: the salon showed "Book online"
+ * twice and the bar covered the questions). */
+static void
+test_sticky_bar_headers(void){
+	g_autoptr(LsComponents) components = library();
+	const gchar *held[] = {"rail", "pill", "shrink", "transparent-solid"};
+	guint i, j, bars = 0;
+	for (i = 0; i < 400; i++) {
+		g_autofree gchar *site = g_strdup_printf("{\"brand\": {\"name\": \"Example %u Salon\", \"tagline\": \"Salon\"},"
+			" \"contact\": {\"phone\": \"503-555-0122\"}, \"offers\": [{\"id\": \"a\", \"name\": \"One\"},"
+			" {\"id\": \"b\", \"name\": \"Two\"}]}", i);
+		g_autoptr(JsonObject) design = design_for(components, site, NULL, four_photos);
+		JsonArray *overlays = json_object_get_array_member(design, "overlays");
+		gboolean bar = FALSE;
+		for (j = 0; j < json_array_get_length(overlays); j++)
+			bar = bar || g_strcmp0(json_array_get_string_element(overlays, j), "sticky-bar") == 0;
+		if (!bar)
+			continue;
+		bars++;
+		for (j = 0; j < G_N_ELEMENTS(held); j++)
+			if (g_strcmp0(ls_string(design, "header"), held[j]) == 0)
+				g_error("%s: sticky-bar beside the %s header", site, held[j]);
+	}
+	g_assert_cmpuint(bars, >, 20);
+}
+
 /* Every new header, hero, footer, skeleton, overlay and motion level
  * renders on a preset site with its styles; overlays keep their
  * keyboard contracts; motion never hides content without its script and
@@ -1476,6 +1504,7 @@ main(int argc, char **argv){
 	g_test_add_func("/design/layout-picks", test_layout_picks);
 	g_test_add_func("/design/layout-neighbours", test_layout_neighbours);
 	g_test_add_func("/design/layout-spread", test_layout_spread);
+	g_test_add_func("/design/sticky-bar-headers", test_sticky_bar_headers);
 	g_test_add_func("/design/layout-render", test_layout_render);
 	g_test_add_func("/design/gallery", test_gallery);
 	return g_test_run();

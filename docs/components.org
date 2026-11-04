@@ -301,7 +301,7 @@ The design holds three more builder-owned members: =skeleton= (where the home's 
 |-+-+-|
 | =announcement= | We Leave Clean and PRESS Modern Massage: a thin strip above the header with one line and one link (research O10, O11). | facts |
 | =badge= | Denver Biscuit Co.: a round award badge on the opening photo (research O3); here one supplied fact. | badge |
-| =sticky-bar= | Village Dental: the main action held in view at the foot of the screen (research O4). | phone |
+| =sticky-bar= | Village Dental: the main action held in view at the foot of the screen (research O4). Never with the rail, pill, shrink or transparent-solid header, which already keep the action in view. | phone |
 | =modal-form= | Emily's Maids and PRESS Modern Massage: the quote or booking form opens over the page (research O5, O6). | form |
 | =lightbox= | PhotoSwipe (MIT, layout only): a photo opens large over a dark ground with previous, next and close (research O7). | gallery |
 | =card-overlap= | Lindholm Roofing and Village Dental: a text card overlapping a photo (research O1, O2). | the section variant =areas/card-over-photo= |

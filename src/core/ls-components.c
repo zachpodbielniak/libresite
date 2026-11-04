@@ -1296,12 +1296,13 @@ load_layout_blocks(LsComponents *self, GChecksum *digest, JsonObject *library, G
 			JsonObject *entry = member_object(entries, item->data);
 			const gchar *variant = ls_string(entry, "variant");
 			g_autofree gchar *style = NULL, *text = NULL;
-			if (entry == NULL || !ls_object_keys(entry, "|source|words|fits|needs|share|variant|", NULL) ||
+			if (entry == NULL || !ls_object_keys(entry, "|source|words|fits|needs|share|variant|not_headers|", NULL) ||
 				ls_string(entry, "source") == NULL || strlen(ls_string(entry, "source")) < 20 ||
 				(json_object_has_member(entry, "needs") && member_object(entry, "needs") == NULL) ||
 				(json_object_has_member(entry, "words") && member_array(entry, "words") == NULL) ||
-				(json_object_has_member(entry, "fits") && member_array(entry, "fits") == NULL))
-				return catalog_invalid(error, item->data, "library layouts need a source, and words and fits as lists");
+				(json_object_has_member(entry, "fits") && member_array(entry, "fits") == NULL) ||
+				(json_object_has_member(entry, "not_headers") && member_array(entry, "not_headers") == NULL))
+				return catalog_invalid(error, item->data, "library layouts need a source, and words, fits and not_headers as lists");
 			if (g_str_equal(blocks[b], "motion") && !g_str_equal(item->data, "none") && !g_str_equal(item->data, "calm") &&
 				!g_str_equal(item->data, "lively"))
 				return catalog_invalid(error, item->data, "motion levels are none, calm and lively");

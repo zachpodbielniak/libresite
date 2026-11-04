@@ -1119,9 +1119,10 @@ block_pick(JsonObject *library, const gchar *block, const gchar *salt, Content *
 }
 
 /* The overlays a site wears: each eligible one by its share of a stable
- * hash; placement components are section variants and never listed. */
+ * hash; placement components are section variants and never listed. An
+ * overlay skips the headers it names in not_headers. */
 static JsonArray *
-overlays_pick(JsonObject *library, Content *content, JsonObject *site){
+overlays_pick(JsonObject *library, Content *content, JsonObject *site, const gchar *header){
 	JsonObject *entries = object_of(library, "overlays");
 	g_autoptr(GList) names = entries != NULL ? json_object_get_members(entries) : NULL;
 	JsonArray *chosen = json_array_new();
@@ -1130,7 +1131,14 @@ overlays_pick(JsonObject *library, Content *content, JsonObject *site){
 		JsonObject *entry = object_of(entries, name->data);
 		g_autofree gchar *key = g_strconcat(business_name(site), "/overlay/", (const gchar *)name->data, NULL);
 		gint64 share = entry != NULL && json_object_has_member(entry, "share") ? json_object_get_int_member(entry, "share") : 50;
+		JsonArray *not_headers = entry != NULL ? array_of(entry, "not_headers") : NULL;
+		gboolean clashes = FALSE;
+		guint h;
 		if (str_of(entry, "variant") != NULL || !needs_met(object_of(entry, "needs"), content))
+			continue;
+		for (h = 0; not_headers != NULL && h < json_array_get_length(not_headers); h++)
+			clashes = clashes || g_strcmp0(json_array_get_string_element(not_headers, h), header) == 0;
+		if (clashes)
 			continue;
 		if ((gint64)(ls_design_hash(key) % 100) < share)
 			json_array_add_string_element(chosen, name->data);
@@ -1310,7 +1318,7 @@ ls_design_new(JsonObject *library, JsonObject *themes, JsonObject *site, const g
 		if (motion != NULL)
 			json_object_set_string_member(design, "motion", motion);
 	}
-	json_object_set_array_member(design, "overlays", overlays_pick(library, &content, site));
+	json_object_set_array_member(design, "overlays", overlays_pick(library, &content, site, str_of(design, "header")));
 	assign_tones(library, home, str_of(design, "footer"));
 	json_object_set_array_member(design, "home", home);
 	json_object_set_object_member(design, "facts", json_object_ref(facts));
