@@ -823,17 +823,11 @@ assign_tones(JsonObject *library, JsonArray *home, const gchar *footer){
 	}
 }
 
-/* The colour roles: the preset's tokens and roles, the owner's named colour
- * on every role tied to the brand colour, then every text pair at AA. */
+/* The colour roles as a preset gives them, before owner colours and
+ * repairs: the tokens' colours, then the preset's own roles. */
 static JsonObject *
-build_roles(JsonObject *library, JsonObject *tokens, JsonObject *given, JsonObject *site, JsonArray *applied){
+given_roles(JsonObject *tokens, JsonObject *given){
 	JsonObject *roles = json_object_new();
-	g_autoptr(GPtrArray) words = ls_design_owner_words(site);
-	JsonObject *colors = object_of(library, "colors");
-	JsonArray *neutral = array_of(library, "neutral");
-	const gchar *named = NULL, *word = NULL;
-	g_autofree gchar *brand = NULL;
-	guint i;
 	json_object_set_string_member(roles, "bg", str_of(tokens, "paper"));
 	json_object_set_string_member(roles, "fg", str_of(tokens, "ink"));
 	json_object_set_string_member(roles, "surface", str_of(tokens, "surface"));
@@ -848,6 +842,38 @@ build_roles(JsonObject *library, JsonObject *tokens, JsonObject *given, JsonObje
 		for (key = keys; key != NULL; key = key->next)
 			json_object_set_string_member(roles, key->data, str_of(given, key->data));
 	}
+	return roles;
+}
+
+/* The roles that wear the brand colour in @roles, as keys. */
+static GPtrArray *
+brand_tied(JsonObject *roles){
+	GPtrArray *tied = g_ptr_array_new_with_free_func(g_free);
+	g_autofree gchar *brand = g_ascii_strdown(str_of(roles, "brand") != NULL ? str_of(roles, "brand") : "", -1);
+	g_autoptr(GList) keys = json_object_get_members(roles);
+	GList *key;
+	for (key = keys; key != NULL && *brand != '\0'; key = key->next) {
+		g_autofree gchar *value = g_ascii_strdown(str_of(roles, key->data), -1);
+		if (g_str_equal(value, brand))
+			g_ptr_array_add(tied, g_strdup(key->data));
+	}
+	return tied;
+}
+
+/* The roles of one scheme: the preset's, the owner's first colour on every
+ * role tied to the brand (those that equal it, and @also: the roles the
+ * light scheme ties, so both schemes paint the same parts), then each text
+ * pair repaired to AA. */
+static JsonObject *
+build_roles(JsonObject *library, JsonObject *tokens, JsonObject *given, JsonObject *site, JsonArray *applied,
+	GPtrArray *also){
+	JsonObject *roles = given_roles(tokens, given);
+	g_autoptr(GPtrArray) words = ls_design_owner_words(site);
+	JsonObject *colors = object_of(library, "colors");
+	JsonArray *neutral = array_of(library, "neutral");
+	const gchar *named = NULL, *word = NULL;
+	g_autofree gchar *brand = NULL;
+	guint i;
 	/* The owner's first named colour that is not a neutral. */
 	for (i = 0; i < words->len && named == NULL; i++) {
 		const gchar *candidate = g_ptr_array_index(words, i);
@@ -865,6 +891,8 @@ build_roles(JsonObject *library, JsonObject *tokens, JsonObject *given, JsonObje
 			if (g_str_equal(value, brand))
 				json_object_set_string_member(roles, key->data, named);
 		}
+		for (i = 0; also != NULL && i < also->len; i++)
+			json_object_set_string_member(roles, g_ptr_array_index(also, i), named);
 		json_array_add_string_element(applied, word);
 	}
 	{
@@ -1267,7 +1295,12 @@ dark_scheme(JsonObject *library, JsonObject *theme, JsonObject *site){
 		if (str_of(tokens, keys[i]) != NULL)
 			json_object_set_string_member(colors, keys[i], str_of(tokens, keys[i]));
 	json_object_set_object_member(dark, "tokens", json_object_ref(colors));
-	json_object_set_object_member(dark, "roles", build_roles(library, tokens, object_of(given, "roles"), site, ignored));
+	{
+		/* Whatever wears the brand in light wears the owner's colour in dark. */
+		g_autoptr(JsonObject) light = given_roles(object_of(theme, "tokens"), object_of(object_of(theme, "design"), "roles"));
+		g_autoptr(GPtrArray) tied = brand_tied(light);
+		json_object_set_object_member(dark, "roles", build_roles(library, tokens, object_of(given, "roles"), site, ignored, tied));
+	}
 	json_object_set_double_member(dark, "scrim", given != NULL && json_object_has_member(given, "scrim")
 		? json_object_get_double_member(given, "scrim") : 0.65);
 	return dark;
@@ -1409,7 +1442,7 @@ ls_design_new(JsonObject *library, JsonObject *themes, JsonObject *site, const g
 		json_object_set_array_member(design, "pages", site_pages(site, &content));
 	applied = json_array_new();
 	json_object_set_object_member(design, "roles", build_roles(library, object_of(theme, "tokens"),
-		object_of(preset_design, "roles"), site, applied));
+		object_of(preset_design, "roles"), site, applied, NULL));
 	/* Both schemes; the order may lock one, else the visitor's system and
 	 * the toggle choose. */
 	json_object_set_string_member(design, "scheme", str_of(site, "scheme") != NULL ? str_of(site, "scheme") : "auto");

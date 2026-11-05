@@ -194,6 +194,9 @@ body.design {
 	.design.header--centered-split .site-nav { flex: 1 1 auto; }
 	.design.header--centered-split .site-nav > ul { flex: 1 1 auto; }
 	.design.header--centered-split .site-nav > ul > [data-split] { margin-inline-end: auto; }
+	/* The scheme toggle leads the left links, so the right links keep
+	 * their room beside the centred name. */
+	.design.header--centered-split .site-header .scheme-toggle { order: -1; }
 }
 
 /* Header that turns solid: clear over the home's full-screen photo, held at
