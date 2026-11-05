@@ -121,7 +121,7 @@ body.design {
  * (Little Fish, Table & Tulip). */
 @media (min-width: 48rem) {
 	.design.header--split .site-header__inner { display: grid; grid-template-columns: minmax(0, 1fr); justify-items: center; padding-block: var(--space-5) var(--space-3); }
-	.design.header--split .brand { font-size: var(--text-6); }
+	.design.header--split .site-header .brand { font-size: var(--text-6); }
 	.design.header--split .site-nav { justify-content: center; }
 	.design.header--split .site-nav > ul { justify-content: center; }
 }
@@ -190,7 +190,7 @@ body.design {
  * screens keep the bar. */
 @media (min-width: 72rem) {
 	.design.header--centered-split .site-header__inner { position: relative; justify-content: flex-start; padding-block: var(--space-4); }
-	.design.header--centered-split .brand { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); max-width: 20rem; text-align: center; justify-content: center; }
+	.design.header--centered-split .site-header .brand { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); max-width: 20rem; text-align: center; justify-content: center; }
 	.design.header--centered-split .site-nav { flex: 1 1 auto; }
 	.design.header--centered-split .site-nav > ul { flex: 1 1 auto; }
 	.design.header--centered-split .site-nav > ul > [data-split] { margin-inline-end: auto; }
@@ -235,7 +235,7 @@ html:has(body.design:is(.header--transparent-solid, .header--shrink, .header--pi
 }
 .js .design:is(.header--drawer, .header--overlay) .nav-toggle { display: inline-flex; align-items: center; order: 3; border-color: var(--fg); color: var(--fg); }
 .js .design:is(.header--drawer, .header--overlay) .site-header__inner { flex-wrap: nowrap; }
-.js .design:is(.header--drawer, .header--overlay) .brand { margin-inline-end: auto; }
+.js .design:is(.header--drawer, .header--overlay) .site-header .brand { margin-inline-end: auto; }
 .js .design:is(.header--drawer, .header--overlay) .site-nav { display: flex; flex: 0 0 auto; flex-basis: auto; flex-direction: row; align-items: center; }
 .js .design:is(.header--drawer, .header--overlay) .site-nav > ul {
 	position: fixed; z-index: 60; top: 0; right: 0; bottom: 0; display: flex; flex-direction: column; flex-wrap: nowrap; gap: var(--space-2);
@@ -263,7 +263,7 @@ html:has(body.design:is(.header--transparent-solid, .header--shrink, .header--pi
 	border-radius: var(--radius-box); background: var(--bg); box-shadow: var(--shadow-3), 0 0 0 1px var(--line);
 }
 .design.header--pill .site-header__inner:not(:has(.site-nav.is-open)) { flex-wrap: nowrap; }
-.design.header--pill .brand { min-width: 0; }
+.design.header--pill .site-header .brand { min-width: 0; }
 @media (min-width: 48rem) {
 	.design.header--pill .site-header__inner:not(:has(.site-nav.is-open)) { border-radius: 999px; }
 }

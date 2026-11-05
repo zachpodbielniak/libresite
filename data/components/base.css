@@ -200,6 +200,10 @@ main :is(.wrap, [class$="__list"], [class*="__list "], [class$="__grid"], [class
 .scheme-toggle[hidden] { display: none; }
 .scheme-toggle:hover { border-color: currentColor; }
 .scheme-toggle svg { flex: none; }
+/* In the header the button is the icon alone, so it never crowds the
+ * links; its name still says the state. The footer shows the word. */
+.site-header .scheme-toggle { padding: 0; }
+.site-header .scheme-toggle__state { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 .site-footer__scheme { margin: var(--space-4) auto 0; }
 @media (min-width: 48rem) { .site-footer__scheme { display: none; } }
 
