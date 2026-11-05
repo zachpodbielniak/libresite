@@ -573,7 +573,7 @@ An endpoint form is an ordinary =POST= of URL-encoded fields (multipart with a f
 
 * Light and dark
 
-Every preset has two colour schemes. The light one is the preset as read from its reference site. The dark one is written by hand in =themes.yaml= under the preset's =design.dark=, not computed by inverting the light one:
+Every preset has two colour schemes. The light scheme comes from the preset's reference site. A person wrote the dark scheme in =themes.yaml=, under the preset's =design.dark=. The builder does not invert the light scheme to make it:
 
 #+begin_src yaml
 dark:
@@ -584,16 +584,16 @@ dark:
 
 The rules each dark scheme follows (sources in the slice 5 research note):
 - The page is a dark colour tinted with the preset's own hue, never pure black (Material 2's #121212, Radix's dark grey step 1). Its relative luminance is at most 0.03.
-- Surfaces are lighter than the page. Depth comes from the lighter surface, not from a shadow: a preset with shadows gets a faint light edge in dark in place of its black shadow (Material 3 tonal surfaces, Apple's base and elevated backgrounds, Radix steps 1 to 3).
-- The accent is lighter and less saturated than in light, so it reads on the dark page and as a button with dark text (Material 2's desaturated tones, Radix's lighter text step in dark).
+- Surfaces are lighter than the page. The lighter surface gives the depth, not a shadow (Material 3 tonal surfaces, Apple's base and elevated backgrounds, Radix steps 1 to 3). In dark, a preset with shadows gets a faint light edge in place of its black shadow.
+- The accent is lighter and less saturated than in light (Material 2's desaturated tones, Radix's lighter text step in dark). It reads on the dark page, and as a button with dark text.
 - Brand bands, inverse bands, the photo buttons and the photo scrim have their own dark values. The scrim is usually darker than in light.
-- The warning red, the accent text, the focus ring and the firm line are derived again from the dark colours, as for light.
+- The builder calculates the warning red, the accent text, the focus ring and the firm line again from the dark colours, as for light.
 
-=ls_design_new()= builds =design.dark= from the preset: its colour tokens over the light ones, the roles built from them and repaired to the same AA pairs, under the same owner colour words, and its scrim. =ls_design_check()= checks every dark role and every dark text pair at 4.5:1, as for light.
+=ls_design_new()= builds =design.dark= from the preset. It puts the dark colour tokens over the light ones and builds the roles from them. It repairs the roles to the same AA pairs, under the same owner colour words, and adds the scrim. =ls_design_check()= checks every dark role and every dark text pair at 4.5:1, as for light.
 
 ** How a site chooses
 
-=design.scheme= is =auto= unless the order locks it. =site.scheme= in the recipe takes =auto=, =light= or =dark=; anything else is refused. The picker never chooses dark by itself, for any trade.
+=design.scheme= is =auto= unless the order locks it. =site.scheme= in the recipe takes =auto=, =light= or =dark=. The recipe check refuses other values. The picker never chooses dark by itself, for any trade.
 
 - =auto=: =styles.css= holds the light properties, then the dark ones twice: in =@media (prefers-color-scheme: dark)= for =:root:not([data-scheme="light"])=, and for =:root[data-scheme="dark"]=. The page's =color-scheme= meta is =light dark=, and the browser bar takes the light or dark page colour from two =theme-color= metas. Without scripts, the visitor's system setting decides.
 - =light=: one scheme, no dark properties, no toggle.
@@ -601,9 +601,9 @@ The rules each dark scheme follows (sources in the slice 5 research note):
 
 ** The toggle and the head script
 
-On an =auto= site each page carries a small inline script as the first script in the head, before any stylesheet. It reads =ls-scheme= from =localStorage= and, when it holds =light= or =dark=, sets =data-scheme= on the root element. So a returning visitor's choice applies before the first paint, without a flash of the other scheme. A refused storage read is caught and ignored.
+On an =auto= site, each page has a small inline script in the head, before any stylesheet. The script reads =ls-scheme= from =localStorage=. When the value is =light= or =dark=, the script sets =data-scheme= on the root element. Thus a choice from an earlier visit applies before the first paint, and the other scheme never flashes. If the browser refuses the storage read, the script ignores the error.
 
-=scheme.js= (in =site.js=) shows the toggle buttons, which are =hidden= in the markup, so a visitor without scripts never sees a button that does nothing. One button sits at the end of the header's links, and one sits in the footer, shown on phones only, where the header's links are behind the menu. A press cycles the system setting, light and dark. Light and dark are stored; the system setting removes the stored value. Each button is 44 px, names its state in its accessible name (the =scheme= and =scheme_system=, =scheme_light= and =scheme_dark= interface strings: "Colours: Auto"), shows the state word and draws a half-filled circle in =currentColor=. Nothing animates the change, with or without reduced motion.
+The toggle buttons are =hidden= in the markup. =scheme.js= (in =site.js=) shows them, so a visitor without scripts never sees a button that does nothing. One button is at the end of the header's links. One button is in the footer, on phones only, where the header's links are behind the menu. Each press goes to the next state: system, light, dark. The script stores light and dark. The system state removes the stored value. Each button is 44 px, names its state in its accessible name (the =scheme= and =scheme_system=, =scheme_light= and =scheme_dark= interface strings: "Colours: Auto") and draws a half-filled circle in =currentColor=. The footer button also shows the state word; the header button is the icon alone, so it never crowds the header's links. Nothing animates the change, with or without reduced motion.
 
 Icons on every site are inline SVG in =currentColor=, so they follow the text colour in both schemes. Preset sites draw no logo boxes; supplied photos keep their colours and sit under the dark scrim where text lies over them.
 
@@ -637,21 +637,25 @@ Every control:
 - has an error line, =p.field-error=, after the label and hint and before the control (GOV.UK), tied to the control by =aria-describedby= with the hint;
 - keeps a 44 px target: the input itself, or the label row for checkboxes, radio buttons and the switch;
 - shows the site's focus ring, =3px solid var(--focus)=, on the input, or on the button of a toggle;
-- takes its corners from =--radius-control= (capped at 0.75rem for text boxes and 0.375rem for checkboxes, so a pill preset gives round buttons and not round text boxes), its border width from =--border=, its checked colour from =--primary= and its label weight from =--heading-weight=; a site without a design falls back to =--radius= and =--accent=;
+- takes its corners from =--radius-control=, its border width from =--border=, its checked colour from =--primary= and its label weight from =--heading-weight=. Text boxes keep corners of 0.75rem or less, and checkboxes 0.375rem or less, so a pill preset gets round buttons but not round text boxes. A site without a design uses =--radius= and =--accent=;
 - works in both colour schemes, since every colour is a token.
 
-Mail and posted forms carry =data-validate=. With scripts, a send first checks every field: each problem shows in the field's error line, the field is marked =aria-invalid=, the summary counts the problems and the first takes the focus; a radio group is one question. A corrected field loses its message on change. Without scripts the browser's own checks apply.
+Mail and posted forms carry =data-validate=. With scripts, the form checks every field before it sends. Each problem shows in the field's error line, and the script sets =aria-invalid= on the field. The summary counts the problems, and the first field with a problem gets the focus. A radio group is one question. When the visitor corrects a field, its message goes. Without scripts, the browser's own checks apply.
 
 ** The forms the builder writes
 
-On a preset site the builder rewrites the fields of an enquiry form the writer wrote (one with an email field and a message), before it is drawn:
+On a preset site, the builder changes the fields of an enquiry form from the writer before it draws the form. An enquiry form has an email field and a message. The changes are:
 - a =select= of 2 or 3 choices becomes a =toggle=, of up to 7 a =radio= group; longer lists stay a =select=;
-- before the message, when missing: "Contact me by" (=radio=, Phone or Email) when the form asks for a phone; a preferred date and a preferred time; "This is urgent" (=switch=) when the order offers urgent work (=design.controls.urgent=: an offer, the tagline or the requirements name emergencies, urgent calls, 24/7 or round-the-clock answers); and "Photos of the job" (=file=, optional) when the trade benefits (=design.controls.photos=: trades, outdoor, cleaning and auto) and the form posts to an endpoint. A mail link cannot carry a file, so a =mailto= form never gets the upload, and a =file= field the writer named is left out of a =mailto= or =local= form;
+- before the message, the builder adds the fields that the form does not have:
+  - "Contact me by" (=radio=, Phone or Email), when the form asks for a phone;
+  - a preferred date and a preferred time;
+  - "This is urgent" (=switch=), when the order offers urgent work. =design.controls.urgent= is true when an offer, the tagline or the requirements name emergencies, urgent calls, 24/7 or round-the-clock answers;
+  - "Photos of the job" (=file=, optional), when the trade benefits and the form posts to an endpoint. =design.controls.photos= is true for trades, outdoor work, cleaning and auto work. A mail link cannot carry a file. Thus a =mailto= form never gets the upload, and the builder removes a =file= field from a =mailto= or =local= form;
 - at the end, when the form has no checkbox, a required "You may contact me about this request." box.
 
 The words are interface strings (=contact_by=, =by_phone=, =by_email=, =preferred_date=, =preferred_time=, =urgent=, =photos=, =photos_hint=, =agree=), so a translated plan translates them. A supplied =site.form= is drawn exactly, in the same controls, and never gains a field: the host decides what it receives. The hero form, the modal form and the split-form footer are that supplied form.
 
-The booking calendar's form gains the order's services as a choice (a =toggle= for 2 or 3, else =radio=) and the required agreement box, each with its error line. The host's booking request keeps its fields: the chosen service goes at the head of =notes= as "Service: ...".
+The booking calendar's form gets the order's services as a choice and the required agreement box, each with its error line. The choice is a =toggle= for 2 or 3 services, else a =radio= group. The host's booking request keeps its fields. The script puts the chosen service at the start of =notes= as "Service: ...".
 
 ** Checks
 
