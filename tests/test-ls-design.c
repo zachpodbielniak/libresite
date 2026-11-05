@@ -9,6 +9,7 @@
 #include "core/ls-design.h"
 #include "core/ls-recipe.h"
 #include "core/ls-util.h"
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 
@@ -700,6 +701,8 @@ static const gchar rich_home[] =
 /* The component gallery's realistic pages and photos, while it is built. */
 static gchar *gallery_pages = NULL;
 static gchar *gallery_photos = NULL;
+/* The order's colour scheme lock for compose_site(), or NULL for none. */
+static const gchar *compose_scheme = NULL;
 
 /* A live form as the platform supplies it, three supplied reviews, and a
  * contact page whose form section the quote action leads to. */
@@ -707,6 +710,7 @@ static const gchar supplied_form[] =
 	"{\"action\": \"/api/forms/quote\", \"honeypot\": \"website\", \"fields\": ["
 	"{\"name\": \"name\", \"label\": \"Your name\", \"required\": true, \"autocomplete\": \"name\"},"
 	"{\"name\": \"phone\", \"label\": \"Phone\", \"type\": \"tel\", \"required\": true, \"autocomplete\": \"tel\"},"
+	"{\"name\": \"contact_by\", \"label\": \"Contact me by\", \"type\": \"radio\", \"options\": [\"Phone\", \"Email\"]},"
 	"{\"name\": \"job\", \"label\": \"What needs doing?\", \"type\": \"textarea\", \"maxlength\": 2000}]}";
 static const gchar supplied_reviews[] =
 	"[{\"quote\": \"They came the same evening and found the leak behind the dishwasher.\", \"name\": \"Dana R.\", \"source\": \"Google\"},"
@@ -743,6 +747,8 @@ compose_site(LsComponents *components, const gchar *preset, const gchar *type, c
 	gboolean reviews = gallery_pages != NULL || g_strcmp0(type, "reviews") == 0;
 	gboolean own = g_strcmp0(type, "overlay") == 0 && g_strcmp0(variant, "lightbox") == 0;
 	guint i;
+	if (compose_scheme != NULL)
+		json_object_set_string_member(json_node_get_object(site), "scheme", compose_scheme);
 	g_assert_true(g_file_get_contents("tests/fixtures/composed/plan.json", &plan_text, NULL, NULL));
 	plan = parse(plan_text);
 	pages = parse("{}");
@@ -1483,6 +1489,577 @@ test_gallery(void){
 	g_clear_pointer(&gallery_photos, g_free);
 }
 
+/* ---- Light and dark (docs/components.org, "Light and dark") ------------- */
+
+/* The custom properties declared in @css from @start up to @stop (or the
+ * end), later declarations replacing earlier ones, added to @into. A
+ * var(--x) reference is not a declaration. */
+static void
+css_vars(GHashTable *into, const gchar *start, const gchar *stop){
+	const gchar *end = stop != NULL && strstr(start, stop) != NULL ? strstr(start, stop) : start + strlen(start);
+	const gchar *at = start;
+	while ((at = strstr(at, "--")) != NULL && at < end) {
+		const gchar *colon = strchr(at, ':'), *semi = colon != NULL ? strchr(colon, ';') : NULL;
+		if (colon == NULL || semi == NULL || semi > end)
+			break;
+		if (at > start && strchr("\t\n {;", at[-1]) != NULL && memchr(at, ' ', (gsize)(colon - at)) == NULL) {
+			g_autofree gchar *value = g_strndup(colon + 1, (gsize)(semi - colon - 1));
+			g_hash_table_insert(into, g_strndup(at + 2, (gsize)(colon - at - 2)), g_strdup(g_strstrip(value)));
+		}
+		at = semi;
+	}
+}
+
+/* Text and ground pairs every scheme keeps: {text, ground, minimum}. The
+ * line-strong border and the focus ring are controls, at 3:1. */
+static const struct { const gchar *text, *ground; gdouble minimum; } scheme_pairs[] = {
+	{"ink", "paper", 4.5}, {"muted", "paper", 4.5}, {"ink", "surface", 4.5}, {"muted", "surface", 4.5},
+	{"accent-ink", "accent", 4.5}, {"accent-text", "paper", 4.5}, {"accent-text", "surface", 4.5},
+	{"danger", "paper", 4.5}, {"fg", "bg", 4.5}, {"muted-fg", "bg", 4.5}, {"surface-fg", "surface", 4.5},
+	{"muted-fg", "surface", 4.5}, {"primary-text", "bg", 4.5}, {"primary-text", "surface", 4.5},
+	{"primary-fg", "primary", 4.5}, {"primary-fg", "primary-hover", 4.5}, {"brand-fg", "brand", 4.5},
+	{"brand-fg", "brand-hover", 4.5}, {"brand-muted", "brand", 4.5}, {"brand-accent", "brand", 4.5},
+	{"inverse-fg", "inverse", 4.5}, {"inverse-muted", "inverse", 4.5}, {"photo-primary-fg", "photo-primary", 4.5},
+	{"photo-primary-fg", "photo-primary-hover", 4.5}, {"focus", "bg", 3}, {"line-strong", "paper", 3}};
+
+static void
+check_scheme_pairs(const gchar *preset, const gchar *scheme, GHashTable *vars){
+	guint i;
+	for (i = 0; i < G_N_ELEMENTS(scheme_pairs); i++) {
+		const gchar *text = g_hash_table_lookup(vars, scheme_pairs[i].text);
+		const gchar *ground = g_hash_table_lookup(vars, scheme_pairs[i].ground);
+		if (text == NULL || ground == NULL || *text != '#' || *ground != '#')
+			g_error("%s %s: --%s or --%s is not a colour (%s, %s)", preset, scheme, scheme_pairs[i].text,
+				scheme_pairs[i].ground, text != NULL ? text : "missing", ground != NULL ? ground : "missing");
+		if (ls_design_contrast(text, ground) < scheme_pairs[i].minimum)
+			g_error("%s %s: --%s %s on --%s %s is %.2f:1, under %.1f:1", preset, scheme, scheme_pairs[i].text, text,
+				scheme_pairs[i].ground, ground, ls_design_contrast(text, ground), scheme_pairs[i].minimum);
+	}
+}
+
+static gdouble
+hex_luminance(const gchar *hex){
+	guint r, g, b;
+	gdouble c[3];
+	guint i;
+	g_assert_cmpint(sscanf(hex, "#%02x%02x%02x", &r, &g, &b), ==, 3);
+	c[0] = r / 255.0; c[1] = g / 255.0; c[2] = b / 255.0;
+	for (i = 0; i < 3; i++)
+		c[i] = c[i] <= 0.04045 ? c[i] / 12.92 : pow((c[i] + 0.055) / 1.055, 2.4);
+	return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+}
+
+/* Every preset carries its own dark scheme, written by hand in
+ * themes.yaml: dark grounds, surfaces lighter than the page for depth,
+ * its own accent and status colours, photo scrim and brand bands. Every
+ * text pair holds AA in both schemes, under three orders, and the
+ * stylesheet a site ships keeps them. */
+static void
+test_dark_schemes(void){
+	g_autoptr(LsComponents) components = library();
+	const gchar *tokens[] = {"paper", "ink", "muted", "surface", "line", "accent", "accent_ink"};
+	const gchar *roles[] = {"brand", "brand_fg", "inverse", "inverse_fg", "highlight", "photo_primary", "photo_primary_fg"};
+	const gchar *pairs[][2] = {{"bg", "fg"}, {"bg", "muted_fg"}, {"surface", "surface_fg"}, {"surface", "muted_fg"},
+		{"bg", "primary_text"}, {"surface", "primary_text"}, {"primary", "primary_fg"}, {"brand", "brand_fg"},
+		{"brand", "brand_muted"}, {"inverse", "inverse_fg"}, {"inverse", "inverse_muted"},
+		{"photo_primary", "photo_primary_fg"}, {"brand", "brand_accent"}};
+	guint p, i;
+	for (p = 0; p < G_N_ELEMENTS(presets); p++) {
+		JsonObject *preset = json_object_get_object_member(json_object_get_object_member(themes_of(components),
+			presets[p][0]), "design");
+		JsonObject *dark = json_object_has_member(preset, "dark") ? json_object_get_object_member(preset, "dark") : NULL;
+		JsonObject *dark_tokens, *dark_roles;
+		if (dark == NULL)
+			g_error("%s has no hand-written dark scheme", presets[p][0]);
+		dark_tokens = json_object_get_object_member(dark, "tokens");
+		dark_roles = json_object_get_object_member(dark, "roles");
+		for (i = 0; i < G_N_ELEMENTS(tokens); i++)
+			if (ls_string(dark_tokens, tokens[i]) == NULL || *ls_string(dark_tokens, tokens[i]) != '#')
+				g_error("%s: dark.tokens.%s must be #rrggbb", presets[p][0], tokens[i]);
+		for (i = 0; i < G_N_ELEMENTS(roles); i++)
+			if (ls_string(dark_roles, roles[i]) == NULL || *ls_string(dark_roles, roles[i]) != '#')
+				g_error("%s: dark.roles.%s must be #rrggbb", presets[p][0], roles[i]);
+		g_assert_cmpfloat(json_object_get_double_member(dark, "scrim"), >=, 0.2);
+		g_assert_cmpfloat(json_object_get_double_member(dark, "scrim"), <=, 0.85);
+		/* A dark ground, and a surface lifted above it rather than a black
+		 * shadow under it. */
+		if (hex_luminance(ls_string(dark_tokens, "paper")) > 0.03)
+			g_error("%s: dark paper %s is not dark", presets[p][0], ls_string(dark_tokens, "paper"));
+		if (hex_luminance(ls_string(dark_tokens, "surface")) <= hex_luminance(ls_string(dark_tokens, "paper")))
+			g_error("%s: dark surface %s is not lighter than the paper", presets[p][0], ls_string(dark_tokens, "surface"));
+	}
+	/* The design the picker builds carries both schemes, each repaired to
+	 * AA, under the owner's colour words too. */
+	for (p = 0; p < G_N_ELEMENTS(presets); p++) {
+		const gchar *orders[] = {plumber, salon, yellow_order};
+		guint o;
+		for (o = 0; o < G_N_ELEMENTS(orders); o++) {
+			g_autoptr(JsonObject) design = design_for(components, orders[o], presets[p][0], four_photos);
+			g_autoptr(GString) why = g_string_new(NULL);
+			JsonObject *dark = json_object_get_object_member(design, "dark");
+			JsonObject *dark_roles = dark != NULL ? json_object_get_object_member(dark, "roles") : NULL;
+			g_assert_cmpstr(ls_string(design, "scheme"), ==, "auto");
+			g_assert_nonnull(dark_roles);
+			for (i = 0; i < G_N_ELEMENTS(pairs); i++)
+				if (ls_design_contrast(ls_string(dark_roles, pairs[i][0]), ls_string(dark_roles, pairs[i][1])) < 4.5)
+					g_error("%s dark: %s on %s is under 4.5:1", presets[p][0], pairs[i][1], pairs[i][0]);
+			if (!ls_design_check(block(components), design, why))
+				g_error("%s: %s", presets[p][0], why->str);
+		}
+	}
+	/* What a site ships: the light properties, then the dark ones the
+	 * visitor's system or the toggle asks for, the same in both places. */
+	for (p = 0; p < G_N_ELEMENTS(presets); p++) {
+		g_autoptr(JsonNode) plan = NULL;
+		g_autoptr(JsonNode) bundle = compose_site(components, presets[p][0], NULL, NULL, NULL, &plan);
+		const gchar *css = file_in(bundle, "styles.css");
+		const gchar *chosen = strstr(css, ":root[data-scheme=\"dark\"] {");
+		const gchar *system = strstr(css, "@media (prefers-color-scheme: dark) {\n:root:not([data-scheme=\"light\"]) {");
+		g_autoptr(GHashTable) light = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
+		g_autoptr(GHashTable) dark = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
+		g_autoptr(GHashTable) followed = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
+		GHashTableIter iter;
+		gpointer key, value;
+		if (chosen == NULL || system == NULL)
+			g_error("%s: styles.css has no dark scheme for the toggle and the system setting", presets[p][0]);
+		css_vars(light, css, "@layer ls-base");
+		g_hash_table_iter_init(&iter, light);
+		while (g_hash_table_iter_next(&iter, &key, &value)) {
+			g_hash_table_insert(dark, g_strdup(key), g_strdup(value));
+			g_hash_table_insert(followed, g_strdup(key), g_strdup(value));
+		}
+		css_vars(dark, strchr(chosen, '{'), "}");
+		css_vars(followed, strchr(strstr(system, ":root:not"), '{'), "}");
+		check_scheme_pairs(presets[p][0], "light", light);
+		check_scheme_pairs(presets[p][0], "dark", dark);
+		g_hash_table_iter_init(&iter, dark);
+		while (g_hash_table_iter_next(&iter, &key, &value))
+			if (g_strcmp0(g_hash_table_lookup(followed, key), value) != 0)
+				g_error("%s: --%s differs between the toggle's dark and the system's dark", presets[p][0], (gchar *)key);
+		/* Depth from lighter surfaces, not black shadows; the photo scrim
+		 * is the dark scheme's own. */
+		if (strstr(g_hash_table_lookup(dark, "shadow-2"), "16 24 40") != NULL)
+			g_error("%s: the dark scheme keeps the light scheme's black shadow", presets[p][0]);
+		g_assert_nonnull(g_hash_table_lookup(dark, "scrim"));
+	}
+}
+
+/* Followed by default, chosen by the visitor, locked by the owner. The
+ * head sets a chosen scheme before the stylesheet can paint; without
+ * scripts the system setting still applies; the toggle sits in the
+ * header and the footer and only shows when its script runs; nothing
+ * animates the change. */
+static void
+test_scheme_page(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(JsonNode) plan = NULL;
+	g_autoptr(JsonNode) bundle = compose_site(components, "evergreen", NULL, NULL, NULL, &plan);
+	JsonArray *files = json_object_get_array_member(json_node_get_object(bundle), "files");
+	const gchar *css = file_in(bundle, "styles.css"), *js = file_in(bundle, "site.js");
+	guint i, pages = 0;
+	for (i = 0; i < json_array_get_length(files); i++) {
+		JsonObject *file = json_array_get_object_element(files, i);
+		const gchar *html = ls_string(file, "content");
+		const gchar *head_end, *script, *sheet, *header, *footer;
+		if (!g_str_has_suffix(ls_string(file, "path"), ".html"))
+			continue;
+		pages++;
+		head_end = strstr(html, "</head>");
+		script = strstr(html, "<script>");
+		sheet = strstr(html, "<link rel=\"stylesheet\"");
+		if (script == NULL || sheet == NULL || script > sheet || script > head_end)
+			g_error("%s: the scheme script does not run before the first stylesheet", ls_string(file, "path"));
+		if (strstr(html, "<style") != NULL && strstr(html, "<style") < script)
+			g_error("%s: a style element comes before the scheme script", ls_string(file, "path"));
+		g_assert_nonnull(g_strstr_len(script, strstr(script, "</script>") - script, "localStorage"));
+		g_assert_nonnull(g_strstr_len(script, strstr(script, "</script>") - script, "\"ls-scheme\""));
+		g_assert_nonnull(g_strstr_len(script, strstr(script, "</script>") - script, "dataset.scheme"));
+		g_assert_nonnull(strstr(html, "<meta name=\"color-scheme\" content=\"light dark\">"));
+		header = strstr(html, "<header class=\"site-header\"");
+		footer = strstr(html, "<footer class=\"site-footer\"");
+		g_assert_nonnull(header);
+		g_assert_nonnull(footer);
+		if (strstr(header, "data-scheme-toggle") == NULL || strstr(header, "data-scheme-toggle") > strstr(header, "</header>"))
+			g_error("%s: no scheme toggle in the header", ls_string(file, "path"));
+		if (strstr(footer, "data-scheme-toggle") == NULL)
+			g_error("%s: no scheme toggle in the footer", ls_string(file, "path"));
+		g_assert_nonnull(strstr(html, "<button class=\"scheme-toggle\" type=\"button\" data-scheme-toggle hidden"));
+	}
+	g_assert_cmpuint(pages, >=, 5);
+	/* The toggle's script cycles system, light, dark and keeps the choice. */
+	g_assert_nonnull(strstr(js, "\"ls-scheme\""));
+	g_assert_nonnull(strstr(js, "[\"system\", \"light\", \"dark\"]"));
+	g_assert_nonnull(strstr(js, "localStorage.setItem"));
+	g_assert_nonnull(strstr(js, "localStorage.removeItem"));
+	g_assert_nonnull(strstr(js, "[data-scheme-toggle]"));
+	/* Without scripts the system setting applies through the media query,
+	 * and the change of scheme never animates. */
+	g_assert_nonnull(strstr(css, "@media (prefers-color-scheme: dark) {\n:root:not([data-scheme=\"light\"]) {"));
+	g_assert_nonnull(strstr(css, ".scheme-toggle"));
+	{
+		const gchar *start = strstr(css, "@media (prefers-color-scheme: dark)");
+		const gchar *end = strstr(css, "@layer ls-base");
+		g_autofree gchar *scheme = g_strndup(start, (gsize)(end - start));
+		g_assert_null(strstr(scheme, "transition"));
+		g_assert_null(strstr(scheme, "animation"));
+	}
+	/* The owner's lock: one scheme, no toggle. */
+	{
+		const gchar *locks[] = {"light", "dark"};
+		guint l;
+		for (l = 0; l < G_N_ELEMENTS(locks); l++) {
+			g_autoptr(JsonNode) locked_plan = NULL;
+			g_autoptr(JsonNode) locked = NULL;
+			g_autofree gchar *meta = g_strdup_printf("<meta name=\"color-scheme\" content=\"%s\">", locks[l]);
+			const gchar *home, *styles;
+			JsonObject *design;
+			compose_scheme = locks[l];
+			locked = compose_site(components, "evergreen", NULL, NULL, NULL, &locked_plan);
+			compose_scheme = NULL;
+			home = file_in(locked, "index.html");
+			styles = file_in(locked, "styles.css");
+			design = json_object_get_object_member(json_node_get_object(locked_plan), "design");
+			g_assert_cmpstr(ls_string(design, "scheme"), ==, locks[l]);
+			g_assert_nonnull(strstr(home, meta));
+			g_assert_null(strstr(home, "data-scheme-toggle"));
+			g_assert_null(strstr(styles, "prefers-color-scheme"));
+			g_assert_null(strstr(styles, "data-scheme"));
+			{
+				g_autoptr(GHashTable) vars = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
+				const gchar *paper;
+				css_vars(vars, styles, "@layer ls-base");
+				paper = g_hash_table_lookup(vars, "paper");
+				if (g_str_equal(locks[l], "dark") ? hex_luminance(paper) > 0.03 : hex_luminance(paper) < 0.5)
+					g_error("locked %s: the page ground is %s", locks[l], paper);
+				check_scheme_pairs("evergreen", locks[l], vars);
+			}
+		}
+	}
+	/* The picker never chooses dark by itself: every trade, every preset. */
+	{
+		const gchar *trades[] = {"Plumbing", "Hair salon", "Law office", "Bakery", "Dental practice", "Roofing",
+			"Bowling club", "Accounting", "Barber", "Landscaping"};
+		guint t;
+		for (t = 0; t < G_N_ELEMENTS(trades); t++) {
+			g_autofree gchar *order = g_strdup_printf("{\"brand\": {\"name\": \"%s %u\", \"tagline\": \"%s\"},"
+				" \"contact\": {\"phone\": \"585-555-0141\"}, \"offers\": [{\"id\": \"a\", \"name\": \"%s\"}]}",
+				trades[t], t, trades[t], trades[t]);
+			g_autoptr(JsonObject) design = design_for(components, order, NULL, four_photos);
+			g_assert_cmpstr(ls_string(design, "scheme"), ==, "auto");
+		}
+	}
+}
+
+/* ---- Controls (docs/components.org, "Controls") ------------------------- */
+
+/* A contact page whose form shows every control. */
+static const gchar controls_page[] =
+	"{\"contact.html\": {\"path\": \"contact.html\", \"sections\": [{\"component\": \"page-header\", \"variant\": \"plain\","
+	" \"content\": {\"heading\": \"Every control\"}}, {\"component\": \"form\", \"variant\": \"stacked\", \"id\": \"quote\","
+	" \"content\": {\"heading\": \"Ask for a quote\", \"mode\": \"endpoint\", \"target\": \"/api/forms/quote\", \"fields\": ["
+	"{\"name\": \"name\", \"label\": \"Your name\", \"required\": true, \"autocomplete\": \"name\"},"
+	"{\"name\": \"rooms\", \"label\": \"Rooms\", \"type\": \"number\", \"min\": 1, \"max\": 20},"
+	"{\"name\": \"day\", \"label\": \"Preferred day\", \"type\": \"date\"},"
+	"{\"name\": \"at\", \"label\": \"Preferred time\", \"type\": \"time\"},"
+	"{\"name\": \"budget\", \"label\": \"Budget\", \"type\": \"range\", \"min\": 0, \"max\": 5000, \"step\": 250},"
+	"{\"name\": \"service\", \"label\": \"Service\", \"type\": \"radio\", \"required\": true, \"options\": [\"Repair\", \"Install\", \"Inspect\", \"Other\"]},"
+	"{\"name\": \"size\", \"label\": \"Job size\", \"type\": \"toggle\", \"options\": [\"Small\", \"Medium\", \"Large\"]},"
+	"{\"name\": \"town\", \"label\": \"Town\", \"type\": \"select\", \"options\": [\"Fairport\", \"Penfield\", \"Perinton\","
+	" \"Pittsford\", \"Webster\", \"East Rochester\", \"Brighton\", \"Victor\"]},"
+	"{\"name\": \"urgent\", \"label\": \"This is urgent\", \"type\": \"switch\"},"
+	"{\"name\": \"photos\", \"label\": \"Photos of the job\", \"type\": \"file\", \"hint\": \"Optional.\"},"
+	"{\"name\": \"agree\", \"label\": \"You may contact me about this request\", \"type\": \"checkbox\", \"required\": true},"
+	"{\"name\": \"job\", \"label\": \"What needs doing?\", \"type\": \"textarea\", \"hint\": \"A sentence or two.\"}],"
+	" \"submit\": \"Send\"}}, {\"component\": \"faq\", \"variant\": \"list\", \"content\": {\"items\": [{\"question\": \"One?\","
+	" \"answer\": \"Yes.\"}, {\"question\": \"Two?\", \"answer\": \"Yes.\"}, {\"question\": \"Three?\", \"answer\": \"Yes.\"}]}}]}}";
+
+/* A contact page as a writer answers it: name, email, phone, the services
+ * as a select and a message, in @mode. */
+static gchar *
+enquiry_page(const gchar *mode){
+	return g_strdup_printf("{\"contact.html\": {\"path\": \"contact.html\", \"sections\": [{\"component\": \"page-header\","
+		" \"variant\": \"plain\", \"content\": {\"heading\": \"Contact\"}}, {\"component\": \"form\", \"variant\": \"stacked\","
+		" \"id\": \"quote\", \"content\": {\"heading\": \"Ask for a quote\", \"mode\": \"%s\", \"target\": \"%s\", \"fields\": ["
+		"{\"name\": \"name\", \"label\": \"Name\", \"required\": true, \"autocomplete\": \"name\"},"
+		"{\"name\": \"email\", \"label\": \"Email\", \"type\": \"email\", \"required\": true, \"autocomplete\": \"email\"},"
+		"{\"name\": \"phone\", \"label\": \"Phone\", \"type\": \"tel\", \"autocomplete\": \"tel\"},"
+		"{\"name\": \"service\", \"label\": \"Service\", \"type\": \"select\", \"options\": [\"Emergency repairs\","
+		" \"Drain cleaning\", \"Water heaters\", \"Other question\"]},"
+		"{\"name\": \"message\", \"label\": \"Message\", \"type\": \"textarea\", \"required\": true}], \"submit\": \"Send\"}},"
+		" {\"component\": \"faq\", \"variant\": \"list\", \"content\": {\"items\": [{\"question\": \"One?\", \"answer\": \"Yes.\"},"
+		" {\"question\": \"Two?\", \"answer\": \"Yes.\"}, {\"question\": \"Three?\", \"answer\": \"Yes.\"}]}}]}}", mode,
+		g_str_equal(mode, "mailto") ? "office@hartwell.example" : "/api/forms/quote");
+}
+
+/* The markup of the field whose control is named @name in @html: from the
+ * field's opening element to the next field's, or NULL. */
+static gchar *
+field_of(const gchar *html, const gchar *name){
+	g_autofree gchar *needle = g_strdup_printf("name=\"%s\"", name);
+	const gchar *at = strstr(html, needle), *start, *end, *next_div, *next_set;
+	if (at == NULL)
+		return NULL;
+	start = g_strrstr_len(html, at - html, "class=\"field");
+	if (start == NULL)
+		return NULL;
+	next_div = strstr(at, "class=\"field ");
+	next_set = strstr(at, "class=\"field\"");
+	end = next_div != NULL && (next_set == NULL || next_div < next_set) ? next_div : next_set;
+	if (end == NULL)
+		end = strstr(at, "</form>");
+	return g_strndup(start, (gsize)(end - start));
+}
+
+/* Every control in @html's forms is a native element with a visible label
+ * (its own, or the fieldset's legend for a choice) and an error message
+ * tied to it by aria-describedby. */
+static void
+check_controls_labelled(const gchar *where, const gchar *html){
+	const gchar *kinds[] = {"<input", "<select", "<textarea"};
+	guint k, controls = 0;
+	for (k = 0; k < G_N_ELEMENTS(kinds); k++) {
+		const gchar *at = html;
+		while ((at = strstr(at, kinds[k])) != NULL) {
+			const gchar *start = at, *close = strchr(at, '>');
+			g_autofree gchar *tag = g_strndup(start, (gsize)(close - start + 1));
+			g_autofree gchar *id = NULL;
+			const gchar *idp = strstr(tag, " id=\""), *described = strstr(tag, "aria-describedby=\"");
+			at = close;
+			if (strstr(tag, "type=\"hidden\"") != NULL || strstr(tag, "tabindex=\"-1\"") != NULL)
+				continue;
+			controls++;
+			if (idp == NULL)
+				g_error("%s: a control has no id: %s", where, tag);
+			id = g_strndup(idp + 5, (gsize)(strchr(idp + 5, '"') - idp - 5));
+			if (strstr(tag, "type=\"radio\"") != NULL) {
+				const gchar *label = g_strrstr_len(html, start - html, "<label class=\"choice");
+				const gchar *ended = label != NULL ? strstr(label, "</label>") : NULL;
+				const gchar *set = g_strrstr_len(html, start - html, "<fieldset");
+				const gchar *legend = set != NULL ? strstr(set, "<legend") : NULL;
+				if (label == NULL || ended == NULL || ended < start || set == NULL || legend == NULL || legend > start)
+					g_error("%s: radio %s is not inside a choice label under a legend", where, id);
+			} else {
+				g_autofree gchar *label = g_strdup_printf("<label for=\"%s\"", id);
+				if (strstr(html, label) == NULL)
+					g_error("%s: control %s has no label", where, id);
+			}
+			if (described == NULL)
+				g_error("%s: control %s has no aria-describedby", where, id);
+			{
+				g_autofree gchar *list = g_strndup(described + 18, (gsize)(strchr(described + 18, '"') - described - 18));
+				g_auto(GStrv) ids = g_strsplit(list, " ", -1);
+				guint i;
+				gboolean error = FALSE;
+				for (i = 0; ids[i] != NULL; i++) {
+					g_autofree gchar *target = g_strdup_printf("id=\"%s\"", ids[i]);
+					if (strstr(html, target) == NULL)
+						g_error("%s: control %s describes itself by missing %s", where, id, ids[i]);
+					error = error || g_str_has_suffix(ids[i], "-error");
+				}
+				if (!error)
+					g_error("%s: control %s has no error message tied to it", where, id);
+			}
+		}
+	}
+	g_assert_cmpuint(controls, >, 0);
+}
+
+/* Every control renders from its native element with a label, a focus
+ * ring, a 44 px target and the preset's corners, borders and accent. */
+static void
+test_controls(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(JsonNode) plan = NULL;
+	g_autoptr(JsonNode) bundle = compose_site(components, "evergreen", NULL, NULL, controls_page, &plan);
+	const gchar *html = file_in(bundle, "contact.html"), *css = file_in(bundle, "styles.css");
+	const gchar *output = g_getenv("LS_CONTROLS_OUTPUT");
+	g_autofree gchar *service = field_of(html, "service");
+	g_autofree gchar *size = field_of(html, "size");
+	g_autofree gchar *urgent = field_of(html, "urgent");
+	g_autofree gchar *budget = field_of(html, "budget");
+	g_autofree gchar *photos = field_of(html, "photos");
+	g_autofree gchar *agree = field_of(html, "agree");
+	g_autofree gchar *town = field_of(html, "town");
+	g_autofree gchar *at = field_of(html, "at");
+	g_autofree gchar *rooms = field_of(html, "rooms");
+	g_autofree gchar *job = field_of(html, "job");
+	g_assert_nonnull(html);
+	check_controls_labelled("contact.html", html);
+	/* Choices are radio buttons in a fieldset with a legend. */
+	g_assert_nonnull(service);
+	g_assert_true(g_str_has_prefix(service, "class=\"field field--choice"));
+	g_assert_nonnull(strstr(service, "<legend"));
+	g_assert_nonnull(strstr(service, "type=\"radio\" "));
+	g_assert_nonnull(strstr(service, " required"));
+	g_assert_nonnull(strstr(service, ">Inspect<"));
+	g_assert_nonnull(size);
+	g_assert_nonnull(strstr(size, "field--toggle"));
+	g_assert_nonnull(strstr(size, "type=\"radio\" "));
+	g_assert_nonnull(strstr(urgent, "type=\"checkbox\" role=\"switch\""));
+	g_assert_nonnull(strstr(budget, "type=\"range\""));
+	g_assert_nonnull(strstr(budget, "min=\"0\" max=\"5000\" step=\"250\""));
+	g_assert_nonnull(strstr(budget, "<output"));
+	g_assert_nonnull(strstr(photos, "type=\"file\""));
+	g_assert_nonnull(strstr(photos, "accept=\"image/*\""));
+	g_assert_nonnull(strstr(html, "enctype=\"multipart/form-data\""));
+	g_assert_nonnull(strstr(agree, "type=\"checkbox\""));
+	g_assert_null(strstr(agree, "role=\"switch\""));
+	g_assert_nonnull(strstr(town, "<select"));
+	g_assert_nonnull(strstr(at, "type=\"time\""));
+	g_assert_nonnull(strstr(rooms, "type=\"number\""));
+	g_assert_nonnull(strstr(rooms, "min=\"1\" max=\"20\""));
+	g_assert_nonnull(strstr(job, "<textarea"));
+	/* No control is a div pretending to be one. */
+	g_assert_null(strstr(html, "role=\"radio\""));
+	g_assert_null(strstr(html, "role=\"checkbox\""));
+	g_assert_null(strstr(html, "<div role=\"switch\""));
+	/* The styles: a 44 px target for every control, a focus ring, and the
+	 * preset's control corners, borders and accent. */
+	{
+		const gchar *start = strstr(css, "/* controls */");
+		g_autofree gchar *controls = NULL;
+		const gchar *rules[] = {".choice", ".field--toggle", ".field--switch", "input[type=\"range\"]",
+			"::file-selector-button", ":focus-visible", "[aria-invalid=\"true\"]"};
+		guint r;
+		g_assert_nonnull(start);
+		controls = g_strndup(start, (gsize)(strstr(start, "\n}\n") - start));
+		for (r = 0; r < G_N_ELEMENTS(rules); r++)
+			if (strstr(controls, rules[r]) == NULL)
+				g_error("the control styles have no %s rule", rules[r]);
+		g_assert_nonnull(strstr(controls, "min-height: 2.75rem"));
+		g_assert_nonnull(strstr(controls, "var(--radius-control"));
+		g_assert_nonnull(strstr(controls, "var(--border"));
+		g_assert_nonnull(strstr(controls, "var(--primary"));
+		g_assert_nonnull(strstr(controls, "var(--heading-weight"));
+		g_assert_nonnull(strstr(controls, "outline: 3px solid var(--focus)"));
+	}
+	/* The script sends the files with the fields and checks every choice. */
+	g_assert_nonnull(strstr(file_in(bundle, "site.js"), "new FormData(form)"));
+	if (output != NULL) {
+		JsonArray *files = json_object_get_array_member(json_node_get_object(bundle), "files");
+		guint f;
+		for (f = 0; f < json_array_get_length(files); f++) {
+			JsonObject *file = json_array_get_object_element(files, f);
+			g_autofree gchar *path = g_build_filename(output, ls_string(file, "path"), NULL);
+			g_autofree gchar *parent = g_path_get_dirname(path);
+			if (ls_string(file, "encoding") != NULL)
+				continue;
+			g_assert_cmpint(g_mkdir_with_parents(parent, 0755), ==, 0);
+			g_assert_true(g_file_set_contents(path, ls_string(file, "content"), -1, NULL));
+		}
+	}
+	/* The page check refuses controls without what they need. */
+	{
+		const gchar *bad[] = {"{\"name\": \"s\", \"label\": \"S\", \"type\": \"radio\"}",
+			"{\"name\": \"s\", \"label\": \"S\", \"type\": \"toggle\", \"options\": []}",
+			"{\"name\": \"s\", \"label\": \"S\", \"type\": \"text\", \"options\": [\"A\"]}",
+			"{\"name\": \"s\", \"label\": \"S\", \"type\": \"range\"}",
+			"{\"name\": \"s\", \"label\": \"S\", \"type\": \"range\", \"min\": 9, \"max\": 1}",
+			"{\"name\": \"s\", \"label\": \"S\", \"type\": \"switch\", \"options\": [\"On\"]}",
+			"{\"name\": \"s\", \"label\": \"S\", \"type\": \"color\"}"};
+		guint b;
+		for (b = 0; b < G_N_ELEMENTS(bad); b++) {
+			g_autofree gchar *text = g_strdup_printf("{\"path\": \"contact.html\", \"sections\": [{\"component\": \"page-header\","
+				" \"variant\": \"plain\", \"content\": {\"heading\": \"Contact\"}}, {\"component\": \"form\", \"variant\": \"stacked\","
+				" \"content\": {\"heading\": \"Ask\", \"mode\": \"local\", \"fields\": [%s], \"submit\": \"Send\"}}]}", bad[b]);
+			g_autoptr(JsonNode) page = parse(text);
+			g_autoptr(GError) error = NULL;
+			if (ls_components_check_page(components, plan, "contact.html", page, &error))
+				g_error("the page check accepted %s", bad[b]);
+			g_assert_nonnull(strstr(error->message, "fields"));
+		}
+	}
+}
+
+/* The forms the builder writes use the controls: the services as a choice,
+ * how to reply as a radio group, a preferred date and time, a switch for
+ * urgent work where the order offers it, a photo upload where the trade
+ * benefits and the form can carry files, and an agreement box; the booking
+ * form and a supplied form too. */
+static void
+test_forms_use_controls(void){
+	g_autoptr(LsComponents) components = library();
+	const gchar *modes[] = {"mailto", "endpoint"};
+	guint m;
+	for (m = 0; m < G_N_ELEMENTS(modes); m++) {
+		g_autofree gchar *pages = enquiry_page(modes[m]);
+		g_autoptr(JsonNode) plan = NULL;
+		g_autoptr(JsonNode) bundle = compose_site(components, "evergreen", NULL, NULL, pages, &plan);
+		const gchar *html = file_in(bundle, "contact.html");
+		g_autofree gchar *service = field_of(html, "service");
+		g_autofree gchar *reply = field_of(html, "contact_by");
+		g_autofree gchar *date = field_of(html, "preferred_date");
+		g_autofree gchar *time = field_of(html, "preferred_time");
+		g_autofree gchar *urgent = field_of(html, "urgent");
+		g_autofree gchar *agree = field_of(html, "agree");
+		g_autofree gchar *photos = field_of(html, "photos");
+		check_controls_labelled(modes[m], html);
+		if (service == NULL || strstr(service, "type=\"radio\"") == NULL)
+			g_error("%s: the services are not a choice of radio buttons", modes[m]);
+		g_assert_nonnull(strstr(service, ">Water heaters<"));
+		if (reply == NULL || strstr(reply, "type=\"radio\"") == NULL || strstr(reply, "<legend") == NULL)
+			g_error("%s: no 'contact me by' radio group", modes[m]);
+		g_assert_nonnull(date);
+		g_assert_nonnull(strstr(date, "type=\"date\""));
+		g_assert_nonnull(time);
+		g_assert_nonnull(strstr(time, "type=\"time\""));
+		/* The rich order offers emergency repairs. */
+		if (urgent == NULL || strstr(urgent, "role=\"switch\"") == NULL)
+			g_error("%s: no urgent switch", modes[m]);
+		if (agree == NULL || strstr(agree, "type=\"checkbox\"") == NULL || strstr(agree, " required") == NULL)
+			g_error("%s: no required agreement box", modes[m]);
+		/* A mail link cannot carry a file; a posted form can. */
+		if (g_str_equal(modes[m], "mailto"))
+			g_assert_null(photos);
+		else {
+			g_assert_nonnull(photos);
+			g_assert_nonnull(strstr(photos, "type=\"file\""));
+			g_assert_null(strstr(photos, " required"));
+		}
+		/* The message stays last before the agreement. */
+		g_assert_true(strstr(html, "name=\"message\"") < strstr(html, "name=\"agree\""));
+		g_assert_true(strstr(html, "name=\"preferred_time\"") < strstr(html, "name=\"message\""));
+		/* The booking page's form: the service as a choice and the agreement. */
+		if (m == 0) {
+			const gchar *book = file_in(bundle, "book.html");
+			const gchar *form = book != NULL ? strstr(book, "data-booking-form") : NULL;
+			g_assert_nonnull(form);
+			g_assert_nonnull(strstr(form, "name=\"service\""));
+			g_assert_nonnull(strstr(form, "type=\"radio\""));
+			g_assert_nonnull(strstr(form, "name=\"agree\""));
+			g_assert_nonnull(strstr(file_in(bundle, "site.js"), "\"Service: \""));
+			check_controls_labelled("book.html", form);
+		}
+	}
+	/* Urgent work only where the order offers it. */
+	{
+		g_autoptr(JsonObject) plumbing = design_for(components, plumber, "evergreen", four_photos);
+		g_autoptr(JsonObject) styling = design_for(components, salon, "evergreen", four_photos);
+		JsonObject *controls = json_object_get_object_member(plumbing, "controls");
+		g_assert_true(json_object_get_boolean_member(controls, "urgent"));
+		g_assert_true(json_object_get_boolean_member(controls, "photos"));
+		controls = json_object_get_object_member(styling, "controls");
+		g_assert_false(json_object_get_boolean_member(controls, "urgent"));
+		g_assert_false(json_object_get_boolean_member(controls, "photos"));
+	}
+	/* A supplied form is drawn exactly, in the same controls: the hero
+	 * form and the modal form. */
+	{
+		const gchar *places[][2] = {{"hero", "form"}, {"overlay", "modal-form"}};
+		guint p;
+		for (p = 0; p < G_N_ELEMENTS(places); p++) {
+			g_autoptr(JsonNode) plan = NULL;
+			g_autoptr(JsonNode) bundle = compose_site(components, "evergreen", places[p][0], places[p][1], NULL, &plan);
+			const gchar *home = file_in(bundle, "index.html");
+			g_autofree gchar *reply = field_of(home, "contact_by");
+			if (reply == NULL || strstr(reply, "type=\"radio\"") == NULL)
+				g_error("%s/%s: the supplied radio group is not drawn", places[p][0], places[p][1]);
+			g_assert_null(field_of(home, "urgent"));
+			check_controls_labelled(places[p][1], strstr(home, "<form class=\"form__form quote-form"));
+		}
+	}
+}
+
 int
 main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
@@ -1507,5 +2084,9 @@ main(int argc, char **argv){
 	g_test_add_func("/design/sticky-bar-headers", test_sticky_bar_headers);
 	g_test_add_func("/design/layout-render", test_layout_render);
 	g_test_add_func("/design/gallery", test_gallery);
+	g_test_add_func("/design/dark-schemes", test_dark_schemes);
+	g_test_add_func("/design/scheme-page", test_scheme_page);
+	g_test_add_func("/design/controls", test_controls);
+	g_test_add_func("/design/forms-use-controls", test_forms_use_controls);
 	return g_test_run();
 }
