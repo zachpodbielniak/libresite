@@ -4724,12 +4724,53 @@ ls_components_repair_plan(LsComponents *self, JsonNode *plan){
 	return g_string_free(notes, FALSE);
 }
 
+static gint booking_calendar_score(JsonObject *entry);
+
+/* Words that send a booking to the contact form or one shared form, which
+ * a booking page of a bookable site never says. Returns a new regex. */
+static GRegex *
+booking_elsewhere(void){
+	return g_regex_new("\\bcontact form\\b|\\bform on (?:the|our) contact page\\b|"
+		"\\bcontact page has (?:the|a|our|one) form\\b|\\b(?:one|single|shared)(?: shared)? (?:enquiry |request |booking )?form\\b",
+		G_REGEX_CASELESS, 0, NULL);
+}
+
+/* On a bookable site the plan's entry for a booking page has a description
+ * (its search snippet) and a brief for the writer that agree with the
+ * page's own way to book (see check_booking_words). */
+static void
+check_booking_plan(Problems *problems, JsonNode *plan_node){
+	JsonObject *plan = plan_node != NULL && JSON_NODE_HOLDS_OBJECT(plan_node) ? json_node_get_object(plan_node) : NULL;
+	JsonArray *planned = member_array(plan, "pages");
+	g_autoptr(GRegex) elsewhere = NULL;
+	const gchar *members[] = {"description", "brief"};
+	guint i, m;
+	if (!ls_booking_valid(member_object(plan, "booking")) || planned == NULL)
+		return;
+	elsewhere = booking_elsewhere();
+	for (i = 0; i < json_array_get_length(planned); i++) {
+		JsonObject *entry = JSON_NODE_HOLDS_OBJECT(json_array_get_element(planned, i))
+			? json_array_get_object_element(planned, i) : NULL;
+		if (entry == NULL || booking_calendar_score(entry) != 5)
+			continue;
+		for (m = 0; m < G_N_ELEMENTS(members); m++) {
+			const gchar *text = ls_string(entry, members[m]);
+			if (text != NULL && g_regex_match(elsewhere, text, 0, NULL))
+				problem(problems, "the %s of %s sends bookings to the contact form, but the booking page has its "
+					"own way to book: the booking calendar, or the form that asks for a time when no open times "
+					"show. Say that visitors choose or ask for a time on that page: \"%.120s\"", members[m],
+					ls_string(entry, "path"), text);
+		}
+	}
+}
+
 gboolean
 ls_components_check_plan(LsComponents *self, JsonNode *plan, GError **error){
 	Problems problems = {g_ptr_array_new_with_free_func(g_free)};
 	gboolean okay;
 	g_return_val_if_fail(LS_IS_COMPONENTS(self), FALSE);
 	check_plan_into(&problems, self, plan);
+	check_booking_plan(&problems, plan);
 	okay = finish(&problems, "The site plan", error);
 	g_ptr_array_unref(problems.messages);
 	return okay;
@@ -5356,8 +5397,6 @@ check_filler(Problems *problems, JsonNode *plan_node, JsonNode *page){
 		problem(problems, "\"%.120s\" is filler; say something specific and true about the service instead", hit);
 }
 
-static gint booking_calendar_score(JsonObject *entry);
-
 /* On a bookable site the booking page has its own way to book: the
  * calendar, or the form that asks for a time when open times cannot load.
  * Its words never send a booking to the contact form or one shared form. */
@@ -5378,9 +5417,7 @@ check_booking_words(Problems *problems, JsonNode *plan_node, const gchar *path, 
 	}
 	if (!booking)
 		return;
-	elsewhere = g_regex_new("\\bcontact form\\b|\\bform on (?:the|our) contact page\\b|"
-		"\\bcontact page has (?:the|a|our|one) form\\b|\\b(?:one|single|shared)(?: shared)? (?:enquiry |request |booking )?form\\b",
-		G_REGEX_CASELESS, 0, NULL);
+	elsewhere = booking_elsewhere();
 	hit = filler_in(page, elsewhere);
 	if (hit != NULL)
 		problem(problems, "\"%.120s\" sends bookings to the contact form, but the booking page has its own way to "
