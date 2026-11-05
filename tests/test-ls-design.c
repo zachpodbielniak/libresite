@@ -1595,7 +1595,7 @@ test_dark_schemes(void){
 	const gchar *pairs[][2] = {{"bg", "fg"}, {"bg", "muted_fg"}, {"surface", "surface_fg"}, {"surface", "muted_fg"},
 		{"bg", "primary_text"}, {"surface", "primary_text"}, {"primary", "primary_fg"}, {"brand", "brand_fg"},
 		{"brand", "brand_muted"}, {"inverse", "inverse_fg"}, {"inverse", "inverse_muted"},
-		{"photo_primary", "photo_primary_fg"}, {"brand", "brand_accent"}};
+		{"photo_primary", "photo_primary_fg"}, {"brand", "brand_accent"}, {"surface", "fg"}};
 	guint p, i;
 	for (p = 0; p < G_N_ELEMENTS(presets); p++) {
 		JsonObject *preset = json_object_get_object_member(json_object_get_object_member(themes_of(components),
