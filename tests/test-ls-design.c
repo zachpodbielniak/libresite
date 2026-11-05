@@ -2250,6 +2250,32 @@ test_header_brand_scope(void){
 	}
 }
 
+/* On a preset site a row of inline links that the writer gave
+ * descriptions draws as a list, so the descriptions show: inline hides
+ * them and left a section of short links, as the site gate found on the
+ * bakery's booking page. Links without descriptions stay inline. */
+static void
+test_inline_links(void){
+	g_autoptr(LsComponents) components = library();
+	const gchar *pages = "{\"contact.html\": {\"path\": \"contact.html\", \"sections\": ["
+		"{\"component\": \"page-header\", \"variant\": \"plain\", \"content\": {\"heading\": \"Contact\"}},"
+		"{\"component\": \"links\", \"variant\": \"inline\", \"id\": \"described\", \"content\": {\"heading\": \"Ready to ask?\", \"items\": ["
+		"{\"link\": {\"label\": \"Open the contact form\", \"href\": \"index.html\"}, \"body\": \"Send a quote request or an enquiry.\"},"
+		"{\"link\": {\"label\": \"Read common questions\", \"href\": \"questions.html\"}, \"body\": \"Answers about the work.\"}]}},"
+		"{\"component\": \"links\", \"variant\": \"inline\", \"id\": \"plain\", \"content\": {\"heading\": \"More\", \"items\": ["
+		"{\"link\": {\"label\": \"Questions\", \"href\": \"questions.html\"}}, {\"link\": {\"label\": \"Home\", \"href\": \"index.html\"}}]}}]}}";
+	g_autoptr(JsonNode) plan = NULL;
+	g_autoptr(JsonNode) bundle = compose_site(components, "evergreen", NULL, NULL, pages, &plan);
+	const gchar *html = file_in(bundle, "contact.html");
+	const gchar *described = strstr(html, "id=\"described\"");
+	const gchar *plain = strstr(html, "id=\"plain\"");
+	g_assert_nonnull(described);
+	g_assert_nonnull(plain);
+	g_assert_nonnull(g_strrstr_len(html, described - html, "links links--list"));
+	g_assert_null(strstr(g_strrstr_len(html, described - html, "<section"), "links--inline\" id=\"described"));
+	g_assert_nonnull(strstr(g_strrstr_len(html, plain - html, "<section"), "links--inline"));
+}
+
 int
 main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
@@ -2279,6 +2305,7 @@ main(int argc, char **argv){
 	g_test_add_func("/design/controls", test_controls);
 	g_test_add_func("/design/forms-use-controls", test_forms_use_controls);
 	g_test_add_func("/design/header-brand-scope", test_header_brand_scope);
+	g_test_add_func("/design/inline-links", test_inline_links);
 	g_test_add_func("/design/controls-gallery", test_controls_gallery);
 	g_test_add_func("/design/scheme-gallery", test_scheme_gallery);
 	return g_test_run();
