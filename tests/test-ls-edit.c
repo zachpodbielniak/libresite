@@ -290,6 +290,35 @@ test_edit_plan_twice(void){
 	site_teardown(&site);
 }
 
+static void
+test_replace_headline(void){
+	Site site;
+	g_autoptr(LsEditor) editor = NULL;
+	g_autoptr(GError) error = NULL;
+	g_autofree gchar *summary = NULL, *commit = NULL, *html = NULL, *outlines = NULL, *before = NULL, *after = NULL;
+	site_setup(&site);
+	editor = ls_editor_new(LS_PROVIDER(site.provider), site.prompts, site.settings);
+	before = read_file(site.site, "index.html");
+	g_assert_true(ls_editor_replace_headline(editor, site.site, "Old furniture, made useful again",
+		"Repair your furniture with care", &summary, &commit, NULL, &error));
+	g_assert_no_error(error);
+	g_assert_cmpint(site.provider->calls, ==, 0);
+	g_assert_nonnull(commit);
+	html = read_file(site.site, "index.html");
+	g_assert_nonnull(strstr(html, "Repair your furniture with care"));
+	g_assert_null(strstr(html, "Old furniture, made useful again"));
+	outlines = read_file(site.site, ".libresite/outlines.json");
+	g_assert_nonnull(strstr(outlines, "Repair your furniture with care"));
+	g_assert_null(strstr(outlines, "Old furniture, made useful again"));
+	g_assert_false(ls_editor_replace_headline(editor, site.site, "Repair your furniture with care",
+		"Repair your furniture with care", NULL, NULL, NULL, &error));
+	g_assert_no_error(error);
+	after = read_file(site.site, "index.html");
+	g_assert_cmpstr(after, ==, html);
+	g_assert_cmpstr(before, !=, after);
+	site_teardown(&site);
+}
+
 /* Rejected answers go back once with the reason; when none passes, nothing
  * on disk or in the history changes. */
 static void
@@ -802,6 +831,7 @@ main(int argc, char **argv){
 	g_test_add_func("/edit/page", test_edit_page);
 	g_test_add_func("/edit/photos", test_edit_photos);
 	g_test_add_func("/edit/plan-twice", test_edit_plan_twice);
+	g_test_add_func("/edit/replace-headline", test_replace_headline);
 	g_test_add_func("/edit/rejected", test_edit_rejected);
 	g_test_add_func("/edit/unchanged", test_edit_unchanged);
 	g_test_add_func("/edit/bad-record", test_edit_bad_record);
