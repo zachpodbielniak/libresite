@@ -752,6 +752,10 @@ compose_site(LsComponents *components, const gchar *preset, const gchar *type, c
 	g_assert_true(g_file_get_contents("tests/fixtures/composed/plan.json", &plan_text, NULL, NULL));
 	plan = parse(plan_text);
 	pages = parse("{}");
+	/* Gallery sites are written out for people to look at: the fixture's
+	 * logo file is not among them, so they draw none, as the orders do. */
+	if (gallery_photos != NULL)
+		json_object_remove_member(json_object_get_object_member(json_node_get_object(plan), "brand"), "mark");
 	if (gallery_pages != NULL) {
 		json_object_set_string_member(json_node_get_object(plan), "name", "Hartwell Plumbing");
 		json_object_set_string_member(json_node_get_object(plan), "tagline", "Family plumbing in Fairport since 1998");
@@ -2067,6 +2071,139 @@ test_forms_use_controls(void){
 	}
 }
 
+/* Writes every text file of @bundle under @dir. */
+static void
+write_bundle(JsonNode *bundle, const gchar *dir){
+	JsonArray *files = json_object_get_array_member(json_node_get_object(bundle), "files");
+	guint f;
+	for (f = 0; f < json_array_get_length(files); f++) {
+		JsonObject *file = json_array_get_object_element(files, f);
+		g_autofree gchar *path = g_build_filename(dir, ls_string(file, "path"), NULL);
+		g_autofree gchar *parent = g_path_get_dirname(path);
+		if (ls_string(file, "encoding") != NULL)
+			continue;
+		g_assert_cmpint(g_mkdir_with_parents(parent, 0755), ==, 0);
+		g_assert_true(g_file_set_contents(path, ls_string(file, "content"), -1, NULL));
+	}
+}
+
+/* The controls gallery: one site per control, its contact page a form
+ * that shows that control in the made-up plumber's words. With
+ * LS_CONTROLS_GALLERY set, each site is written there as DIR/NN-NAME/. */
+static void
+test_controls_gallery(void){
+	g_autoptr(LsComponents) components = library();
+	const gchar *output = g_getenv("LS_CONTROLS_GALLERY");
+	const gchar *const pages[][4] = {
+		{"checkbox", "Checkboxes", "Tick what applies; the box and its words are one target.",
+			"{\"name\": \"agree\", \"label\": \"You may contact me about this request.\", \"type\": \"checkbox\", \"required\": true},"
+			"{\"name\": \"remind\", \"label\": \"Send me a reminder the day before\", \"type\": \"checkbox\"},"
+			"{\"name\": \"pets\", \"label\": \"There are pets at home\", \"type\": \"checkbox\", \"hint\": \"So the plumber knows to close doors behind them.\"}"},
+		{"radio", "Radio buttons", "Choose one; every choice is a full row.",
+			"{\"name\": \"service\", \"label\": \"Which service?\", \"type\": \"radio\", \"required\": true, \"options\": [\"Emergency repairs\", \"Drain cleaning\", \"Water heaters\", \"Something else\"]},"
+			"{\"name\": \"contact_by\", \"label\": \"Contact me by\", \"type\": \"radio\", \"options\": [\"Phone\", \"Email\"]}"},
+		{"switch", "Switches", "On or off at once, with no send needed to see the state.",
+			"{\"name\": \"urgent\", \"label\": \"This is urgent\", \"type\": \"switch\"},"
+			"{\"name\": \"text_me\", \"label\": \"Text me when the plumber is on the way\", \"type\": \"switch\", \"hint\": \"One message, on the day.\"}"},
+		{"toggle", "Toggle buttons", "A short choice drawn as a row of buttons; they are radio buttons underneath.",
+			"{\"name\": \"size\", \"label\": \"How big is the job?\", \"type\": \"toggle\", \"options\": [\"Small\", \"Medium\", \"Large\"]},"
+			"{\"name\": \"home\", \"label\": \"Where is it?\", \"type\": \"toggle\", \"required\": true, \"options\": [\"House\", \"Apartment\"]}"},
+		{"select", "Select", "A long list of choices in the browser's own list.",
+			"{\"name\": \"town\", \"label\": \"Town\", \"type\": \"select\", \"options\": [\"Fairport\", \"Penfield\", \"Perinton\", \"Pittsford\", \"Webster\", \"East Rochester\", \"Brighton\", \"Victor\"]},"
+			"{\"name\": \"heard\", \"label\": \"How did you find us?\", \"type\": \"select\", \"options\": [\"A neighbour\", \"A search\", \"A van in the street\", \"Something else\"]}"},
+		{"textarea", "Text areas", "Room for a few sentences, with a limit the browser keeps.",
+			"{\"name\": \"job\", \"label\": \"What needs doing?\", \"type\": \"textarea\", \"required\": true, \"maxlength\": 2000, \"hint\": \"A sentence or two is enough.\"},"
+			"{\"name\": \"access\", \"label\": \"How do we get in?\", \"type\": \"textarea\"}"},
+		{"text", "Text, email, phone and number", "One line each, with the keyboard a phone should show.",
+			"{\"name\": \"name\", \"label\": \"Your name\", \"required\": true, \"autocomplete\": \"name\"},"
+			"{\"name\": \"email\", \"label\": \"Email\", \"type\": \"email\", \"autocomplete\": \"email\"},"
+			"{\"name\": \"phone\", \"label\": \"Phone\", \"type\": \"tel\", \"autocomplete\": \"tel\"},"
+			"{\"name\": \"rooms\", \"label\": \"How many bathrooms?\", \"type\": \"number\", \"min\": 1, \"max\": 9}"},
+		{"date-time", "Date and time", "The browser's own pickers, in the page's colour scheme.",
+			"{\"name\": \"preferred_date\", \"label\": \"Preferred date\", \"type\": \"date\"},"
+			"{\"name\": \"preferred_time\", \"label\": \"Preferred time\", \"type\": \"time\", \"hint\": \"We confirm the time by phone.\"}"},
+		{"range", "Range", "A slider with its value beside it.",
+			"{\"name\": \"budget\", \"label\": \"Rough budget in dollars\", \"type\": \"range\", \"min\": 0, \"max\": 5000, \"step\": 250},"
+			"{\"name\": \"fixtures\", \"label\": \"Fixtures to replace\", \"type\": \"range\", \"min\": 1, \"max\": 10}"},
+		{"file", "File upload", "Photos of the job travel with the form when it posts.",
+			"{\"name\": \"photos\", \"label\": \"Photos of the job\", \"type\": \"file\", \"hint\": \"Optional. Pictures help us see the job.\"}"},
+		{"validation", "Messages", "Send the form empty: each field says what it needs, above the field, and a line counts them.",
+			"{\"name\": \"name\", \"label\": \"Your name\", \"required\": true, \"autocomplete\": \"name\"},"
+			"{\"name\": \"email\", \"label\": \"Email\", \"type\": \"email\", \"required\": true, \"autocomplete\": \"email\"},"
+			"{\"name\": \"service\", \"label\": \"Which service?\", \"type\": \"radio\", \"required\": true, \"options\": [\"Repairs\", \"Drains\", \"Heaters\"]},"
+			"{\"name\": \"agree\", \"label\": \"You may contact me about this request.\", \"type\": \"checkbox\", \"required\": true}"}};
+	guint i;
+	g_assert_true(g_file_get_contents("tests/fixtures/gallery/photos.json", &gallery_photos, NULL, NULL));
+	for (i = 0; i < G_N_ELEMENTS(pages); i++) {
+		g_autoptr(JsonNode) plan = NULL;
+		g_autoptr(JsonNode) bundle = NULL;
+		g_autoptr(GString) problems = g_string_new(NULL);
+		g_autofree gchar *extra = g_strdup_printf("{\"contact.html\": {\"path\": \"contact.html\", \"sections\": ["
+			"{\"component\": \"page-header\", \"variant\": \"plain\", \"content\": {\"heading\": \"%s\"}},"
+			"{\"component\": \"form\", \"variant\": \"card\", \"id\": \"quote\", \"content\": {\"heading\": \"%s\","
+			" \"intro\": \"%s\", \"mode\": \"endpoint\", \"target\": \"/api/forms/quote\", \"fields\": [%s], \"submit\": \"Send\"}},"
+			"{\"component\": \"faq\", \"variant\": \"list\", \"content\": {\"heading\": \"About this control\", \"items\": ["
+			"{\"question\": \"Is it the browser's own control?\", \"answer\": \"Yes. It is drawn in the site's colours.\"},"
+			"{\"question\": \"Does it work in dark?\", \"answer\": \"Yes. Use the Colours button.\"},"
+			"{\"question\": \"Does it work with a keyboard?\", \"answer\": \"Yes. Tab reaches it.\"}]}}]}}",
+			pages[i][1], pages[i][1], pages[i][2], pages[i][3]);
+		bundle = compose_site(components, "evergreen", NULL, NULL, extra, &plan);
+		if (!ls_components_check_taste(components, plan, bundle, problems))
+			g_error("%s: %s", pages[i][0], problems->str);
+		check_controls_labelled(pages[i][0], file_in(bundle, "contact.html"));
+		if (output != NULL) {
+			g_autofree gchar *dir = g_strdup_printf("%s/%02u-control-%s", output, i + 1, pages[i][0]);
+			write_bundle(bundle, dir);
+		}
+	}
+	g_clear_pointer(&gallery_photos, g_free);
+}
+
+/* The schemes gallery: one composed site per preset, each in both colour
+ * schemes. With LS_SCHEMES_OUTPUT set, each is written there as
+ * DIR/PRESET/. */
+static void
+test_scheme_gallery(void){
+	g_autoptr(LsComponents) components = library();
+	const gchar *output = g_getenv("LS_SCHEMES_OUTPUT");
+	guint p;
+	g_assert_true(g_file_get_contents("tests/fixtures/gallery/pages.json", &gallery_pages, NULL, NULL));
+	g_assert_true(g_file_get_contents("tests/fixtures/gallery/photos.json", &gallery_photos, NULL, NULL));
+	for (p = 0; p < G_N_ELEMENTS(presets); p++) {
+		g_autoptr(JsonNode) plan = NULL;
+		g_autoptr(JsonNode) bundle = compose_site(components, presets[p][0], NULL, NULL, NULL, &plan);
+		g_autoptr(GString) problems = g_string_new(NULL);
+		if (!ls_components_check_taste(components, plan, bundle, problems))
+			g_error("%s: %s", presets[p][0], problems->str);
+		g_assert_nonnull(strstr(file_in(bundle, "styles.css"), ":root[data-scheme=\"dark\"]"));
+		if (output != NULL) {
+			g_autofree gchar *dir = g_build_filename(output, presets[p][0], NULL);
+			write_bundle(bundle, dir);
+		}
+	}
+	g_clear_pointer(&gallery_pages, g_free);
+	g_clear_pointer(&gallery_photos, g_free);
+}
+
+/* A header layout styles the header's own name, never the footer's: a
+ * header rule on every .brand floated the footer's name, white on white in
+ * light and plain to see in dark. */
+static void
+test_header_brand_scope(void){
+	g_autofree gchar *css = NULL;
+	g_auto(GStrv) lines = NULL;
+	guint i;
+	g_assert_true(g_file_get_contents("data/components/design.css", &css, NULL, NULL));
+	lines = g_strsplit(css, "\n", -1);
+	for (i = 0; lines[i] != NULL; i++) {
+		const gchar *brace = strchr(lines[i], '{');
+		g_autofree gchar *selector = brace != NULL ? g_strndup(lines[i], (gsize)(brace - lines[i])) : NULL;
+		if (selector != NULL && strstr(selector, ".header--") != NULL && strstr(selector, ".brand") != NULL &&
+			strstr(selector, ".site-header") == NULL && strstr(selector, ".site-footer") == NULL)
+			g_error("design.css line %u styles every .brand under a header layout: %s", i + 1, selector);
+	}
+}
+
 int
 main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
@@ -2095,5 +2232,8 @@ main(int argc, char **argv){
 	g_test_add_func("/design/scheme-page", test_scheme_page);
 	g_test_add_func("/design/controls", test_controls);
 	g_test_add_func("/design/forms-use-controls", test_forms_use_controls);
+	g_test_add_func("/design/header-brand-scope", test_header_brand_scope);
+	g_test_add_func("/design/controls-gallery", test_controls_gallery);
+	g_test_add_func("/design/scheme-gallery", test_scheme_gallery);
 	return g_test_run();
 }
