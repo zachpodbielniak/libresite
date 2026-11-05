@@ -6727,6 +6727,15 @@ design_variant(JsonObject *plan, const gchar *name, const gchar *variant, JsonOb
 	if (member_object(plan, "design") != NULL && g_strcmp0(name, "cta") == 0 &&
 		g_strcmp0(variant, "closing-band") != 0 && g_strcmp0(variant, "promise") != 0)
 		return "closing-band";
+	/* Inline links hide their descriptions; links the writer described
+	 * draw as a list, so the section keeps its words. */
+	if (member_object(plan, "design") != NULL && g_strcmp0(name, "links") == 0 && g_strcmp0(variant, "inline") == 0) {
+		JsonArray *items = member_array(content, "items");
+		guint i;
+		for (i = 0; items != NULL && i < json_array_get_length(items); i++)
+			if (ls_string(json_array_get_object_element(items, i), "body") != NULL)
+				return "list";
+	}
 	return variant;
 }
 
