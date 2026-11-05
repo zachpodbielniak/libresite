@@ -14,6 +14,7 @@ const until = async (test, ms) => { for (let t = 0; t < ms; t += 50) { if (test(
 const root = () => document.querySelector(".booking-calendar [data-booking-url]");
 const request = () => document.querySelector("[data-booking-request] form");
 const app = () => document.querySelector(".booking-calendar__app");
+const heading = () => { const h = document.querySelector(".booking-calendar .section-head > :first-child"); return h ? h.innerText.trim() : ""; };
 const probes = {};
 /* With the host answering: the calendar replaces the request form; the
  * first time was just taken (409) and the second books (201). */
@@ -22,6 +23,7 @@ probes.calendar = () => (async () => {
   await until(() => shown(app()), 6000);
   out.app = shown(app());
   out.request = shown(request());
+  out.heading = heading();
   if (!out.app) { done(out); return; }
   const scope = root(), status = scope.querySelector("[data-booking-status]");
   const form = scope.querySelector("[data-booking-form]");
@@ -51,7 +53,7 @@ probes.request = () => (async () => {
   let count = 0;
   /* The times request has had its chance to fail. */
   await sleep(1500);
-  const out = {request: shown(request()), app: shown(app())};
+  const out = {request: shown(request()), app: shown(app()), heading: heading()};
   if (!out.request) { done({...out, count, problems: ["no request form shown"]}); return; }
   for (const scheme of ["light", "dark"]) {
     document.documentElement.dataset.scheme = scheme;
@@ -75,5 +77,16 @@ probes.request = () => (async () => {
   }
   delete document.documentElement.dataset.scheme;
   done({...out, count, problems});
+})();
+/* The booking page whose writer wrote its own form: whether the calendar
+ * or that form shows, how many forms show, where its book link leads
+ * and the calendar's heading. */
+probes.replaced = () => (async () => {
+  const section = document.querySelector("section.booking-calendar");
+  const writer = document.getElementById(root() ? root().getAttribute("data-booking-replaces") || "" : "");
+  await until(() => shown(app()), 1500);
+  const book = [...document.querySelectorAll("main a")].find(link => link.textContent === "Book a time");
+  done({calendar: shown(section) && shown(app()), writer: shown(writer), heading: heading(),
+    forms: [...document.querySelectorAll("form")].filter(shown).length, book: book ? book.getAttribute("href") : ""});
 })();
 probes[which]();

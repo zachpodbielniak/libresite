@@ -9,7 +9,12 @@
 #   - with the host stopped, an empty list of times, or no scripts, the
 #     same page shows the booking request form instead;
 #   - the request form's controls have labels, 44 px targets and error
-#     text tied by aria-describedby, in light and dark, at 390 and 1440.
+#     text tied by aria-describedby, in light and dark, at 390 and 1440;
+#   - the heading reads "Ask for a time" over the request form and
+#     "Choose a time" over the calendar;
+#   - on a booking page whose writer wrote its own form, the builder adds
+#     no form: that form shows until open times load, and the calendar
+#     then takes its place.
 # Needs firefox and geckodriver, or WEBDRIVER_URL.
 set -euo pipefail
 case ${1:-} in
@@ -75,15 +80,15 @@ open_session() {
 	encoded=$(cd "$profile" && zip -qr - . | base64 -w0)
 	call POST /session "$(jq -nc --arg profile "$encoded" '{capabilities:{alwaysMatch:{browserName:"firefox","moz:firefoxOptions":{args:["-headless"],profile:$profile}}}}')" | jq -er .value.sessionId
 }
-# Serves the site; "host" answers the booking route, "empty" answers no
+# Serves $site; "host" answers the booking route, "empty" answers no
 # times, "static" is a plain file server with no booking route.
 serve() {
 	stop_server
 	port=$(free_port)
 	case $1 in
-	static) python3 -I -m http.server "$port" --bind 127.0.0.1 --directory "$work/site" > /dev/null 2>&1 & ;;
-	empty) python3 -I "$root/tests/fixtures/booking.py" "$work/site" "$port" "$work/posts" --empty & ;;
-	*) python3 -I "$root/tests/fixtures/booking.py" "$work/site" "$port" "$work/posts" & ;;
+	static) python3 -I -m http.server "$port" --bind 127.0.0.1 --directory "$site" > /dev/null 2>&1 & ;;
+	empty) python3 -I "$root/tests/fixtures/booking.py" "$site" "$port" "$work/posts" --empty & ;;
+	*) python3 -I "$root/tests/fixtures/booking.py" "$site" "$port" "$work/posts" & ;;
 	esac
 	server=$!
 	wait_for "http://127.0.0.1:$port/index.html"
@@ -106,6 +111,10 @@ displayed() {
 (cd "$root" && LS_BOOKING_OUTPUT="$work/site" "$binary" -p /design/booking-request) > "$work/compose.log" 2>&1 ||
 	{ cat "$work/compose.log"; fail 'the booking site was not composed'; }
 [[ -f $work/site/book.html ]] || fail 'the booking site has no booking page'
+(cd "$root" && LS_BOOKING_FORM_OUTPUT="$work/form-site" "$binary" -p /design/booking-one-form) > "$work/compose-form.log" 2>&1 ||
+	{ cat "$work/compose-form.log"; fail 'the booking site with a written form was not composed'; }
+[[ -f $work/form-site/book.html ]] || fail 'the booking site with a written form has no booking page'
+site=$work/site
 
 if [[ -z $webdriver ]]; then
 	gport=$(free_port)
@@ -127,6 +136,7 @@ open_page book.html
 result=$(run calendar)
 printf 'host up: %s\n' "$result"
 jq -e '.app and (.request | not)' <<< "$result" > /dev/null || { printf '  the calendar did not replace the request form\n'; failed=1; }
+jq -e '.heading == "Choose a time"' <<< "$result" > /dev/null || { printf '  the calendar is not headed "Choose a time"\n'; failed=1; }
 jq -e '.taken | test("just taken")' <<< "$result" > /dev/null || { printf '  a 409 did not ask for another time\n'; failed=1; }
 jq -e '.booked | test("confirmed")' <<< "$result" > /dev/null || { printf '  a 201 did not confirm the booking\n'; failed=1; }
 [[ -f $work/posts && $(wc -l < "$work/posts") -eq 2 ]] || { printf '  the host did not receive two booking requests\n'; failed=1; }
@@ -142,8 +152,33 @@ for mode in static empty; do
 		printf '%s %s: %s\n' "$mode" "$size" "$(jq -c 'del(.problems)' <<< "$result")"
 		jq -r '.problems[]' <<< "$result" | sed "s/^/  $mode $size: /"
 		jq -e '.request and (.app | not) and (.problems | length == 0) and .count >= 8' <<< "$result" > /dev/null || failed=1
+		jq -e '.heading == "Ask for a time"' <<< "$result" > /dev/null || { printf '  the request form is not headed "Ask for a time"\n'; failed=1; }
 	done
 done
+
+# The writer's own form on the booking page: one form at a time. With
+# times, the calendar takes the form's place and the page's book link
+# leads to it; without, the writer's form shows and the link leads there.
+site=$work/form-site
+for mode in host static; do
+	serve "$mode"
+	for size in 390x844 1440x900; do
+		width=${size%x*} height=${size#*x}
+		call POST "/session/$session/window/rect" "{\"width\":$width,\"height\":$height}" > /dev/null
+		open_page book.html
+		result=$(run replaced)
+		printf 'written form, %s %s: %s\n' "$mode" "$size" "$result"
+		if [[ $mode == host ]]; then
+			jq -e '.calendar and (.writer | not) and .book == "#choose-a-time" and .heading == "Choose a time"' <<< "$result" > /dev/null ||
+				{ printf '  the calendar did not take the written form'"'"'s place\n'; failed=1; }
+		else
+			jq -e '(.calendar | not) and .writer and .forms == 1 and .book == "#request-your-consultation"' <<< "$result" > /dev/null ||
+				{ printf '  the written form is not the one form on the page\n'; failed=1; }
+		fi
+	done
+done
+site=$work/site
+serve empty
 
 # The probe itself: with the request form's targets shrunk it must say
 # so, or a pass above proves nothing.
@@ -166,6 +201,13 @@ request=$(displayed '[data-booking-request] form')
 app=$(displayed '.booking-calendar__app')
 printf 'no scripts: request form displayed %s, calendar displayed %s\n' "$request" "$app"
 [[ $request == true && $app == false ]] || failed=1
+site=$work/form-site
+serve static
+open_page book.html
+writer=$(displayed '#request-your-consultation form')
+calendar=$(displayed 'section.booking-calendar')
+printf 'no scripts, written form: written form displayed %s, calendar displayed %s\n' "$writer" "$calendar"
+[[ $writer == true && $calendar == false ]] || failed=1
 
 [[ $failed == 0 ]] || fail 'see above'
 printf '%s\n' 'BOOKING VERIFIED'

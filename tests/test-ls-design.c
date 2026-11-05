@@ -2236,6 +2236,114 @@ test_booking_request(void){
 		g_assert_null(strstr(request, " AM<"));
 		g_assert_null(strstr(request, " PM<"));
 		check_no_self_link(modes[m], book, "/book", "book.html");
+		/* Over the request form the heading asks for a time; the
+		 * calendar's own heading waits, hidden, for the month. */
+		if (strstr(book, "<span data-heading-request>Ask for a time</span>"
+			"<span data-heading-calendar hidden>Choose a time</span></h2>") == NULL)
+			g_error("%s: the heading over the request form is not \"Ask for a time\"", modes[m]);
+	}
+}
+
+/* The booking page as the law writer answered it: the steps, then its own
+ * consultation form, which sends by mail. */
+static const gchar *const booking_form_page = "{\"book.html\": {\"path\": \"book.html\", \"sections\": ["
+	"{\"component\": \"page-header\", \"variant\": \"plain\", \"content\": {\"heading\": \"Book a free consultation\"}},"
+	" {\"component\": \"text\", \"variant\": \"narrow\", \"content\": {\"body\": \"Fill in the form with your name and"
+	" the service you have in mind. [Book a time](book.html).\"}},"
+	" {\"component\": \"form\", \"variant\": \"aside\", \"content\": {\"heading\": \"Request your consultation\","
+	" \"mode\": \"mailto\", \"target\": \"intake@okafor.example\", \"fields\": ["
+	"{\"name\": \"name\", \"label\": \"Name\", \"required\": true, \"autocomplete\": \"name\"},"
+	"{\"name\": \"email\", \"label\": \"Email\", \"type\": \"email\", \"required\": true, \"autocomplete\": \"email\"},"
+	"{\"name\": \"service\", \"label\": \"Service\", \"type\": \"select\", \"options\": [\"Wills\", \"Probate\"]},"
+	"{\"name\": \"best_time\", \"label\": \"Best time to call\"}], \"submit\": \"Request my consultation\"}},"
+	" {\"component\": \"faq\", \"variant\": \"list\", \"content\": {\"items\": [{\"question\": \"One?\", \"answer\": \"Yes.\"},"
+	" {\"question\": \"Two?\", \"answer\": \"Yes.\"}, {\"question\": \"Three?\", \"answer\": \"Yes.\"}]}}]}}";
+
+/* One form per booking page. When the writer's booking page has a form that
+ * sends, the builder adds no request form of its own. The calendar sits
+ * above the writer's form, hidden until open times load, and then takes
+ * its place; until then a book link leads to the writer's form. With
+ * LS_BOOKING_FORM_OUTPUT set, the site is written there for
+ * tests/booking.sh. */
+static void
+test_booking_one_form(void){
+	g_autoptr(LsComponents) components = library();
+	const gchar *output = g_getenv("LS_BOOKING_FORM_OUTPUT");
+	g_autoptr(JsonNode) bundle = compose_site(components, "evergreen", NULL, NULL, booking_form_page, NULL);
+	const gchar *book = file_in(bundle, "book.html");
+	const gchar *calendar, *writer, *at;
+	g_autofree gchar *opening = NULL;
+	guint forms = 0;
+	if (output != NULL)
+		write_bundle(bundle, output);
+	g_assert_nonnull(book);
+	if (strstr(book, "data-booking-request") != NULL)
+		g_error("the builder added a request form beside the writer's form");
+	for (at = book; (at = strstr(at, "<form ")) != NULL; at++)
+		forms++;
+	/* The writer's form and the calendar's own booking step, no more. */
+	g_assert_cmpuint(forms, ==, 2);
+	calendar = strstr(book, "<section class=\"block block--booking-calendar");
+	writer = strstr(book, "id=\"request-your-consultation\"");
+	g_assert_nonnull(calendar);
+	g_assert_nonnull(writer);
+	if (calendar > writer)
+		g_error("the calendar does not sit above the writer's form");
+	opening = g_strndup(calendar, (gsize)(strchr(calendar, '>') - calendar));
+	if (strstr(opening, " hidden") == NULL)
+		g_error("the calendar shows before open times load: %s", opening);
+	g_assert_nonnull(strstr(calendar, "data-booking-replaces=\"request-your-consultation\""));
+	g_assert_null(strstr(book, "Ask for a time"));
+	g_assert_nonnull(strstr(book, "<a href=\"#request-your-consultation\">Book a time</a>"));
+	check_no_self_link("book.html", book, "/book", "book.html");
+}
+
+/* The booking page of a bookable site never says that bookings or requests
+ * go through the contact form: the page has its own way to book. */
+static void
+test_booking_words(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(JsonNode) plan = NULL;
+	g_autoptr(JsonNode) bundle = compose_site(components, "evergreen", NULL, NULL, NULL, &plan);
+	const gchar *contradictions[] = {"Requests and enquiries go through one shared contact form.",
+		"Every booking request goes through the contact form.", "Use the shared form on the contact page.",
+		"If it can wait, [send the contact form](contact.html).", "One form handles every enquiry and quote request."};
+	const gchar *fine = "Choose an open time below. When no times show, ask for one with the form on this page.";
+	guint i;
+	for (i = 0; i <= G_N_ELEMENTS(contradictions); i++) {
+		const gchar *words = i < G_N_ELEMENTS(contradictions) ? contradictions[i] : fine;
+		g_autofree gchar *text = g_strdup_printf("{\"path\": \"book.html\", \"sections\": [{\"component\": \"page-header\","
+			" \"variant\": \"plain\", \"content\": {\"heading\": \"Booking\"}}, {\"component\": \"text\", \"variant\": \"narrow\","
+			" \"content\": {\"body\": \"%s\"}}, {\"component\": \"faq\", \"variant\": \"list\", \"content\": {\"items\": ["
+			"{\"question\": \"One?\", \"answer\": \"Yes.\"}, {\"question\": \"Two?\", \"answer\": \"Yes.\"},"
+			" {\"question\": \"Three?\", \"answer\": \"Yes.\"}]}}]}", words);
+		g_autoptr(JsonNode) page = parse(text);
+		g_autoptr(GError) error = NULL;
+		gboolean okay = ls_components_check_page(components, plan, "book.html", page, &error);
+		if (i == G_N_ELEMENTS(contradictions)) {
+			g_assert_no_error(error);
+			g_assert_true(okay);
+			continue;
+		}
+		if (okay)
+			g_error("the booking page may say \"%s\"", words);
+		g_assert_nonnull(strstr(error->message, "contact form"));
+		/* The contact page may send visitors to its own form. */
+		g_clear_error(&error);
+		json_object_set_string_member(json_node_get_object(page), "path", "contact.html");
+		if (!ls_components_check_page(components, plan, "contact.html", page, &error))
+			g_error("the contact page may not say \"%s\": %s", words, error->message);
+	}
+	/* Without a booking page supplied, the words are not checked. */
+	json_object_remove_member(json_node_get_object(plan), "booking");
+	{
+		g_autofree gchar *text = g_strdup_printf("{\"path\": \"book.html\", \"sections\": [{\"component\": \"page-header\","
+			" \"variant\": \"plain\", \"content\": {\"heading\": \"Booking\"}}, {\"component\": \"text\", \"variant\": \"narrow\","
+			" \"content\": {\"body\": \"%s\"}}]}", contradictions[0]);
+		g_autoptr(JsonNode) page = parse(text);
+		g_autoptr(GError) error = NULL;
+		g_assert_true(ls_components_check_page(components, plan, "book.html", page, &error));
+		g_assert_no_error(error);
 	}
 }
 
@@ -2427,6 +2535,8 @@ main(int argc, char **argv){
 	g_test_add_func("/design/controls", test_controls);
 	g_test_add_func("/design/forms-use-controls", test_forms_use_controls);
 	g_test_add_func("/design/booking-request", test_booking_request);
+	g_test_add_func("/design/booking-one-form", test_booking_one_form);
+	g_test_add_func("/design/booking-words", test_booking_words);
 	g_test_add_func("/design/header-brand-scope", test_header_brand_scope);
 	g_test_add_func("/design/inline-links", test_inline_links);
 	g_test_add_func("/design/controls-gallery", test_controls_gallery);
