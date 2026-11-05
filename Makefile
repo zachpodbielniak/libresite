@@ -71,10 +71,13 @@ gate: all $(OUTDIR)/test-gate $(OUTDIR)/test-options $(OUTDIR)/test-mobile $(OUT
 # The site gate's own checks (docs/site-gate.org): a good fixture site
 # passes and each defect page fails only its check; then the scheme toggle
 # and the form controls in a browser (docs/components.org, "Light and
-# dark" and "Controls"). Needs firefox and geckodriver, or WEBDRIVER_URL.
+# dark" and "Controls"), and the booking calendar and its request form
+# against a fake booking host ("Book online"). Needs firefox and
+# geckodriver, or WEBDRIVER_URL.
 site-gate: all $(OUTDIR)/test-ls-design
 	bash tests/site-gate.sh
 	bash tests/controls.sh $(OUTDIR)/test-ls-design
+	bash tests/booking.sh $(OUTDIR)/test-ls-design
 # Live visual acceptance is separate from the hermetic fixture gate.
 .PHONY: visual-review
 visual-review:

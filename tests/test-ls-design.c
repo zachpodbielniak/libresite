@@ -1381,7 +1381,8 @@ test_layout_render(void){
 		/* Motion: only with the script, only without reduced motion. */
 		if (g_str_equal(added[i][0], "motion")) {
 			gboolean moving = !g_str_equal(added[i][1], "none");
-			g_assert_true((strstr(js, "prefers-reduced-motion: reduce") != NULL) == moving);
+			/* The motion script's own guard; the form script also asks. */
+			g_assert_true((strstr(js, "(prefers-reduced-motion: reduce)\").matches) return;") != NULL) == moving);
 			g_assert_true((strstr(js, "is-pending") != NULL) == moving);
 		}
 	}
@@ -2128,6 +2129,116 @@ test_forms_use_controls(void){
 	}
 }
 
+static void write_bundle(JsonNode *bundle, const gchar *dir);
+
+/* No link on @html leads to the booking address @book, and a link to the
+ * page itself (@self) is only the navigation's current-page link. */
+static void
+check_no_self_link(const gchar *where, const gchar *html, const gchar *book, const gchar *self){
+	g_autofree gchar *to_book = g_strdup_printf("href=\"%s\"", book);
+	g_autofree gchar *to_self = g_strdup_printf("href=\"%s\"", self);
+	const gchar *at = html;
+	if (strstr(html, to_book) != NULL)
+		g_error("%s links to its own booking address %s", where, book);
+	while ((at = strstr(at, to_self)) != NULL) {
+		at += strlen(to_self);
+		if (!g_str_has_prefix(at, " aria-current=\"page\""))
+			g_error("%s links to itself outside the navigation: %.120s", where, at - strlen(to_self));
+	}
+}
+
+/* The booking request form of @html's booking calendar, from its wrapper
+ * to the end of its form, inclusive, or NULL. */
+static gchar *
+booking_request_of(const gchar *html){
+	const gchar *start = html != NULL ? strstr(html, "data-booking-request") : NULL;
+	const gchar *end = start != NULL ? strstr(start, "</form>") : NULL;
+	return end != NULL ? g_strndup(start, (gsize)(end + strlen("</form>") - start)) : NULL;
+}
+
+/* When open times cannot load, the booking page is a booking request form
+ * that works without scripts and sends the way the site's contact form
+ * does: the service as radios, a preferred date and time, name, how to
+ * reach the visitor, a note and the agreement box, in words that say the
+ * business confirms the time. The booking page never links to itself as
+ * its booking action; its book action leads to the form on the page.
+ * With LS_BOOKING_OUTPUT set, the mail-form site is written there for
+ * tests/booking.sh. */
+static void
+test_booking_request(void){
+	g_autoptr(LsComponents) components = library();
+	const gchar *output = g_getenv("LS_BOOKING_OUTPUT");
+	const gchar *modes[] = {"mailto", "endpoint", "none"};
+	const gchar *actions[] = {"action=\"mailto:office@hartwell.example\"", "action=\"/api/forms/quote\"",
+		"action=\"mailto:office@hartwell.example\""};
+	guint m;
+	for (m = 0; m < G_N_ELEMENTS(modes); m++) {
+		g_autofree gchar *pages = g_str_equal(modes[m], "none") ? NULL : enquiry_page(modes[m]);
+		g_autoptr(JsonNode) plan = NULL;
+		g_autoptr(JsonNode) bundle = compose_site(components, "evergreen", NULL, NULL, pages, &plan);
+		const gchar *book = file_in(bundle, "book.html");
+		const gchar *app;
+		g_autofree gchar *request = booking_request_of(book);
+		g_autofree gchar *service = NULL, *date = NULL, *time = NULL, *name = NULL, *reach = NULL;
+		g_autofree gchar *notes = NULL, *agree = NULL, *wrapper = NULL, *form = NULL;
+		/* Written first, so a failed check below leaves the site to look at. */
+		if (output != NULL && m == 0)
+			write_bundle(bundle, output);
+		g_assert_nonnull(book);
+		if (request == NULL)
+			g_error("%s: the booking page has no booking request form", modes[m]);
+		/* Neither the wrapper nor the form waits for a script. */
+		wrapper = g_strndup(request, (gsize)(strchr(request, '>') - request));
+		form = g_strndup(strstr(request, "<form"), (gsize)(strchr(strstr(request, "<form"), '>') - strstr(request, "<form")));
+		g_assert_null(strstr(wrapper, " hidden"));
+		g_assert_null(strstr(form, " hidden"));
+		app = strstr(book, "booking-calendar__app");
+		g_assert_nonnull(app);
+		g_assert_true(strstr(book, "data-booking-request") < app);
+		g_assert_true(g_str_has_prefix(app, "booking-calendar__app\" hidden"));
+		/* It sends the way the contact form does. */
+		if (strstr(form, actions[m]) == NULL)
+			g_error("%s: the request form does not send like the contact form: %s", modes[m], form);
+		g_assert_nonnull(strstr(form, "method=\"post\""));
+		g_assert_nonnull(strstr(form, "data-validate"));
+		if (g_str_equal(modes[m], "endpoint"))
+			g_assert_nonnull(strstr(form, "data-endpoint-form"));
+		else
+			g_assert_nonnull(strstr(form, "enctype=\"text/plain\""));
+		check_controls_labelled(modes[m], request);
+		service = field_of(request, "service");
+		date = field_of(request, "preferred_date");
+		time = field_of(request, "preferred_time");
+		name = field_of(request, "name");
+		reach = field_of(request, "reach");
+		notes = field_of(request, "notes");
+		agree = field_of(request, "agree");
+		if (service == NULL || strstr(service, "type=\"radio\"") == NULL || strstr(service, " required") == NULL)
+			g_error("%s: the services are not a required choice of radio buttons", modes[m]);
+		g_assert_nonnull(date);
+		g_assert_nonnull(strstr(date, "type=\"date\""));
+		g_assert_nonnull(strstr(date, " required"));
+		g_assert_nonnull(time);
+		g_assert_nonnull(strstr(time, "type=\"time\""));
+		g_assert_nonnull(name);
+		g_assert_nonnull(strstr(name, "autocomplete=\"name\""));
+		g_assert_nonnull(strstr(name, " required"));
+		g_assert_nonnull(reach);
+		g_assert_nonnull(strstr(reach, ">Email or phone"));
+		g_assert_nonnull(strstr(reach, " required"));
+		g_assert_nonnull(notes);
+		g_assert_nonnull(strstr(notes, "<textarea"));
+		if (agree == NULL || strstr(agree, "type=\"checkbox\"") == NULL || strstr(agree, " required") == NULL)
+			g_error("%s: no required agreement box on the request form", modes[m]);
+		/* Its words say the business confirms the time. */
+		g_assert_nonnull(strstr(request, "will confirm the time"));
+		/* No made-up open times: the page names no time of day itself. */
+		g_assert_null(strstr(request, " AM<"));
+		g_assert_null(strstr(request, " PM<"));
+		check_no_self_link(modes[m], book, "/book", "book.html");
+	}
+}
+
 /* Writes every text file of @bundle under @dir. */
 static void
 write_bundle(JsonNode *bundle, const gchar *dir){
@@ -2315,6 +2426,7 @@ main(int argc, char **argv){
 	g_test_add_func("/design/scheme-page", test_scheme_page);
 	g_test_add_func("/design/controls", test_controls);
 	g_test_add_func("/design/forms-use-controls", test_forms_use_controls);
+	g_test_add_func("/design/booking-request", test_booking_request);
 	g_test_add_func("/design/header-brand-scope", test_header_brand_scope);
 	g_test_add_func("/design/inline-links", test_inline_links);
 	g_test_add_func("/design/controls-gallery", test_controls_gallery);

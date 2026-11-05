@@ -1986,6 +1986,9 @@ test_booking_action(void){
 	contains(home, "<nav class=\"action-bar\" aria-label=\"Get in touch\">");
 	contains(home, "<a class=\"button action-bar__book\" href=\"/book\">Book online</a>");
 	contains(file_content(bundle, "visit.html"), "class=\"block block--booking-calendar");
+	/* On the page with the calendar, the action leads to it, not to itself. */
+	contains(file_content(bundle, "visit.html"), "<a class=\"button action-bar__book\" href=\"#choose-a-time\">");
+	lacks(file_content(bundle, "visit.html"), "href=\"/book\"");
 	lacks(home, "action-bar__call");
 	every = all_pages(bundle);
 	g_assert_cmpuint(occurrences(every, "action-bar__book"), >=, 2);
@@ -2015,8 +2018,10 @@ test_booking_action(void){
 	lacks(every, "action-bar__book");
 }
 
-/* Booking stays on the site's page, using the host's route for times and
- * the ordinary booking page as its no-script fallback. */
+/* Booking stays on the site's page, using the host's route for times. The
+ * page never links to itself as its booking action. Without a way to send
+ * there is no request form; with the supplied email, the request form
+ * that stands in for unloaded times sends by mail. */
 static void
 test_booking_calendar(void){
 	g_autoptr(LsComponents) components = library();
@@ -2036,7 +2041,8 @@ test_booking_calendar(void){
 	script = file_content(bundle, "site.js");
 	style = file_content(bundle, "styles.css");
 	contains(html, "data-booking-url=\"/book\"");
-	contains(html, "href=\"/book\"");
+	lacks(html, "href=\"/book\"");
+	lacks(html, "data-booking-request");
 	contains(html, "name=\"start\"");
 	contains(html, "name=\"name\"");
 	contains(html, "name=\"email\"");
@@ -2055,6 +2061,14 @@ test_booking_calendar(void){
 	contains(script, "Array.isArray(data.slots)");
 	contains(style, ".booking-calendar");
 	g_clear_pointer(&bundle, json_node_unref);
+	json_object_set_member(root, "contact", json("{'email':'hello@bench.example'}"));
+	bundle = compose_bundle(components, plan, pages);
+	html = file_content(bundle, "visit.html");
+	contains(html, "data-booking-request");
+	contains(html, "action=\"mailto:hello@bench.example\"");
+	lacks(html, "href=\"/book\"");
+	g_clear_pointer(&bundle, json_node_unref);
+	json_object_remove_member(root, "contact");
 	json_object_remove_member(root, "booking");
 	g_assert_false(ls_components_check_page(components, plan, "visit.html",
 		json_object_get_member(pages, "visit.html"), &error));
