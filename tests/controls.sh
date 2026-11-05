@@ -6,6 +6,7 @@
 # checks in headless Firefox at 390 and 1440 px:
 #   - the scheme toggle shows, cycles system, light, dark and back, keeps
 #     the choice in localStorage, and a reload starts in the chosen scheme;
+#   - nothing in the header overlaps the business name or another link;
 #   - every form control has a label, a 44 px target and a visible focus
 #     ring, and its border reads on the page in both schemes.
 # Needs firefox and geckodriver, or WEBDRIVER_URL.
@@ -107,6 +108,11 @@ for size in 390x844 1440x900; do
 	jq -e '.scheme == "dark" and .stored == "dark" and .ground == "dark" and (.labels | unique | length == 1)' <<< "$result" > /dev/null ||
 		{ printf '  %s: a reload did not keep the chosen dark scheme\n' "$size"; failed=1; }
 	run clear > /dev/null
+	open_page index.html
+	result=$(run header)
+	printf '%s header (%s): %s items\n' "$size" "$(jq -r .layout <<< "$result")" "$(jq .count <<< "$result")"
+	jq -r '.problems[]' <<< "$result" | sed "s/^/  $size: /"
+	jq -e '.problems | length == 0' <<< "$result" > /dev/null || failed=1
 	open_page contact.html
 	result=$(run controls)
 	printf '%s controls: %s checked\n' "$size" "$(jq .count <<< "$result")"

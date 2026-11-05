@@ -70,4 +70,19 @@ probes.controls = () => (async () => {
   delete document.documentElement.dataset.scheme;
   done({problems, count});
 })();
+/* The header: the business name and the links, the action and the toggle
+ * never overlap one another. */
+probes.header = () => {
+  const header = document.querySelector(".site-header");
+  const items = [...header.querySelectorAll(".brand, .site-nav a, .site-nav .button, [data-scheme-toggle]")]
+    .filter(el => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(el).visibility !== "hidden"; });
+  const problems = [];
+  for (let i = 0; i < items.length; i++) for (let j = i + 1; j < items.length; j++) {
+    if (items[i].contains(items[j]) || items[j].contains(items[i])) continue;
+    const a = items[i].getBoundingClientRect(), b = items[j].getBoundingClientRect();
+    const x = Math.min(a.right, b.right) - Math.max(a.left, b.left), y = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top);
+    if (x > 1 && y > 1) problems.push(`"${(items[i].innerText || items[i].getAttribute("aria-label") || "").trim()}" overlaps "${(items[j].innerText || items[j].getAttribute("aria-label") || "").trim()}"`);
+  }
+  done({problems, count: items.length, layout: [...document.body.classList].find(c => c.startsWith("header--")) || "none"});
+};
 probes[which]();

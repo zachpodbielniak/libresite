@@ -1553,6 +1553,35 @@ hex_luminance(const gchar *hex){
 	return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
 }
 
+/* The difference in hue between two #rrggbb colours, in degrees. */
+static gdouble
+hue_gap(const gchar *a, const gchar *b){
+	const gchar *colors[2];
+	gdouble hues[2], gap;
+	guint i;
+	colors[0] = a;
+	colors[1] = b;
+	for (i = 0; i < 2; i++) {
+		guint r, g, bl;
+		gdouble c[3], max, min, h = 0;
+		g_assert_cmpint(sscanf(colors[i], "#%02x%02x%02x", &r, &g, &bl), ==, 3);
+		c[0] = r / 255.0; c[1] = g / 255.0; c[2] = bl / 255.0;
+		max = MAX(c[0], MAX(c[1], c[2]));
+		min = MIN(c[0], MIN(c[1], c[2]));
+		if (max > min) {
+			if (max == c[0])
+				h = fmod((c[1] - c[2]) / (max - min), 6);
+			else if (max == c[1])
+				h = (c[2] - c[0]) / (max - min) + 2;
+			else
+				h = (c[0] - c[1]) / (max - min) + 4;
+		}
+		hues[i] = fmod(h * 60 + 360, 360);
+	}
+	gap = fabs(hues[0] - hues[1]);
+	return MIN(gap, 360 - gap);
+}
+
 /* Every preset carries its own dark scheme, written by hand in
  * themes.yaml: dark grounds, surfaces lighter than the page for depth,
  * its own accent and status colours, photo scrim and brand bands. Every
@@ -1609,6 +1638,23 @@ test_dark_schemes(void){
 					g_error("%s dark: %s on %s is under 4.5:1", presets[p][0], pairs[i][1], pairs[i][0]);
 			if (!ls_design_check(block(components), design, why))
 				g_error("%s: %s", presets[p][0], why->str);
+			/* The owner's colour paints the same parts in dark as in light:
+			 * a band that wears it in light wears it in dark. */
+			if (json_array_get_length(json_object_get_array_member(design, "colors")) > 0) {
+				JsonObject *light = json_object_get_object_member(design, "roles");
+				const gchar *tied[] = {"brand", "inverse", "photo_primary", "primary", "highlight"};
+				guint k;
+				/* Each ground may be lightened or deepened to keep its own text
+				 * at AA, as in light, but keeps the owner's hue. */
+				for (k = 0; k < G_N_ELEMENTS(tied); k++) {
+					if (g_strcmp0(ls_string(light, tied[k]), ls_string(light, "brand")) != 0)
+						continue;
+					if (hue_gap(ls_string(dark_roles, tied[k]), ls_string(dark_roles, "brand")) > 20)
+						g_error("%s dark: %s wears the owner's colour in light (%s) but %s in dark, where the brand is %s",
+							presets[p][0], tied[k], ls_string(light, tied[k]), ls_string(dark_roles, tied[k]),
+							ls_string(dark_roles, "brand"));
+				}
+			}
 		}
 	}
 	/* What a site ships: the light properties, then the dark ones the
