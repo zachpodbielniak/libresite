@@ -2334,6 +2334,31 @@ test_booking_words(void){
 		if (!ls_components_check_page(components, plan, "contact.html", page, &error))
 			g_error("the contact page may not say \"%s\": %s", words, error->message);
 	}
+	/* The plan's description of the booking page (its search snippet) and
+	 * the brief the writer gets say the same, or the plan is refused. */
+	{
+		JsonArray *planned = json_object_get_array_member(json_node_get_object(plan), "pages");
+		JsonObject *entry = NULL;
+		const gchar *members[] = {"description", "brief"};
+		guint m;
+		for (i = 0; i < json_array_get_length(planned); i++)
+			if (g_strcmp0(ls_string(json_array_get_object_element(planned, i), "path"), "book.html") == 0)
+				entry = json_array_get_object_element(planned, i);
+		g_assert_nonnull(entry);
+		for (m = 0; m < G_N_ELEMENTS(members); m++) {
+			g_autoptr(GError) error = NULL;
+			g_autofree gchar *kept = g_strdup(ls_string(entry, members[m]));
+			json_object_set_string_member(entry, members[m], "How to book: send one contact form or call.");
+			if (ls_components_check_plan(components, plan, &error))
+				g_error("the plan may give the booking page a %s that sends bookings to the contact form", members[m]);
+			g_assert_nonnull(strstr(error->message, "contact form"));
+			if (kept != NULL)
+				json_object_set_string_member(entry, members[m], kept);
+			else
+				json_object_remove_member(entry, members[m]);
+		}
+		g_assert_true(ls_components_check_plan(components, plan, NULL));
+	}
 	/* Without a booking page supplied, the words are not checked. */
 	json_object_remove_member(json_node_get_object(plan), "booking");
 	{
