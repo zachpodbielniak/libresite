@@ -293,6 +293,33 @@ form_controls_recipe(void){
 	}
 }
 
+/* The order's style.scheme, as the platform writes it: site.style may be a
+ * mapping {name, scheme}; name is the prompt style, scheme the lock. */
+static void
+style_scheme_recipe(void){
+	const gchar *valid[] = {"{scheme: dark}", "{scheme: light}", "{scheme: auto}", "{name: editorial, scheme: dark}",
+		"editorial"};
+	const gchar *invalid[] = {"{scheme: night}", "{scheme: ''}", "{colour: dark}", "{name: '', scheme: dark}", "{}", "[dark]"};
+	guint i;
+	for (i = 0; i < G_N_ELEMENTS(valid); i++) {
+		g_autofree gchar *text = g_strdup_printf("version: 1\nname: test\nsite: {brief: hi, style: %s}\n"
+			"pipeline: {steps: [{id: a, type: frontend}]}", valid[i]);
+		g_autoptr(GError) error = NULL;
+		g_autoptr(LsRecipe) recipe = ls_recipe_new(text, &error);
+		if (error != NULL)
+			g_error("%s: %s", valid[i], error->message);
+	}
+	for (i = 0; i < G_N_ELEMENTS(invalid); i++) {
+		g_autofree gchar *text = g_strdup_printf("version: 1\nname: test\nsite: {brief: hi, style: %s}\n"
+			"pipeline: {steps: [{id: a, type: frontend}]}", invalid[i]);
+		g_autoptr(GError) error = NULL;
+		g_autoptr(LsRecipe) recipe = ls_recipe_new(text, &error);
+		if (recipe != NULL)
+			g_error("%s was accepted", invalid[i]);
+		g_assert_nonnull(strstr(error->message, "site.style"));
+	}
+}
+
 int
 main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
@@ -301,6 +328,7 @@ main(int argc, char **argv){
 	g_test_add_func("/recipe/credit", credit_recipe);
 	g_test_add_func("/recipe/booking", booking_recipe);
 	g_test_add_func("/recipe/scheme", scheme_recipe);
+	g_test_add_func("/recipe/style-scheme", style_scheme_recipe);
 	g_test_add_func("/recipe/form-controls", form_controls_recipe);
 	g_test_add_func("/recipe/modules-valid", modules_valid);
 	g_test_add_func("/recipe/modules-invalid", modules_invalid);

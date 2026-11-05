@@ -1785,6 +1785,17 @@ test_scheme_page(void){
 			}
 		}
 	}
+	/* The order's style.scheme locks the site as site.scheme does. */
+	{
+		const gchar *locks[] = {"light", "dark", "auto"};
+		guint l;
+		for (l = 0; l < G_N_ELEMENTS(locks); l++) {
+			g_autofree gchar *order = g_strdup_printf("{\"brand\": {\"name\": \"Lock %u\"}, \"style\": {\"scheme\": \"%s\"},"
+				" \"contact\": {\"phone\": \"585-555-0141\"}, \"offers\": [{\"id\": \"a\", \"name\": \"Repairs\"}]}", l, locks[l]);
+			g_autoptr(JsonObject) design = design_for(components, order, "evergreen", four_photos);
+			g_assert_cmpstr(ls_string(design, "scheme"), ==, locks[l]);
+		}
+	}
 	/* The picker never chooses dark by itself: every trade, every preset. */
 	{
 		const gchar *trades[] = {"Plumbing", "Hair salon", "Law office", "Bakery", "Dental practice", "Roofing",
