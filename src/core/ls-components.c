@@ -4735,6 +4735,24 @@ booking_elsewhere(void){
 		G_REGEX_CASELESS, 0, NULL);
 }
 
+/* The words of @text that @elsewhere matches, with a little of the text
+ * around them, so a refusal shows the writer what to change. Returns a
+ * new string, or NULL when nothing matches. */
+static gchar *
+booking_quote(GRegex *elsewhere, const gchar *text){
+	g_autoptr(GMatchInfo) info = NULL;
+	glong first, last, length;
+	gint start, end;
+	g_autofree gchar *part = NULL;
+	if (text == NULL || !g_regex_match(elsewhere, text, 0, &info) || !g_match_info_fetch_pos(info, 0, &start, &end))
+		return NULL;
+	length = g_utf8_strlen(text, -1);
+	first = MAX(g_utf8_pointer_to_offset(text, text + start) - 60, 0);
+	last = MIN(g_utf8_pointer_to_offset(text, text + end) + 40, length);
+	part = g_utf8_substring(text, first, last);
+	return g_strconcat(first > 0 ? "..." : "", part, last < length ? "..." : "", NULL);
+}
+
 /* On a bookable site the plan's entry for a booking page has a description
  * (its search snippet) and a brief for the writer that agree with the
  * page's own way to book (see check_booking_words). */
@@ -4754,12 +4772,12 @@ check_booking_plan(Problems *problems, JsonNode *plan_node){
 		if (entry == NULL || booking_calendar_score(entry) != 5)
 			continue;
 		for (m = 0; m < G_N_ELEMENTS(members); m++) {
-			const gchar *text = ls_string(entry, members[m]);
-			if (text != NULL && g_regex_match(elsewhere, text, 0, NULL))
-				problem(problems, "the %s of %s sends bookings to the contact form, but the booking page has its "
-					"own way to book: the booking calendar, or the form that asks for a time when no open times "
-					"show. Say that visitors choose or ask for a time on that page: \"%.120s\"", members[m],
-					ls_string(entry, "path"), text);
+			g_autofree gchar *quote = booking_quote(elsewhere, ls_string(entry, members[m]));
+			if (quote != NULL)
+				problem(problems, "the %s of %s sends bookings to the contact form (\"%s\"), but the booking page "
+					"has its own way to book: the booking calendar, or the form that asks for a time when no open "
+					"times show. Say that visitors choose or ask for a time on that page", members[m],
+					ls_string(entry, "path"), quote);
 		}
 	}
 }
@@ -5405,7 +5423,7 @@ check_booking_words(Problems *problems, JsonNode *plan_node, const gchar *path, 
 	JsonObject *plan = plan_node != NULL && JSON_NODE_HOLDS_OBJECT(plan_node) ? json_node_get_object(plan_node) : NULL;
 	JsonArray *planned = member_array(plan, "pages");
 	g_autoptr(GRegex) elsewhere = NULL;
-	const gchar *hit;
+	g_autofree gchar *quote = NULL;
 	gboolean booking = FALSE;
 	guint i;
 	if (!ls_booking_valid(member_object(plan, "booking")) || page == NULL)
@@ -5418,11 +5436,11 @@ check_booking_words(Problems *problems, JsonNode *plan_node, const gchar *path, 
 	if (!booking)
 		return;
 	elsewhere = booking_elsewhere();
-	hit = filler_in(page, elsewhere);
-	if (hit != NULL)
-		problem(problems, "\"%.120s\" sends bookings to the contact form, but the booking page has its own way to "
+	quote = booking_quote(elsewhere, filler_in(page, elsewhere));
+	if (quote != NULL)
+		problem(problems, "\"%s\" sends bookings to the contact form, but the booking page has its own way to "
 			"book: the booking calendar, or the form that asks for a time when no open times show. Say that "
-			"visitors choose or ask for a time here, on this page", hit);
+			"visitors choose or ask for a time here, on this page", quote);
 }
 
 /* On a preset site a heading that promises a process ("how it works",
