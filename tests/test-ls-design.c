@@ -2305,7 +2305,8 @@ test_booking_words(void){
 	g_autoptr(LsComponents) components = library();
 	g_autoptr(JsonNode) plan = NULL;
 	g_autoptr(JsonNode) bundle = compose_site(components, "evergreen", NULL, NULL, NULL, &plan);
-	const gchar *contradictions[] = {"Requests and enquiries go through one shared contact form.",
+	const gchar *contradictions[] = {"Cuts, colour, balayage, blowouts and bridal styling are all on the services page,"
+		" with prices where we have them. Requests and enquiries go through one shared contact form.",
 		"Every booking request goes through the contact form.", "Use the shared form on the contact page.",
 		"If it can wait, [send the contact form](contact.html).", "One form handles every enquiry and quote request."};
 	const gchar *fine = "Choose an open time below. When no times show, ask for one with the form on this page.";
@@ -2328,6 +2329,8 @@ test_booking_words(void){
 		if (okay)
 			g_error("the booking page may say \"%s\"", words);
 		g_assert_nonnull(strstr(error->message, "contact form"));
+		if (i == 0 && strstr(error->message, "one shared contact form") == NULL)
+			g_error("the refusal does not quote the words at fault: %s", error->message);
 		/* The contact page may send visitors to its own form. */
 		g_clear_error(&error);
 		json_object_set_string_member(json_node_get_object(page), "path", "contact.html");
@@ -2348,10 +2351,14 @@ test_booking_words(void){
 		for (m = 0; m < G_N_ELEMENTS(members); m++) {
 			g_autoptr(GError) error = NULL;
 			g_autofree gchar *kept = g_strdup(ls_string(entry, members[m]));
-			json_object_set_string_member(entry, members[m], "How to book: send one contact form or call.");
+			/* Long, with the fault at the end: the refusal quotes the fault. */
+			json_object_set_string_member(entry, members[m], "page-header/plain 'Book with Studio Nine Salon'. text/narrow:"
+				" in a few plain lines, tell the visitor about cuts, colour and blowouts, then say that requests and enquiries"
+				" go through the one shared contact form on contact.html.");
 			if (ls_components_check_plan(components, plan, &error))
 				g_error("the plan may give the booking page a %s that sends bookings to the contact form", members[m]);
-			g_assert_nonnull(strstr(error->message, "contact form"));
+			if (strstr(error->message, "one shared contact form") == NULL)
+				g_error("the refusal does not quote the words at fault: %s", error->message);
 			if (kept != NULL)
 				json_object_set_string_member(entry, members[m], kept);
 			else
