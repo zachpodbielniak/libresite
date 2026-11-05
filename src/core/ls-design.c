@@ -845,16 +845,19 @@ given_roles(JsonObject *tokens, JsonObject *given){
 	return roles;
 }
 
-/* The roles that wear the brand colour in @roles, as keys. */
+/* The grounds that wear the brand colour in @roles, as keys: bands,
+ * buttons and the highlight. Text roles are left out; in dark the text
+ * stays the dark scheme's own light text. */
 static GPtrArray *
 brand_tied(JsonObject *roles){
+	static const gchar *const grounds[] = {"brand", "inverse", "primary", "photo_primary", "highlight", NULL};
 	GPtrArray *tied = g_ptr_array_new_with_free_func(g_free);
 	g_autofree gchar *brand = g_ascii_strdown(str_of(roles, "brand") != NULL ? str_of(roles, "brand") : "", -1);
 	g_autoptr(GList) keys = json_object_get_members(roles);
 	GList *key;
 	for (key = keys; key != NULL && *brand != '\0'; key = key->next) {
 		g_autofree gchar *value = g_ascii_strdown(str_of(roles, key->data), -1);
-		if (g_str_equal(value, brand))
+		if (g_str_equal(value, brand) && g_strv_contains(grounds, key->data))
 			g_ptr_array_add(tied, g_strdup(key->data));
 	}
 	return tied;
