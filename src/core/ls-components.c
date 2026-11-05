@@ -2785,7 +2785,7 @@ static const gchar *const ui_keys[] = {"skip", "menu", "nav", "footer_nav", "con
 	"address", "towns", "all_services", "based_in", "how_it_works", "where_we_work", "own_work", "reviews_on",
 	"mentioned_in", "our_places", "announcement", "dismiss", "directions", "scheme", "scheme_system", "scheme_light",
 	"scheme_dark", "contact_by", "by_phone", "by_email", "preferred_date", "preferred_time", "urgent", "agree",
-	"photos", "photos_hint", "service"};
+	"photos", "photos_hint", "service", "request_intro", "request_send", "your_name", "reach", "note"};
 static const gchar *const ui_defaults[] = {"Skip to content", "Menu", "Primary", "Footer", "Contents",
 	"Filter entries", "{n} entry shown", "{n} entries shown", "required", "Clear", "Preview",
 	"Download text file", "Fill in this field.", "Check this entry.", "{n} fields need attention.",
@@ -2797,7 +2797,8 @@ static const gchar *const ui_defaults[] = {"Skip to content", "Menu", "Primary",
 	"{n} reviews on {source}", "Mentioned in", "Where to find us", "Notice", "Dismiss", "Get directions",
 	"Colours", "Auto", "Light", "Dark", "Contact me by", "Phone", "Email", "Preferred date", "Preferred time",
 	"This is urgent", "You may contact me about this request.", "Photos of the job", "Optional. Pictures help us see the job.",
-	"Service"};
+	"Service", "Tell us the day and time you would like. We will confirm the time with you.",
+	"Ask for this time", "Name", "Email or phone", "Note"};
 /* An interface string for @plan: its own ui text, else the default. */
 static const gchar *
 plan_ui(JsonObject *plan, const gchar *key){
@@ -5488,6 +5489,7 @@ typedef struct {
 	const gchar *quote;		/* the live form on its page, for the quote action, or NULL */
 	const gchar *book;		/* the supplied booking page, for the book action, or NULL */
 	GHashTable *modules;		/* supplied podbay module ids drawn anywhere */
+	JsonObject *request;		/* how a booking request is sent: {mode, target}, or NULL */
 } Render;
 
 static void derived_filter(Render *render, JsonObject *view, const gchar *field);
@@ -6739,6 +6741,60 @@ design_variant(JsonObject *plan, const gchar *name, const gchar *variant, JsonOb
 	return variant;
 }
 
+/* The booking request form of the calendar @id, for when open times cannot
+ * load (docs/components.org, "Book online"): the order's @services as a
+ * choice, a preferred date and time, the visitor's name, how to reach them,
+ * a note and the agreement box. It is a form view as form.html draws one,
+ * sending as render->request says, and works without scripts. Returns a
+ * new view. */
+static JsonObject *
+request_view(Render *render, const gchar *id, JsonArray *services){
+	g_autoptr(JsonObject) content = json_object_new();
+	g_autofree gchar *rid = g_strdup_printf("%s-request", id);
+	JsonObject *view = json_object_new();
+	JsonArray *fields = json_array_new();
+	JsonObject *field;
+	json_object_set_string_member(content, "mode", ls_string(render->request, "mode"));
+	json_object_set_string_member(content, "target", ls_string(render->request, "target"));
+	json_object_set_array_member(content, "fields", fields);
+	if (services != NULL && json_array_get_length(services) > 0) {
+		guint n = json_array_get_length(services);
+		field = new_field("service", ui_text(render, "service"), n >= 2 && n <= 3 ? "toggle" : "radio");
+		json_object_set_array_member(field, "options", json_array_ref(services));
+		json_object_set_boolean_member(field, "required", TRUE);
+		json_array_add_object_element(fields, field);
+	}
+	field = new_field("preferred_date", ui_text(render, "preferred_date"), "date");
+	json_object_set_boolean_member(field, "required", TRUE);
+	json_array_add_object_element(fields, field);
+	json_array_add_object_element(fields, new_field("preferred_time", ui_text(render, "preferred_time"), "time"));
+	field = new_field("name", ui_text(render, "your_name"), "text");
+	json_object_set_string_member(field, "autocomplete", "name");
+	json_object_set_int_member(field, "maxlength", 200);
+	json_object_set_boolean_member(field, "required", TRUE);
+	json_array_add_object_element(fields, field);
+	field = new_field("reach", ui_text(render, "reach"), "text");
+	json_object_set_int_member(field, "maxlength", 254);
+	json_object_set_boolean_member(field, "required", TRUE);
+	json_array_add_object_element(fields, field);
+	field = new_field("notes", ui_text(render, "note"), "textarea");
+	json_object_set_int_member(field, "maxlength", 4000);
+	json_array_add_object_element(fields, field);
+	field = new_field("agree", ui_text(render, "agree"), "checkbox");
+	json_object_set_boolean_member(field, "required", TRUE);
+	json_array_add_object_element(fields, field);
+	form_view(render, view, content, rid);
+	/* form_view writes the mail link only when the address lacks one. */
+	if (ls_string(view, "target") == NULL)
+		json_object_set_string_member(view, "target", ls_string(content, "target"));
+	json_object_set_string_member(view, "intro", ui_text(render, "request_intro"));
+	json_object_set_string_member(view, "submit", ui_text(render, "request_send"));
+	json_object_set_string_member(view, "send_another_label", ui_text(render, "send_another"));
+	/* The form's styles and script come with it. */
+	g_hash_table_add(render->used, g_strdup("form"));
+	return view;
+}
+
 static void
 render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArray *toc){
 	g_autoptr(GHashTable) anchors = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
@@ -6843,6 +6899,14 @@ render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArra
 					json_array_get_length(names) <= 3);
 				json_object_set_array_member(services, "choices", choice_views(fid, names));
 				json_object_set_object_member(view, "services", services);
+			}
+			/* When open times cannot load, a request form asks for a time. */
+			if (render->request != NULL)
+				json_object_set_object_member(view, "request", request_view(render, id, names));
+			else {
+				JsonObject *call = call_view(render->plan);
+				if (call != NULL)
+					json_object_set_object_member(view, "call", call);
 			}
 		} else if (g_str_equal(name, "module")) {
 			/* The supplied snippet, as podbay drew it and checked again with
@@ -7150,6 +7214,49 @@ look_classes(LsComponents *self, JsonObject *look){
 			value = look_default(self, axis->data);
 		g_string_append_printf(out, "%slook-%s-%s", out->len > 0 ? " " : "", (const gchar *)axis->data, value);
 	}
+	return g_string_free(out, FALSE);
+}
+
+/* "#ID" of the booking calendar among a page's @sections when the site has
+ * a booking page, else NULL. */
+static gchar *
+booking_anchor(Render *render, JsonArray *sections){
+	g_autoptr(GHashTable) anchors = NULL;
+	g_autoptr(GPtrArray) ids = NULL;
+	guint i;
+	if (render->book == NULL || sections == NULL)
+		return NULL;
+	for (i = 0; i < json_array_get_length(sections); i++) {
+		JsonNode *node = json_array_get_element(sections, i);
+		if (JSON_NODE_HOLDS_OBJECT(node) &&
+			g_strcmp0(ls_string(json_node_get_object(node), "component"), "booking-calendar") == 0)
+			break;
+	}
+	if (i == json_array_get_length(sections))
+		return NULL;
+	anchors = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
+	ids = section_ids(sections, anchors);
+	return g_strdup_printf("#%s", (const gchar *)g_ptr_array_index(ids, i));
+}
+
+/* @html with every link to @href, except a current-page link, leading to
+ * @anchor instead. Returns a new string. */
+static gchar *
+point_links(const gchar *html, const gchar *href, const gchar *anchor){
+	g_autofree gchar *escaped = ls_template_escape(href);
+	g_autofree gchar *needle = g_strdup_printf("href=\"%s\"", escaped);
+	GString *out = g_string_new(NULL);
+	const gchar *at = html, *found;
+	while ((found = strstr(at, needle)) != NULL) {
+		const gchar *after = found + strlen(needle);
+		g_string_append_len(out, at, found - at);
+		if (g_str_has_prefix(after, " aria-current="))
+			g_string_append(out, needle);
+		else
+			g_string_append_printf(out, "href=\"%s\"", anchor);
+		at = after;
+	}
+	g_string_append(out, at);
 	return g_string_free(out, FALSE);
 }
 
@@ -7501,15 +7608,29 @@ render_page(Render *render, const gchar *path, const gchar *title, const gchar *
 			json_object_set_array_member(view, "font_preloads", font_preloads(plan));
 		}
 	}
-	/* Every link to the live form opens the quote dialog, when there is one. */
-	if (json_object_has_member(view, "quote_dialog") && render->quote != NULL) {
+	{
 		g_autofree gchar *html = render_template(render, "layout.html", view);
-		g_autofree gchar *escaped = ls_template_escape(render->quote);
-		g_autofree gchar *needle = g_strdup_printf("href=\"%s\"", escaped);
-		g_autofree gchar *with = g_strdup_printf("href=\"%s\" data-dialog=\"quote-dialog\"", escaped);
-		return replace_all(html, needle, with);
+		g_autofree gchar *here = booking_anchor(render, member_array(page, "sections"));
+		/* Every link to the live form opens the quote dialog, when there is one. */
+		if (json_object_has_member(view, "quote_dialog") && render->quote != NULL) {
+			g_autofree gchar *escaped = ls_template_escape(render->quote);
+			g_autofree gchar *needle = g_strdup_printf("href=\"%s\"", escaped);
+			g_autofree gchar *with = g_strdup_printf("href=\"%s\" data-dialog=\"quote-dialog\"", escaped);
+			gchar *dialog = replace_all(html, needle, with);
+			g_free(html);
+			html = dialog;
+		}
+		/* The booking page never links to itself as its booking action:
+		 * its book links lead to the calendar on the page. The navigation's
+		 * current-page links stay. */
+		if (here != NULL) {
+			gchar *pointed = point_links(html, render->book, here);
+			g_free(html);
+			html = point_links(pointed, path, here);
+			g_free(pointed);
+		}
+		return g_steal_pointer(&html);
 	}
-	return render_template(render, "layout.html", view);
 }
 
 static void
@@ -7852,6 +7973,52 @@ quote_href(JsonObject *plan, JsonObject *pages){
 	return NULL;
 }
 
+/* How a booking request is sent when open times cannot load: the way the
+ * site's contact form sends (the supplied form, else the first written
+ * form, in page order, that sends by mail or to an endpoint), else by mail
+ * to the supplied email. Returns a new {mode, target}, or NULL when the
+ * site has no way to send. */
+static JsonObject *
+request_way(JsonObject *plan, JsonObject *pages){
+	JsonObject *form = member_object(plan, "form");
+	JsonArray *planned = member_array(plan, "pages");
+	JsonObject *contact = member_object(plan, "contact");
+	const gchar *email = contact != NULL ? ls_string(contact, "email") : NULL;
+	JsonObject *way;
+	guint i;
+	if (form != NULL && member_array(form, "fields") != NULL && ls_string(form, "action") != NULL) {
+		way = json_object_new();
+		json_object_set_string_member(way, "mode", "endpoint");
+		json_object_set_string_member(way, "target", ls_string(form, "action"));
+		return way;
+	}
+	for (i = 0; planned != NULL && i < json_array_get_length(planned); i++) {
+		const gchar *path = ls_string(json_array_get_object_element(planned, i), "path");
+		JsonNode *node = path != NULL ? json_object_get_member(pages, path) : NULL;
+		JsonArray *sections = node != NULL && JSON_NODE_HOLDS_OBJECT(node)
+			? member_array(json_node_get_object(node), "sections") : NULL;
+		guint j;
+		for (j = 0; sections != NULL && j < json_array_get_length(sections); j++) {
+			JsonObject *section = json_array_get_object_element(sections, j);
+			JsonObject *content = member_object(section, "content");
+			const gchar *mode = ls_string(content, "mode");
+			if (g_strcmp0(ls_string(section, "component"), "form") != 0 || ls_string(content, "target") == NULL ||
+				(g_strcmp0(mode, "mailto") != 0 && g_strcmp0(mode, "endpoint") != 0))
+				continue;
+			way = json_object_new();
+			json_object_set_string_member(way, "mode", mode);
+			json_object_set_string_member(way, "target", ls_string(content, "target"));
+			return way;
+		}
+	}
+	if (email == NULL || strchr(email, '@') == NULL || strpbrk(email, " <>\"'") != NULL)
+		return NULL;
+	way = json_object_new();
+	json_object_set_string_member(way, "mode", "mailto");
+	json_object_set_string_member(way, "target", email);
+	return way;
+}
+
 /* A booking, contact or visit page outranks a name that merely contains
  * those letters. Zero means leave the page alone. */
 static gint
@@ -7952,7 +8119,7 @@ library_variant(LsComponents *self, const gchar *extra){
 gchar *
 ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages, const gchar *base_url, GError **error){
 	Problems problems = {g_ptr_array_new_with_free_func(g_free)};
-	Render render = {self, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
+	Render render = {self, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 	g_autoptr(JsonObject) ui = json_object_new();
 	g_autoptr(JsonObject) booking_pages = NULL;
 	g_autoptr(GHashTable) used = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
@@ -7961,6 +8128,7 @@ ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages
 	g_autoptr(JsonObject) bundle = json_object_new();
 	g_autofree gchar *base = NULL;
 	g_autofree gchar *quote = NULL;
+	g_autoptr(JsonObject) request = NULL;
 	JsonArray *files = json_array_new();
 	JsonArray *planned;
 	JsonObject *plan;
@@ -8007,8 +8175,12 @@ ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages
 	render.base = base;
 	render.quote = quote;
 	/* A supplied booking page offers the book action that leads to it. */
-	if (ls_booking_valid(member_object(plan, "booking")))
+	if (ls_booking_valid(member_object(plan, "booking"))) {
 		render.book = ls_string(member_object(plan, "booking"), "href");
+		/* Its calendar asks for a time the way the site sends its forms. */
+		request = request_way(plan, pages);
+		render.request = request;
+	}
 	if (base != NULL) {
 		sitemap = g_string_new("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
 			"<urlset xmlns=\"http://www.sitemaps.org/schemas/sitemap/0.9\">\n");

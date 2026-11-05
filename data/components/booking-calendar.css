@@ -35,3 +35,5 @@
 }
 .booking-calendar__confirmed:focus { outline: 3px solid var(--focus); outline-offset: 3px; }
 .booking-calendar [hidden] { display: none; }
+.booking-calendar__request { margin-top: var(--space-4); }
+.booking-calendar__request-intro { margin-block: 0 var(--space-4); }

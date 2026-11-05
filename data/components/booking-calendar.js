@@ -1,11 +1,13 @@
 /* The host owns availability and the booking. This script only draws the
- * public slots and leaves the ordinary booking link when that list cannot
- * be read. Venture's GET ?format=json body is a JSON array of
- * {start, end, label, day}. A {"slots":[...]} object is accepted too. */
+ * public slots. Until it has at least one, and whenever the list cannot be
+ * read or is empty, the booking request form (or the call line) stays, so
+ * a visitor can still ask for a time. Venture's GET ?format=json body is a
+ * JSON array of {start, end, label, day}. A {"slots":[...]} object is
+ * accepted too. */
 document.querySelectorAll(".booking-calendar [data-booking-url]").forEach(function (root) {
 	var url = root.getAttribute("data-booking-url");
 	var app = root.querySelector(".booking-calendar__app");
-	var fallback = root.querySelector(".booking-calendar__fallback");
+	var fallback = root.querySelector("[data-booking-request]") || root.querySelector(".booking-calendar__fallback");
 	var days = root.querySelector("[data-booking-days]");
 	var monthLabel = root.querySelector("[data-booking-month]");
 	var status = root.querySelector("[data-booking-status]");
@@ -18,7 +20,7 @@ document.querySelectorAll(".booking-calendar [data-booking-url]").forEach(functi
 	var offset = 0;
 	var origin = new Date();
 	origin = new Date(origin.getFullYear(), origin.getMonth(), 1);
-	if (!url || !app || !fallback || !days || !monthLabel || !status || !times || !timeList || !form || !confirmed || typeof fetch === "undefined")
+	if (!url || !app || !days || !monthLabel || !status || !times || !timeList || !form || !confirmed || typeof fetch === "undefined")
 		return;
 	function pad(value) { return String(value).padStart(2, "0"); }
 	function monthKey(date) { return date.getFullYear() + "-" + pad(date.getMonth() + 1); }
@@ -153,6 +155,12 @@ document.querySelectorAll(".booking-calendar [data-booking-url]").forEach(functi
 					times.hidden = true;
 					form.hidden = true;
 					selected = "";
+					/* With no time left, the request form asks for one. */
+					if (!slots.length && fallback) {
+						app.hidden = true;
+						fallback.hidden = false;
+						return;
+					}
 					showMonth();
 					release(slots.length ? "That time was just taken. Choose another day." : "No open times are available right now.");
 					return;
@@ -177,14 +185,19 @@ document.querySelectorAll(".booking-calendar [data-booking-url]").forEach(functi
 			if (!list) throw new Error("unavailable");
 			slots = list.filter(usable);
 			slots.sort(function (a, b) { return a.day < b.day ? -1 : a.day > b.day ? 1 : 0; });
+			/* An empty answer keeps the request form. */
+			if (!slots.length && fallback) return;
 			if (slots.length) {
 				parts = slots[0].day.split("-");
 				origin = new Date(Number(parts[0]), Number(parts[1]) - 1, 1);
 			}
 			app.hidden = false;
-			fallback.hidden = true;
+			if (fallback) fallback.hidden = true;
 			showMonth();
 			status.textContent = slots.length ? "Choose an open day." : "No open times are available right now.";
 		})
-		.catch(function () { fallback.hidden = false; });
+		.catch(function () {
+			app.hidden = true;
+			if (fallback) fallback.hidden = false;
+		});
 });
