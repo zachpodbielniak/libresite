@@ -526,6 +526,26 @@ validate_site(JsonObject *site, GError **error){
 					"address without spaces, quotes or angle brackets");
 				return FALSE;
 			}
+		} else if (g_str_equal(key, "style")) {
+			/* The order's style: a prompt style name, or a mapping of that
+			 * name and the colour scheme lock, style.scheme. */
+			JsonNode *node = json_object_get_member(site, key);
+			JsonObject *style = JSON_NODE_HOLDS_OBJECT(node) ? json_node_get_object(node) : NULL;
+			const gchar *name = style != NULL ? ls_string(style, "name") : ls_string(site, key);
+			const gchar *scheme = style != NULL ? ls_string(style, "scheme") : NULL;
+			gboolean ok;
+			if (style == NULL)
+				ok = name != NULL && *name != '\0';
+			else
+				ok = ls_object_keys(style, "|name|scheme|", NULL) && json_object_get_size(style) > 0 &&
+					(!json_object_has_member(style, "name") || (name != NULL && *name != '\0')) &&
+					(!json_object_has_member(style, "scheme") || g_strcmp0(scheme, "auto") == 0 ||
+					g_strcmp0(scheme, "light") == 0 || g_strcmp0(scheme, "dark") == 0);
+			if (!ok) {
+				g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID, "site.style must be a style name or {name, scheme}: "
+					"name a nonempty style name, scheme auto, light or dark");
+				return FALSE;
+			}
 		} else if (g_str_equal(key, "scheme")) {
 			/* The owner's colour scheme: auto follows the visitor; light or
 			 * dark locks the site to one. */

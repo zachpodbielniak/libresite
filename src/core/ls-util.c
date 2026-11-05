@@ -442,6 +442,22 @@ ls_form_field_shape_rule(void){
 }
 
 const gchar *
+ls_site_style_name(JsonObject *site){
+	JsonNode *node = site != NULL ? json_object_get_member(site, "style") : NULL;
+	if (node != NULL && JSON_NODE_HOLDS_OBJECT(node))
+		return ls_string(json_node_get_object(node), "name");
+	return site != NULL ? ls_string(site, "style") : NULL;
+}
+
+const gchar *
+ls_site_scheme(JsonObject *site){
+	JsonNode *node = site != NULL ? json_object_get_member(site, "style") : NULL;
+	if (node != NULL && JSON_NODE_HOLDS_OBJECT(node) && ls_string(json_node_get_object(node), "scheme") != NULL)
+		return ls_string(json_node_get_object(node), "scheme");
+	return site != NULL ? ls_string(site, "scheme") : NULL;
+}
+
+const gchar *
 ls_form_requirements(void){
 	return "site.form needs {action, fields, honeypot}: action a same-site path such as /api/forms/contact or an "
 		"https:// address, without spaces, quotes, ? or #; fields 1 to 12 unique {name, label, type, required, "

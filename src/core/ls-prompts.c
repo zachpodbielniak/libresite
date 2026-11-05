@@ -1,5 +1,6 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
 #include "core/ls-prompts.h"
+#include "core/ls-util.h"
 #include <string.h>
 /* Referencing this symbol pulls the embedded catalog out of the static archive. */
 GResource *ls_resources_get_resource(void);
@@ -168,7 +169,7 @@ ls_prompts_render_spec(LsPrompts *self, LsRecipe *recipe, JsonObject *step,
 	const gchar *stage, const gchar *reference, const gchar *task, GError **error){
 	JsonObject *root = json_node_get_object(self->root);
 	JsonObject *site = json_object_get_object_member(ls_recipe_get_root(recipe), "site");
-	const gchar *style = ls_string(site, "style") != NULL ? ls_string(site, "style") : "editorial";
+	const gchar *style = ls_site_style_name(site) != NULL ? ls_site_style_name(site) : "editorial";
 	const gchar *style_text = ls_string(json_object_get_object_member(root, "styles"), style);
 	const gchar *stage_text = ls_string(json_object_get_object_member(root, "stages"), stage);
 	const gchar *system = ls_prompts_get_spec_system(self);
@@ -246,7 +247,7 @@ ls_prompts_render(
 ){
 	JsonObject *root = json_node_get_object(self->root);
 	JsonObject *site = json_object_get_object_member(ls_recipe_get_root(recipe), "site");
-	const gchar *style = ls_string(site, "style");
+	const gchar *style = ls_site_style_name(site);
 	const gchar *stage = ls_string(step, "prompt");
 	const gchar *stack = ls_string(site, "stack");
 	const gchar *stack_text = "(none)";

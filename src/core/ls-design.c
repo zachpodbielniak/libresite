@@ -224,7 +224,7 @@ ls_design_owner_words(JsonObject *site){
 	guint i;
 	if (site == NULL)
 		return words;
-	add_words(words, str_of(site, "style"));
+	add_words(words, ls_site_style_name(site));
 	add_words(words, str_of(brand, "colors"));
 	add_words(words, str_of(brand, "tone"));
 	for (i = 0; requirements != NULL && i < G_N_ELEMENTS(labels); i++)
@@ -1448,7 +1448,7 @@ ls_design_new(JsonObject *library, JsonObject *themes, JsonObject *site, const g
 		object_of(preset_design, "roles"), site, applied, NULL));
 	/* Both schemes; the order may lock one, else the visitor's system and
 	 * the toggle choose. */
-	json_object_set_string_member(design, "scheme", str_of(site, "scheme") != NULL ? str_of(site, "scheme") : "auto");
+	json_object_set_string_member(design, "scheme", ls_site_scheme(site) != NULL ? ls_site_scheme(site) : "auto");
 	json_object_set_object_member(design, "dark", dark_scheme(library, theme, site));
 	json_object_set_object_member(design, "controls", form_controls(site, sector_name));
 	json_object_set_array_member(design, "colors", applied);

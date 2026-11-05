@@ -593,7 +593,7 @@ The rules each dark scheme follows (sources in the slice 5 research note):
 
 ** How a site chooses
 
-=design.scheme= is =auto= unless the order locks it. =site.scheme= in the recipe takes =auto=, =light= or =dark=. The recipe check refuses other values. The picker never chooses dark by itself, for any trade.
+=design.scheme= is =auto= unless the order locks it. The order sets =style.scheme=: =site.style= may be a mapping ={name, scheme}=, where =name= is the prompt style and =scheme= is =auto=, =light= or =dark=. =site.scheme= is accepted with the same values. The recipe check refuses other values. The picker never chooses dark by itself, for any trade.
 
 - =auto=: =styles.css= holds the light properties, then the dark ones twice: in =@media (prefers-color-scheme: dark)= for =:root:not([data-scheme="light"])=, and for =:root[data-scheme="dark"]=. The page's =color-scheme= meta is =light dark=, and the browser bar takes the light or dark page colour from two =theme-color= metas. Without scripts, the visitor's system setting decides.
 - =light=: one scheme, no dark properties, no toggle.
@@ -661,7 +661,7 @@ The booking calendar's form gets the order's services as a choice and the requir
 
 - =/design/controls=: a page with every control renders each from its native element with a label or legend and an error tie; choices are radio buttons in a fieldset, the switch is a checkbox with =role="switch"=, the range has its bounds and an =output=, the file input accepts images and makes the form multipart; no =role="radio"= or =role="checkbox"= stand-ins; =controls.css= has the target, focus, corner, border, accent and weight rules; the page check refuses a choice without options, options on a text field, a range without bounds or with =min= above =max=, a switch with options and an unknown type. With =LS_CONTROLS_OUTPUT= set it writes the site there.
 - =/design/forms-use-controls=: a written enquiry form in =mailto= and =endpoint= modes gets the service choice, "contact me by", the date and time, the urgent switch, the agreement box and, only when posted, the upload; the booking form gets the service choice and the agreement; urgent and photos follow the order and trade; a supplied form draws its radio group in the hero and modal forms and gains nothing.
-- =tests/test-ls-recipe.c=, =/recipe/form-controls=: a supplied form accepts every control and refuses the malformed ones; =/recipe/scheme=: =site.scheme= takes only =auto=, =light= and =dark=.
+- =tests/test-ls-recipe.c=, =/recipe/form-controls=: a supplied form accepts every control and refuses the malformed ones; =/recipe/scheme= and =/recipe/style-scheme=: =site.scheme= and =site.style.scheme= take only =auto=, =light= and =dark=.
 - =tests/controls.sh= (browser, =make site-gate=): every control on the controls page, in light and dark at 390 and 1440 px, has a visible label, a 44 px target, a focus ring, a border at 3:1 on the page and a label at AA.
 
 * Podbay modules
