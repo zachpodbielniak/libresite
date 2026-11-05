@@ -37,3 +37,5 @@
 .booking-calendar [hidden] { display: none; }
 .booking-calendar__request { margin-top: var(--space-4); }
 .booking-calendar__request-intro { margin-block: 0 var(--space-4); }
+/* The calendar waiting for times, and the written form it replaces. */
+section.block[hidden] { display: none; }
