@@ -483,7 +483,7 @@ validate_site(JsonObject *site, GError **error){
 	guint i;
 	if (!ls_object_keys(site,
 		"|brief|audience|style|stack|frontend|backend|database|requirements|pages|offers|contact|brand|copy_lock|languages|"
-		"photos|media|social|avoid|form|modules|credit|booking|demo|reviews|press|rating|locations|",
+		"photos|media|social|avoid|form|modules|credit|booking|demo|reviews|press|rating|locations|scheme|",
 		error))
 		return FALSE;
 	if (!json_object_has_member(site, "brief")) {
@@ -524,6 +524,15 @@ validate_site(JsonObject *site, GError **error){
 				g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID,
 					"site.credit needs {text, url}: text one line of 1 to 80 characters and url an https:// "
 					"address without spaces, quotes or angle brackets");
+				return FALSE;
+			}
+		} else if (g_str_equal(key, "scheme")) {
+			/* The owner's colour scheme: auto follows the visitor; light or
+			 * dark locks the site to one. */
+			const gchar *scheme = ls_string(site, key);
+			if (scheme == NULL || (!g_str_equal(scheme, "auto") && !g_str_equal(scheme, "light") &&
+				!g_str_equal(scheme, "dark"))) {
+				g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID, "site.scheme must be auto, light or dark");
 				return FALSE;
 			}
 		} else if (g_str_equal(key, "demo")) {

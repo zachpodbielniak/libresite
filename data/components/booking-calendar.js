@@ -132,7 +132,9 @@ document.querySelectorAll(".booking-calendar [data-booking-url]").forEach(functi
 				start: fields.get("start"),
 				name: fields.get("name"),
 				email: fields.get("email"),
-				notes: fields.get("notes")
+				/* The host's booking takes start, name, email and notes; the
+				 * chosen service travels at the head of the note. */
+				notes: (fields.get("service") ? "Service: " + fields.get("service") + "\n" : "") + (fields.get("notes") || "")
 			})
 		}).then(function (reply) {
 			if (reply.status === 409) return { taken: true };

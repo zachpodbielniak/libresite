@@ -215,6 +215,8 @@ is_utility(const gchar *path){
 /* ---- Colors ------------------------------------------------------------- */
 
 static gchar *accent_text(const gchar *accent, const gchar *paper, const gchar *surface, const gchar *ink);
+static void color_css(GString *out, JsonObject *tokens);
+static const gchar *plan_scheme(JsonObject *plan);
 
 static gboolean
 parse_color(const gchar *text, gdouble rgb[3]){
@@ -1503,11 +1505,16 @@ ls_components_new_from_snapshot(const gchar *snapshot, GError **error){
 		if (text == NULL)
 			return NULL;
 	}
-	/* Older sealed libraries keep their original photo treatment. */
+	/* Older sealed libraries keep their original photo treatment, form
+	 * fields and single colour scheme. */
 	{
-		g_autofree gchar *text = load_resource(self, digest, "supplied-photos.css", snapshot == NULL, error);
-		if (text == NULL && snapshot == NULL)
-			return NULL;
+		const gchar *later[] = {"supplied-photos.css", "controls.css", "scheme.js", "fields.html"};
+		guint k;
+		for (k = 0; k < G_N_ELEMENTS(later); k++) {
+			g_autofree gchar *text = load_resource(self, digest, later[k], snapshot == NULL, error);
+			if (text == NULL && snapshot == NULL)
+				return NULL;
+		}
 	}
 	self->order = g_ptr_array_new_with_free_func(g_free);
 	names = json_object_get_members(self->components);
@@ -2776,7 +2783,9 @@ static const gchar *const ui_keys[] = {"skip", "menu", "nav", "footer_nav", "con
 	"checklist_yes", "checklist_no", "close", "ingredients", "method", "social", "share", "copy_link", "copied",
 	"sending", "sent", "send_failed", "call", "quote", "quick_actions", "send_another", "book", "since", "hours",
 	"address", "towns", "all_services", "based_in", "how_it_works", "where_we_work", "own_work", "reviews_on",
-	"mentioned_in", "our_places", "announcement", "dismiss", "directions"};
+	"mentioned_in", "our_places", "announcement", "dismiss", "directions", "scheme", "scheme_system", "scheme_light",
+	"scheme_dark", "contact_by", "by_phone", "by_email", "preferred_date", "preferred_time", "urgent", "agree",
+	"photos", "photos_hint", "service"};
 static const gchar *const ui_defaults[] = {"Skip to content", "Menu", "Primary", "Footer", "Contents",
 	"Filter entries", "{n} entry shown", "{n} entries shown", "required", "Clear", "Preview",
 	"Download text file", "Fill in this field.", "Check this entry.", "{n} fields need attention.",
@@ -2785,7 +2794,10 @@ static const gchar *const ui_defaults[] = {"Skip to content", "Menu", "Primary",
 	"Sending your message.", "Thank you. Your message was sent.", "Your message was not sent. Please try again.",
 	"Call", "Request a quote", "Get in touch", "Send another message", "Book online", "In business since", "Hours",
 	"Address", "Towns served", "All services", "Based in", "How it works", "Where we work", "Our work",
-	"{n} reviews on {source}", "Mentioned in", "Where to find us", "Notice", "Dismiss", "Get directions"};
+	"{n} reviews on {source}", "Mentioned in", "Where to find us", "Notice", "Dismiss", "Get directions",
+	"Colours", "Auto", "Light", "Dark", "Contact me by", "Phone", "Email", "Preferred date", "Preferred time",
+	"This is urgent", "You may contact me about this request.", "Photos of the job", "Optional. Pictures help us see the job.",
+	"Service"};
 /* An interface string for @plan: its own ui text, else the default. */
 static const gchar *
 plan_ui(JsonObject *plan, const gchar *key){
@@ -3792,7 +3804,7 @@ check_preset(Problems *problems, LsComponents *self, JsonObject *theme, const gc
 		problem(problems, "presets need the catalog's library block");
 		return;
 	}
-	if (design == NULL || !ls_object_keys(design, "|source|fits|words|roles|kicker|accent|font_accent|font_label|shape|prefer|",
+	if (design == NULL || !ls_object_keys(design, "|source|fits|words|roles|kicker|accent|font_accent|font_label|shape|prefer|dark|",
 		NULL) ||
 		ls_string(design, "source") == NULL || member_array(design, "fits") == NULL ||
 		member_array(design, "words") == NULL || member_object(design, "roles") == NULL || prefer == NULL) {
@@ -4827,7 +4839,8 @@ check_fields(PageCheck *check, const gchar *where, JsonObject *definitions, Json
 
 static void
 check_form_fields(PageCheck *check, const gchar *where, JsonArray *fields){
-	const gchar *types[] = {"text", "email", "tel", "url", "number", "date", "textarea", "select", "checkbox", NULL};
+	const gchar *types[] = {"text", "email", "tel", "url", "number", "date", "time", "textarea", "select", "radio",
+		"toggle", "checkbox", "switch", "range", "file", NULL};
 	g_autoptr(GHashTable) names = g_hash_table_new(g_str_hash, g_str_equal);
 	guint i;
 	for (i = 0; i < json_array_get_length(fields); i++) {
@@ -4839,7 +4852,8 @@ check_form_fields(PageCheck *check, const gchar *where, JsonArray *fields){
 		g_autofree gchar *label = g_strconcat(here, ".label", NULL);
 		g_autofree gchar *hint = g_strconcat(here, ".hint", NULL);
 		JsonNode *maxlength;
-		if (field == NULL || !ls_object_keys(field, "|name|label|type|required|hint|options|maxlength|autocomplete|", NULL)) {
+		if (field == NULL || !ls_object_keys(field, "|name|label|type|required|hint|options|maxlength|autocomplete|min|max|step|",
+			NULL)) {
 			problem(check->problems, "%s must be a field object with known keys", here);
 			continue;
 		}
@@ -4850,21 +4864,13 @@ check_form_fields(PageCheck *check, const gchar *where, JsonArray *fields){
 		check_text(check->problems, label, json_object_get_member(field, "label"), TRUE, 120);
 		check_text(check->problems, hint, json_object_get_member(field, "hint"), FALSE, 240);
 		if (!g_strv_contains(types, type))
-			problem(check->problems, "%s.type must be text, email, tel, url, number, date, textarea, select or checkbox", here);
+			problem(check->problems, "%s.type must be text, email, tel, url, number, date, time, textarea, select, radio, "
+				"toggle, checkbox, switch, range or file", here);
 		if (json_object_has_member(field, "required") &&
 			json_node_get_value_type(json_object_get_member(field, "required")) != G_TYPE_BOOLEAN)
 			problem(check->problems, "%s.required must be true or false", here);
-		if (g_str_equal(type, "select")) {
-			JsonArray *options = member_array(field, "options");
-			guint j;
-			if (options == NULL || json_array_get_length(options) == 0 || json_array_get_length(options) > 30)
-				problem(check->problems, "%s.options must list 1 to 30 choices for a select", here);
-			for (j = 0; options != NULL && j < json_array_get_length(options); j++)
-				if (!is_string(json_array_get_element(options, j)) ||
-					blank(json_array_get_string_element(options, j)))
-					problem(check->problems, "%s.options[%u] must be text", here, j);
-		} else if (json_object_has_member(field, "options"))
-			problem(check->problems, "%s.options is only for select fields", here);
+		if (!ls_form_field_shape_valid(field))
+			problem(check->problems, "%s needs %s", here, ls_form_field_shape_rule());
 		maxlength = json_object_get_member(field, "maxlength");
 		if (maxlength != NULL && (json_node_get_value_type(maxlength) != G_TYPE_INT64 ||
 			json_node_get_int(maxlength) < 1 || json_node_get_int(maxlength) > 10000))
@@ -6054,17 +6060,213 @@ convert_value(Render *render, JsonObject *slot, JsonNode *value, gboolean eager)
 	return json_node_copy(value);
 }
 
+/* A new field {name, label, type} for the builder's own form questions. */
+static JsonObject *
+new_field(const gchar *name, const gchar *label, const gchar *type){
+	JsonObject *field = json_object_new();
+	json_object_set_string_member(field, "name", name);
+	json_object_set_string_member(field, "label", label);
+	json_object_set_string_member(field, "type", type);
+	return field;
+}
+
+static JsonObject *
+copy_object(JsonObject *object){
+	g_autoptr(JsonNode) node = json_node_new(JSON_NODE_OBJECT);
+	g_autoptr(JsonNode) copy = NULL;
+	json_node_set_object(node, object);
+	copy = json_node_copy(node);
+	return json_object_ref(json_node_get_object(copy));
+}
+
+/* The fields of an enquiry form the writer wrote on a preset site, in the
+ * controls (docs/components.org, "Controls"): a short list of choices
+ * becomes buttons or radio buttons; how to reply, a preferred date and
+ * time, an urgent switch where the order offers urgent work and a photo
+ * upload where the trade benefits and the form can carry files join
+ * before the message; a box to agree to be contacted ends the form. A
+ * form without an email field and a message, and a supplied form, keep
+ * their fields as written. Returns a new reference. */
+static JsonArray *
+enquiry_fields(Render *render, JsonArray *fields, const gchar *mode){
+	JsonObject *design = member_object(render->plan, "design");
+	JsonObject *supplied = member_object(render->plan, "form");
+	JsonObject *controls = design != NULL ? member_object(design, "controls") : NULL;
+	JsonArray *out;
+	gboolean email = FALSE, tel = FALSE, date = FALSE, time = FALSE, check = FALSE, toggle = FALSE, file = FALSE;
+	gboolean reply = FALSE, added = FALSE, message = FALSE;
+	guint i;
+	if (fields == NULL || design == NULL || controls == NULL || (supplied != NULL && member_array(supplied, "fields") == fields))
+		return fields != NULL ? json_array_ref(fields) : NULL;
+	for (i = 0; i < json_array_get_length(fields); i++) {
+		JsonObject *field = json_array_get_object_element(fields, i);
+		const gchar *type = ls_string(field, "type") != NULL ? ls_string(field, "type") : "text";
+		email = email || g_str_equal(type, "email");
+		tel = tel || g_str_equal(type, "tel");
+		date = date || g_str_equal(type, "date");
+		time = time || g_str_equal(type, "time");
+		check = check || g_str_equal(type, "checkbox");
+		toggle = toggle || g_str_equal(type, "switch");
+		file = file || g_str_equal(type, "file");
+		reply = reply || g_strcmp0(ls_string(field, "name"), "contact_by") == 0;
+		message = message || g_str_equal(type, "textarea");
+	}
+	if (!email || !message)
+		return json_array_ref(fields);
+	out = json_array_new();
+	for (i = 0; i < json_array_get_length(fields); i++) {
+		JsonObject *field = copy_object(json_array_get_object_element(fields, i));
+		const gchar *type = ls_string(field, "type") != NULL ? ls_string(field, "type") : "text";
+		JsonArray *options = member_array(field, "options");
+		if (g_str_equal(type, "select") && options != NULL && json_array_get_length(options) <= 7)
+			json_object_set_string_member(field, "type", json_array_get_length(options) >= 2 &&
+				json_array_get_length(options) <= 3 ? "toggle" : "radio");
+		if (g_str_equal(type, "textarea") && !added) {
+			added = TRUE;
+			if (tel && !reply) {
+				JsonObject *by = new_field("contact_by", ui_text(render, "contact_by"), "radio");
+				JsonArray *ways = json_array_new();
+				json_array_add_string_element(ways, ui_text(render, "by_phone"));
+				json_array_add_string_element(ways, ui_text(render, "by_email"));
+				json_object_set_array_member(by, "options", ways);
+				json_array_add_object_element(out, by);
+			}
+			if (!date)
+				json_array_add_object_element(out, new_field("preferred_date", ui_text(render, "preferred_date"), "date"));
+			if (!time)
+				json_array_add_object_element(out, new_field("preferred_time", ui_text(render, "preferred_time"), "time"));
+			if (!toggle && json_object_get_boolean_member(controls, "urgent"))
+				json_array_add_object_element(out, new_field("urgent", ui_text(render, "urgent"), "switch"));
+			/* A mail link carries no file; only a posted form gets the upload. */
+			if (!file && json_object_get_boolean_member(controls, "photos") && g_strcmp0(mode, "endpoint") == 0) {
+				JsonObject *photos = new_field("photos", ui_text(render, "photos"), "file");
+				json_object_set_string_member(photos, "hint", ui_text(render, "photos_hint"));
+				json_array_add_object_element(out, photos);
+			}
+		}
+		json_array_add_object_element(out, field);
+	}
+	if (!check) {
+		JsonObject *agree = new_field("agree", ui_text(render, "agree"), "checkbox");
+		json_object_set_boolean_member(agree, "required", TRUE);
+		json_array_add_object_element(out, agree);
+	}
+	return out;
+}
+
+/* A choice field's buttons: the first carries the field's id, so the
+ * error summary and the label lead to the group. */
+static JsonArray *
+choice_views(const gchar *fid, JsonArray *options){
+	JsonArray *choices = json_array_new();
+	guint j;
+	for (j = 0; options != NULL && j < json_array_get_length(options); j++) {
+		JsonObject *choice = json_object_new();
+		g_autofree gchar *cid = j == 0 ? g_strdup(fid) : g_strdup_printf("%s-%u", fid, j + 1);
+		json_object_set_string_member(choice, "cid", cid);
+		json_object_set_string_member(choice, "value", json_array_get_string_element(options, j));
+		json_object_set_string_member(choice, "label", json_array_get_string_element(options, j));
+		json_array_add_object_element(choices, choice);
+	}
+	return choices;
+}
+
+/* The view of one field for fields.html, and whether it carries files. */
+static JsonObject *
+field_view(Render *render, JsonObject *field, const gchar *form_id, guint rows, gboolean *files){
+	JsonObject *out = json_object_new();
+	const gchar *type = ls_string(field, "type") != NULL ? ls_string(field, "type") : "text";
+	g_autofree gchar *fid = g_strdup_printf("%s-%s", form_id, ls_string(field, "name"));
+	g_autofree gchar *described = ls_string(field, "hint") != NULL
+		? g_strdup_printf("%s-hint %s-error", fid, fid) : g_strdup_printf("%s-error", fid);
+	JsonArray *options = member_array(field, "options");
+	gboolean choice = g_str_equal(type, "radio") || g_str_equal(type, "toggle");
+	gboolean checkbox = g_str_equal(type, "checkbox") || g_str_equal(type, "switch");
+	json_object_set_string_member(out, "fid", fid);
+	json_object_set_string_member(out, "name", ls_string(field, "name"));
+	json_object_set_string_member(out, "label", ls_string(field, "label"));
+	json_object_set_string_member(out, "type", type);
+	json_object_set_string_member(out, "describedby", described);
+	json_object_set_string_member(out, "required_label", ui_text(render, "required"));
+	json_object_set_int_member(out, "rows", rows);
+	if (ls_string(field, "hint") != NULL)
+		json_object_set_string_member(out, "hint", ls_string(field, "hint"));
+	if (ls_string(field, "autocomplete") != NULL)
+		json_object_set_string_member(out, "autocomplete", ls_string(field, "autocomplete"));
+	if (json_object_has_member(field, "maxlength"))
+		json_object_set_int_member(out, "maxlength", json_object_get_int_member(field, "maxlength"));
+	json_object_set_boolean_member(out, "required", json_object_has_member(field, "required") &&
+		json_object_get_boolean_member(field, "required"));
+	json_object_set_boolean_member(out, "is_choice", choice);
+	json_object_set_boolean_member(out, "is_toggle", g_str_equal(type, "toggle"));
+	json_object_set_boolean_member(out, "is_checkbox", checkbox);
+	json_object_set_boolean_member(out, "is_switch", g_str_equal(type, "switch"));
+	json_object_set_boolean_member(out, "is_other", !choice && !checkbox);
+	json_object_set_boolean_member(out, "is_textarea", g_str_equal(type, "textarea"));
+	json_object_set_boolean_member(out, "is_select", g_str_equal(type, "select"));
+	json_object_set_boolean_member(out, "is_range", g_str_equal(type, "range"));
+	json_object_set_boolean_member(out, "is_file", g_str_equal(type, "file"));
+	json_object_set_boolean_member(out, "is_input", !choice && !checkbox && !g_str_equal(type, "textarea") &&
+		!g_str_equal(type, "select") && !g_str_equal(type, "range") && !g_str_equal(type, "file"));
+	*files = *files || g_str_equal(type, "file");
+	if (json_object_has_member(field, "min") && json_object_has_member(field, "max")) {
+		gint64 min = json_object_get_int_member(field, "min"), max = json_object_get_int_member(field, "max");
+		gint64 step = json_object_has_member(field, "step") ? MAX(1, json_object_get_int_member(field, "step")) : 1;
+		JsonObject *bounds = json_object_new();
+		json_object_set_int_member(bounds, "min", min);
+		json_object_set_int_member(bounds, "max", max);
+		json_object_set_object_member(out, "bounds", bounds);
+		json_object_set_int_member(out, "min", min);
+		json_object_set_int_member(out, "max", max);
+		json_object_set_int_member(out, "step", step);
+		/* A slider starts at its middle, on a step. */
+		json_object_set_int_member(out, "value", min + ((max - min) / 2 / step) * step);
+	}
+	if (choice)
+		json_object_set_array_member(out, "choices", choice_views(fid, options));
+	else if (options != NULL) {
+		JsonArray *choices = json_array_new();
+		guint j;
+		for (j = 0; j < json_array_get_length(options); j++) {
+			JsonObject *option = json_object_new();
+			json_object_set_string_member(option, "value", json_array_get_string_element(options, j));
+			json_object_set_string_member(option, "label", json_array_get_string_element(options, j));
+			json_array_add_object_element(choices, option);
+		}
+		json_object_set_array_member(out, "options", choices);
+	}
+	return out;
+}
+
+/* fields.html for @views: every field of one form, as HTML. */
+static gchar *render_template(Render *render, const gchar *name, JsonObject *view);
+
+static void
+fields_html(Render *render, JsonObject *view, JsonArray *views){
+	g_autoptr(JsonObject) holder = json_object_new();
+	g_autofree gchar *html = NULL;
+	if (file_text(render->self, "fields.html") == NULL)
+		return;
+	json_object_set_array_member(holder, "fields", json_array_ref(views));
+	html = render_template(render, "fields.html", holder);
+	json_object_set_string_member(view, "fields_html", html);
+}
+
 static void
 form_view(Render *render, JsonObject *view, JsonObject *content, const gchar *id){
 	g_autofree gchar *form_id = g_strconcat(id, "-form", NULL);
 	const gchar *mode = ls_string(content, "mode");
-	JsonArray *fields = member_array(content, "fields");
+	g_autoptr(JsonArray) fields = enquiry_fields(render, member_array(content, "fields"), mode);
 	JsonArray *views = json_array_new();
+	gboolean files = FALSE;
 	guint i;
 	json_object_set_string_member(view, "form_id", form_id);
 	json_object_set_boolean_member(view, "local", g_strcmp0(mode, "local") == 0);
 	json_object_set_boolean_member(view, "mailto", g_strcmp0(mode, "mailto") == 0);
 	json_object_set_boolean_member(view, "endpoint", g_strcmp0(mode, "endpoint") == 0);
+	json_object_set_string_member(view, "error_required", ui_text(render, "error_required"));
+	json_object_set_string_member(view, "error_invalid", ui_text(render, "error_invalid"));
+	json_object_set_string_member(view, "error_summary", ui_text(render, "error_summary"));
 	if (g_strcmp0(mode, "endpoint") == 0) {
 		JsonObject *form = member_object(render->plan, "form");
 		const gchar *trap = form != NULL ? ls_string(form, "honeypot") : NULL;
@@ -6088,45 +6290,15 @@ form_view(Render *render, JsonObject *view, JsonObject *content, const gchar *id
 	}
 	for (i = 0; fields != NULL && i < json_array_get_length(fields); i++) {
 		JsonObject *field = json_array_get_object_element(fields, i);
-		JsonObject *out = json_object_new();
-		const gchar *type = ls_string(field, "type") != NULL ? ls_string(field, "type") : "text";
-		g_autofree gchar *fid = g_strdup_printf("%s-%s", form_id, ls_string(field, "name"));
-		g_autofree gchar *described = ls_string(field, "hint") != NULL
-			? g_strdup_printf("%s-hint %s-error", fid, fid) : g_strdup_printf("%s-error", fid);
-		JsonArray *options = member_array(field, "options");
-		json_object_set_string_member(out, "fid", fid);
-		json_object_set_string_member(out, "name", ls_string(field, "name"));
-		json_object_set_string_member(out, "label", ls_string(field, "label"));
-		json_object_set_string_member(out, "type", type);
-		json_object_set_string_member(out, "describedby", described);
-		json_object_set_string_member(out, "required_label", ui_text(render, "required"));
-		if (ls_string(field, "hint") != NULL)
-			json_object_set_string_member(out, "hint", ls_string(field, "hint"));
-		if (ls_string(field, "autocomplete") != NULL)
-			json_object_set_string_member(out, "autocomplete", ls_string(field, "autocomplete"));
-		if (json_object_has_member(field, "maxlength"))
-			json_object_set_int_member(out, "maxlength", json_object_get_int_member(field, "maxlength"));
-		json_object_set_boolean_member(out, "required", json_object_has_member(field, "required") &&
-			json_object_get_boolean_member(field, "required"));
-		json_object_set_boolean_member(out, "is_textarea", g_str_equal(type, "textarea"));
-		json_object_set_boolean_member(out, "is_select", g_str_equal(type, "select"));
-		json_object_set_boolean_member(out, "is_checkbox", g_str_equal(type, "checkbox"));
-		json_object_set_boolean_member(out, "is_input", !g_str_equal(type, "textarea") &&
-			!g_str_equal(type, "select") && !g_str_equal(type, "checkbox"));
-		if (options != NULL) {
-			JsonArray *choices = json_array_new();
-			guint j;
-			for (j = 0; j < json_array_get_length(options); j++) {
-				JsonObject *choice = json_object_new();
-				json_object_set_string_member(choice, "value", json_array_get_string_element(options, j));
-				json_object_set_string_member(choice, "label", json_array_get_string_element(options, j));
-				json_array_add_object_element(choices, choice);
-			}
-			json_object_set_array_member(out, "options", choices);
-		}
-		json_array_add_object_element(views, out);
+		/* A file never travels by mail link or in a local text file: such a
+		 * field is left out there. */
+		if (g_strcmp0(ls_string(field, "type"), "file") == 0 && g_strcmp0(mode, "endpoint") != 0)
+			continue;
+		json_array_add_object_element(views, field_view(render, field, form_id, 5, &files));
 	}
+	json_object_set_boolean_member(view, "multipart", files);
 	json_object_set_array_member(view, "fields", views);
+	fields_html(render, view, views);
 }
 
 static gchar *
@@ -6645,7 +6817,24 @@ render_sections(Render *render, JsonArray *sections, GPtrArray *pieces, JsonArra
 				json_object_set_object_member(view, "call", call);
 			json_object_set_string_member(view, "call_label", ui_text(render, "call"));
 		} else if (g_str_equal(name, "booking-calendar") && render->book != NULL) {
+			JsonArray *pages = member_array(member_object(render->plan, "design"), "pages");
+			g_autoptr(JsonArray) names = json_array_new();
+			guint p;
 			json_object_set_string_member(view, "booking_url", render->book);
+			json_object_set_string_member(view, "agree", ui_text(render, "agree"));
+			/* The order's services as a choice (docs/components.org, "Controls"). */
+			for (p = 0; pages != NULL && p < json_array_get_length(pages); p++)
+				if (g_strcmp0(ls_string(json_array_get_object_element(pages, p), "kind"), "detail") == 0)
+					json_array_add_string_element(names, ls_string(json_array_get_object_element(pages, p), "title"));
+			if (json_array_get_length(names) > 0) {
+				JsonObject *services = json_object_new();
+				g_autofree gchar *fid = g_strdup_printf("%s-service", id);
+				json_object_set_string_member(services, "legend", ui_text(render, "service"));
+				json_object_set_boolean_member(services, "toggle", json_array_get_length(names) >= 2 &&
+					json_array_get_length(names) <= 3);
+				json_object_set_array_member(services, "choices", choice_views(fid, names));
+				json_object_set_object_member(view, "services", services);
+			}
 		} else if (g_str_equal(name, "module")) {
 			/* The supplied snippet, as podbay drew it and checked again with
 			 * the plan; it also posts without scripts. */
@@ -7035,9 +7224,13 @@ render_page(Render *render, const gchar *path, const gchar *title, const gchar *
 	}
 	json_object_set_boolean_member(view, "home", g_str_equal(path, "index.html"));
 	parse_color(ls_string(tokens, "paper"), paper);
-	json_object_set_string_member(view, "color_scheme",
-		g_strcmp0(ls_string(member_object(plan, "look"), "scheme"), "auto") == 0
-		? (luminance(paper) < 0.2 ? "dark light" : "light dark") : luminance(paper) < 0.2 ? "dark" : "light");
+	if (member_object(member_object(plan, "design"), "dark") != NULL)
+		json_object_set_string_member(view, "color_scheme", g_str_equal(plan_scheme(plan), "auto") ? "light dark"
+			: plan_scheme(plan));
+	else
+		json_object_set_string_member(view, "color_scheme",
+			g_strcmp0(ls_string(member_object(plan, "look"), "scheme"), "auto") == 0
+			? (luminance(paper) < 0.2 ? "dark light" : "light dark") : luminance(paper) < 0.2 ? "dark" : "light");
 	/* A footer sitemap lists every planned page and the built-in ones. */
 	if (g_strcmp0(ls_string(member_object(plan, "look"), "footer"), "sitemap") == 0) {
 		JsonArray *map = json_array_new();
@@ -7055,6 +7248,22 @@ render_page(Render *render, const gchar *path, const gchar *title, const gchar *
 		json_object_set_boolean_member(view, "has_sitemap", json_array_get_length(map) > 0);
 	}
 	json_object_set_string_member(view, "theme_color", ls_string(tokens, "paper"));
+	/* Light and dark: the dark page colour for the browser's own bar, and
+	 * the toggle with its words when the visitor may choose. */
+	{
+		JsonObject *dark = member_object(member_object(member_object(plan, "design"), "dark"), "tokens");
+		if (dark != NULL && g_str_equal(plan_scheme(plan), "dark"))
+			json_object_set_string_member(view, "theme_color", ls_string(dark, "paper"));
+		else if (dark != NULL && g_str_equal(plan_scheme(plan), "auto")) {
+			JsonObject *toggle = json_object_new();
+			json_object_set_string_member(view, "theme_color_dark", ls_string(dark, "paper"));
+			json_object_set_string_member(toggle, "label", ui_text(render, "scheme"));
+			json_object_set_string_member(toggle, "system", ui_text(render, "scheme_system"));
+			json_object_set_string_member(toggle, "light", ui_text(render, "scheme_light"));
+			json_object_set_string_member(toggle, "dark", ui_text(render, "scheme_dark"));
+			json_object_set_object_member(view, "scheme_toggle", toggle);
+		}
+	}
 	json_object_set_string_member(view, "skip_label", ui_text(render, "skip"));
 	json_object_set_string_member(view, "menu_label", ui_text(render, "menu"));
 	json_object_set_string_member(view, "nav_label", ui_text(render, "nav"));
@@ -7330,8 +7539,6 @@ static gchar *accent_surface(const gchar *accent, const gchar *accent_ink);
 static gchar *
 token_css(JsonObject *tokens, JsonObject *structure){
 	GString *out = g_string_new(":root {\n");
-	const gchar *paper = ls_string(tokens, "paper");
-	const gchar *accent = ls_string(tokens, "accent");
 	const gchar *density = ls_string(tokens, "density") != NULL ? ls_string(tokens, "density") : "regular";
 	const gdouble multipliers[] = {0.25, 0.5, 0.75, 1, 1.5, 2, 3, 4.5};
 	gdouble base = token_number(tokens, &number_tokens[0]);
@@ -7340,22 +7547,7 @@ token_css(JsonObject *tokens, JsonObject *structure){
 	gdouble border = token_number(tokens, &number_tokens[4]);
 	gint step;
 	guint i;
-	for (i = 0; i < G_N_ELEMENTS(color_tokens); i++) {
-		g_autofree gchar *name = g_strdelimit(g_strdup(color_tokens[i]), "_", '-');
-		g_string_append_printf(out, "\t--%s: %s;\n", name, ls_string(tokens, color_tokens[i]));
-	}
-	{
-		g_autofree gchar *text = accent_text(accent, paper, ls_string(tokens, "surface"), ls_string(tokens, "ink"));
-		g_string_append_printf(out, "\t--accent-text: %s;\n", text);
-	}
-	{
-		g_autofree gchar *panel = accent_surface(accent, ls_string(tokens, "accent_ink"));
-		g_string_append_printf(out, "\t--accent-surface: %s;\n", panel);
-	}
-	g_string_append_printf(out, "\t--focus: %s;\n", contrast(accent, paper) >= 3 ? accent : ls_string(tokens, "ink"));
-	g_string_append_printf(out, "\t--line-strong: %s;\n", contrast(ls_string(tokens, "line"), paper) >= 3
-		? ls_string(tokens, "line") : ls_string(tokens, "muted"));
-	g_string_append_printf(out, "\t--danger: %s;\n", danger_color(paper, ls_string(tokens, "surface"), ls_string(tokens, "ink")));
+	color_css(out, tokens);
 	g_string_append(out, "\t--field: var(--paper);\n");
 	for (i = 0; i < G_N_ELEMENTS(font_tokens); i++) {
 		g_autofree gchar *name = g_strdelimit(g_strdup(font_tokens[i]), "_", '-');
@@ -7468,6 +7660,69 @@ accent_surface(const gchar *accent, const gchar *accent_ink){
 	return contrast(accent_ink, away) >= 4.5 ? g_steal_pointer(&away) : g_strdup(accent);
 }
 
+
+/* The colour tokens of one scheme, with the accent text, accent panel,
+ * focus ring, firm line and warning red derived from them. */
+static void
+color_css(GString *out, JsonObject *tokens){
+	const gchar *paper = ls_string(tokens, "paper");
+	const gchar *accent = ls_string(tokens, "accent");
+	guint i;
+	for (i = 0; i < G_N_ELEMENTS(color_tokens); i++) {
+		g_autofree gchar *name = g_strdelimit(g_strdup(color_tokens[i]), "_", '-');
+		g_string_append_printf(out, "\t--%s: %s;\n", name, ls_string(tokens, color_tokens[i]));
+	}
+	{
+		g_autofree gchar *text = accent_text(accent, paper, ls_string(tokens, "surface"), ls_string(tokens, "ink"));
+		g_string_append_printf(out, "\t--accent-text: %s;\n", text);
+	}
+	{
+		g_autofree gchar *panel = accent_surface(accent, ls_string(tokens, "accent_ink"));
+		g_string_append_printf(out, "\t--accent-surface: %s;\n", panel);
+	}
+	g_string_append_printf(out, "\t--focus: %s;\n", contrast(accent, paper) >= 3 ? accent : ls_string(tokens, "ink"));
+	g_string_append_printf(out, "\t--line-strong: %s;\n", contrast(ls_string(tokens, "line"), paper) >= 3
+		? ls_string(tokens, "line") : ls_string(tokens, "muted"));
+	g_string_append_printf(out, "\t--danger: %s;\n", danger_color(paper, ls_string(tokens, "surface"), ls_string(tokens, "ink")));
+}
+
+/* A preset's dark scheme as declarations: its colour tokens over the plan's,
+ * then the design's dark roles. NULL without a dark scheme. */
+static gchar *
+dark_declarations(JsonObject *plan){
+	JsonObject *design = member_object(plan, "design");
+	JsonObject *dark = design != NULL ? member_object(design, "dark") : NULL;
+	JsonObject *colors = dark != NULL ? member_object(dark, "tokens") : NULL;
+	g_autoptr(JsonObject) tokens = NULL;
+	g_autofree gchar *roles = NULL;
+	GString *out;
+	guint i;
+	if (colors == NULL)
+		return NULL;
+	tokens = json_object_new();
+	for (i = 0; i < G_N_ELEMENTS(color_tokens); i++) {
+		const gchar *value = ls_string(colors, color_tokens[i]) != NULL ? ls_string(colors, color_tokens[i])
+			: ls_string(member_object(plan, "tokens"), color_tokens[i]);
+		if (value != NULL)
+			json_object_set_string_member(tokens, color_tokens[i], value);
+	}
+	out = g_string_new("\tcolor-scheme: dark;\n");
+	color_css(out, tokens);
+	roles = ls_design_dark_css(design);
+	g_string_append(out, roles);
+	return g_string_free(out, FALSE);
+}
+
+/* The plan's colour scheme: auto (light, with dark for visitors who ask for
+ * it), light or dark. Only a design with its own dark scheme offers dark. */
+static const gchar *
+plan_scheme(JsonObject *plan){
+	JsonObject *design = member_object(plan, "design");
+	const gchar *scheme = design != NULL ? ls_string(design, "scheme") : NULL;
+	if (design == NULL || member_object(design, "dark") == NULL)
+		return "light";
+	return scheme != NULL ? scheme : "auto";
+}
 
 /* look.scheme auto: the other scheme's working colors, derived from the
  * tokens and repaired to the same AA pairs, for visitors whose device asks
@@ -7783,16 +8038,32 @@ ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages
 		g_autofree gchar *tokens = token_css(member_object(plan, "tokens"), member_object(plan, "structure"));
 		g_autofree gchar *focus = focus_css(plan);
 		g_autofree gchar *design = member_object(plan, "design") != NULL ? ls_design_css(member_object(plan, "design")) : NULL;
+		g_autofree gchar *dark = dark_declarations(plan);
 		g_string_append(css, tokens);
 		if (design != NULL)
 			g_string_append(css, design);
-		if (g_strcmp0(ls_string(member_object(plan, "look"), "scheme"), "auto") == 0) {
+		/* A preset's own dark scheme (docs/components.org, "Light and
+		 * dark"): the visitor's system asks for it unless the toggle chose
+		 * light, the toggle chooses it, or the owner locks the site to it.
+		 * Nothing animates the change. */
+		if (dark != NULL && g_str_equal(plan_scheme(plan), "auto"))
+			g_string_append_printf(css, ":root { color-scheme: light; }\n"
+				"@media (prefers-color-scheme: dark) {\n:root:not([data-scheme=\"light\"]) {\n%s}\n}\n"
+				":root[data-scheme=\"dark\"] {\n%s}\n", dark, dark);
+		else if (dark != NULL && g_str_equal(plan_scheme(plan), "dark"))
+			g_string_append_printf(css, ":root {\n%s}\n", dark);
+		else if (dark != NULL)
+			g_string_append(css, ":root { color-scheme: light; }\n");
+		else if (g_strcmp0(ls_string(member_object(plan, "look"), "scheme"), "auto") == 0) {
 			g_autofree gchar *scheme = scheme_css(member_object(plan, "tokens"));
 			g_string_append(css, scheme);
 		}
 		g_string_append(css, focus);
 	}
 	g_string_append_printf(css, "@layer ls-base {\n%s}\n", file_text(self, "base.css"));
+	/* Every form control, in every form (docs/components.org, "Controls"). */
+	if (file_text(self, "controls.css") != NULL)
+		g_string_append_printf(css, "/* controls */\n@layer ls-base {\n%s}\n", file_text(self, "controls.css"));
 	/* Supplied podbay module styles sit under the library, whose module
 	 * component retunes them to the site's tokens. */
 	if (g_hash_table_size(modules) > 0) {
@@ -7808,6 +8079,8 @@ ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages
 	}
 	js = g_string_new("/* Generated by libresite from the component library. */\n");
 	g_string_append(js, file_text(self, "nav.js"));
+	if (g_str_equal(plan_scheme(plan), "auto") && file_text(self, "scheme.js") != NULL)
+		g_string_append_printf(js, "\n%s", file_text(self, "scheme.js"));
 	for (i = 0; i < self->order->len; i++) {
 		const gchar *name = g_ptr_array_index(self->order, i);
 		g_autofree gchar *style = g_strconcat(name, ".css", NULL);

@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{full_title}}</title>
+{{#scheme_toggle}}<script>try{var s=localStorage.getItem("ls-scheme");if(s==="light"||s==="dark")document.documentElement.dataset.scheme=s}catch(e){}</script>
+{{/scheme_toggle}}<title>{{full_title}}</title>
 <meta name="description" content="{{description}}">
 {{#noindex}}<meta name="robots" content="noindex">
 {{/noindex}}{{#canonical}}<link rel="canonical" href="{{canonical}}">
@@ -15,8 +16,10 @@
 {{#og_image}}<meta property="og:image" content="{{og_image}}">
 {{/og_image}}<meta name="twitter:card" content="{{twitter_card}}">
 <meta name="color-scheme" content="{{color_scheme}}">
-<meta name="theme-color" content="{{theme_color}}">
-{{#font_href}}<link rel="preconnect" href="https://fonts.bunny.net">
+{{#theme_color_dark}}<meta name="theme-color" content="{{theme_color}}" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="{{theme_color_dark}}" media="(prefers-color-scheme: dark)">
+{{/theme_color_dark}}{{^theme_color_dark}}<meta name="theme-color" content="{{theme_color}}">
+{{/theme_color_dark}}{{#font_href}}<link rel="preconnect" href="https://fonts.bunny.net">
 {{#font_preloads}}<link rel="preload" href="{{href}}" as="font" type="font/woff2" crossorigin>
 {{/font_preloads}}<link rel="stylesheet" href="{{font_href}}">
 {{/font_href}}<link rel="stylesheet" href="styles.css">
@@ -55,7 +58,8 @@
 {{/has_children}}</li>
 {{/nav}}</ul>
 {{#action}}<a class="button{{^primary}} button--ghost{{/primary}} button--small" href="{{href}}">{{label}}</a>
-{{/action}}</nav>
+{{/action}}{{#scheme_toggle}}<button class="scheme-toggle" type="button" data-scheme-toggle hidden aria-label="{{label}}: {{system}}" data-label="{{label}}" data-system="{{system}}" data-light="{{light}}" data-dark="{{dark}}"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg><span class="scheme-toggle__state" aria-hidden="true">{{system}}</span></button>
+{{/scheme_toggle}}</nav>
 </div>
 </header>
 <main id="main" tabindex="-1">
@@ -130,7 +134,8 @@
 </nav>
 </div>
 {{#footer_wordmark}}<p class="wrap site-footer__wordmark" aria-hidden="true">{{wordmark}}</p>
-{{/footer_wordmark}}{{#photo_credits}}<p class="wrap site-footer__photos">{{photo_credits}}</p>
+{{/footer_wordmark}}{{#scheme_toggle}}<p class="wrap site-footer__scheme"><button class="scheme-toggle" type="button" data-scheme-toggle hidden aria-label="{{label}}: {{system}}" data-label="{{label}}" data-system="{{system}}" data-light="{{light}}" data-dark="{{dark}}"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg><span class="scheme-toggle__state" aria-hidden="true">{{system}}</span></button></p>
+{{/scheme_toggle}}{{#photo_credits}}<p class="wrap site-footer__photos">{{photo_credits}}</p>
 {{/photo_credits}}{{#credit}}<p class="wrap site-footer__credit"><a href="{{url}}" rel="noopener">{{text}}</a></p>
 {{/credit}}</footer>
 </body>

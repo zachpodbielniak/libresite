@@ -183,4 +183,17 @@ gboolean ls_design_check(JsonObject *library, JsonObject *design, GString *why);
  */
 gchar *ls_design_css(JsonObject *design);
 
+/**
+ * ls_design_dark_css:
+ * @design: a plan's design object
+ *
+ * The declarations of the design's dark scheme, without a selector: its
+ * colour roles and their tints, the shadows (a light edge in place of a
+ * black shadow) and its photo scrim. Empty when @design has no dark
+ * scheme. The caller places them in the rule that applies the scheme.
+ *
+ * Returns: (transfer full): CSS declarations
+ */
+gchar *ls_design_dark_css(JsonObject *design);
+
 G_END_DECLS

@@ -682,8 +682,10 @@ test_trusted_form(void){
 	g_autoptr(GError) error = NULL;
 	g_autoptr(JsonNode) form = ls_json_parse("{\"action\":\"/enquiries/custom\",\"fields\":["
 		"{\"name\":\"custom_question\",\"label\":\"Your question\",\"type\":\"text\",\"required\":true}]}", NULL);
+	/* A choice without its options is refused (supplied forms may use every
+	 * control; see docs/components.org, "Controls"). */
 	g_autoptr(JsonNode) select_form = ls_json_parse("{\"action\":\"/enquiries/custom\",\"fields\":["
-		"{\"name\":\"custom_question\",\"label\":\"Your question\",\"type\":\"select\",\"options\":[\"One\"]}]}", NULL);
+		"{\"name\":\"custom_question\",\"label\":\"Your question\",\"type\":\"radio\"}]}", NULL);
 	g_autoptr(JsonNode) action_form = ls_json_parse("{\"action\":\"/enquiries/custom;\",\"fields\":["
 		"{\"name\":\"custom_question\",\"label\":\"Your question\",\"type\":\"text\"}]}", NULL);
 	g_autofree gchar *commit = NULL, *html = NULL, *before = NULL, *after = NULL, *outlines = NULL;

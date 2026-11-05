@@ -826,8 +826,7 @@ assign_tones(JsonObject *library, JsonArray *home, const gchar *footer){
 /* The colour roles: the preset's tokens and roles, the owner's named colour
  * on every role tied to the brand colour, then every text pair at AA. */
 static JsonObject *
-build_roles(JsonObject *library, JsonObject *theme, JsonObject *site, JsonArray *applied){
-	JsonObject *tokens = object_of(theme, "tokens"), *given = object_of(object_of(theme, "design"), "roles");
+build_roles(JsonObject *library, JsonObject *tokens, JsonObject *given, JsonObject *site, JsonArray *applied){
 	JsonObject *roles = json_object_new();
 	g_autoptr(GPtrArray) words = ls_design_owner_words(site);
 	JsonObject *colors = object_of(library, "colors");
@@ -1234,6 +1233,88 @@ home_order(JsonObject *sector, JsonObject *site){
 	}
 }
 
+/* A copy of @base with every member of @over set over it. */
+static JsonObject *
+merged(JsonObject *base, JsonObject *over){
+	JsonObject *out = json_object_new();
+	JsonObject *layers[2];
+	guint l;
+	layers[0] = base;
+	layers[1] = over;
+	for (l = 0; l < 2; l++) {
+		g_autoptr(GList) keys = layers[l] != NULL ? json_object_get_members(layers[l]) : NULL;
+		GList *key;
+		for (key = keys; key != NULL; key = key->next)
+			json_object_set_member(out, key->data, json_node_copy(json_object_get_member(layers[l], key->data)));
+	}
+	return out;
+}
+
+/* The preset's own dark scheme (docs/components.org, "Light and dark"):
+ * its hand-written colour tokens over the light ones, the colour roles
+ * built from them and repaired to the same AA pairs, under the same owner
+ * colour words, and its photo scrim. */
+static JsonObject *
+dark_scheme(JsonObject *library, JsonObject *theme, JsonObject *site){
+	JsonObject *given = object_of(object_of(theme, "design"), "dark");
+	JsonObject *dark = json_object_new();
+	g_autoptr(JsonObject) tokens = merged(object_of(theme, "tokens"), object_of(given, "tokens"));
+	g_autoptr(JsonObject) colors = json_object_new();
+	g_autoptr(JsonArray) ignored = json_array_new();
+	const gchar *keys[] = {"paper", "ink", "muted", "surface", "line", "accent", "accent_ink"};
+	guint i;
+	for (i = 0; i < G_N_ELEMENTS(keys); i++)
+		if (str_of(tokens, keys[i]) != NULL)
+			json_object_set_string_member(colors, keys[i], str_of(tokens, keys[i]));
+	json_object_set_object_member(dark, "tokens", json_object_ref(colors));
+	json_object_set_object_member(dark, "roles", build_roles(library, tokens, object_of(given, "roles"), site, ignored));
+	json_object_set_double_member(dark, "scrim", given != NULL && json_object_has_member(given, "scrim")
+		? json_object_get_double_member(given, "scrim") : 0.65);
+	return dark;
+}
+
+/* Whether the order offers urgent work: an offer, the tagline or the
+ * requirements name emergencies, urgent calls or round-the-clock answers. */
+static gboolean
+offers_urgent(JsonObject *site){
+	static const gchar *const words[] = {"emergency", "emergencies", "urgent", "24/7", "24 hours", "around the clock",
+		"out of hours", "after-hours", "after hours", NULL};
+	JsonArray *offers = array_of(site, "offers");
+	g_autoptr(GString) text = g_string_new(str_of(site, "requirements"));
+	guint i;
+	g_string_append_printf(text, " %s", str_of(object_of(site, "brand"), "tagline") != NULL
+		? str_of(object_of(site, "brand"), "tagline") : "");
+	for (i = 0; offers != NULL && i < json_array_get_length(offers); i++) {
+		JsonNode *node = json_array_get_element(offers, i);
+		JsonObject *offer = JSON_NODE_HOLDS_OBJECT(node) ? json_node_get_object(node) : NULL;
+		g_string_append_printf(text, " %s %s", str_of(offer, "name") != NULL ? str_of(offer, "name") : "",
+			str_of(offer, "description") != NULL ? str_of(offer, "description") : "");
+	}
+	{
+		g_autofree gchar *lower = g_utf8_strdown(text->str, -1);
+		for (i = 0; words[i] != NULL; i++)
+			if (strstr(lower, words[i]) != NULL)
+				return TRUE;
+	}
+	return FALSE;
+}
+
+/* What the builder's enquiry and booking forms ask (docs/components.org,
+ * "Controls"): an urgent switch where the order offers urgent work, and a
+ * photo upload where the trade benefits from seeing the job. */
+static JsonObject *
+form_controls(JsonObject *site, const gchar *sector){
+	JsonObject *controls = json_object_new();
+	const gchar *visual[] = {"trades", "outdoor", "cleaning", "auto"};
+	gboolean photos = FALSE;
+	guint i;
+	for (i = 0; i < G_N_ELEMENTS(visual); i++)
+		photos = photos || g_strcmp0(sector, visual[i]) == 0;
+	json_object_set_boolean_member(controls, "urgent", offers_urgent(site));
+	json_object_set_boolean_member(controls, "photos", photos);
+	return controls;
+}
+
 JsonObject *
 ls_design_new(JsonObject *library, JsonObject *themes, JsonObject *site, const gchar *preset,
 	JsonArray *photos, GError **error){
@@ -1327,7 +1408,13 @@ ls_design_new(JsonObject *library, JsonObject *themes, JsonObject *site, const g
 	if (content.items > 0)
 		json_object_set_array_member(design, "pages", site_pages(site, &content));
 	applied = json_array_new();
-	json_object_set_object_member(design, "roles", build_roles(library, theme, site, applied));
+	json_object_set_object_member(design, "roles", build_roles(library, object_of(theme, "tokens"),
+		object_of(preset_design, "roles"), site, applied));
+	/* Both schemes; the order may lock one, else the visitor's system and
+	 * the toggle choose. */
+	json_object_set_string_member(design, "scheme", str_of(site, "scheme") != NULL ? str_of(site, "scheme") : "auto");
+	json_object_set_object_member(design, "dark", dark_scheme(library, theme, site));
+	json_object_set_object_member(design, "controls", form_controls(site, sector_name));
 	json_object_set_array_member(design, "colors", applied);
 	json_object_set_string_member(design, "kicker", str_of(preset_design, "kicker") != NULL
 		? str_of(preset_design, "kicker") : "caps");
@@ -1494,10 +1581,48 @@ ls_design_check(JsonObject *library, JsonObject *design, GString *why){
 	guint i;
 	if (design == NULL || !ls_object_keys(design,
 		"|preset|source|sector|action|header|footer|home|roles|colors|kicker|accent|font_accent|font_label|shape|facts|pages|"
-		"skeleton|motion|overlays|", NULL)) {
+		"skeleton|motion|overlays|scheme|dark|controls|", NULL)) {
 		g_string_append(why, "design may only have preset, source, sector, action, header, footer, home, roles, "
-			"colors, kicker, accent, font_accent, font_label, shape, facts, pages, skeleton, motion and overlays\n");
+			"colors, kicker, accent, font_accent, font_label, shape, facts, pages, skeleton, motion, overlays, scheme, "
+			"dark and controls\n");
 		return FALSE;
+	}
+	/* Older designs have one scheme: they read as light only. */
+	if (json_object_has_member(design, "scheme") && g_strcmp0(str_of(design, "scheme"), "auto") != 0 &&
+		g_strcmp0(str_of(design, "scheme"), "light") != 0 && g_strcmp0(str_of(design, "scheme"), "dark") != 0)
+		g_string_append(why, "design.scheme must be auto, light or dark\n");
+	if (json_object_has_member(design, "dark")) {
+		JsonObject *dark = object_of(design, "dark"), *dark_roles = object_of(dark, "roles");
+		JsonObject *dark_tokens = object_of(dark, "tokens");
+		const gchar *keys[] = {"paper", "ink", "muted", "surface", "line", "accent", "accent_ink"};
+		gboolean whole = TRUE;
+		if (dark == NULL || !ls_object_keys(dark, "|tokens|roles|scrim|", NULL) || dark_roles == NULL || dark_tokens == NULL ||
+			!json_object_has_member(dark, "scrim") || json_object_get_double_member(dark, "scrim") < 0.2 ||
+			json_object_get_double_member(dark, "scrim") > 0.85) {
+			g_string_append(why, "design.dark needs {tokens, roles, scrim} with a scrim from 0.2 to 0.85\n");
+			whole = FALSE;
+		}
+		for (i = 0; whole && i < G_N_ELEMENTS(keys); i++)
+			if (!hex_valid(str_of(dark_tokens, keys[i]))) {
+				g_string_append_printf(why, "design.dark.tokens.%s must be #rrggbb\n", keys[i]);
+				whole = FALSE;
+			}
+		for (i = 0; whole && i < G_N_ELEMENTS(role_names); i++)
+			if (!hex_valid(str_of(dark_roles, role_names[i]))) {
+				g_string_append_printf(why, "design.dark.roles.%s must be #rrggbb\n", role_names[i]);
+				whole = FALSE;
+			}
+		for (i = 0; whole && i < G_N_ELEMENTS(text_pairs); i++)
+			if (ls_design_contrast(str_of(dark_roles, text_pairs[i][0]), str_of(dark_roles, text_pairs[i][1])) < 4.5)
+				g_string_append_printf(why, "design.dark.roles.%s on %s is under 4.5:1\n", text_pairs[i][1], text_pairs[i][0]);
+	}
+	if (json_object_has_member(design, "controls")) {
+		JsonObject *controls = object_of(design, "controls");
+		if (controls == NULL || !ls_object_keys(controls, "|urgent|photos|", NULL) ||
+			!json_object_has_member(controls, "urgent") || !json_object_has_member(controls, "photos") ||
+			json_node_get_value_type(json_object_get_member(controls, "urgent")) != G_TYPE_BOOLEAN ||
+			json_node_get_value_type(json_object_get_member(controls, "photos")) != G_TYPE_BOOLEAN)
+			g_string_append(why, "design.controls needs {urgent, photos}, each true or false\n");
 	}
 	/* Older designs have no skeleton, motion or overlays: they read as the
 	 * stack, no motion and none. */
@@ -1636,15 +1761,10 @@ hover_of(const gchar *ground, const gchar *text){
 	return ls_design_contrast(moved, text) >= 4.5 ? g_steal_pointer(&moved) : g_strdup(ground);
 }
 
-gchar *
-ls_design_css(JsonObject *design){
-	JsonObject *roles = object_of(design, "roles"), *shape = object_of(design, "shape");
-	GString *out = g_string_new(":root {\n");
-	const gchar *steps[] = {"0.75rem", "0.875rem", "1rem", "1.125rem", "1.25rem", "1.5rem",
-		"clamp(1.5rem, 1.3rem + 0.9cqi, 1.75rem)", "clamp(1.75rem, 1.35rem + 1.8cqi, 2.1875rem)",
-		"clamp(2.25rem, 1.45rem + 3.6cqi, 3.75rem)"};
-	const gchar *space[] = {"0.25rem", "0.5rem", "0.75rem", "1rem", "1.5rem", "2rem", "2.5rem", "3rem", "4rem"};
-	gchar scrim[G_ASCII_DTOSTR_BUF_SIZE];
+/* The colour roles of one scheme as custom properties, with the hover and
+ * soft tints derived from them. */
+static void
+roles_css(GString *out, JsonObject *roles){
 	guint i;
 	for (i = 0; i < G_N_ELEMENTS(role_names); i++) {
 		g_autofree gchar *name = g_strdelimit(g_strdup(role_names[i]), "_", '-');
@@ -1661,6 +1781,47 @@ ls_design_css(JsonObject *design){
 			"\t--primary-soft: %s;\n\t--brand-soft: %s;\n\t--line-firm: %s;\n", primary_hover, brand_hover, photo_hover,
 			primary_soft, brand_soft, line_strong);
 	}
+}
+
+/* Raised boxes: soft shadows in light; in dark the box's lighter surface
+ * gives the depth and a faint light edge replaces the black shadow. */
+static void
+shadows_css(GString *out, JsonObject *shape, gboolean dark){
+	if (shape == NULL || json_object_get_int_member(shape, "depth") == 0)
+		g_string_append(out, "\t--shadow-1: none;\n\t--shadow-2: none;\n\t--shadow-3: none;\n");
+	else if (dark)
+		g_string_append(out, "\t--shadow-1: 0 0 0 1px rgb(255 255 255 / 0.06);\n"
+			"\t--shadow-2: 0 0 0 1px rgb(255 255 255 / 0.08);\n\t--shadow-3: 0 0 0 1px rgb(255 255 255 / 0.1);\n");
+	else
+		g_string_append(out, "\t--shadow-1: 0 1px 2px rgb(16 24 40 / 0.06);\n"
+			"\t--shadow-2: 0 4px 16px rgb(16 24 40 / 0.08);\n\t--shadow-3: 0 12px 32px rgb(16 24 40 / 0.12);\n");
+}
+
+gchar *
+ls_design_dark_css(JsonObject *design){
+	JsonObject *dark = object_of(design, "dark");
+	GString *out = g_string_new(NULL);
+	gchar scrim[G_ASCII_DTOSTR_BUF_SIZE];
+	if (object_of(dark, "roles") == NULL)
+		return g_string_free(out, FALSE);
+	roles_css(out, object_of(dark, "roles"));
+	shadows_css(out, object_of(design, "shape"), TRUE);
+	g_string_append_printf(out, "\t--scrim: %s;\n", g_ascii_formatd(scrim, sizeof scrim, "%.2f",
+		json_object_get_double_member(dark, "scrim")));
+	return g_string_free(out, FALSE);
+}
+
+gchar *
+ls_design_css(JsonObject *design){
+	JsonObject *roles = object_of(design, "roles"), *shape = object_of(design, "shape");
+	GString *out = g_string_new(":root {\n");
+	const gchar *steps[] = {"0.75rem", "0.875rem", "1rem", "1.125rem", "1.25rem", "1.5rem",
+		"clamp(1.5rem, 1.3rem + 0.9cqi, 1.75rem)", "clamp(1.75rem, 1.35rem + 1.8cqi, 2.1875rem)",
+		"clamp(2.25rem, 1.45rem + 3.6cqi, 3.75rem)"};
+	const gchar *space[] = {"0.25rem", "0.5rem", "0.75rem", "1rem", "1.5rem", "2rem", "2.5rem", "3rem", "4rem"};
+	gchar scrim[G_ASCII_DTOSTR_BUF_SIZE];
+	guint i;
+	roles_css(out, roles);
 	g_string_append_printf(out, "\t--font-accent: %s;\n", str_of(design, "font_accent") != NULL
 		? str_of(design, "font_accent") : "var(--font-display)");
 	g_string_append_printf(out, "\t--font-label: %s;\n", str_of(design, "font_label") != NULL
@@ -1679,11 +1840,7 @@ ls_design_css(JsonObject *design){
 		g_string_append(out, "\t--radius-frame: 50%;\n");
 	else
 		g_string_append(out, "\t--radius-frame: var(--radius-box);\n");
-	if (shape != NULL && json_object_get_int_member(shape, "depth") > 0)
-		g_string_append(out, "\t--shadow-1: 0 1px 2px rgb(16 24 40 / 0.06);\n"
-			"\t--shadow-2: 0 4px 16px rgb(16 24 40 / 0.08);\n\t--shadow-3: 0 12px 32px rgb(16 24 40 / 0.12);\n");
-	else
-		g_string_append(out, "\t--shadow-1: none;\n\t--shadow-2: none;\n\t--shadow-3: none;\n");
+	shadows_css(out, shape, FALSE);
 	g_string_append_printf(out, "\t--depth: %" G_GINT64_FORMAT ";\n", shape != NULL
 		? json_object_get_int_member(shape, "depth") : 0);
 	g_string_append_printf(out, "\t--scrim: %s;\n", g_ascii_formatd(scrim, sizeof scrim, "%.2f",

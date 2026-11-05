@@ -1622,7 +1622,7 @@ test_dark_schemes(void){
 		gpointer key, value;
 		if (chosen == NULL || system == NULL)
 			g_error("%s: styles.css has no dark scheme for the toggle and the system setting", presets[p][0]);
-		css_vars(light, css, "@layer ls-base");
+		css_vars(light, css, "@layer ls-base {");
 		g_hash_table_iter_init(&iter, light);
 		while (g_hash_table_iter_next(&iter, &key, &value)) {
 			g_hash_table_insert(dark, g_strdup(key), g_strdup(value));
@@ -1698,7 +1698,7 @@ test_scheme_page(void){
 	g_assert_nonnull(strstr(css, ".scheme-toggle"));
 	{
 		const gchar *start = strstr(css, "@media (prefers-color-scheme: dark)");
-		const gchar *end = strstr(css, "@layer ls-base");
+		const gchar *end = strstr(css, "@layer ls-base {");
 		g_autofree gchar *scheme = g_strndup(start, (gsize)(end - start));
 		g_assert_null(strstr(scheme, "transition"));
 		g_assert_null(strstr(scheme, "animation"));
@@ -1727,7 +1727,7 @@ test_scheme_page(void){
 			{
 				g_autoptr(GHashTable) vars = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
 				const gchar *paper;
-				css_vars(vars, styles, "@layer ls-base");
+				css_vars(vars, styles, "@layer ls-base {");
 				paper = g_hash_table_lookup(vars, "paper");
 				if (g_str_equal(locks[l], "dark") ? hex_luminance(paper) > 0.03 : hex_luminance(paper) < 0.5)
 					g_error("locked %s: the page ground is %s", locks[l], paper);
@@ -1799,9 +1799,15 @@ field_of(const gchar *html, const gchar *name){
 	const gchar *at = strstr(html, needle), *start, *end, *next_div, *next_set;
 	if (at == NULL)
 		return NULL;
-	start = g_strrstr_len(html, at - html, "class=\"field");
-	if (start == NULL)
-		return NULL;
+	{
+		/* The field's own element, not its error or hint paragraph. */
+		const gchar *div = g_strrstr_len(html, at - html, "<div class=\"field");
+		const gchar *set = g_strrstr_len(html, at - html, "<fieldset class=\"field");
+		start = div != NULL && (set == NULL || div > set) ? div : set;
+		if (start == NULL)
+			return NULL;
+		start = strstr(start, "class=");
+	}
 	next_div = strstr(at, "class=\"field ");
 	next_set = strstr(at, "class=\"field\"");
 	end = next_div != NULL && (next_set == NULL || next_div < next_set) ? next_div : next_set;
@@ -1922,7 +1928,8 @@ test_controls(void){
 			"::file-selector-button", ":focus-visible", "[aria-invalid=\"true\"]"};
 		guint r;
 		g_assert_nonnull(start);
-		controls = g_strndup(start, (gsize)(strstr(start, "\n}\n") - start));
+		/* Up to the first component's block. */
+		controls = g_strndup(start, (gsize)(strstr(start, "@layer ls-components") - start));
 		for (r = 0; r < G_N_ELEMENTS(rules); r++)
 			if (strstr(controls, rules[r]) == NULL)
 				g_error("the control styles have no %s rule", rules[r]);

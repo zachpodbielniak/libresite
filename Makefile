@@ -69,10 +69,12 @@ gate: all $(OUTDIR)/test-gate $(OUTDIR)/test-options $(OUTDIR)/test-mobile $(OUT
 	! bash tests/gate.sh "$(WEBDRIVER_URL)" $(GATE_OUT)/taste-bad >/dev/null
 	jq -e '[.pages[] | (.rotated | length) > 0 and (.blobs | length) > 0 and (.loud | length) > 0 and (.stroked | length) > 0] | all' $(GATE_OUT)/taste-bad/gate.json >/dev/null
 # The site gate's own checks (docs/site-gate.org): a good fixture site
-# passes and each defect page fails only its check. Needs firefox and
-# geckodriver, or WEBDRIVER_URL.
-site-gate:
+# passes and each defect page fails only its check; then the scheme toggle
+# and the form controls in a browser (docs/components.org, "Light and
+# dark" and "Controls"). Needs firefox and geckodriver, or WEBDRIVER_URL.
+site-gate: all $(OUTDIR)/test-ls-design
 	bash tests/site-gate.sh
+	bash tests/controls.sh $(OUTDIR)/test-ls-design
 # Live visual acceptance is separate from the hermetic fixture gate.
 .PHONY: visual-review
 visual-review:

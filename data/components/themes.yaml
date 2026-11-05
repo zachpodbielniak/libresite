@@ -1411,6 +1411,12 @@ themes:
       kicker: caps
       accent: colour
       shape: {control: 5, box: 8, badge: 999, depth: 0, scrim: 0.62}
+      # Hand-tuned dark scheme (docs/components.org, "Light and dark"): a tinted
+      # ground, not black; surfaces lighter for depth; a lighter accent.
+      dark:
+        tokens: {paper: '#0f1a16', ink: '#e8efe9', muted: '#a9b9b1', surface: '#17251f', line: '#2c3d36', accent: '#8cc7a6', accent_ink: '#0b1a14'}
+        roles: {brand: '#1f5240', brand_fg: '#f0f5f1', inverse: '#0a2a1f', inverse_fg: '#e8efe9', highlight: '#a6d64a', photo_primary: '#f6f4ed', photo_primary_fg: '#163e31'}
+        scrim: 0.68
       prefer: {hero: photo-start, services: [photo-cards, price-list], reviews: card-grid, contact: call-first, header: bar, footer: columns}
   press:
     summary: 'Warm wellness: cream and dark brown, a forest-green button, Inter with one PT Serif italic phrase.'
@@ -1484,6 +1490,10 @@ themes:
       kicker: caps
       accent: italic
       shape: {control: 2, box: 4, badge: 2, depth: 0, scrim: 0.5}
+      dark:
+        tokens: {paper: '#1a1511', ink: '#f1e9df', muted: '#bfae9e', surface: '#251e18', line: '#3b3027', accent: '#8fbf98', accent_ink: '#13261a'}
+        roles: {brand: '#7f532b', brand_fg: '#ffffff', inverse: '#2b2018', inverse_fg: '#f1e9df', highlight: '#d39a62', photo_primary: '#3d7550', photo_primary_fg: '#ffffff'}
+        scrim: 0.6
       prefer: {hero: photo-center, services: price-list, reviews: quote-headline, contact: split, header: bar, footer: simple}
   lindholm:
     summary: 'Friendly family trades: white, royal blue and navy, an orange pill, Work Sans and generous rounded boxes.'
@@ -1553,6 +1563,10 @@ themes:
       kicker: caps
       accent: colour
       shape: {control: 999, box: 20, badge: 999, depth: 1, scrim: 0.55}
+      dark:
+        tokens: {paper: '#0f1420', ink: '#eef1f6', muted: '#a9b2c2', surface: '#182032', line: '#2b3549', accent: '#f59a3c', accent_ink: '#1a1206'}
+        roles: {brand: '#2c58c9', brand_fg: '#ffffff', inverse: '#08182b', inverse_fg: '#eef1f6', highlight: '#f59a3c', photo_primary: '#f59a3c', photo_primary_fg: '#1a1206'}
+        scrim: 0.62
       prefer: {hero: split-card, services: sublinks, reviews: card-grid, contact: split, header: utility, footer: columns}
   veterans:
     summary: 'Quiet modern roofing: warm off-white and charcoal, a bright blue pill, light Roboto headings.'
@@ -1626,6 +1640,10 @@ themes:
       kicker: caps
       accent: colour
       shape: {control: 999, box: 12, badge: 999, depth: 0, scrim: 0.55}
+      dark:
+        tokens: {paper: '#15181b', ink: '#eef0f2', muted: '#a8afb6', surface: '#1f2327', line: '#33393f', accent: '#7b9bff', accent_ink: '#0b1020'}
+        roles: {brand: '#2c3238', brand_fg: '#f7f5f3', inverse: '#0c0e11', inverse_fg: '#eef0f2', highlight: '#8eabff', photo_primary: '#7b9bff', photo_primary_fg: '#0b1020'}
+        scrim: 0.62
       prefer: {hero: photo-center, services: [feature-rows, photo-cards, sublinks], steps: expect, faq: questions, cta: promise, header: utility, footer: columns}
   highlands:
     summary: 'Outdoor work: white and forest green, a sage button, a Spectral serif with an italic accent.'
@@ -1701,6 +1719,10 @@ themes:
       kicker: caps
       accent: italic
       shape: {control: 4, box: 4, badge: 4, depth: 0, scrim: 0.45}
+      dark:
+        tokens: {paper: '#111a10', ink: '#e9f0e7', muted: '#a8b7a4', surface: '#1a2619', line: '#2f3d2d', accent: '#8fc29a', accent_ink: '#10200f'}
+        roles: {brand: '#2a5a26', brand_fg: '#f0f5ee', inverse: '#0b240a', inverse_fg: '#e9f0e7', highlight: '#9fd0a8', photo_primary: '#f0f5ee', photo_primary_fg: '#193f16'}
+        scrim: 0.55
       prefer: {hero: photo-center, services: [feature-rows, photo-cards, price-list], areas: town-list, reviews: card-grid, cta: photo-band, header: bar, footer: simple}
   guin:
     summary: 'Friendly family trades: off-white and deep teal, a green band, an orange button, Barlow headings.'
@@ -1773,6 +1795,10 @@ themes:
       kicker: caps
       accent: colour
       shape: {control: 6, box: 10, badge: 999, depth: 1, scrim: 0.5}
+      dark:
+        tokens: {paper: '#0e1b1e', ink: '#e9f1ef', muted: '#a5b8b6', surface: '#16282c', line: '#2a3e43', accent: '#f99a52', accent_ink: '#12353c'}
+        roles: {brand: '#1d7a3f', brand_fg: '#ffffff', inverse: '#082a30', inverse_fg: '#e9f1ef', highlight: '#4fd283', photo_primary: '#f99a52', photo_primary_fg: '#12353c'}
+        scrim: 0.6
       prefer: {hero: split-frame, facts: band, services: [photo-cards, sublinks], steps: numbered-row, header: bar, footer: columns}
   weleave:
     summary: 'Bright home services: white and near-black, one lime button with a black label, Be Vietnam Pro.'
@@ -1842,6 +1868,10 @@ themes:
       kicker: caps
       accent: colour
       shape: {control: 8, box: 16, badge: 999, depth: 0, scrim: 0.45}
+      dark:
+        tokens: {paper: '#111111', ink: '#f3f1f1', muted: '#b1adad', surface: '#1c1c1c', line: '#2f2f2f', accent: '#b4ff5c', accent_ink: '#0a0909'}
+        roles: {brand: '#262626', brand_fg: '#f5f3f3', inverse: '#050505', inverse_fg: '#f5f3f3', highlight: '#b4ff5c', photo_primary: '#b4ff5c', photo_primary_fg: '#0a0909'}
+        scrim: 0.55
       prefer: {hero: text-first, facts: rating, services: [photo-cards, price-list], steps: three-steps, faq: questions, header: bar, footer: simple}
   electrified:
     summary: 'Technical workshops: warm off-white and ink, one orange pill, Montserrat with JetBrains Mono labels.'
@@ -1917,6 +1947,10 @@ themes:
       kicker: caps
       accent: colour
       shape: {control: 999, box: 6, badge: 999, depth: 0, scrim: 0.55}
+      dark:
+        tokens: {paper: '#12171e', ink: '#f2efe8', muted: '#b0b4b2', surface: '#1b222b', line: '#2f3843', accent: '#ff6a35', accent_ink: '#161f2c'}
+        roles: {brand: '#232c37', brand_fg: '#f5f3ee', inverse: '#0a0e13', inverse_fg: '#f5f3ee', highlight: '#ff7a4a', photo_primary: '#ff6a35', photo_primary_fg: '#161f2c'}
+        scrim: 0.62
       prefer: {hero: split-frame, services: [sublinks, feature-rows], steps: expect, areas: shop-chooser, header: bar, footer: columns}
   glenwood:
     summary: 'Barbers and salons: off-white and black, one dark red pill, Mulish and Quicksand, round service photos.'
@@ -1989,6 +2023,10 @@ themes:
       kicker: caps
       accent: colour
       shape: {control: 999, box: 4, badge: 999, depth: 0, scrim: 0.62}
+      dark:
+        tokens: {paper: '#121212', ink: '#f2f2f2', muted: '#b0b0b0', surface: '#1d1d1d', line: '#313131', accent: '#b8352f', accent_ink: '#ffffff'}
+        roles: {brand: '#272727', brand_fg: '#f7f7f7', inverse: '#050505', inverse_fg: '#f7f7f7', highlight: '#e0716c', photo_primary: '#b8352f', photo_primary_fg: '#ffffff'}
+        scrim: 0.68
       prefer: {hero: photo-center, services: [round-photos, price-list], header: over-photo, cta: promise, footer: simple}
   gleamery:
     summary: 'Warm modern clinics: warm white and charcoal, a mint surface, a rust pill, Hanken Grotesk.'
@@ -2062,6 +2100,10 @@ themes:
       kicker: caps
       accent: colour
       shape: {control: 999, box: 16, badge: 999, depth: 0, scrim: 0.4}
+      dark:
+        tokens: {paper: '#171514', ink: '#f2eeea', muted: '#b8b1ab', surface: '#1d2421', line: '#35332f', accent: '#e08a7e', accent_ink: '#1f0f0c'}
+        roles: {brand: '#516b4b', brand_fg: '#ffffff', inverse: '#0e0d0c', inverse_fg: '#f2eeea', highlight: '#9cb894', photo_primary: '#faf7f5', photo_primary_fg: '#963f36'}
+        scrim: 0.5
       prefer: {hero: photo-start, facts: rating, services: [photo-cards, sublinks], steps: three-steps, header: bar, footer: simple}
   village:
     summary: 'Premium practices: off-white and navy, a gold button, a Noto Serif headline, square corners.'
@@ -2135,6 +2177,10 @@ themes:
       kicker: caps
       accent: colour
       shape: {control: 0, box: 0, badge: 0, depth: 0, scrim: 0.45}
+      dark:
+        tokens: {paper: '#0b1a24', ink: '#eef3f1', muted: '#a7b6bd', surface: '#12242f', line: '#263a47', accent: '#e7ca71', accent_ink: '#052639'}
+        roles: {brand: '#123a52', brand_fg: '#f4f6f3', inverse: '#05131c', inverse_fg: '#eef3f1', highlight: '#6cbbd3', photo_primary: '#e7ca71', photo_primary_fg: '#052639'}
+        scrim: 0.55
       prefer: {hero: photo-center, services: [sublinks, price-list], faq: side-heading, contact: split, header: bar, footer: columns}
   harte:
     summary: 'Professional firms: white and deep navy, a light blue button with a navy label, Public Sans, square corners.'
@@ -2204,6 +2250,10 @@ themes:
       kicker: caps
       accent: colour
       shape: {control: 0, box: 0, badge: 0, depth: 0, scrim: 0.62}
+      dark:
+        tokens: {paper: '#0a1522', ink: '#edf3f5', muted: '#a6b4c2', surface: '#111f30', line: '#24354a', accent: '#afd2eb', accent_ink: '#002746'}
+        roles: {brand: '#0f3a5f', brand_fg: '#ffffff', inverse: '#040e19', inverse_fg: '#edf3f5', highlight: '#afd2eb', photo_primary: '#afd2eb', photo_primary_fg: '#002746'}
+        scrim: 0.7
       prefer: {hero: photo-start, facts: logos, services: [feature-rows, sublinks, price-list], faq: side-heading, contact: split, header: bar, footer: columns}
   littlefish:
     summary: 'Human professionals: warm white and charcoal, a peach button, Raleway and one Sacramento script word.'
@@ -2281,6 +2331,10 @@ themes:
       kicker: caps
       accent: script
       shape: {control: 0, box: 24, badge: 999, depth: 0, scrim: 0.45, frame: circle}
+      dark:
+        tokens: {paper: '#181716', ink: '#f3f0ec', muted: '#b6b1aa', surface: '#232220', line: '#383532', accent: '#f2b297', accent_ink: '#1b1b1b'}
+        roles: {brand: '#2f6463', brand_fg: '#ffffff', inverse: '#0e0e0d', inverse_fg: '#f3f0ec', highlight: '#95cac2', photo_primary: '#f2b297', photo_primary_fg: '#1b1b1b'}
+        scrim: 0.55
       prefer: {hero: split-frame, services: [photo-cards, price-list], faq: two-column, header: split, footer: centered}
   zinc:
     summary: 'Cafes and kitchens: white and navy, one red detail, an EB Garamond headline over Jost.'
@@ -2356,6 +2410,10 @@ themes:
       kicker: caps
       accent: italic
       shape: {control: 0, box: 0, badge: 0, depth: 0, scrim: 0.45}
+      dark:
+        tokens: {paper: '#0c1524', ink: '#eef1f5', muted: '#a9b3c2', surface: '#142034', line: '#26344c', accent: '#dfe6f0', accent_ink: '#101f36'}
+        roles: {brand: '#1a2d4d', brand_fg: '#ffffff', inverse: '#050c17', inverse_fg: '#eef1f5', highlight: '#ec6a6e', photo_primary: '#ffffff', photo_primary_fg: '#101f36'}
+        scrim: 0.55
       prefer: {hero: photo-pair, services: [round-photos, price-list], areas: location-blocks, header: split, footer: centered}
   mission:
     summary: 'Venues and nights out: white and black, a red button, navy band, Montserrat in capitals.'
@@ -2425,6 +2483,10 @@ themes:
       kicker: pill
       accent: colour
       shape: {control: 12, box: 12, badge: 999, depth: 0, scrim: 0.55}
+      dark:
+        tokens: {paper: '#121212', ink: '#f5f5f5', muted: '#b3b3b3', surface: '#1d1d1d', line: '#313131', accent: '#c62828', accent_ink: '#ffffff'}
+        roles: {brand: '#2c4270', brand_fg: '#ffffff', inverse: '#050505', inverse_fg: '#f5f5f5', highlight: '#ff7070', photo_primary: '#c62828', photo_primary_fg: '#ffffff'}
+        scrim: 0.62
       prefer: {hero: photo-center, facts: strip, services: [photo-cards, round-photos], cta: closing-band, header: bar, footer: simple}
   tulip:
     summary: 'Florists and boutiques: warm grey and near-black, a steel blue band, an Ovo serif headline over Karla.'
@@ -2496,4 +2558,8 @@ themes:
       kicker: caps
       accent: colour
       shape: {control: 0, box: 0, badge: 0, depth: 0, scrim: 0.5}
+      dark:
+        tokens: {paper: '#161514', ink: '#f2f0ec', muted: '#b4afa8', surface: '#201f1d', line: '#363431', accent: '#f2f0ec', accent_ink: '#121212'}
+        roles: {brand: '#365f73', brand_fg: '#ffffff', inverse: '#0b0b0a', inverse_fg: '#f2f0ec', highlight: '#86b8cf', photo_primary: '#ffffff', photo_primary_fg: '#121212'}
+        scrim: 0.55
       prefer: {hero: photo-start, services: [photo-cards, feature-rows, price-list], header: split, footer: simple}

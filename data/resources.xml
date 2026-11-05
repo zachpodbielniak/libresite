@@ -231,6 +231,9 @@
     <file>components/form.css</file>
     <file>components/form.html</file>
     <file>components/form.js</file>
+    <file>components/controls.css</file>
+    <file>components/scheme.js</file>
+    <file>components/fields.html</file>
     <file>components/module.css</file>
     <file>components/module.html</file>
     <file>components/module.js</file>

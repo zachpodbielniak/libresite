@@ -99,11 +99,17 @@ forms(void){
 		"{\"action\":\"/api/forms/contact\",\"fields\":[{\"name\":\"message\",\"label\":\"Message\"}]}",
 		"{\"action\":\"https://forms.example/harbor\",\"honeypot\":\"website\",\"fields\":["
 		"{\"name\":\"email\",\"label\":\"Email\",\"type\":\"email\",\"required\":true,\"autocomplete\":\"email\","
-		"\"maxlength\":4000,\"hint\":\"We reply from this address\"}]}"};
+		"\"maxlength\":4000,\"hint\":\"We reply from this address\"}]}",
+		/* Every control (docs/components.org, "Controls"). */
+		"{\"action\":\"/x\",\"fields\":[{\"name\":\"a\",\"label\":\"A\",\"type\":\"select\",\"options\":[\"One\"]},"
+		"{\"name\":\"b\",\"label\":\"B\",\"type\":\"range\",\"min\":0,\"max\":10,\"step\":2},"
+		"{\"name\":\"c\",\"label\":\"C\",\"type\":\"switch\"},{\"name\":\"d\",\"label\":\"D\",\"type\":\"file\"}]}"};
 	const gchar *bad[] = {"{}", "{\"action\":\"/x\"}",
 		"{\"action\":\"/enquiries/custom;\",\"fields\":[{\"name\":\"a\",\"label\":\"A\"}]}",
 		"{\"action\":\"/x?y=1\",\"fields\":[{\"name\":\"a\",\"label\":\"A\"}]}",
-		"{\"action\":\"/x\",\"fields\":[{\"name\":\"a\",\"label\":\"A\",\"type\":\"select\",\"options\":[\"One\"]}]}",
+		"{\"action\":\"/x\",\"fields\":[{\"name\":\"a\",\"label\":\"A\",\"type\":\"radio\"}]}",
+		"{\"action\":\"/x\",\"fields\":[{\"name\":\"a\",\"label\":\"A\",\"type\":\"text\",\"options\":[\"One\"]}]}",
+		"{\"action\":\"/x\",\"fields\":[{\"name\":\"a\",\"label\":\"A\",\"type\":\"range\",\"min\":5}]}",
 		"{\"action\":\"/x\",\"fields\":[{\"name\":\"A\",\"label\":\"A\"}]}",
 		"{\"action\":\"/x\",\"honeypot\":\"a\",\"fields\":[{\"name\":\"a\",\"label\":\"A\"}]}",
 		"{\"action\":\"/x\",\"fields\":[{\"name\":\"a\",\"label\":\"A\"},{\"name\":\"a\",\"label\":\"B\"}]}",

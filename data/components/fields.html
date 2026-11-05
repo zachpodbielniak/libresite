@@ -1,0 +1,30 @@
+{{#fields}}{{#is_choice}}<fieldset class="field field--choice{{#is_toggle}} field--toggle{{/is_toggle}}" aria-describedby="{{describedby}}">
+<legend>{{label}}{{#required}} <span class="required">({{required_label}})</span>{{/required}}</legend>
+{{#hint}}<p class="hint" id="{{fid}}-hint">{{hint}}</p>
+{{/hint}}<p class="field-error" id="{{fid}}-error" data-field-error></p>
+<div class="choice-list">
+{{#choices}}<label class="choice"><input type="radio" id="{{cid}}" name="{{name}}" value="{{value}}"{{#required}} required{{/required}} aria-describedby="{{describedby}}"><span>{{label}}</span></label>
+{{/choices}}</div>
+</fieldset>
+{{/is_choice}}{{#is_checkbox}}<div class="field field--check{{#is_switch}} field--switch{{/is_switch}}">
+<input type="checkbox"{{#is_switch}} role="switch"{{/is_switch}} id="{{fid}}" name="{{name}}" value="yes"{{#required}} required{{/required}} aria-describedby="{{describedby}}">
+<label for="{{fid}}">{{label}}{{#required}} <span class="required">({{required_label}})</span>{{/required}}</label>
+{{#hint}}<p class="hint" id="{{fid}}-hint">{{hint}}</p>
+{{/hint}}<p class="field-error" id="{{fid}}-error" data-field-error></p>
+</div>
+{{/is_checkbox}}{{#is_other}}<div class="field{{#is_range}} field--range{{/is_range}}{{#is_file}} field--file{{/is_file}}">
+<label for="{{fid}}">{{label}}{{#required}} <span class="required">({{required_label}})</span>{{/required}}</label>
+{{#hint}}<p class="hint" id="{{fid}}-hint">{{hint}}</p>
+{{/hint}}<p class="field-error" id="{{fid}}-error" data-field-error></p>
+{{#is_textarea}}<textarea id="{{fid}}" name="{{name}}" rows="{{rows}}"{{#required}} required{{/required}}{{#maxlength}} maxlength="{{maxlength}}"{{/maxlength}} aria-describedby="{{describedby}}"></textarea>
+{{/is_textarea}}{{#is_select}}<select id="{{fid}}" name="{{name}}"{{#required}} required{{/required}} aria-describedby="{{describedby}}">
+{{#options}}<option value="{{value}}">{{label}}</option>
+{{/options}}</select>
+{{/is_select}}{{#is_range}}<div class="range">
+<input type="range" id="{{fid}}" name="{{name}}" min="{{min}}" max="{{max}}" step="{{step}}" value="{{value}}" aria-describedby="{{describedby}}" data-range>
+<output class="range__value" for="{{fid}}" id="{{fid}}-value">{{value}}</output>
+</div>
+{{/is_range}}{{#is_file}}<input type="file" id="{{fid}}" name="{{name}}" accept="image/*" multiple{{#required}} required{{/required}} aria-describedby="{{describedby}}">
+{{/is_file}}{{#is_input}}<input type="{{type}}" id="{{fid}}" name="{{name}}"{{#required}} required{{/required}}{{#maxlength}} maxlength="{{maxlength}}"{{/maxlength}}{{#bounds}} min="{{min}}" max="{{max}}"{{/bounds}}{{#autocomplete}} autocomplete="{{autocomplete}}"{{/autocomplete}} aria-describedby="{{describedby}}">
+{{/is_input}}</div>
+{{/is_other}}{{/fields}}

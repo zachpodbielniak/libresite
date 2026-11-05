@@ -59,8 +59,8 @@ open_page() {
 	call POST "/session/$session/url" "$(jq -nc --arg url "http://127.0.0.1:$port/$1" '{url:$url}')" > /dev/null
 }
 
-(cd "$root" && LS_CONTROLS_OUTPUT="$work/site" "$binary" -p /design/controls) | grep -q '^ok' ||
-	fail 'the controls site was not composed'
+(cd "$root" && LS_CONTROLS_OUTPUT="$work/site" "$binary" -p /design/controls) > "$work/compose.log" 2>&1 ||
+	{ cat "$work/compose.log"; fail 'the controls site was not composed'; }
 [[ -f $work/site/contact.html ]] || fail 'the controls site has no contact page'
 
 if [[ -z $webdriver ]]; then
@@ -111,7 +111,17 @@ for size in 390x844 1440x900; do
 	result=$(run controls)
 	printf '%s controls: %s checked\n' "$size" "$(jq .count <<< "$result")"
 	jq -r '.problems[]' <<< "$result" | sed "s/^/  $size: /"
-	jq -e '.problems | length == 0 and .count >= 20' <<< "$result" > /dev/null || failed=1
+	jq -e '(.problems | length == 0) and .count >= 20' <<< "$result" > /dev/null || failed=1
 done
 [[ $failed == 0 ]] || fail 'see above'
+# The probe itself: with the targets shrunk and the ring taken away it
+# must report both, or a pass above proves nothing. The site's own ring is
+# an important rule in a layer, so only the first layer can remove it.
+printf '%s\n' '.choice, .field--check > label, .field--toggle .choice { min-height: 0 !important; padding: 0 !important; }' \
+	'@layer ls-base { :focus-visible, .choice:has(input:focus-visible) { outline: none !important; } }' >> "$work/site/styles.css"
+open_page contact.html
+result=$(run controls)
+jq -e '[.problems[] | select(test("the target is"))] | length > 0' <<< "$result" > /dev/null || fail 'the probe missed shrunken targets'
+jq -e '[.problems[] | select(test("no focus ring"))] | length > 0' <<< "$result" > /dev/null || fail 'the probe missed a missing focus ring'
+printf 'broken styles: %s problems found, as expected\n' "$(jq '.problems | length' <<< "$result")"
 printf '%s\n' 'CONTROLS VERIFIED'
