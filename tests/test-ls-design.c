@@ -2298,6 +2298,35 @@ test_booking_one_form(void){
 	check_no_self_link("book.html", book, "/book", "book.html");
 }
 
+/* A calendar the writer placed keeps its words for the month. Over the
+ * request form they would describe open days that are not there, so they
+ * wait, hidden, with the calendar's heading. */
+static void
+test_booking_calendar_words(void){
+	g_autoptr(LsComponents) components = library();
+	const gchar *page = "{\"book.html\": {\"path\": \"book.html\", \"sections\": ["
+		"{\"component\": \"page-header\", \"variant\": \"plain\", \"content\": {\"heading\": \"Booking\"}},"
+		" {\"component\": \"text\", \"variant\": \"narrow\", \"content\": {\"body\": \"Choose or ask for a time here.\"}},"
+		" {\"component\": \"booking-calendar\", \"variant\": \"month\", \"content\": {\"heading\": \"Choose a day and time\","
+		" \"body\": \"Select an open day, pick a time and send your details.\"}},"
+		" {\"component\": \"faq\", \"variant\": \"list\", \"content\": {\"items\": [{\"question\": \"One?\", \"answer\": \"Yes.\"},"
+		" {\"question\": \"Two?\", \"answer\": \"Yes.\"}, {\"question\": \"Three?\", \"answer\": \"Yes.\"}]}}]}}";
+	g_autoptr(JsonNode) bundle = compose_site(components, "evergreen", NULL, NULL, page, NULL);
+	const gchar *book = file_in(bundle, "book.html");
+	const gchar *words, *request;
+	g_autofree gchar *opening = NULL;
+	g_assert_nonnull(book);
+	request = strstr(book, "data-booking-request");
+	words = strstr(book, "Select an open day");
+	g_assert_nonnull(request);
+	g_assert_nonnull(words);
+	g_assert_nonnull(strstr(book, "<span data-heading-request>Ask for a time</span>"));
+	/* The element that holds the words is hidden until the month shows. */
+	opening = g_strndup(g_strrstr_len(book, words - book, "<div"), (gsize)(words - g_strrstr_len(book, words - book, "<div")));
+	if (strstr(opening, "data-calendar-words") == NULL || strstr(opening, " hidden") == NULL)
+		g_error("the calendar's own words show over the request form: %s", opening);
+}
+
 /* The booking page of a bookable site never says that bookings or requests
  * go through the contact form: the page has its own way to book. */
 static void
@@ -2583,6 +2612,7 @@ main(int argc, char **argv){
 	g_test_add_func("/design/booking-request", test_booking_request);
 	g_test_add_func("/design/booking-one-form", test_booking_one_form);
 	g_test_add_func("/design/booking-words", test_booking_words);
+	g_test_add_func("/design/booking-calendar-words", test_booking_calendar_words);
 	g_test_add_func("/design/header-brand-scope", test_header_brand_scope);
 	g_test_add_func("/design/inline-links", test_inline_links);
 	g_test_add_func("/design/controls-gallery", test_controls_gallery);
