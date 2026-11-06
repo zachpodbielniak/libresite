@@ -36,17 +36,42 @@ const backdrop = el => {
 const onScreen = r => r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth;
 const overlap = (a, b) => Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) *
   Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
-/* Sticky elements that stay put on the screen while the page scrolls. */
+/* Sticky elements that stay put while the page moves. A single scroll can
+ * miss a bar that only sticks for a few pixels, so each one is lined up
+ * with the top of the screen and the page is moved a little. */
 const held = async () => {
   const sticky = [...document.querySelectorAll("body *")].filter(el => getComputedStyle(el).position === "sticky");
-  const before = sticky.map(el => el.getBoundingClientRect().top), y = scrollY;
-  scrollBy(0, innerHeight / 4);
-  await sleep(40);
-  const moved = scrollY - y;
-  const kept = new Set(sticky.filter((el, i) => moved > 1 && Math.abs(el.getBoundingClientRect().top - before[i]) < 1));
-  scrollTo(0, y);
-  await sleep(40);
-  return kept;
+  const y = scrollY;
+  const found = new Map();
+  try {
+    for (const el of sticky) {
+      if (!shown(el)) continue;
+      /* A bar inside another pinned bar is the same bar. Match pinned(). */
+      let nested = false;
+      for (let up = el.parentElement; up && up !== document.body; up = up.parentElement) {
+        const p = getComputedStyle(up).position;
+        if (p === "fixed" || p === "sticky") { nested = true; break; }
+      }
+      if (nested) continue;
+      const origin = el.getBoundingClientRect().top + scrollY;
+      scrollTo(0, Math.max(0, origin));
+      await sleep(40);
+      const before = el.getBoundingClientRect().top;
+      const y1 = scrollY;
+      scrollBy(0, 8);
+      await sleep(40);
+      if (scrollY - y1 <= 1 || Math.abs(el.getBoundingClientRect().top - before) >= 1) continue;
+      /* Height is taken while it is stuck. Measuring after the scroll is
+       * restored misses a bar that lives further down the page. */
+      const r = el.getBoundingClientRect();
+      const h = Math.min(r.bottom, innerHeight) - Math.max(r.top, 0);
+      if (r.width >= innerWidth / 2 && h > 0) found.set(el, h);
+    }
+  } finally {
+    scrollTo(0, y);
+    await sleep(40);
+  }
+  return found;
 };
 /* Bars pinned over the page: fixed elements, and held sticky ones, at
  * least half the screen wide, not inside another pinned one. */
@@ -68,6 +93,8 @@ const raster = url => !!url && !/^data:image\/svg/i.test(url) && !/\.svgz?([?#]|
   const say = (check, detail) => findings.push({check, detail});
   await Promise.race([document.fonts.ready, sleep(3000)]);
   await sleep(150);
+  /* A smooth scroll would finish after the measurements below. */
+  document.documentElement.style.scrollBehavior = "auto";
   scrollTo(0, 0);
   await sleep(50);
   const W = innerWidth, H = innerHeight, phone = W < 600;
@@ -77,7 +104,12 @@ const raster = url => !!url && !/^data:image\/svg/i.test(url) && !/\.svgz?([?#]|
     const r = el.getBoundingClientRect(), h = Math.min(r.bottom, H) - Math.max(r.top, 0);
     if (!bars.has(el) || bars.get(el) < h) bars.set(el, h);
   } };
-  keepBars(await held());
+  const noteHeld = async () => {
+    const found = await held();
+    for (const [el, h] of found) if (!bars.has(el) || bars.get(el) < h) bars.set(el, h);
+    keepBars(new Set(found.keys()));
+  };
+  await noteHeld();
   const pinnedNow = [...bars.keys()].map(el => el.getBoundingClientRect());
 
   if (opts.home) {
@@ -129,12 +161,24 @@ const raster = url => !!url && !/^data:image\/svg/i.test(url) && !/\.svgz?([?#]|
       if (!filled) continue;
       const text = short(el.innerText || el.value || el.getAttribute("aria-label") || "");
       if (!text) continue;
+      /* Same destination counts once. A control with no destination, and a
+       * href the browser cannot parse, is its own action. A bad href must
+       * not reject the whole probe. */
       let key;
       const href = el.getAttribute("href");
-      if (href === null) key = "form:" + (el.form ? el.form.action : "button");
-      else if (/^tel:/i.test(href)) key = "tel:" + href.replace(/\D/g, "");
+      if (href === null) {
+        key = el.form ? "form:" + el.form.action : "button:" + text;
+        if (!el.form && actions.has(key)) key = key + "#" + actions.size;
+      } else if (/^tel:/i.test(href)) key = "tel:" + href.replace(/\D/g, "");
       else if (/^mailto:/i.test(href)) key = href.toLowerCase();
-      else { const u = new URL(href, location.href); key = u.origin + u.pathname.replace(/\/$/, "/index.html") + u.hash; }
+      else {
+        try {
+          const u = new URL(href, location.href);
+          key = u.origin + u.pathname.replace(/\/$/, "/index.html") + u.hash;
+        } catch (e) {
+          key = "url:" + href;
+        }
+      }
       if (!actions.has(key)) actions.set(key, text);
     }
     if (actions.size === 0) say("action", "no primary action on the first screen");
@@ -154,7 +198,7 @@ const raster = url => !!url && !/^data:image\/svg/i.test(url) && !/\.svgz?([?#]|
   for (let y = 0; y <= root.scrollHeight; y += H / 2) { scrollTo(0, y); await sleep(40); }
   scrollTo(0, Math.min(H, root.scrollHeight - H));
   await sleep(80);
-  keepBars(await held());
+  await noteHeld();
   scrollTo(0, 0);
   await sleep(80);
 
@@ -192,7 +236,9 @@ const raster = url => !!url && !/^data:image\/svg/i.test(url) && !/\.svgz?([?#]|
       say("empty", `the section ${name} gives no hours`);
     else if (/\breviews?\b|\btestimonials?\b|what (?:our )?(?:customers|clients|patients|people|neighbou?rs) say/i.test(topic) &&
       !sec.querySelector("blockquote, q, [itemprop=review]") &&
-      ![...sec.querySelectorAll("a[href^='http']")].some(a => new URL(a.href).host !== location.host))
+      ![...sec.querySelectorAll("a[href^='http']")].some(a => {
+        try { return new URL(a.href).host !== location.host; } catch (e) { return false; }
+      }))
       say("empty", `the section ${name} has no review and no link to reviews`);
     else if (/\bhow\b.*\b(?:works?|runs?|goes)\b|\bprocess\b|\bstep by step\b/i.test(topic) &&
       sec.querySelectorAll("li").length < 2 && sec.querySelectorAll("h3, h4, h5").length < 2)

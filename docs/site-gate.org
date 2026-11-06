@@ -3,7 +3,7 @@
 #+authors: Ben Doty
 #+categories: libresite, quality, testing
 #+created: 2026-11-02T16:00:00-05:00
-#+updated: 2026-11-02T16:00:00-05:00
+#+updated: 2026-11-03T17:10:00-05:00
 #+version: 0.1.0
 
 * What it does
@@ -47,7 +47,7 @@ The first screen is the part of the page that shows before the visitor scrolls. 
 
 - photo :: A photo is on the first screen at both widths. A photo is a raster image (JPEG, PNG, WebP and similar), not an SVG drawing. It must cover at least 10 percent of the first screen, so a small logo does not count.
 - headline :: The first visible H1 is on the first screen. No fixed bar covers it. On a phone, its text is at least 28 px.
-- action :: The first screen has exactly one primary action. A primary action is a link or button with a solid fill that stands out from the colour behind it. Two buttons to the same place, such as two buttons for the same phone number, are one action. An outline button is not a primary action.
+- action :: The first screen has exactly one primary action. A primary action is a link or button with a solid fill that stands out from the colour behind it. Two controls to the same place, such as two buttons for the same phone number or two submits of one form, are one action. A button that names no destination is its own action. An outline button is not a primary action. A link the browser cannot parse does not abort the check; it counts as its own action.
 - bar :: On a phone, no fixed bar covers more than 12 percent of the screen height. A fixed bar is a fixed element, or a sticky element that stays in place when the page scrolls. It must be at least half the screen wide. The gate measures each bar alone.
 - copy :: The page has none of these: "example business", "for demonstration", "ends here", "One of the N services", "Ask us about a ...".
 - empty :: Each section has its content. A section fails when it has no words except its heading and short links. A link of five words or more is a card, and its words count. A phone or email link counts. A picture, map, form or table counts. Text in a closed fold counts. A section named for hours must give a time. A section named for reviews must show a quote or link to a review site. A section named for a process must list two steps or more.
