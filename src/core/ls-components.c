@@ -4735,22 +4735,63 @@ booking_elsewhere(void){
 		G_REGEX_CASELESS, 0, NULL);
 }
 
-/* The words of @text that @elsewhere matches, with a little of the text
- * around them, so a refusal shows the writer what to change. Returns a
- * new string, or NULL when nothing matches. */
+/* The first words of @text that @elsewhere matches outside a sentence that
+ * says not to ("Do not say ... the contact form"), with a little of the
+ * text around them, so a refusal shows the writer what to change. Returns
+ * a new string, or NULL when nothing matches. */
 static gchar *
 booking_quote(GRegex *elsewhere, const gchar *text){
 	g_autoptr(GMatchInfo) info = NULL;
+	g_autoptr(GRegex) negation = NULL;
 	glong first, last, length;
-	gint start, end;
+	gint start = -1, end = 0;
 	g_autofree gchar *part = NULL;
-	if (text == NULL || !g_regex_match(elsewhere, text, 0, &info) || !g_match_info_fetch_pos(info, 0, &start, &end))
+	if (text == NULL || !g_regex_match(elsewhere, text, 0, &info))
+		return NULL;
+	negation = g_regex_new("\\b(?:not|never|no|don't|doesn't|won't)\\b", G_REGEX_CASELESS, 0, NULL);
+	for (; g_match_info_matches(info); g_match_info_next(info, NULL)) {
+		gint from, to, sentence;
+		g_autofree gchar *before = NULL;
+		if (!g_match_info_fetch_pos(info, 0, &from, &to))
+			continue;
+		for (sentence = from; sentence > 0 && strchr(".!?;\n", text[sentence - 1]) == NULL; sentence--)
+			;
+		before = g_strndup(text + sentence, (gsize)(from - sentence));
+		if (!g_regex_match(negation, before, 0, NULL)) {
+			start = from;
+			end = to;
+			break;
+		}
+	}
+	if (start < 0)
 		return NULL;
 	length = g_utf8_strlen(text, -1);
 	first = MAX(g_utf8_pointer_to_offset(text, text + start) - 60, 0);
 	last = MIN(g_utf8_pointer_to_offset(text, text + end) + 40, length);
 	part = g_utf8_substring(text, first, last);
 	return g_strconcat(first > 0 ? "..." : "", part, last < length ? "..." : "", NULL);
+}
+
+/* booking_quote() of the first string under @node with such words. */
+static gchar *
+booking_fault_in(JsonNode *node, GRegex *elsewhere){
+	gchar *quote = NULL;
+	if (node == NULL)
+		return NULL;
+	if (JSON_NODE_HOLDS_VALUE(node) && json_node_get_value_type(node) == G_TYPE_STRING)
+		return booking_quote(elsewhere, json_node_get_string(node));
+	if (JSON_NODE_HOLDS_ARRAY(node)) {
+		JsonArray *array = json_node_get_array(node);
+		guint i;
+		for (i = 0; quote == NULL && i < json_array_get_length(array); i++)
+			quote = booking_fault_in(json_array_get_element(array, i), elsewhere);
+	} else if (JSON_NODE_HOLDS_OBJECT(node)) {
+		g_autoptr(GList) keys = json_object_get_members(json_node_get_object(node));
+		GList *key;
+		for (key = keys; quote == NULL && key != NULL; key = key->next)
+			quote = booking_fault_in(json_object_get_member(json_node_get_object(node), key->data), elsewhere);
+	}
+	return quote;
 }
 
 /* On a bookable site the plan's entry for a booking page has a description
@@ -5436,7 +5477,7 @@ check_booking_words(Problems *problems, JsonNode *plan_node, const gchar *path, 
 	if (!booking)
 		return;
 	elsewhere = booking_elsewhere();
-	quote = booking_quote(elsewhere, filler_in(page, elsewhere));
+	quote = booking_fault_in(page, elsewhere);
 	if (quote != NULL)
 		problem(problems, "\"%s\" sends bookings to the contact form, but the booking page has its own way to "
 			"book: the booking calendar, or the form that asks for a time when no open times show. Say that "
