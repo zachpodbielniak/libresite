@@ -2309,7 +2309,8 @@ test_booking_words(void){
 		" with prices where we have them. Requests and enquiries go through one shared contact form.",
 		"Every booking request goes through the contact form.", "Use the shared form on the contact page.",
 		"If it can wait, [send the contact form](contact.html).", "One form handles every enquiry and quote request."};
-	const gchar *fine = "Choose an open time below. When no times show, ask for one with the form on this page.";
+	const gchar *fine = "Choose an open time below. When no times show, ask for one with the form on this page."
+		" Bookings never go through the contact form.";
 	guint i;
 	for (i = 0; i <= G_N_ELEMENTS(contradictions); i++) {
 		const gchar *words = i < G_N_ELEMENTS(contradictions) ? contradictions[i] : fine;
@@ -2365,6 +2366,19 @@ test_booking_words(void){
 				json_object_remove_member(entry, members[m]);
 		}
 		g_assert_true(ls_components_check_plan(components, plan, NULL));
+		/* A brief may tell the writer what not to say. */
+		{
+			g_autoptr(GError) error = NULL;
+			g_autofree gchar *kept = g_strdup(ls_string(entry, "brief"));
+			json_object_set_string_member(entry, "brief", "text/narrow: choose or ask for a time here. Do not say bookings"
+				" or requests go through the contact page or contact form; add no form section.");
+			if (!ls_components_check_plan(components, plan, &error))
+				g_error("a brief that forbids the contact form is refused: %s", error->message);
+			if (kept != NULL)
+				json_object_set_string_member(entry, "brief", kept);
+			else
+				json_object_remove_member(entry, "brief");
+		}
 	}
 	/* Without a booking page supplied, the words are not checked. */
 	json_object_remove_member(json_node_get_object(plan), "booking");
