@@ -8238,11 +8238,100 @@ pages_with_booking_calendar(JsonObject *plan, JsonObject *pages){
 	return copy;
 }
 
+/* A contact or visit page outranks a page built around some other task. Zero
+ * means leave the page alone. */
+static gint
+supplied_form_score(JsonObject *entry){
+	const gchar *path = ls_string(entry, "path");
+	const gchar *kind = ls_string(entry, "kind");
+	if ((path != NULL && g_str_has_prefix(path, "contact")) || g_strcmp0(kind, "contact") == 0)
+		return 3;
+	if ((path != NULL && g_str_has_prefix(path, "visit")) || g_strcmp0(kind, "visit") == 0)
+		return 2;
+	if (g_strcmp0(kind, "form") == 0)
+		return 1;
+	return 0;
+}
+
+/* Give a site with a supplied form one form section when no page has one, at
+ * its most relevant page: the model may leave it out, and then visitors have
+ * no way to write. The words are the builder's; the target and fields are the
+ * supplied form's. Copy the page specifications as the calendar does. */
+static JsonObject *
+pages_with_supplied_form(JsonObject *plan, JsonObject *pages){
+	JsonArray *planned = member_array(plan, "pages");
+	JsonObject *form = member_object(plan, "form");
+	JsonObject *copy;
+	g_autoptr(JsonNode) source = NULL;
+	g_autoptr(JsonNode) parsed = NULL;
+	g_autofree gchar *encoded = NULL;
+	const gchar *target = NULL;
+	gint best = 0;
+	guint i;
+	if (pages == NULL || form == NULL || member_array(form, "fields") == NULL)
+		return json_object_ref(pages);
+	for (i = 0; planned != NULL && i < json_array_get_length(planned); i++) {
+		JsonObject *entry = json_array_get_object_element(planned, i);
+		const gchar *path;
+		JsonNode *node;
+		JsonArray *sections;
+		gint score;
+		guint j;
+		if (entry == NULL)
+			continue;
+		path = ls_string(entry, "path");
+		node = path != NULL ? json_object_get_member(pages, path) : NULL;
+		sections = node != NULL && JSON_NODE_HOLDS_OBJECT(node)
+			? member_array(json_node_get_object(node), "sections") : NULL;
+		for (j = 0; sections != NULL && j < json_array_get_length(sections); j++) {
+			JsonObject *section = json_array_get_object_element(sections, j);
+			if (section != NULL && g_strcmp0(ls_string(section, "component"), "form") == 0)
+				return json_object_ref(pages);
+		}
+		if (sections == NULL || json_array_get_length(sections) >= MAX_SECTIONS)
+			continue;
+		score = supplied_form_score(entry);
+		if (score > best) {
+			best = score;
+			target = path;
+		}
+	}
+	if (target == NULL)
+		return json_object_ref(pages);
+	source = json_node_new(JSON_NODE_OBJECT);
+	json_node_set_object(source, pages);
+	encoded = ls_json_encode(source);
+	parsed = ls_json_parse(encoded, NULL);
+	copy = json_object_ref(json_node_get_object(parsed));
+	{
+		JsonNode *node = json_object_get_member(copy, target);
+		JsonObject *page = node != NULL && JSON_NODE_HOLDS_OBJECT(node) ? json_node_get_object(node) : NULL;
+		JsonArray *sections = member_array(page, "sections");
+		JsonObject *section;
+		JsonObject *content;
+		if (sections == NULL)
+			return copy;
+		section = json_object_new();
+		content = json_object_new();
+		json_object_set_string_member(section, "component", "form");
+		json_object_set_string_member(section, "variant", "stacked");
+		json_object_set_string_member(content, "heading", "Send a message");
+		json_object_set_string_member(content, "mode", "endpoint");
+		json_object_set_string_member(content, "target", ls_string(form, "action"));
+		json_object_set_array_member(content, "fields", json_array_ref(member_array(form, "fields")));
+		json_object_set_string_member(content, "submit", "Send");
+		json_object_set_object_member(section, "content", content);
+		json_array_add_object_element(sections, section);
+	}
+	return copy;
+}
+
 gchar *
 ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages, const gchar *base_url, GError **error){
 	Problems problems = {g_ptr_array_new_with_free_func(g_free)};
 	Render render = {self, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL};
 	g_autoptr(JsonObject) ui = json_object_new();
+	g_autoptr(JsonObject) form_pages = NULL;
 	g_autoptr(JsonObject) booking_pages = NULL;
 	g_autoptr(GHashTable) used = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 	g_autoptr(GHashTable) modules = g_hash_table_new(g_str_hash, g_str_equal);
@@ -8265,7 +8354,8 @@ ls_components_compose(LsComponents *self, JsonNode *plan_node, JsonObject *pages
 	if (base_url != NULL && base == NULL)
 		goto fail;
 	plan = json_node_get_object(plan_node);
-	booking_pages = pages_with_booking_calendar(plan, pages);
+	form_pages = pages_with_supplied_form(plan, pages);
+	booking_pages = pages_with_booking_calendar(plan, form_pages);
 	pages = booking_pages;
 	planned = member_array(plan, "pages");
 	for (i = 0; i < json_array_get_length(planned); i++) {

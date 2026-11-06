@@ -2578,6 +2578,52 @@ test_booking_calendar_default_page(void){
 		json_node_get_object(json_object_get_member(pages, "contact.html")), "sections")), ==, 1);
 }
 
+/* A site with a supplied form whose pages left every form out still gets one,
+ * on its contact page: the model kept the calendar but dropped the enquiry
+ * form, and visitors had no way to send a question. A site that already
+ * shows a form gets no second one. */
+static void
+test_supplied_form_default_page(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(JsonNode) plan = load("plan.json");
+	g_autoptr(JsonObject) pages = fixture_pages();
+	g_autoptr(JsonNode) bundle = NULL;
+	g_autoptr(JsonNode) kept = NULL;
+	JsonObject *root = json_node_get_object(plan);
+	JsonArray *planned = json_object_get_array_member(root, "pages");
+	const gchar *contact;
+	json_object_set_member(root, "form", json(
+		"{'action':'/api/v1/sites/harbor/enquiries','fields':["
+		"{'name':'first-name','label':'First name','type':'text','required':true},"
+		"{'name':'message','label':'Message','type':'textarea','required':true}]}"));
+	json_object_set_member(root, "booking", json("{'href':'/book'}"));
+	json_array_add_element(planned, json("{'path':'contact.html','kind':'contact','title':'Contact',"
+		"'description':'Reach us and choose a time.','brief':'Contact'}"));
+	json_object_set_member(pages, "contact.html", json("{'path':'contact.html',"
+		"'sections':[{'component':'page-header','content':{'heading':'Contact and quote requests'}}]}"));
+	/* The start page's form is the only one; without it no page has a form. */
+	json_object_set_member(pages, "start.html", json("{'path':'start.html',"
+		"'sections':[{'component':'page-header','content':{'heading':'Start'}}]}"));
+	bundle = compose_bundle(components, plan, pages);
+	contact = file_content(bundle, "contact.html");
+	contains(contact, "data-endpoint-form");
+	contains(contact, "action=\"/api/v1/sites/harbor/enquiries\"");
+	contains(contact, ">First name");
+	contains(contact, "class=\"block block--booking-calendar");
+	lacks(file_content(bundle, "visit.html"), "data-endpoint-form");
+	lacks(file_content(bundle, "index.html"), "data-endpoint-form");
+	/* The quote action leads to the form it placed. */
+	contains(file_content(bundle, "index.html"), "href=\"contact.html#");
+	/* Composition did not change the caller's page specification. */
+	g_assert_cmpuint(json_array_get_length(json_object_get_array_member(
+		json_node_get_object(json_object_get_member(pages, "contact.html")), "sections")), ==, 1);
+	/* With the start page's own form back, contact gets no second one. */
+	json_object_set_member(pages, "start.html", load("start.json"));
+	kept = compose_bundle(components, plan, pages);
+	lacks(file_content(kept, "contact.html"), "data-endpoint-form");
+	contains(file_content(kept, "start.html"), "data-endpoint-form");
+}
+
 /* "facebook.html" contains the letters book, and a full visit page cannot
  * grow. Neither becomes the calendar; contact still can. */
 static void
@@ -2997,6 +3043,7 @@ main(int argc, char **argv){
 	g_test_add_func("/components/booking-calendar", test_booking_calendar);
 	g_test_add_func("/components/booking-calendar-default-page", test_booking_calendar_default_page);
 	g_test_add_func("/components/booking-calendar-placement", test_booking_calendar_placement);
+	g_test_add_func("/components/supplied-form-default-page", test_supplied_form_default_page);
 	g_test_add_func("/components/footer-credit", test_footer_credit);
 	g_test_add_func("/components/missing-talk", test_missing_talk);
 	return g_test_run();
