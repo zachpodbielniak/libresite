@@ -21,6 +21,7 @@ document.querySelectorAll(".booking-calendar [data-booking-url]").forEach(functi
 	var replaced = document.getElementById(root.getAttribute("data-booking-replaces") || "");
 	var ask = root.querySelector("[data-heading-request]");
 	var choose = root.querySelector("[data-heading-calendar]");
+	var words = root.querySelector("[data-calendar-words]");
 	var slots = [];
 	var selected = "";
 	var offset = 0;
@@ -37,6 +38,7 @@ document.querySelectorAll(".booking-calendar [data-booking-url]").forEach(functi
 		app.hidden = false;
 		if (fallback) fallback.hidden = true;
 		if (ask && choose) { ask.hidden = true; choose.hidden = false; }
+		if (words) words.hidden = false;
 		if (replaced && section) { section.hidden = false; replaced.hidden = true; retarget(replaced.id, section.id); }
 	}
 	/* The form that asks for a time in place of the month. */
@@ -44,6 +46,7 @@ document.querySelectorAll(".booking-calendar [data-booking-url]").forEach(functi
 		app.hidden = true;
 		if (fallback) fallback.hidden = false;
 		if (ask && choose) { ask.hidden = false; choose.hidden = true; }
+		if (words) words.hidden = true;
 		if (replaced && section) { replaced.hidden = false; section.hidden = true; retarget(section.id, replaced.id); }
 	}
 	function pad(value) { return String(value).padStart(2, "0"); }

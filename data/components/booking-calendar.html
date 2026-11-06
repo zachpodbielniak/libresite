@@ -1,5 +1,5 @@
 <div class="wrap booking-calendar__inner" data-booking-url="{{booking_url}}"{{#replaces}} data-booking-replaces="{{replaces}}"{{/replaces}}>
-<div class="section-head"><{{htag}} id="{{id}}-h">{{#request}}<span data-heading-request>{{ask_heading}}</span><span data-heading-calendar hidden>{{/request}}{{{heading_html}}}{{#request}}</span>{{/request}}</{{htag}}>{{#body}}<div class="prose">{{{body}}}</div>{{/body}}</div>
+<div class="section-head"><{{htag}} id="{{id}}-h">{{#request}}<span data-heading-request>{{ask_heading}}</span><span data-heading-calendar hidden>{{/request}}{{{heading_html}}}{{#request}}</span>{{/request}}</{{htag}}>{{#body}}<div class="prose"{{#request}} data-calendar-words hidden{{/request}}>{{{body}}}</div>{{/body}}</div>
 {{#request}}<div class="booking-calendar__request" data-booking-request>
 <p class="booking-calendar__request-intro">{{intro}}</p>
 {{#endpoint}}<div class="form__sent" role="status" aria-live="polite" tabindex="-1" data-form-sent hidden>
