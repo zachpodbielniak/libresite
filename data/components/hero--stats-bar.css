@@ -1,0 +1,38 @@
+/* hero/stats-bar: a full-bleed photo with the words at the start and a
+ * bar of the supplied facts along its foot, on the brand colour. Layout
+ * only. */
+.hero--stats-bar {
+	position: relative; isolation: isolate; display: grid; grid-template-rows: minmax(0, 1fr) auto;
+	min-height: min(48rem, 64cqi);
+	background: var(--inverse); color: var(--inverse-fg);
+	--ink: var(--inverse-fg); --fg: var(--inverse-fg); --muted: var(--inverse-muted); --muted-fg: var(--inverse-fg);
+}
+.design main > .hero--stats-bar { padding: 0; }
+.hero--stats-bar .hero__inner { align-self: center; padding-block: clamp(4rem, 8cqi, 7rem); }
+.design:is(.header--over-photo, .header--transparent-solid).page--kind-home main > .hero--stats-bar .hero__inner { padding-top: calc(clamp(4rem, 8cqi, 7rem) + 5rem); }
+.hero--stats-bar .hero__media { position: absolute; inset: 0; z-index: -1; margin: 0; }
+.design main > .block.hero--stats-bar .hero__media img:is([src]) { width: 100%; height: 100%; max-height: none; object-fit: cover; border-radius: 0; }
+.hero--stats-bar .hero__media::after {
+	content: ""; position: absolute; inset: 0;
+	background: linear-gradient(90deg, rgb(0 0 0 / calc(var(--scrim) + 0.12)) 0%, rgb(0 0 0 / var(--scrim)) 45%, rgb(0 0 0 / 0.1) 85%);
+}
+.hero--stats-bar .hero__text { max-width: 40rem; }
+.hero--stats-bar .hero__title { max-width: 16ch; margin-bottom: var(--space-5); font-size: var(--text-9); }
+.hero--stats-bar .hero__lede { max-width: 34rem; font-size: var(--text-4); line-height: 1.55; }
+.hero--stats-bar .hero__bar { background: var(--brand); color: var(--brand-fg); }
+.hero--stats-bar .hero__stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4) var(--space-5); margin: 0 auto; padding-block: var(--space-5); }
+.hero--stats-bar .hero__stat { display: grid; gap: var(--space-1); align-content: start; }
+.hero--stats-bar .hero__stat dt { order: 2; font-size: var(--text-2); color: var(--brand-muted); }
+.hero--stats-bar .hero__stat dd { order: 1; margin: 0; font-family: var(--font-display); font-size: var(--text-6); font-weight: var(--heading-weight); line-height: 1.2; }
+.hero--stats-bar .kicker { color: inherit; }
+.hero--stats-bar .button:not(.button--outline) { background: var(--photo-primary); border-color: var(--photo-primary); color: var(--photo-primary-fg); }
+.hero--stats-bar .button:not(.button--outline):hover { background: var(--photo-primary-hover); border-color: var(--photo-primary-hover); }
+.hero--stats-bar .button--outline { color: var(--inverse-fg); border-color: var(--inverse-fg); }
+.hero--stats-bar .button--outline:hover { background: var(--inverse-fg); color: var(--inverse); }
+.hero--stats-bar .hero__phone { margin: var(--space-4) 0 0; font-size: var(--text-3); }
+.hero--stats-bar .hero__phone a { font-weight: 600; }
+@container (min-width: 52rem) {
+	.hero--stats-bar .hero__stats { grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 0; padding-block: var(--space-6); }
+	.hero--stats-bar .hero__stat { padding-inline: var(--space-6); border-left: 1px solid var(--brand-line); }
+	.hero--stats-bar .hero__stat:first-child { padding-left: 0; border-left: 0; }
+}

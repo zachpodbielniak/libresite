@@ -1,0 +1,18 @@
+/* services/sublinks: one card per service group with its services as
+ * links (Lindholm Roofing). Layout only. */
+.services--sublinks .services__groups { display: grid; gap: var(--space-6); grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); margin: 0; padding: 0; list-style: none; }
+.services--sublinks .services__group { display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--line); }
+.services--sublinks .services__photo img { width: 100%; aspect-ratio: 16 / 9; height: auto; max-height: none; object-fit: cover; border-radius: var(--radius-box) var(--radius-box) 0 0; }
+.services--sublinks .services__body { padding: var(--space-6); }
+.services--sublinks .services__name { margin: 0 0 var(--space-3); font-size: var(--text-6); }
+.services--sublinks .services__summary { color: var(--muted-fg); margin-bottom: var(--space-4); }
+.services--sublinks .services__sublinks { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 12rem), 1fr)); gap: 0 var(--space-5); margin: 0; padding: 0; list-style: none; }
+.services--sublinks .services__sublinks a { display: inline-flex; align-items: center; min-height: 44px; font-weight: 600; color: var(--primary-text); text-decoration: none; }
+.services--sublinks .services__sublinks a:hover { text-decoration: underline; }
+/* One group alone sits beside its photo rather than under a full-width one. */
+@container (min-width: 48rem) {
+	.services--sublinks .services__group:only-child { flex-direction: row; }
+	.services--sublinks .services__group:only-child .services__photo { flex: 0 0 42%; }
+	.services--sublinks .services__group:only-child .services__photo img { height: 100%; aspect-ratio: auto; border-radius: var(--radius-box) 0 0 var(--radius-box); }
+	.services--sublinks .services__group:only-child .services__body { align-self: center; }
+}

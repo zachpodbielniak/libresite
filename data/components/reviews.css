@@ -1,0 +1,10 @@
+/* reviews: supplied quotes with their names. Layout only. */
+.reviews__list { display: grid; gap: var(--space-6); margin: 0; padding: 0; list-style: none; }
+.reviews__item { display: flex; flex-direction: column; gap: var(--space-4); height: 100%; margin: 0; padding: var(--space-6); }
+.reviews__quote { margin: 0; font-size: var(--text-4); line-height: 1.55; }
+.reviews__quote p { margin: 0; }
+.reviews__quote p::before { content: "\201c"; }
+.reviews__quote p::after { content: "\201d"; }
+.reviews__item figcaption { margin-top: auto; display: grid; gap: var(--space-1); font-size: var(--text-2); }
+.reviews__name { font-weight: 600; }
+.reviews__source { color: var(--muted-fg); }

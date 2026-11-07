@@ -55,13 +55,14 @@ static const gchar *const photos_json = "[{'path':'assets/photos/patio.jpg','alt
 	"{'path':'assets/photos/lawn.jpg','alt':'A lawn with daisies','width':2000,'height':1330},"
 	"{'path':'assets/photos/shrub.jpg','alt':'A dense green shrub','width':2000,'height':1330}]";
 
-/* The fixture plan dealt from @seed, with the supplied photos when @photos. */
+/* The fixture plan in the default design, with the supplied photos when
+ * @photos. */
 static JsonNode *
-dealt_plan(LsComponents *components, const gchar *seed, gboolean photos){
+fixture_plan(LsComponents *components, gboolean photos){
 	JsonNode *plan = load("tests/fixtures/composed/plan.json");
 	if (photos)
 		json_object_set_member(json_node_get_object(plan), "photos", json(photos_json));
-	g_assert_true(ls_components_apply_seed(components, plan, seed, "trades", FALSE));
+	g_assert_true(ls_components_apply_default(components, plan, FALSE));
 	return plan;
 }
 
@@ -70,124 +71,42 @@ is_picture_led(const gchar *opening){
 	return g_str_has_prefix(opening, "cover/") || g_strv_contains(picture_led, opening);
 }
 
-/* A site with photos is dealt an opening led by its picture, and the
- * opening shows a supplied photo; the prompt's suggestion agrees; sites
- * without photos keep the opening they were dealt before. */
+/* A site with photos opens on the default photo opening, led by its
+ * picture, and the opening shows a supplied photo; a site without photos
+ * keeps the default opening. */
 static void
 test_photo_opening(void){
 	g_autoptr(LsComponents) components = library();
-	g_autoptr(GHashTable) seen = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
-	guint s, sites = 300;
-	for (s = 0; s < sites; s++) {
-		g_autofree gchar *seed = g_strdup_printf("wow-%u\nA business %u.", s, s);
-		g_autoptr(JsonNode) plan = dealt_plan(components, seed, TRUE);
-		g_autoptr(JsonNode) bare = dealt_plan(components, seed, FALSE);
-		g_autoptr(JsonObject) dealt = ls_components_deal_structure(components, seed);
-		g_autoptr(JsonNode) page = load("tests/fixtures/composed/index.json");
-		g_autofree gchar *suggested = ls_components_suggest_photo_opening(components, seed);
-		const gchar *opening = json_object_get_string_member(object(json_node_get_object(plan), "structure"), "opening");
-		JsonObject *art;
-		if (!is_picture_led(opening))
-			g_error("seed %u has photos but opens with %s", s, opening);
-		g_assert_cmpstr(suggested, ==, opening);
-		g_assert_cmpstr(json_object_get_string_member(object(json_node_get_object(bare), "structure"), "opening"), ==,
-			json_object_get_string_member(dealt, "opening"));
-		g_hash_table_add(seen, g_strdup(opening));
-		g_assert_true(ls_components_apply_opening(components, plan, "index.html", page));
-		art = object(object(section(page, 0), "content"), "art");
-		g_assert_nonnull(art);
-		if (!g_str_has_prefix(json_object_get_string_member(art, "src"), "assets/photos/"))
-			g_error("seed %u opens with %s, not a photo", s, json_object_get_string_member(art, "src"));
-	}
-	if (g_hash_table_size(seen) < 10)
-		g_error("photo sites open with only %u openings", g_hash_table_size(seen));
+	g_autoptr(JsonNode) plan = fixture_plan(components, TRUE);
+	g_autoptr(JsonNode) bare = fixture_plan(components, FALSE);
+	g_autoptr(JsonNode) page = load("tests/fixtures/composed/index.json");
+	JsonObject *fallback = object(json_node_get_object(ls_components_get_catalog(components)), "default");
+	const gchar *opening = json_object_get_string_member(object(json_node_get_object(plan), "structure"), "opening");
+	JsonObject *art;
+	g_assert_cmpstr(opening, ==, json_object_get_string_member(fallback, "photo_opening"));
+	g_assert_true(is_picture_led(opening));
+	g_assert_cmpstr(json_object_get_string_member(object(json_node_get_object(bare), "structure"), "opening"), ==,
+		json_object_get_string_member(fallback, "opening"));
+	g_assert_true(ls_components_apply_opening(components, plan, "index.html", page));
+	art = object(object(section(page, 0), "content"), "art");
+	g_assert_nonnull(art);
+	g_assert_true(g_str_has_prefix(json_object_get_string_member(art, "src"), "assets/photos/"));
 }
 
-/* Whether @block's @name list holds an opening its picture leads. */
-static gboolean
-any_led(JsonObject *block, const gchar *name){
-	JsonArray *openings = block != NULL && json_object_has_member(block, name)
-		? json_object_get_array_member(block, name) : NULL;
-	guint i;
-	for (i = 0; openings != NULL && i < json_array_get_length(openings); i++)
-		if (is_picture_led(json_array_get_string_element(openings, i)))
-			return TRUE;
-	return FALSE;
-}
-
-/* Whether @composition offers an opening its picture leads: its own
- * openings, or those the bold block deals into it. */
-static gboolean
-offers_led(const gchar *composition){
-	static JsonNode *catalog = NULL;
-	const gchar *blocks[] = {"compositions", "wider"};
-	JsonObject *root;
-	guint b;
-	if (catalog == NULL) {
-		g_autofree gchar *text = NULL;
-		g_assert_true(g_file_get_contents("data/components/catalog.yaml", &text, NULL, NULL));
-		catalog = ls_yaml_parse(text, NULL);
-	}
-	root = json_node_get_object(catalog);
-	for (b = 0; b < G_N_ELEMENTS(blocks); b++) {
-		JsonObject *layouts = object(object(root, blocks[b]), "layouts");
-		if (json_object_has_member(layouts, composition) && any_led(object(layouts, composition), "openings"))
-			return TRUE;
-	}
-	return any_led(object(object(root, "bold"), "deal_in"), composition);
-}
-
-/* A photo site whose composition offers no picture-led opening picks from
- * every such home opening, not only the first component that has one. */
-static void
-test_photo_fallback(void){
-	g_autoptr(LsComponents) components = library();
-	g_autoptr(GHashTable) kinds = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
-	guint s, fell = 0;
-	for (s = 0; s < 400; s++) {
-		g_autofree gchar *seed = g_strdup_printf("fallback-%u\nA business %u.", s, s);
-		g_autoptr(JsonNode) plan = dealt_plan(components, seed, TRUE);
-		g_autoptr(JsonNode) bare = dealt_plan(components, seed, FALSE);
-		JsonObject *structure = object(json_node_get_object(plan), "structure");
-		const gchar *composition = json_object_get_string_member_with_default(structure, "composition", NULL);
-		const gchar *opening = json_object_get_string_member(structure, "opening");
-		/* Only sites whose own opening and composition offer no picture
-		 * fall back to the pool. */
-		if ((composition != NULL && offers_led(composition)) ||
-			is_picture_led(json_object_get_string_member(object(json_node_get_object(bare), "structure"), "opening")))
-			continue;
-		fell++;
-		g_hash_table_add(kinds, g_strndup(opening, (gsize)(strchr(opening, '/') - opening)));
-	}
-	g_assert_cmpuint(fell, >=, 10);
-	if (g_hash_table_size(kinds) < 2)
-		g_error("%u fallback photo sites all open with one component", fell);
-}
-
-/* Supplied photos keep their colour: no site is dealt a black-and-white or
- * two-tone photo treatment, and the printed-ink artwork treatment leaves
- * photos alone. */
+/* Supplied photos keep their colour: the default design shows them as
+ * they are, and the printed-ink artwork treatment leaves photos alone. */
 static void
 test_photo_colour(void){
 	g_autoptr(LsComponents) components = library();
-	g_autoptr(GHashTable) seen = g_hash_table_new(g_str_hash, g_str_equal);
-	guint s;
-	for (s = 0; s < 3000; s++) {
-		g_autofree gchar *seed = g_strdup_printf("colour-%u\nA business %u.", s, s);
-		g_autoptr(JsonObject) look = ls_components_suggest_look(components, seed);
-		const gchar *photos = json_object_get_string_member(look, "photos");
-		if (g_strcmp0(photos, "mono") == 0 || g_strcmp0(photos, "duotone") == 0)
-			g_error("seed %u drains its photos with %s", s, photos);
-		g_hash_table_add(seen, (gpointer)json_object_get_string_member(look, "photos"));
-	}
-	g_assert_cmpuint(g_hash_table_size(seen), >=, 8);
+	g_autoptr(JsonNode) plan = fixture_plan(components, TRUE);
+	g_assert_cmpstr(json_object_get_string_member(object(json_node_get_object(plan), "look"), "photos"), ==, "natural");
 	/* Gradient lettering clips its fill to the letters, wiping out the
 	 * band of page colour a cover's headline sits on over the photo. */
 	{
 		gchar *css = NULL;
 		g_assert_true(g_file_get_contents("data/components/look.css", &css, NULL, NULL));
 		g_assert_null(strstr(css, ".look-lettering-gradient main h1 {"));
-		g_assert_nonnull(strstr(css, ".look-lettering-gradient main h1:not(.cover h1, .poster--backdrop h1, .hero--banner h1) {"));
+		g_assert_nonnull(strstr(css, ".look-lettering-gradient main h1:not(.cover h1, .hero--banner h1) {"));
 		g_free(css);
 	}
 	{
@@ -242,17 +161,16 @@ section_space_max(const gchar *css){
 	return g_ascii_strtod(comma + 1, NULL);
 }
 
-/* The slowest pace on the airiest density still keeps sections within
+/* The airiest density still keeps sections within
  * eight rem of space; the signature's divider shows at every third gap and
  * never adds a section's worth of space of its own. */
 static void
 test_gaps(void){
 	g_autoptr(LsComponents) components = library();
-	g_autoptr(JsonNode) plan = dealt_plan(components, "gaps\nA plumber.", FALSE);
+	g_autoptr(JsonNode) plan = fixture_plan(components, FALSE);
 	g_autoptr(JsonNode) site = NULL;
 	JsonObject *root = json_node_get_object(plan);
 	const gchar *css, *signature;
-	json_object_set_double_member(object(root, "structure"), "pace", 2.1);
 	json_object_set_string_member(object(root, "tokens"), "density", "airy");
 	json_object_set_string_member(root, "signature", "main > .block + .block::before{content:\"\";display:block;"
 		"width:7.5rem;height:1rem;margin-inline:auto;margin-bottom:var(--section-space);background:var(--accent)}");
@@ -273,7 +191,7 @@ test_gaps(void){
 static void
 test_photo_twice(void){
 	g_autoptr(LsComponents) components = library();
-	g_autoptr(JsonNode) plan = dealt_plan(components, "twice\nA landscaper.", TRUE);
+	g_autoptr(JsonNode) plan = fixture_plan(components, TRUE);
 	g_autoptr(JsonNode) page = json("{'path':'index.html','sections':["
 		"{'component':'cover','variant':'full','content':{'heading':'Gardens you will sit in',"
 		"'art':{'src':'assets/photos/patio.jpg','alt':'A sunny patio'}}},"
@@ -318,7 +236,6 @@ int
 main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
 	g_test_add_func("/wow/photo-opening", test_photo_opening);
-	g_test_add_func("/wow/photo-fallback", test_photo_fallback);
 	g_test_add_func("/wow/photo-colour", test_photo_colour);
 	g_test_add_func("/wow/gaps", test_gaps);
 	g_test_add_func("/wow/photo-twice", test_photo_twice);

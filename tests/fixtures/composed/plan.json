@@ -29,7 +29,7 @@
   },
   "look": {
     "header": "centered",
-    "heads": "numbered",
+    "heads": "rule",
     "panels": "outlined",
     "rhythm": "bands",
     "footer": "big",

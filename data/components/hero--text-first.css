@@ -1,0 +1,14 @@
+/* hero/text-first: centered words and the actions first, then one wide
+ * rounded photo still on the first screen (We Leave Clean). Layout only. */
+.design main > .hero--text-first { padding-block: var(--space-8) var(--space-7); text-align: center; }
+.hero--text-first .hero__text { max-width: 46rem; margin-inline: auto; }
+.hero--text-first .hero__title { max-width: 20ch; margin: 0 auto var(--space-5); font-size: var(--text-9); }
+.hero--text-first .hero__lede { max-width: 36rem; margin-inline: auto; font-size: var(--text-4); line-height: 1.55; color: var(--muted-fg); }
+.hero--text-first .actions { justify-content: center; }
+.hero--text-first .hero__phone { margin: var(--space-4) 0 0; font-size: var(--text-3); }
+.hero--text-first .hero__phone a { font-weight: 600; }
+.hero--text-first .hero__wide { margin: var(--space-8) 0 0; }
+.design main > .block.hero--text-first .hero__wide img:is([src]) { width: 100%; aspect-ratio: 21 / 9; height: auto; max-height: 30rem; object-fit: cover; border-radius: var(--radius-box); }
+@container (max-width: 40rem) {
+	.design main > .block.hero--text-first .hero__wide img:is([src]) { aspect-ratio: 4 / 3; }
+}

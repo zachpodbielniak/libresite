@@ -1,0 +1,13 @@
+/* skeleton/overlap: on wider screens every section after the opening is a
+ * raised panel that overlaps the foot of the one before it, the first one
+ * overlapping the opening's photo. Placement only. */
+@container (min-width: 48rem) {
+	.design.skeleton--overlap.page--kind-home main > .block:not(:first-child) {
+		position: relative; z-index: 1; width: min(100% - 2 * var(--gutter), var(--container) + 2 * var(--space-8));
+		margin-inline: auto; padding-block: var(--section-y); border-radius: var(--radius-box); box-shadow: var(--shadow-3);
+	}
+	.design.skeleton--overlap.page--kind-home main > .block:not(:first-child):not(.tone-surface, .tone-inverse, .tone-brand, .tone-photo) { background: var(--bg); border: 1px solid var(--line); }
+	.design.skeleton--overlap.page--kind-home main > .block + .block { margin-top: calc(var(--space-7) * -1); }
+	.design.skeleton--overlap.page--kind-home main > .block:first-child { padding-bottom: calc(var(--section-y) + var(--space-8)); }
+	.design.skeleton--overlap.page--kind-home main > .block:last-of-type { margin-bottom: var(--space-8); }
+}

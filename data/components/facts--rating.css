@@ -1,0 +1,8 @@
+/* facts/rating: the supplied rating, its count and its source in one line
+ * (We Leave Clean, The Gleamery). Layout only. */
+.facts--rating.block { padding-block: var(--space-5); border-bottom: 1px solid var(--line); }
+.facts--rating .facts__rating { display: flex; justify-content: center; }
+.facts--rating .facts__line { flex-wrap: wrap; justify-content: center; gap: var(--space-2) var(--space-3); margin: 0; text-align: center; }
+.facts--rating .facts__score { font-family: var(--font-display); font-size: var(--text-6); font-weight: var(--heading-weight); }
+.facts--rating .facts__score p { margin: 0; }
+.facts--rating .facts__count { color: var(--muted-fg); font-weight: 500; }

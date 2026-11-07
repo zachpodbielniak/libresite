@@ -1,0 +1,26 @@
+/* hero/fullscreen: the photo fills the first screen under a scrim that
+ * deepens toward its foot; the words sit low on the left. Layout only. */
+.hero--fullscreen {
+	position: relative; isolation: isolate; display: grid; align-items: end;
+	min-height: calc(100svh - 4.75rem);
+	background: var(--inverse); color: var(--inverse-fg);
+	--ink: var(--inverse-fg); --fg: var(--inverse-fg); --muted: var(--inverse-muted); --muted-fg: var(--inverse-fg);
+}
+.design:is(.header--over-photo, .header--transparent-solid) .hero--fullscreen { min-height: 100svh; }
+.design main > .hero--fullscreen { padding-block: var(--space-9) clamp(5.5rem, 9cqi, 8rem); }
+.hero--fullscreen .hero__media { position: absolute; inset: 0; z-index: -1; margin: 0; }
+.design main > .block.hero--fullscreen .hero__media img:is([src]) { width: 100%; height: 100%; max-height: none; object-fit: cover; border-radius: 0; }
+.hero--fullscreen .hero__media::after {
+	content: ""; position: absolute; inset: 0;
+	background: linear-gradient(0deg, rgb(0 0 0 / calc(var(--scrim) + 0.2)) 0%, rgb(0 0 0 / var(--scrim)) 45%, rgb(0 0 0 / 0.15) 100%);
+}
+.hero--fullscreen .hero__text { max-width: 46rem; }
+.hero--fullscreen .hero__title { max-width: 15ch; margin-bottom: var(--space-5); font-size: var(--text-9); }
+.hero--fullscreen .hero__lede { max-width: 36rem; font-size: var(--text-4); line-height: 1.55; }
+.hero--fullscreen .kicker { color: inherit; }
+.hero--fullscreen .button:not(.button--outline) { background: var(--photo-primary); border-color: var(--photo-primary); color: var(--photo-primary-fg); }
+.hero--fullscreen .button:not(.button--outline):hover { background: var(--photo-primary-hover); border-color: var(--photo-primary-hover); }
+.hero--fullscreen .button--outline { color: var(--inverse-fg); border-color: var(--inverse-fg); }
+.hero--fullscreen .button--outline:hover { background: var(--inverse-fg); color: var(--inverse); }
+.hero--fullscreen .hero__phone { margin: var(--space-4) 0 0; font-size: var(--text-3); }
+.hero--fullscreen .hero__phone a { font-weight: 600; }

@@ -105,7 +105,7 @@ themes:
     look:
       header: bar
       nav: slashes
-      heads: numbered
+      heads: rule
       buttons: offset
       panels: outlined
       rhythm: divided
@@ -186,7 +186,7 @@ themes:
       lettering: plain
       links: highlight
       scheme: fixed
-    css: '.hero__title, .poster__title { color: var(--accent); } .kicker { color: var(--accent); }'
+    css: '.hero__title { color: var(--accent); } .kicker { color: var(--accent); }'
   soft:
     summary: 'Friendly and calm: cream, sage, rounded everything, soft shadows and centered headings.'
     tokens:
@@ -357,7 +357,7 @@ themes:
       scheme: fixed
     css: 'body { font-weight: 300; } .brand { letter-spacing: 0.3em; }'
   workshop:
-    summary: 'Made by hand: chalk paper, green-black ink, signal red, numbered sections, pressed buttons and a drafting grid.'
+    summary: 'Made by hand: chalk paper, green-black ink, signal red, ruled section heads, pressed buttons and a drafting grid.'
     tokens:
       paper: '#f3efe4'
       ink: '#16211c'
@@ -395,7 +395,7 @@ themes:
     look:
       header: stacked
       nav: underline
-      heads: numbered
+      heads: rule
       buttons: offset
       panels: outlined
       rhythm: divided
@@ -473,7 +473,7 @@ themes:
       lettering: gradient
       links: highlight
       scheme: fixed
-    css: '.site-footer .brand, .hero__title, .poster__title { color: var(--accent); }'
+    css: '.site-footer .brand, .hero__title { color: var(--accent); }'
   terracotta:
     summary: 'Sun-baked Mediterranean: clay, cream and olive, a soft serif display, highlighted words and warm glows.'
     tokens:
@@ -950,7 +950,7 @@ themes:
     look:
       header: bar
       nav: caps
-      heads: numbered
+      heads: rule
       buttons: hud
       panels: hud
       rhythm: divided
@@ -969,7 +969,7 @@ themes:
       lettering: plain
       links: dotted
       scheme: fixed
-    css: '.site-header { border-bottom-color: color-mix(in srgb, var(--accent) 45%, transparent); } h1, .hero__title, .poster__title { text-shadow: 0 0 1.5rem color-mix(in srgb, var(--accent) 45%, transparent); } ::selection { background: var(--accent); color: var(--accent-ink); }'
+    css: '.site-header { border-bottom-color: color-mix(in srgb, var(--accent) 45%, transparent); } h1, .hero__title { text-shadow: 0 0 1.5rem color-mix(in srgb, var(--accent) 45%, transparent); } ::selection { background: var(--accent); color: var(--accent-ink); }'
   hologram:
     summary: 'Hologram: violet-black space with plasma magenta light, glass panels glowing over aurora fields and a starfield.'
     tokens:
@@ -1023,9 +1023,9 @@ themes:
       lettering: gradient
       links: highlight
       scheme: fixed
-    css: '.hero__title, .poster__title, .manifesto__title { background: linear-gradient(100deg, var(--ink) 30%, var(--accent)); -webkit-background-clip: text; background-clip: text; color: transparent; }'
+    css: '.hero__title { background: linear-gradient(100deg, var(--ink) 30%, var(--accent)); -webkit-background-clip: text; background-clip: text; color: transparent; }'
   swiss:
-    summary: 'Swiss grid: white, black and one red, tight heavy grotesk, numbered sections, ruled items and a full sitemap footer.'
+    summary: 'Swiss grid: white, black and one red, tight heavy grotesk, ruled section heads and items and a full sitemap footer.'
     tokens:
       paper: '#ffffff'
       ink: '#0a0a0a'
@@ -1058,7 +1058,7 @@ themes:
     look:
       header: bar
       nav: underline
-      heads: numbered
+      heads: rule
       buttons: square
       panels: rules
       rhythm: divided
@@ -1131,7 +1131,7 @@ themes:
       links: underline
       scheme: auto
   terminal:
-    summary: 'Retro terminal: black screen, phosphor green monospace everywhere, scanlines, outlined boxes and numbered sections.'
+    summary: 'Retro terminal: black screen, phosphor green monospace everywhere, scanlines, outlined boxes and ruled section heads.'
     tokens:
       paper: '#0b0f0a'
       ink: '#b9f5a4'
@@ -1160,7 +1160,7 @@ themes:
     look:
       header: bar
       nav: slashes
-      heads: numbered
+      heads: rule
       buttons: hud
       panels: outlined
       rhythm: divided
@@ -1339,3 +1339,1227 @@ themes:
       lettering: gradient
       links: highlight
       scheme: fixed
+  # Presets (docs/components.org, "Presets and the picker"): themes with a
+  # design block, each read from one real site's measured palette and fonts
+  # (colour values and layout ideas only; no code, photos or words). The
+  # picker chooses one for every site that names no theme.
+  evergreen:
+    summary: 'Calm trades: white and deep green, a cream surface, one leaf-green detail, Manrope and small radii.'
+    tokens:
+      paper: '#ffffff'
+      ink: '#163e31'
+      muted: '#485e67'
+      surface: '#f6f4ed'
+      line: '#dcd8cc'
+      accent: '#163e31'
+      accent_ink: '#ffffff'
+      font_display: '"Manrope", system-ui, sans-serif'
+      font_body: '"Manrope", system-ui, sans-serif'
+      font_mono: 'ui-monospace, monospace'
+      base_size: 1.0625
+      ratio: 1.25
+      measure: 64
+      radius: 5
+      border: 1
+      space: 1
+      density: regular
+      heading_weight: 600
+      heading_tracking: -0.02
+      heading_leading: 1.1
+      heading_case: none
+    fonts:
+    - family: Manrope
+      weights:
+      - 400
+      - 500
+      - 600
+      - 700
+    look:
+      header: bar
+      nav: underline
+      heads: plain
+      buttons: square
+      panels: flat
+      rhythm: even
+      align: left
+      images: plain
+      footer: simple
+      texture: none
+      motion: none
+      emphasis: accent
+      ornament: none
+      kicker: mono
+      backdrop: none
+      art: open
+      photos: natural
+      edges: straight
+      lettering: plain
+      links: underline
+      scheme: fixed
+    design:
+      source: 'Evergreen Home Heating & Energy (evergreenhomeheatingandenergy.com): palette, fonts and arrangement read from its computed styles, 2026-11-02. Manrope stands in for Satoshi.'
+      fits: [trades]
+      words: [clean, modern, calm, trustworthy, honest, simple, fresh, green, natural, plain]
+      roles:
+        brand: '#163e31'
+        brand_fg: '#ffffff'
+        inverse: '#163e31'
+        inverse_fg: '#ffffff'
+        highlight: '#72ab03'
+        photo_primary: '#f6f4ed'
+        photo_primary_fg: '#163e31'
+      kicker: caps
+      accent: colour
+      shape: {control: 5, box: 8, badge: 999, depth: 0, scrim: 0.62}
+      # Hand-tuned dark scheme (docs/components.org, "Light and dark"): a tinted
+      # ground, not black; surfaces lighter for depth; a lighter accent.
+      dark:
+        tokens: {paper: '#0f1a16', ink: '#e8efe9', muted: '#a9b9b1', surface: '#17251f', line: '#2c3d36', accent: '#8cc7a6', accent_ink: '#0b1a14'}
+        roles: {brand: '#1f5240', brand_fg: '#f0f5f1', inverse: '#0a2a1f', inverse_fg: '#e8efe9', highlight: '#a6d64a', photo_primary: '#f6f4ed', photo_primary_fg: '#163e31'}
+        scrim: 0.68
+      prefer: {hero: photo-start, services: [photo-cards, price-list], reviews: card-grid, contact: call-first, header: bar, footer: columns}
+  press:
+    summary: 'Warm wellness: cream and dark brown, a forest-green button, Inter with one PT Serif italic phrase.'
+    tokens:
+      paper: '#f4f1ec'
+      ink: '#3b2311'
+      muted: '#6a5242'
+      surface: '#ebe4da'
+      line: '#d9cdbd'
+      accent: '#295135'
+      accent_ink: '#ffffff'
+      font_display: '"Inter", system-ui, sans-serif'
+      font_body: '"Inter", system-ui, sans-serif'
+      font_mono: 'ui-monospace, monospace'
+      base_size: 1.0625
+      ratio: 1.25
+      measure: 62
+      radius: 2
+      border: 1
+      space: 1.05
+      density: airy
+      heading_weight: 500
+      heading_tracking: -0.025
+      heading_leading: 1.08
+      heading_case: none
+    fonts:
+    - family: Inter
+      weights:
+      - 400
+      - 500
+      - 600
+    - family: PT Serif
+      weights:
+      - 400
+      italic: true
+    look:
+      header: bar
+      nav: underline
+      heads: plain
+      buttons: square
+      panels: flat
+      rhythm: even
+      align: left
+      images: plain
+      footer: simple
+      texture: none
+      motion: none
+      emphasis: italic
+      ornament: none
+      kicker: mono
+      backdrop: none
+      art: open
+      photos: natural
+      edges: straight
+      lettering: plain
+      links: underline
+      scheme: fixed
+    design:
+      source: 'PRESS Modern Massage (pressmodernmassage.com): palette, fonts and arrangement read from its computed styles, 2026-11-02. Inter stands in for Helvetica Neue.'
+      fits: [wellness]
+      words: [warm, soft, calm, relaxed, relaxing, gentle, cosy, cozy, beige, cream, brown, elegant, natural, earthy]
+      roles:
+        brand: '#9f6a38'
+        brand_fg: '#ffffff'
+        inverse: '#3b2311'
+        inverse_fg: '#f4f1ec'
+        highlight: '#9f6a38'
+        photo_primary: '#295135'
+        photo_primary_fg: '#ffffff'
+      font_accent: '"PT Serif", Georgia, serif'
+      kicker: caps
+      accent: italic
+      shape: {control: 2, box: 4, badge: 2, depth: 0, scrim: 0.5}
+      dark:
+        tokens: {paper: '#1a1511', ink: '#f1e9df', muted: '#bfae9e', surface: '#251e18', line: '#3b3027', accent: '#8fbf98', accent_ink: '#13261a'}
+        roles: {brand: '#7f532b', brand_fg: '#ffffff', inverse: '#2b2018', inverse_fg: '#f1e9df', highlight: '#d39a62', photo_primary: '#3d7550', photo_primary_fg: '#ffffff'}
+        scrim: 0.6
+      prefer: {hero: photo-center, services: price-list, reviews: quote-headline, contact: split, header: bar, footer: simple}
+  lindholm:
+    summary: 'Friendly family trades: white, royal blue and navy, an orange pill, Work Sans and generous rounded boxes.'
+    tokens:
+      paper: '#ffffff'
+      ink: '#231f20'
+      muted: '#4f5661'
+      surface: '#eef1f6'
+      line: '#d7dce5'
+      accent: '#ef7d05'
+      accent_ink: '#231f20'
+      font_display: '"Work Sans", system-ui, sans-serif'
+      font_body: '"Work Sans", system-ui, sans-serif'
+      font_mono: 'ui-monospace, monospace'
+      base_size: 1.0625
+      ratio: 1.25
+      measure: 66
+      radius: 20
+      border: 1
+      space: 1
+      density: regular
+      heading_weight: 700
+      heading_tracking: -0.01
+      heading_leading: 1.12
+      heading_case: none
+    fonts:
+    - family: Work Sans
+      weights:
+      - 400
+      - 500
+      - 600
+      - 700
+    look:
+      header: bar
+      nav: caps
+      heads: plain
+      buttons: pill
+      panels: raised
+      rhythm: even
+      align: left
+      images: rounded
+      footer: simple
+      texture: none
+      motion: none
+      emphasis: accent
+      ornament: none
+      kicker: mono
+      backdrop: none
+      art: open
+      photos: natural
+      edges: straight
+      lettering: plain
+      links: underline
+      scheme: fixed
+    design:
+      source: 'Lindholm Roofing (lindholmroofing.com): palette, fonts and arrangement read from its computed styles, 2026-11-02. The orange button takes a dark label for AA.'
+      fits: [trades]
+      words: [bold, friendly, family, bright, blue, orange, classic, strong, cheerful, welcoming]
+      roles:
+        brand: '#0939b2'
+        brand_fg: '#ffffff'
+        inverse: '#001427'
+        inverse_fg: '#ffffff'
+        highlight: '#ef7d05'
+        photo_primary: '#ef7d05'
+        photo_primary_fg: '#231f20'
+      kicker: caps
+      accent: colour
+      shape: {control: 999, box: 20, badge: 999, depth: 1, scrim: 0.55}
+      dark:
+        tokens: {paper: '#0f1420', ink: '#eef1f6', muted: '#a9b2c2', surface: '#182032', line: '#2b3549', accent: '#f59a3c', accent_ink: '#1a1206'}
+        roles: {brand: '#2c58c9', brand_fg: '#ffffff', inverse: '#08182b', inverse_fg: '#eef1f6', highlight: '#f59a3c', photo_primary: '#f59a3c', photo_primary_fg: '#1a1206'}
+        scrim: 0.62
+      prefer: {hero: split-card, services: sublinks, reviews: card-grid, contact: split, header: utility, footer: columns}
+  veterans:
+    summary: 'Quiet modern roofing: warm off-white and charcoal, a bright blue pill, light Roboto headings.'
+    tokens:
+      paper: '#f7f5f3'
+      ink: '#272c30'
+      muted: '#585f66'
+      surface: '#ebecf0'
+      line: '#d6d8dd'
+      accent: '#0540f2'
+      accent_ink: '#ffffff'
+      font_display: '"Roboto", system-ui, sans-serif'
+      font_body: '"Source Sans 3", system-ui, sans-serif'
+      font_mono: 'ui-monospace, monospace'
+      base_size: 1.0625
+      ratio: 1.25
+      measure: 64
+      radius: 12
+      border: 1
+      space: 1
+      density: airy
+      heading_weight: 300
+      heading_tracking: -0.02
+      heading_leading: 1.1
+      heading_case: none
+    fonts:
+    - family: Roboto
+      weights:
+      - 300
+      - 400
+      - 500
+      - 700
+    - family: Source Sans 3
+      weights:
+      - 400
+      - 600
+    look:
+      header: bar
+      nav: underline
+      heads: plain
+      buttons: square
+      panels: flat
+      rhythm: even
+      align: left
+      images: plain
+      footer: simple
+      texture: none
+      motion: none
+      emphasis: accent
+      ornament: none
+      kicker: mono
+      backdrop: none
+      art: open
+      photos: natural
+      edges: straight
+      lettering: plain
+      links: underline
+      scheme: fixed
+    design:
+      source: 'Veterans Contracting (veteranscontractingllc.com): palette, fonts and arrangement read from its computed styles, 2026-11-02. Source Sans 3 stands in for Acumin Pro.'
+      fits: [trades]
+      words: [quiet, modern, light, blue, strong, reliable, straightforward, professional, simple, veteran]
+      roles:
+        brand: '#272c30'
+        brand_fg: '#ffffff'
+        inverse: '#272c30'
+        inverse_fg: '#f7f5f3'
+        highlight: '#0540f2'
+        photo_primary: '#0540f2'
+        photo_primary_fg: '#ffffff'
+      kicker: caps
+      accent: colour
+      shape: {control: 999, box: 12, badge: 999, depth: 0, scrim: 0.55}
+      dark:
+        tokens: {paper: '#15181b', ink: '#eef0f2', muted: '#a8afb6', surface: '#1f2327', line: '#33393f', accent: '#7b9bff', accent_ink: '#0b1020'}
+        roles: {brand: '#2c3238', brand_fg: '#f7f5f3', inverse: '#0c0e11', inverse_fg: '#eef0f2', highlight: '#8eabff', photo_primary: '#7b9bff', photo_primary_fg: '#0b1020'}
+        scrim: 0.62
+      prefer: {hero: photo-center, services: [feature-rows, photo-cards, sublinks], steps: expect, faq: questions, cta: promise, header: utility, footer: columns}
+  highlands:
+    summary: 'Outdoor work: white and forest green, a sage button, a Spectral serif with an italic accent.'
+    tokens:
+      paper: '#ffffff'
+      ink: '#193f16'
+      muted: '#4f5f4c'
+      surface: '#eef0ec'
+      line: '#d9ddd6'
+      accent: '#54805c'
+      accent_ink: '#ffffff'
+      font_display: '"Spectral", Georgia, serif'
+      font_body: '"Figtree", system-ui, sans-serif'
+      font_mono: 'ui-monospace, monospace'
+      base_size: 1.0625
+      ratio: 1.25
+      measure: 64
+      radius: 4
+      border: 1
+      space: 1
+      density: airy
+      heading_weight: 500
+      heading_tracking: -0.01
+      heading_leading: 1.12
+      heading_case: none
+    fonts:
+    - family: Spectral
+      weights:
+      - 400
+      - 500
+      - 600
+      italic: true
+    - family: Figtree
+      weights:
+      - 400
+      - 500
+      - 600
+    look:
+      header: bar
+      nav: underline
+      heads: plain
+      buttons: square
+      panels: flat
+      rhythm: even
+      align: left
+      images: plain
+      footer: simple
+      texture: none
+      motion: none
+      emphasis: accent
+      ornament: none
+      kicker: mono
+      backdrop: none
+      art: open
+      photos: natural
+      edges: straight
+      lettering: plain
+      links: underline
+      scheme: fixed
+    design:
+      source: 'Highlands Landscaping & Fencing (highlandslandscaping.com): palette, fonts and arrangement read from its computed styles, 2026-11-02. Figtree stands in for Proxima Nova; the sage button #5d8e66 is darkened to #54805c for an AA white label.'
+      fits: [outdoor, trades]
+      words: [natural, green, sage, forest, outdoor, premium, elegant, classic, serif, earthy, warm]
+      roles:
+        brand: '#193f16'
+        brand_fg: '#ffffff'
+        inverse: '#193f16'
+        inverse_fg: '#ffffff'
+        highlight: '#5d8e66'
+        photo_primary: '#ffffff'
+        photo_primary_fg: '#193f16'
+      font_accent: '"Spectral", Georgia, serif'
+      kicker: caps
+      accent: italic
+      shape: {control: 4, box: 4, badge: 4, depth: 0, scrim: 0.45}
+      dark:
+        tokens: {paper: '#111a10', ink: '#e9f0e7', muted: '#a8b7a4', surface: '#1a2619', line: '#2f3d2d', accent: '#8fc29a', accent_ink: '#10200f'}
+        roles: {brand: '#2a5a26', brand_fg: '#f0f5ee', inverse: '#0b240a', inverse_fg: '#e9f0e7', highlight: '#9fd0a8', photo_primary: '#f0f5ee', photo_primary_fg: '#193f16'}
+        scrim: 0.55
+      prefer: {hero: photo-center, services: [feature-rows, photo-cards, price-list], areas: town-list, reviews: card-grid, cta: photo-band, header: bar, footer: simple}
+  guin:
+    summary: 'Friendly family trades: off-white and deep teal, a green band, an orange button, Barlow headings.'
+    tokens:
+      paper: '#f5f7f6'
+      ink: '#12353c'
+      muted: '#4a5d61'
+      surface: '#e5eee9'
+      line: '#d1dbd6'
+      accent: '#f78429'
+      accent_ink: '#12353c'
+      font_display: '"Barlow", system-ui, sans-serif'
+      font_body: '"Open Sans", system-ui, sans-serif'
+      font_mono: 'ui-monospace, monospace'
+      base_size: 1.0625
+      ratio: 1.25
+      measure: 64
+      radius: 6
+      border: 1
+      space: 1
+      density: regular
+      heading_weight: 700
+      heading_tracking: -0.01
+      heading_leading: 1.1
+      heading_case: none
+    fonts:
+    - family: Barlow
+      weights:
+      - 500
+      - 600
+      - 700
+    - family: Open Sans
+      weights:
+      - 400
+      - 600
+    look:
+      header: bar
+      nav: underline
+      heads: plain
+      buttons: square
+      panels: flat
+      rhythm: even
+      align: left
+      images: plain
+      footer: simple
+      texture: none
+      motion: none
+      emphasis: accent
+      ornament: none
+      kicker: mono
+      backdrop: none
+      art: open
+      photos: natural
+      edges: straight
+      lettering: plain
+      links: underline
+      scheme: fixed
+    design:
+      source: 'Guin Service (guinservice.com): palette, fonts and arrangement read from its computed styles, 2026-11-02.'
+      fits: [trades]
+      words: [friendly, family, warm, orange, green, teal, promise, local, cheerful, established]
+      roles:
+        brand: '#208545'
+        brand_fg: '#ffffff'
+        inverse: '#12353c'
+        inverse_fg: '#f5f7f6'
+        highlight: '#1fb25a'
+        photo_primary: '#f78429'
+        photo_primary_fg: '#12353c'
+      kicker: caps
+      accent: colour
+      shape: {control: 6, box: 10, badge: 999, depth: 1, scrim: 0.5}
+      dark:
+        tokens: {paper: '#0e1b1e', ink: '#e9f1ef', muted: '#a5b8b6', surface: '#16282c', line: '#2a3e43', accent: '#f99a52', accent_ink: '#12353c'}
+        roles: {brand: '#1d7a3f', brand_fg: '#ffffff', inverse: '#082a30', inverse_fg: '#e9f1ef', highlight: '#4fd283', photo_primary: '#f99a52', photo_primary_fg: '#12353c'}
+        scrim: 0.6
+      prefer: {hero: split-frame, facts: band, services: [photo-cards, sublinks], steps: numbered-row, header: bar, footer: columns}
+  weleave:
+    summary: 'Bright home services: white and near-black, one lime button with a black label, Be Vietnam Pro.'
+    tokens:
+      paper: '#ffffff'
+      ink: '#0a0909'
+      muted: '#555252'
+      surface: '#f5f3f3'
+      line: '#e2dede'
+      accent: '#b4ff5c'
+      accent_ink: '#0a0909'
+      font_display: '"Be Vietnam Pro", system-ui, sans-serif'
+      font_body: '"Be Vietnam Pro", system-ui, sans-serif'
+      font_mono: 'ui-monospace, monospace'
+      base_size: 1.0625
+      ratio: 1.25
+      measure: 62
+      radius: 8
+      border: 1
+      space: 1
+      density: regular
+      heading_weight: 700
+      heading_tracking: -0.025
+      heading_leading: 1.08
+      heading_case: none
+    fonts:
+    - family: Be Vietnam Pro
+      weights:
+      - 400
+      - 500
+      - 600
+      - 700
+    look:
+      header: bar
+      nav: underline
+      heads: plain
+      buttons: square
+      panels: flat
+      rhythm: even
+      align: left
+      images: plain
+      footer: simple
+      texture: none
+      motion: none
+      emphasis: accent
+      ornament: none
+      kicker: mono
+      backdrop: none
+      art: open
+      photos: natural
+      edges: straight
+      lettering: plain
+      links: underline
+      scheme: fixed
+    design:
+      source: 'We Leave Clean (weleaveclean.com): palette, fonts and arrangement read from its computed styles, 2026-11-02.'
+      fits: [cleaning]
+      words: [clean, bright, confident, lime, fresh, modern, friendly, simple, black]
+      roles:
+        brand: '#0a0909'
+        brand_fg: '#ffffff'
+        inverse: '#0a0909'
+        inverse_fg: '#f5f3f3'
+        highlight: '#b4ff5c'
+        photo_primary: '#b4ff5c'
+        photo_primary_fg: '#0a0909'
+      kicker: caps
+      accent: colour
+      shape: {control: 8, box: 16, badge: 999, depth: 0, scrim: 0.45}
+      dark:
+        tokens: {paper: '#111111', ink: '#f3f1f1', muted: '#b1adad', surface: '#1c1c1c', line: '#2f2f2f', accent: '#b4ff5c', accent_ink: '#0a0909'}
+        roles: {brand: '#262626', brand_fg: '#f5f3f3', inverse: '#050505', inverse_fg: '#f5f3f3', highlight: '#b4ff5c', photo_primary: '#b4ff5c', photo_primary_fg: '#0a0909'}
+        scrim: 0.55
+      prefer: {hero: text-first, facts: rating, services: [photo-cards, price-list], steps: three-steps, faq: questions, header: bar, footer: simple}
+  electrified:
+    summary: 'Technical workshops: warm off-white and ink, one orange pill, Montserrat with JetBrains Mono labels.'
+    tokens:
+      paper: '#f5f3ee'
+      ink: '#18202a'
+      muted: '#4e585a'
+      surface: '#ebe7dd'
+      line: '#d6d1c4'
+      accent: '#fc5017'
+      accent_ink: '#161f2c'
+      font_display: '"Montserrat", system-ui, sans-serif'
+      font_body: '"Open Sans", system-ui, sans-serif'
+      font_mono: 'ui-monospace, monospace'
+      base_size: 1.0625
+      ratio: 1.25
+      measure: 64
+      radius: 6
+      border: 1
+      space: 1
+      density: regular
+      heading_weight: 700
+      heading_tracking: -0.03
+      heading_leading: 1.04
+      heading_case: none
+    fonts:
+    - family: Montserrat
+      weights:
+      - 600
+      - 700
+    - family: Open Sans
+      weights:
+      - 400
+      - 600
+    - family: JetBrains Mono
+      weights:
+      - 500
+    look:
+      header: bar
+      nav: underline
+      heads: plain
+      buttons: square
+      panels: flat
+      rhythm: even
+      align: left
+      images: plain
+      footer: simple
+      texture: none
+      motion: none
+      emphasis: accent
+      ornament: none
+      kicker: mono
+      backdrop: none
+      art: open
+      photos: natural
+      edges: straight
+      lettering: plain
+      links: underline
+      scheme: fixed
+    design:
+      source: 'Electrified Garage (electrifiedgarage.com): palette, fonts and arrangement read from its computed styles, 2026-11-02.'
+      fits: [auto]
+      words: [technical, precise, engineered, modern, orange, workshop, electric, sharp, evidence]
+      roles:
+        brand: '#18202a'
+        brand_fg: '#f5f3ee'
+        inverse: '#18202a'
+        inverse_fg: '#f5f3ee'
+        highlight: '#fc5017'
+        photo_primary: '#fc5017'
+        photo_primary_fg: '#161f2c'
+      font_label: '"JetBrains Mono", ui-monospace, monospace'
+      kicker: caps
+      accent: colour
+      shape: {control: 999, box: 6, badge: 999, depth: 0, scrim: 0.55}
+      dark:
+        tokens: {paper: '#12171e', ink: '#f2efe8', muted: '#b0b4b2', surface: '#1b222b', line: '#2f3843', accent: '#ff6a35', accent_ink: '#161f2c'}
+        roles: {brand: '#232c37', brand_fg: '#f5f3ee', inverse: '#0a0e13', inverse_fg: '#f5f3ee', highlight: '#ff7a4a', photo_primary: '#ff6a35', photo_primary_fg: '#161f2c'}
+        scrim: 0.62
+      prefer: {hero: split-frame, services: [sublinks, feature-rows], steps: expect, areas: shop-chooser, header: bar, footer: columns}
+  glenwood:
+    summary: 'Barbers and salons: off-white and black, one dark red pill, Mulish and Quicksand, round service photos.'
+    tokens:
+      paper: '#f7f7f7'
+      ink: '#000000'
+      muted: '#555555'
+      surface: '#ebebeb'
+      line: '#d6d6d6'
+      accent: '#92211d'
+      accent_ink: '#ffffff'
+      font_display: '"Mulish", system-ui, sans-serif'
+      font_body: '"Quicksand", system-ui, sans-serif'
+      font_mono: 'ui-monospace, monospace'
+      base_size: 1.0625
+      ratio: 1.25
+      measure: 62
+      radius: 4
+      border: 1
+      space: 1
+      density: regular
+      heading_weight: 800
+      heading_tracking: -0.02
+      heading_leading: 1.06
+      heading_case: none
+    fonts:
+    - family: Mulish
+      weights:
+      - 600
+      - 800
+    - family: Quicksand
+      weights:
+      - 400
+      - 500
+      - 600
+    look:
+      header: bar
+      nav: underline
+      heads: plain
+      buttons: square
+      panels: flat
+      rhythm: even
+      align: left
+      images: plain
+      footer: simple
+      texture: none
+      motion: none
+      emphasis: accent
+      ornament: none
+      kicker: mono
+      backdrop: none
+      art: open
+      photos: natural
+      edges: straight
+      lettering: plain
+      links: underline
+      scheme: fixed
+    design:
+      source: 'Glenwood South Barberstudio (glenwoodsouthbarberstudio.com): palette, fonts and arrangement read from its computed styles, 2026-11-02. Mulish is the current name of Muli.'
+      fits: [wellness]
+      words: [bold, classic, dark, red, moody, sharp, old, school, barber, fresh]
+      roles:
+        brand: '#000000'
+        brand_fg: '#f7f7f7'
+        inverse: '#000000'
+        inverse_fg: '#f7f7f7'
+        highlight: '#cc4641'
+        photo_primary: '#92211d'
+        photo_primary_fg: '#ffffff'
+      kicker: caps
+      accent: colour
+      shape: {control: 999, box: 4, badge: 999, depth: 0, scrim: 0.62}
+      dark:
+        tokens: {paper: '#121212', ink: '#f2f2f2', muted: '#b0b0b0', surface: '#1d1d1d', line: '#313131', accent: '#b8352f', accent_ink: '#ffffff'}
+        roles: {brand: '#272727', brand_fg: '#f7f7f7', inverse: '#050505', inverse_fg: '#f7f7f7', highlight: '#e0716c', photo_primary: '#b8352f', photo_primary_fg: '#ffffff'}
+        scrim: 0.68
+      prefer: {hero: photo-center, services: [round-photos, price-list], header: over-photo, cta: promise, footer: simple}
+  gleamery:
+    summary: 'Warm modern clinics: warm white and charcoal, a mint surface, a rust pill, Hanken Grotesk.'
+    tokens:
+      paper: '#faf7f5'
+      ink: '#383838'
+      muted: '#5e5955'
+      surface: '#dbf6e9'
+      line: '#e3dcd5'
+      accent: '#963f36'
+      accent_ink: '#ffffff'
+      font_display: '"Hanken Grotesk", system-ui, sans-serif'
+      font_body: '"Inter", system-ui, sans-serif'
+      font_mono: 'ui-monospace, monospace'
+      base_size: 1.0625
+      ratio: 1.25
+      measure: 62
+      radius: 16
+      border: 1
+      space: 1
+      density: airy
+      heading_weight: 500
+      heading_tracking: -0.02
+      heading_leading: 1.1
+      heading_case: none
+    fonts:
+    - family: Hanken Grotesk
+      weights:
+      - 400
+      - 500
+      - 600
+    - family: Inter
+      weights:
+      - 400
+      - 500
+      - 600
+    look:
+      header: bar
+      nav: underline
+      heads: plain
+      buttons: square
+      panels: flat
+      rhythm: even
+      align: left
+      images: plain
+      footer: simple
+      texture: none
+      motion: none
+      emphasis: accent
+      ornament: none
+      kicker: mono
+      backdrop: none
+      art: open
+      photos: natural
+      edges: straight
+      lettering: plain
+      links: underline
+      scheme: fixed
+    design:
+      source: 'The Gleamery (thegleamery.com): palette, fonts and arrangement read from its computed styles, 2026-11-02. Hanken Grotesk stands in for Bagoss, Inter for StyreneB.'
+      fits: [clinic, wellness]
+      words: [warm, modern, soft, gentle, friendly, mint, sage, rust, bright, fresh]
+      roles:
+        brand: '#6e8568'
+        brand_fg: '#ffffff'
+        inverse: '#383838'
+        inverse_fg: '#faf7f5'
+        highlight: '#6e8568'
+        photo_primary: '#ffffff'
+        photo_primary_fg: '#963f36'
+      kicker: caps
+      accent: colour
+      shape: {control: 999, box: 16, badge: 999, depth: 0, scrim: 0.4}
+      dark:
+        tokens: {paper: '#171514', ink: '#f2eeea', muted: '#b8b1ab', surface: '#1d2421', line: '#35332f', accent: '#e08a7e', accent_ink: '#1f0f0c'}
+        roles: {brand: '#516b4b', brand_fg: '#ffffff', inverse: '#0e0d0c', inverse_fg: '#f2eeea', highlight: '#9cb894', photo_primary: '#faf7f5', photo_primary_fg: '#963f36'}
+        scrim: 0.5
+      prefer: {hero: photo-start, facts: rating, services: [photo-cards, sublinks], steps: three-steps, header: bar, footer: simple}
+  village:
+    summary: 'Premium practices: off-white and navy, a gold button, a Noto Serif headline, square corners.'
+    tokens:
+      paper: '#f4f6f3'
+      ink: '#052639'
+      muted: '#4a5b66'
+      surface: '#e6ece8'
+      line: '#d0d9d4'
+      accent: '#e7ca71'
+      accent_ink: '#052639'
+      font_display: '"Noto Serif", Georgia, serif'
+      font_body: '"Karla", system-ui, sans-serif'
+      font_mono: 'ui-monospace, monospace'
+      base_size: 1.0625
+      ratio: 1.25
+      measure: 64
+      radius: 0
+      border: 1
+      space: 1
+      density: airy
+      heading_weight: 500
+      heading_tracking: -0.01
+      heading_leading: 1.12
+      heading_case: none
+    fonts:
+    - family: Noto Serif
+      weights:
+      - 400
+      - 500
+      - 600
+    - family: Karla
+      weights:
+      - 400
+      - 500
+      - 700
+    look:
+      header: bar
+      nav: underline
+      heads: plain
+      buttons: square
+      panels: flat
+      rhythm: even
+      align: left
+      images: plain
+      footer: simple
+      texture: none
+      motion: none
+      emphasis: accent
+      ornament: none
+      kicker: mono
+      backdrop: none
+      art: open
+      photos: natural
+      edges: straight
+      lettering: plain
+      links: underline
+      scheme: fixed
+    design:
+      source: 'Village Dental (villagedentaldtc.com): palette, fonts and arrangement read from its computed styles, 2026-11-02. Noto Serif stands in for Noto Serif JP.'
+      fits: [clinic, professional]
+      words: [premium, calm, refined, navy, gold, brass, trusted, established, serif, elegant]
+      roles:
+        brand: '#052639'
+        brand_fg: '#f4f6f3'
+        inverse: '#052639'
+        inverse_fg: '#f4f6f3'
+        highlight: '#266980'
+        photo_primary: '#e7ca71'
+        photo_primary_fg: '#052639'
+      kicker: caps
+      accent: colour
+      shape: {control: 0, box: 0, badge: 0, depth: 0, scrim: 0.45}
+      dark:
+        tokens: {paper: '#0b1a24', ink: '#eef3f1', muted: '#a7b6bd', surface: '#12242f', line: '#263a47', accent: '#e7ca71', accent_ink: '#052639'}
+        roles: {brand: '#123a52', brand_fg: '#f4f6f3', inverse: '#05131c', inverse_fg: '#eef3f1', highlight: '#6cbbd3', photo_primary: '#e7ca71', photo_primary_fg: '#052639'}
+        scrim: 0.55
+      prefer: {hero: photo-center, services: [sublinks, price-list], faq: side-heading, contact: split, header: bar, footer: columns}
+  harte:
+    summary: 'Professional firms: white and deep navy, a light blue button with a navy label, Public Sans, square corners.'
+    tokens:
+      paper: '#ffffff'
+      ink: '#001a33'
+      muted: '#4b5b6b'
+      surface: '#edf3f5'
+      line: '#d4dee4'
+      accent: '#afd2eb'
+      accent_ink: '#002746'
+      font_display: '"Public Sans", system-ui, sans-serif'
+      font_body: '"Public Sans", system-ui, sans-serif'
+      font_mono: 'ui-monospace, monospace'
+      base_size: 1.0625
+      ratio: 1.25
+      measure: 64
+      radius: 0
+      border: 1
+      space: 1
+      density: regular
+      heading_weight: 600
+      heading_tracking: -0.02
+      heading_leading: 1.1
+      heading_case: none
+    fonts:
+    - family: Public Sans
+      weights:
+      - 400
+      - 500
+      - 600
+      - 700
+    look:
+      header: bar
+      nav: underline
+      heads: plain
+      buttons: square
+      panels: flat
+      rhythm: even
+      align: left
+      images: plain
+      footer: simple
+      texture: none
+      motion: none
+      emphasis: accent
+      ornament: none
+      kicker: mono
+      backdrop: none
+      art: open
+      photos: natural
+      edges: straight
+      lettering: plain
+      links: underline
+      scheme: fixed
+    design:
+      source: 'Harte Law (hartelaw.com): palette, fonts and arrangement read from its computed styles, 2026-11-02. Public Sans stands in for Area Normal.'
+      fits: [professional]
+      words: [navy, serious, professional, established, trustworthy, plain, clear, formal, legal, white]
+      roles:
+        brand: '#002746'
+        brand_fg: '#ffffff'
+        inverse: '#001a33'
+        inverse_fg: '#edf3f5'
+        highlight: '#afd2eb'
+        photo_primary: '#afd2eb'
+        photo_primary_fg: '#002746'
+      kicker: caps
+      accent: colour
+      shape: {control: 0, box: 0, badge: 0, depth: 0, scrim: 0.62}
+      dark:
+        tokens: {paper: '#0a1522', ink: '#edf3f5', muted: '#a6b4c2', surface: '#111f30', line: '#24354a', accent: '#afd2eb', accent_ink: '#002746'}
+        roles: {brand: '#0f3a5f', brand_fg: '#ffffff', inverse: '#040e19', inverse_fg: '#edf3f5', highlight: '#afd2eb', photo_primary: '#afd2eb', photo_primary_fg: '#002746'}
+        scrim: 0.7
+      prefer: {hero: photo-start, facts: logos, services: [feature-rows, sublinks, price-list], faq: side-heading, contact: split, header: bar, footer: columns}
+  littlefish:
+    summary: 'Human professionals: warm white and charcoal, a peach button, Raleway and one Sacramento script word.'
+    tokens:
+      paper: '#f5f3f0'
+      ink: '#383737'
+      muted: '#5f5c58'
+      surface: '#ede6dc'
+      line: '#dcd4c9'
+      accent: '#f2b297'
+      accent_ink: '#1b1b1b'
+      font_display: '"Raleway", system-ui, sans-serif'
+      font_body: '"Quicksand", system-ui, sans-serif'
+      font_mono: 'ui-monospace, monospace'
+      base_size: 1.0625
+      ratio: 1.25
+      measure: 62
+      radius: 0
+      border: 1
+      space: 1
+      density: airy
+      heading_weight: 600
+      heading_tracking: -0.01
+      heading_leading: 1.12
+      heading_case: none
+    fonts:
+    - family: Raleway
+      weights:
+      - 500
+      - 600
+      - 700
+    - family: Quicksand
+      weights:
+      - 400
+      - 500
+      - 600
+    - family: Sacramento
+      weights:
+      - 400
+    look:
+      header: bar
+      nav: underline
+      heads: plain
+      buttons: square
+      panels: flat
+      rhythm: even
+      align: left
+      images: plain
+      footer: simple
+      texture: none
+      motion: none
+      emphasis: accent
+      ornament: none
+      kicker: mono
+      backdrop: none
+      art: open
+      photos: natural
+      edges: straight
+      lettering: plain
+      links: underline
+      scheme: fixed
+    design:
+      source: 'Little Fish Accounting (littlefishaccounting.com): palette, fonts and arrangement read from its computed styles, 2026-11-02.'
+      fits: [professional]
+      words: [calm, soft, human, friendly, peach, teal, approachable, clarity, gentle, personal]
+      roles:
+        brand: '#427d7c'
+        brand_fg: '#ffffff'
+        inverse: '#383737'
+        inverse_fg: '#f5f3f0'
+        highlight: '#95cac2'
+        photo_primary: '#f2b297'
+        photo_primary_fg: '#1b1b1b'
+      font_accent: '"Sacramento", cursive'
+      kicker: caps
+      accent: script
+      shape: {control: 0, box: 24, badge: 999, depth: 0, scrim: 0.45, frame: circle}
+      dark:
+        tokens: {paper: '#181716', ink: '#f3f0ec', muted: '#b6b1aa', surface: '#232220', line: '#383532', accent: '#f2b297', accent_ink: '#1b1b1b'}
+        roles: {brand: '#2f6463', brand_fg: '#ffffff', inverse: '#0e0e0d', inverse_fg: '#f3f0ec', highlight: '#95cac2', photo_primary: '#f2b297', photo_primary_fg: '#1b1b1b'}
+        scrim: 0.55
+      prefer: {hero: split-frame, services: [photo-cards, price-list], faq: two-column, header: split, footer: centered}
+  zinc:
+    summary: 'Cafes and kitchens: white and navy, one red detail, an EB Garamond headline over Jost.'
+    tokens:
+      paper: '#ffffff'
+      ink: '#101f36'
+      muted: '#4f5a6b'
+      surface: '#f0f2f5'
+      line: '#d8dde5'
+      accent: '#101f36'
+      accent_ink: '#ffffff'
+      font_display: '"EB Garamond", Georgia, serif'
+      font_body: '"Jost", system-ui, sans-serif'
+      font_mono: 'ui-monospace, monospace'
+      base_size: 1.0625
+      ratio: 1.25
+      measure: 62
+      radius: 0
+      border: 1
+      space: 1
+      density: airy
+      heading_weight: 500
+      heading_tracking: -0.01
+      heading_leading: 1.1
+      heading_case: none
+    fonts:
+    - family: EB Garamond
+      weights:
+      - 400
+      - 500
+      - 600
+      italic: true
+    - family: Jost
+      weights:
+      - 400
+      - 500
+      - 600
+    look:
+      header: bar
+      nav: underline
+      heads: plain
+      buttons: square
+      panels: flat
+      rhythm: even
+      align: left
+      images: plain
+      footer: simple
+      texture: none
+      motion: none
+      emphasis: accent
+      ornament: none
+      kicker: mono
+      backdrop: none
+      art: open
+      photos: natural
+      edges: straight
+      lettering: plain
+      links: underline
+      scheme: fixed
+    design:
+      source: 'Zinc Cafe & Bar (zinccafe.com): palette, fonts and arrangement read from its computed styles, 2026-11-02. EB Garamond stands in for Garamond Premier, Jost for Brandon Grotesque.'
+      fits: [food]
+      words: [calm, classic, navy, appetising, appetizing, fresh, local, garamond, simple, market]
+      roles:
+        brand: '#101f36'
+        brand_fg: '#ffffff'
+        inverse: '#101f36'
+        inverse_fg: '#ffffff'
+        highlight: '#922024'
+        photo_primary: '#ffffff'
+        photo_primary_fg: '#101f36'
+      font_accent: '"EB Garamond", Georgia, serif'
+      kicker: caps
+      accent: italic
+      shape: {control: 0, box: 0, badge: 0, depth: 0, scrim: 0.45}
+      dark:
+        tokens: {paper: '#0c1524', ink: '#eef1f5', muted: '#a9b3c2', surface: '#142034', line: '#26344c', accent: '#dfe6f0', accent_ink: '#101f36'}
+        roles: {brand: '#1a2d4d', brand_fg: '#ffffff', inverse: '#050c17', inverse_fg: '#eef1f5', highlight: '#ec6a6e', photo_primary: '#ffffff', photo_primary_fg: '#101f36'}
+        scrim: 0.55
+      prefer: {hero: photo-pair, services: [round-photos, price-list], areas: location-blocks, header: split, footer: centered}
+  mission:
+    summary: 'Venues and nights out: white and black, a red button, navy band, Montserrat in capitals.'
+    tokens:
+      paper: '#ffffff'
+      ink: '#000000'
+      muted: '#555555'
+      surface: '#f0f0f0'
+      line: '#dddddd'
+      accent: '#d32f2f'
+      accent_ink: '#ffffff'
+      font_display: '"Montserrat", system-ui, sans-serif'
+      font_body: '"Montserrat", system-ui, sans-serif'
+      font_mono: 'ui-monospace, monospace'
+      base_size: 1.0625
+      ratio: 1.25
+      measure: 62
+      radius: 12
+      border: 1
+      space: 1
+      density: regular
+      heading_weight: 800
+      heading_tracking: -0.01
+      heading_leading: 1.04
+      heading_case: uppercase
+    fonts:
+    - family: Montserrat
+      weights:
+      - 400
+      - 500
+      - 600
+      - 800
+    look:
+      header: bar
+      nav: underline
+      heads: plain
+      buttons: square
+      panels: flat
+      rhythm: even
+      align: left
+      images: plain
+      footer: simple
+      texture: none
+      motion: none
+      emphasis: accent
+      ornament: none
+      kicker: mono
+      backdrop: none
+      art: open
+      photos: natural
+      edges: straight
+      lettering: plain
+      links: underline
+      scheme: fixed
+    design:
+      source: 'Mission Bowling Club (missionbowlingclub.com): palette, fonts and arrangement read from its computed styles, 2026-11-02.'
+      fits: [events, food]
+      words: [bold, fun, lively, red, black, night, punchy, playful, events, energetic]
+      roles:
+        brand: '#2c4270'
+        brand_fg: '#ffffff'
+        inverse: '#000000'
+        inverse_fg: '#ffffff'
+        highlight: '#d32f2f'
+        photo_primary: '#d32f2f'
+        photo_primary_fg: '#ffffff'
+      kicker: pill
+      accent: colour
+      shape: {control: 12, box: 12, badge: 999, depth: 0, scrim: 0.55}
+      dark:
+        tokens: {paper: '#121212', ink: '#f5f5f5', muted: '#b3b3b3', surface: '#1d1d1d', line: '#313131', accent: '#c62828', accent_ink: '#ffffff'}
+        roles: {brand: '#2c4270', brand_fg: '#ffffff', inverse: '#050505', inverse_fg: '#f5f5f5', highlight: '#ff7070', photo_primary: '#c62828', photo_primary_fg: '#ffffff'}
+        scrim: 0.62
+      prefer: {hero: photo-center, facts: strip, services: [photo-cards, round-photos], cta: closing-band, header: bar, footer: simple}
+  tulip:
+    summary: 'Florists and boutiques: warm grey and near-black, a steel blue band, an Ovo serif headline over Karla.'
+    tokens:
+      paper: '#f2f0ec'
+      ink: '#121212'
+      muted: '#57544f'
+      surface: '#e7e3dc'
+      line: '#d4cfc6'
+      accent: '#121212'
+      accent_ink: '#f2f0ec'
+      font_display: '"Ovo", Georgia, serif'
+      font_body: '"Karla", system-ui, sans-serif'
+      font_mono: 'ui-monospace, monospace'
+      base_size: 1.0625
+      ratio: 1.25
+      measure: 62
+      radius: 0
+      border: 1
+      space: 1
+      density: airy
+      heading_weight: 400
+      heading_tracking: -0.01
+      heading_leading: 1.12
+      heading_case: none
+    fonts:
+    - family: Ovo
+      weights:
+      - 400
+    - family: Karla
+      weights:
+      - 400
+      - 500
+      - 700
+    look:
+      header: bar
+      nav: underline
+      heads: plain
+      buttons: square
+      panels: flat
+      rhythm: even
+      align: left
+      images: plain
+      footer: simple
+      texture: none
+      motion: none
+      emphasis: accent
+      ornament: none
+      kicker: mono
+      backdrop: none
+      art: open
+      photos: natural
+      edges: straight
+      lettering: plain
+      links: underline
+      scheme: fixed
+    design:
+      source: 'Table & Tulip (tableandtulip.com): palette, fonts and arrangement read from its computed styles, 2026-11-02.'
+      fits: [retail, food]
+      words: [elegant, warm, moody, boutique, refined, serif, floral, intentional, steel, grey]
+      roles:
+        brand: '#40748d'
+        brand_fg: '#ffffff'
+        inverse: '#121212'
+        inverse_fg: '#f2f0ec'
+        highlight: '#40748d'
+        photo_primary: '#ffffff'
+        photo_primary_fg: '#121212'
+      kicker: caps
+      accent: colour
+      shape: {control: 0, box: 0, badge: 0, depth: 0, scrim: 0.5}
+      dark:
+        tokens: {paper: '#161514', ink: '#f2f0ec', muted: '#b4afa8', surface: '#201f1d', line: '#363431', accent: '#f2f0ec', accent_ink: '#121212'}
+        roles: {brand: '#365f73', brand_fg: '#ffffff', inverse: '#0b0b0a', inverse_fg: '#f2f0ec', highlight: '#86b8cf', photo_primary: '#ffffff', photo_primary_fg: '#121212'}
+        scrim: 0.55
+      prefer: {hero: photo-start, services: [photo-cards, feature-rows, price-list], header: split, footer: simple}

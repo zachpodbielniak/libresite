@@ -1,15 +1,11 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
-/* Calm, but not one template (epic #17 item 24): the seed deals the
- * photo-led opening from at least four calm compositions, earlier sites
- * steer the next one off the opening just worn, and no page shows a
- * supplied photo twice. */
+/* Calm openings: the builder sets the photo-led opening scene, and no page
+ * shows a supplied photo twice. */
 #include "libresite.h"
 #include "core/ls-components.h"
 #include "core/ls-util.h"
 #include "core/ls-visual.h"
 #include <string.h>
-
-static const gchar *const calm_scenes[] = {"split", "right", "above", "scrim", NULL};
 
 static JsonNode *
 read_json(const gchar *path){
@@ -112,72 +108,19 @@ assert_no_repeat(JsonObject *plan, JsonNode *page){
 				GPOINTER_TO_UINT(value));
 }
 
-/* At least four calm openings, every one of them calm, the same seed
- * always the same one. */
+/* The builder, not the writer, picks the opening scene the plan wears: the
+ * catalog default's, whatever the writer chose. */
 static void
-test_scenes_dealt(void){
+test_default_sets_layout(void){
 	g_autoptr(LsComponents) library = ls_components_new(NULL);
-	g_autoptr(GHashTable) seen = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
-	guint i;
-	for (i = 0; i < 64; i++) {
-		g_autofree gchar *seed = g_strdup_printf("site-%u", i);
-		g_autofree gchar *scene = ls_components_suggest_scene(library, seed);
-		g_autofree gchar *again = ls_components_suggest_scene(library, seed);
-		g_assert_nonnull(scene);
-		g_assert_cmpstr(scene, ==, again);
-		g_assert_true(g_strv_contains(calm_scenes, scene));
-		g_hash_table_add(seen, g_steal_pointer(&scene));
-	}
-	g_assert_cmpuint(g_hash_table_size(seen), >=, 4);
-}
-
-/* The seed, not the writer, picks the opening the plan wears. */
-static void
-test_seed_sets_layout(void){
-	g_autoptr(LsComponents) library = ls_components_new(NULL);
-	g_autoptr(GHashTable) seen = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
-	guint i;
-	for (i = 0; i < 32; i++) {
-		g_autoptr(JsonNode) plan = visual_plan(4);
-		g_autofree gchar *seed = g_strdup_printf("layout-%u", i);
-		g_autofree gchar *scene = ls_components_suggest_scene(library, seed);
-		JsonObject *visual = json_object_get_object_member(json_node_get_object(plan), "visual");
-		g_assert_true(ls_components_apply_seed(library, plan, seed, "trades", FALSE));
-		g_assert_cmpstr(ls_string(visual, "layout"), ==, scene);
-		g_assert_true(ls_visual_check_plan(json_node_get_object(plan), NULL));
-		g_hash_table_add(seen, g_strdup(ls_string(visual, "layout")));
-	}
-	g_assert_cmpuint(g_hash_table_size(seen), >=, 4);
-}
-
-/* Eighteen sites in a row, each steering off the ones before it: no two
- * neighbours open the same way, and no opening is worn by over a third. */
-static void
-test_no_two_in_a_row(void){
-	g_autoptr(LsComponents) library = ls_components_new(NULL);
-	g_autoptr(JsonArray) avoid = json_array_new();
-	g_autoptr(GHashTable) worn = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
-	g_autofree gchar *last = NULL;
-	guint i;
-	for (i = 0; i < 18; i++) {
-		g_autofree gchar *seed = g_strdup_printf("showcase business %u", i);
-		g_autofree gchar *chosen = ls_components_choose_photo_seed(library, seed, "trades", avoid, NULL);
-		g_autofree gchar *scene = ls_components_suggest_scene(library, chosen);
-		g_autofree gchar *opening = g_strconcat("scene/", scene, NULL);
-		JsonObject *fingerprint = json_object_new();
-		JsonArray *home = json_array_new();
-		guint count;
-		if (last != NULL)
-			g_assert_cmpstr(scene, !=, last);
-		json_array_add_string_element(home, opening);
-		json_object_set_array_member(fingerprint, "home", home);
-		json_array_add_object_element(avoid, fingerprint);
-		count = GPOINTER_TO_UINT(g_hash_table_lookup(worn, scene)) + 1;
-		g_hash_table_insert(worn, g_strdup(scene), GUINT_TO_POINTER(count));
-		g_assert_cmpuint(count, <=, 6);
-		g_free(last);
-		last = g_steal_pointer(&scene);
-	}
+	JsonObject *fallback = json_object_get_object_member(json_node_get_object(ls_components_get_catalog(library)),
+		"default");
+	g_autoptr(JsonNode) plan = visual_plan(4);
+	JsonObject *visual = json_object_get_object_member(json_node_get_object(plan), "visual");
+	json_object_set_string_member(visual, "layout", "object");
+	g_assert_true(ls_components_apply_default(library, plan, FALSE));
+	g_assert_cmpstr(ls_string(visual, "layout"), ==, ls_string(fallback, "scene"));
+	g_assert_true(ls_visual_check_plan(json_node_get_object(plan), NULL));
 }
 
 /* The writer reuses the hero and detail photos all down the home page;
@@ -190,7 +133,7 @@ test_no_photo_twice(void){
 	JsonObject *root = json_node_get_object(plan);
 	g_autoptr(GError) error = NULL;
 	g_autofree gchar *text = NULL;
-	g_assert_true(ls_components_apply_seed(library, plan, "no-photo-twice", "trades", FALSE));
+	g_assert_true(ls_components_apply_default(library, plan, FALSE));
 	ls_visual_apply_page(root, json_node_get_object(page));
 	ls_components_spread_photos(library, plan, page);
 	assert_no_repeat(root, page);
@@ -213,7 +156,7 @@ test_short_of_photos(void){
 	g_autofree gchar *text = NULL;
 	json_object_remove_member(media, "proof");
 	json_object_set_string_member(media, "portrait", "assets/room.jpg");
-	g_assert_true(ls_components_apply_seed(library, plan, "short-of-photos", "trades", FALSE));
+	g_assert_true(ls_components_apply_default(library, plan, FALSE));
 	ls_visual_apply_page(root, json_node_get_object(page));
 	ls_components_spread_photos(library, plan, page);
 	assert_no_repeat(root, page);
@@ -241,7 +184,7 @@ test_inner_spares(void){
 		g_autoptr(JsonNode) page = ls_json_parse(text, NULL);
 		JsonObject *art;
 		const gchar *src;
-		g_assert_true(ls_components_apply_seed(library, plan, "inner-spares", "trades", FALSE));
+		g_assert_true(ls_components_apply_default(library, plan, FALSE));
 		g_assert_true(ls_components_spread_photos(library, plan, page));
 		art = json_object_get_object_member(json_object_get_object_member(json_array_get_object_element(
 			json_object_get_array_member(json_node_get_object(page), "sections"), 1), "content"), "art");
@@ -256,7 +199,7 @@ test_inner_spares(void){
 		g_autoptr(JsonNode) page = ls_json_parse("{\"path\":\"work.html\",\"sections\":["
 			"{\"component\":\"page-header\",\"variant\":\"plain\",\"content\":{\"heading\":\"Our work\"}},"
 			"{\"component\":\"media\",\"variant\":\"full\",\"content\":{\"art\":{\"src\":\"assets/room.jpg\",\"alt\":\"A bright room\"}}}]}", NULL);
-		g_assert_true(ls_components_apply_seed(library, plan, "inner-spares", "trades", FALSE));
+		g_assert_true(ls_components_apply_default(library, plan, FALSE));
 		g_assert_false(ls_components_spread_photos(library, plan, page));
 	}
 }
@@ -270,7 +213,7 @@ build_site(LsComponents *library, JsonNode *plan, gboolean spread){
 	g_autoptr(GError) error = NULL;
 	g_autofree gchar *text = NULL;
 	guint i;
-	g_assert_true(ls_components_apply_seed(library, plan, "built-site", "trades", FALSE));
+	g_assert_true(ls_components_apply_default(library, plan, FALSE));
 	for (i = 0; i < G_N_ELEMENTS(routes); i++) {
 		g_autofree gchar *route = g_strdup_printf("%s.html", routes[i]);
 		g_autofree gchar *fixture = g_strdup_printf("tests/fixtures/composed/%s.json", routes[i]);
@@ -321,9 +264,7 @@ test_site_check(void){
 int
 main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
-	g_test_add_func("/calm-openings/scenes-dealt", test_scenes_dealt);
-	g_test_add_func("/calm-openings/seed-sets-layout", test_seed_sets_layout);
-	g_test_add_func("/calm-openings/no-two-in-a-row", test_no_two_in_a_row);
+	g_test_add_func("/calm-openings/default-sets-layout", test_default_sets_layout);
 	g_test_add_func("/calm-openings/no-photo-twice", test_no_photo_twice);
 	g_test_add_func("/calm-openings/short-of-photos", test_short_of_photos);
 	g_test_add_func("/calm-openings/inner-spares", test_inner_spares);

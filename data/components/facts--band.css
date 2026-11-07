@@ -1,0 +1,13 @@
+/* facts/band: one large supplied number on the brand colour with the
+ * services as ticks (Guin Service, "66 years"). Layout only. */
+.facts--band.block { padding-block: var(--space-7); }
+.facts--band .facts__band { display: grid; gap: var(--space-5); align-items: center; }
+.facts--band .facts__big { display: grid; gap: var(--space-1); margin: 0; }
+.facts--band .facts__value { font-family: var(--font-display); font-size: var(--text-9); font-weight: var(--heading-weight); line-height: 1; font-variant-numeric: tabular-nums; }
+.facts--band .facts__value p { margin: 0; }
+.facts--band .facts__label { font-family: var(--font-label); font-size: var(--text-2); font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted-fg); order: -1; }
+.facts--band .facts__ticks { grid-template-columns: repeat(auto-fill, minmax(min(100%, 13rem), 1fr)); gap: var(--space-2) var(--space-6); font-weight: 600; }
+.facts--band.tone-brand .ticks li::before { color: var(--brand-accent); }
+@container (min-width: 52rem) {
+	.facts--band .facts__band { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: var(--space-8); }
+}

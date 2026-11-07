@@ -1,7 +1,6 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
 /* Outline lettering stays legible: stroke-only text is kept for headings
- * and manifesto lines of at most three words, and only where the column is
- * wide; everything longer, and everything on a phone, is filled. The
+ * of at most three words, and only where the column is wide; everything longer, and everything on a phone, is filled. The
  * browser half is in tests/gate.sh. See docs/components.org, "Outline
  * lettering". */
 #include "libresite.h"
@@ -74,30 +73,11 @@ test_heading(void){
 	}
 }
 
-/* Manifesto lines say whether they are short; only short ones outline. */
-static void
-test_manifesto(void){
-	g_autoptr(GError) error = NULL;
-	g_autoptr(LsComponents) components = ls_components_new(&error);
-	g_autoptr(JsonNode) site = NULL;
-	const gchar *html, *css;
-	g_assert_no_error(error);
-	site = compose(components, "{\"component\":\"manifesto\",\"variant\":\"outlined\",\"content\":{\"heading\":\"Clearday\","
-		"\"lines\":[{\"text\":\"Weekly visits that keep a home steady.\"},{\"text\":\"Deep cleans.\"},"
-		"{\"text\":\"Move-out cleans for an empty, ready space.\"}]}}");
-	html = bundle_file(site, "index.html");
-	css = bundle_file(site, "styles.css");
-	g_assert_nonnull(strstr(html, "<li class=\"manifesto__line manifesto__line--short\"><span class=\"manifesto__n\" aria-hidden=\"true\">02</span><span class=\"manifesto__text\">Deep cleans.</span>"));
-	g_assert_nonnull(strstr(html, "<li class=\"manifesto__line\"><span class=\"manifesto__n\" aria-hidden=\"true\">03</span>"));
-	g_assert_null(strstr(css, ".manifesto--outlined .manifesto__line { color: transparent"));
-	g_assert_nonnull(strstr(css, ".manifesto--outlined .manifesto__line--short:not(:first-child) { color: transparent"));
-}
-
 /* Every stroke-only rule in the library sits inside a wide-column
  * container query, so no phone gets stroke-only text. */
 static void
 test_rules(void){
-	const gchar *files[] = {"data/components/look.css", "data/components/manifesto.css"};
+	const gchar *files[] = {"data/components/look.css"};
 	guint f;
 	for (f = 0; f < G_N_ELEMENTS(files); f++) {
 		g_autofree gchar *css = NULL;
@@ -117,7 +97,6 @@ int
 main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
 	g_test_add_func("/outline/heading", test_heading);
-	g_test_add_func("/outline/manifesto", test_manifesto);
 	g_test_add_func("/outline/rules", test_rules);
 	return g_test_run();
 }

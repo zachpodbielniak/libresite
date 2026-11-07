@@ -1,11 +1,15 @@
 /* The host owns availability and the booking. This script only draws the
- * public slots and leaves the ordinary booking link when that list cannot
- * be read. Venture's GET ?format=json body is a JSON array of
- * {start, end, label, day}. A {"slots":[...]} object is accepted too. */
+ * public slots. Until it has at least one, and whenever the list cannot be
+ * read or is empty, the booking request form (or the call line) stays, so
+ * a visitor can still ask for a time. On a page whose writer put a form
+ * there, that form stays instead, and the hidden calendar takes its place
+ * once it has times. Venture's GET ?format=json body is a
+ * JSON array of {start, end, label, day}. A {"slots":[...]} object is
+ * accepted too. */
 document.querySelectorAll(".booking-calendar [data-booking-url]").forEach(function (root) {
 	var url = root.getAttribute("data-booking-url");
 	var app = root.querySelector(".booking-calendar__app");
-	var fallback = root.querySelector(".booking-calendar__fallback");
+	var fallback = root.querySelector("[data-booking-request]") || root.querySelector(".booking-calendar__fallback");
 	var days = root.querySelector("[data-booking-days]");
 	var monthLabel = root.querySelector("[data-booking-month]");
 	var status = root.querySelector("[data-booking-status]");
@@ -13,13 +17,38 @@ document.querySelectorAll(".booking-calendar [data-booking-url]").forEach(functi
 	var timeList = root.querySelector("[data-booking-time-list]");
 	var form = root.querySelector("[data-booking-form]");
 	var confirmed = root.querySelector("[data-booking-confirmed]");
+	var section = root.closest("section");
+	var replaced = document.getElementById(root.getAttribute("data-booking-replaces") || "");
+	var ask = root.querySelector("[data-heading-request]");
+	var choose = root.querySelector("[data-heading-calendar]");
+	var words = root.querySelector("[data-calendar-words]");
 	var slots = [];
 	var selected = "";
 	var offset = 0;
 	var origin = new Date();
 	origin = new Date(origin.getFullYear(), origin.getMonth(), 1);
-	if (!url || !app || !fallback || !days || !monthLabel || !status || !times || !timeList || !form || !confirmed || typeof fetch === "undefined")
+	if (!url || !app || !days || !monthLabel || !status || !times || !timeList || !form || !confirmed || typeof fetch === "undefined")
 		return;
+	/* Links to one section lead to the other. */
+	function retarget(from, to) {
+		document.querySelectorAll("a[href=\"#" + from + "\"]").forEach(function (link) { link.setAttribute("href", "#" + to); });
+	}
+	/* The month in place of the form that asks for a time. */
+	function showCalendar() {
+		app.hidden = false;
+		if (fallback) fallback.hidden = true;
+		if (ask && choose) { ask.hidden = true; choose.hidden = false; }
+		if (words) words.hidden = false;
+		if (replaced && section) { section.hidden = false; replaced.hidden = true; retarget(replaced.id, section.id); }
+	}
+	/* The form that asks for a time in place of the month. */
+	function showRequest() {
+		app.hidden = true;
+		if (fallback) fallback.hidden = false;
+		if (ask && choose) { ask.hidden = false; choose.hidden = true; }
+		if (words) words.hidden = true;
+		if (replaced && section) { replaced.hidden = false; section.hidden = true; retarget(section.id, replaced.id); }
+	}
 	function pad(value) { return String(value).padStart(2, "0"); }
 	function monthKey(date) { return date.getFullYear() + "-" + pad(date.getMonth() + 1); }
 	function dateLabel(day) {
@@ -132,7 +161,9 @@ document.querySelectorAll(".booking-calendar [data-booking-url]").forEach(functi
 				start: fields.get("start"),
 				name: fields.get("name"),
 				email: fields.get("email"),
-				notes: fields.get("notes")
+				/* The host's booking takes start, name, email and notes; the
+				 * chosen service travels at the head of the note. */
+				notes: (fields.get("service") ? "Service: " + fields.get("service") + "\n" : "") + (fields.get("notes") || "")
 			})
 		}).then(function (reply) {
 			if (reply.status === 409) return { taken: true };
@@ -151,6 +182,11 @@ document.querySelectorAll(".booking-calendar [data-booking-url]").forEach(functi
 					times.hidden = true;
 					form.hidden = true;
 					selected = "";
+					/* With no time left, the request form asks for one. */
+					if (!slots.length && (fallback || replaced)) {
+						showRequest();
+						return;
+					}
 					showMonth();
 					release(slots.length ? "That time was just taken. Choose another day." : "No open times are available right now.");
 					return;
@@ -175,14 +211,15 @@ document.querySelectorAll(".booking-calendar [data-booking-url]").forEach(functi
 			if (!list) throw new Error("unavailable");
 			slots = list.filter(usable);
 			slots.sort(function (a, b) { return a.day < b.day ? -1 : a.day > b.day ? 1 : 0; });
+			/* An empty answer keeps the request form. */
+			if (!slots.length && (fallback || replaced)) return;
 			if (slots.length) {
 				parts = slots[0].day.split("-");
 				origin = new Date(Number(parts[0]), Number(parts[1]) - 1, 1);
 			}
-			app.hidden = false;
-			fallback.hidden = true;
+			showCalendar();
 			showMonth();
 			status.textContent = slots.length ? "Choose an open day." : "No open times are available right now.";
 		})
-		.catch(function () { fallback.hidden = false; });
+		.catch(showRequest);
 });

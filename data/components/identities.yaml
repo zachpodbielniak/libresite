@@ -1,9 +1,8 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# Site identities. The builder deals each site a palette, a type pairing and a
-# home-page sequence that suit its sector, varied by the site's name and brief,
-# so sites start from designs that fit the business instead of one house
-# default. The plan adapts them. Palettes are contrast-checked and typefaces
-# checked like plans at load; see docs/components.org.
+# Site identities: curated palettes, type pairings and home-page sequences,
+# each listing the sectors it fits. The catalog's default block names the
+# one every unthemed site wears (docs/components.org, "The default design").
+# Palettes are contrast-checked and typefaces checked like plans at load.
 version: 1
 sectors:
   trades: Plumbing, building, repair and other hands-on services.

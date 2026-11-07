@@ -1,0 +1,18 @@
+<div class="wrap">
+{{#heading}}<div class="section-head">
+<{{htag}} id="{{id}}-h">{{{heading_html}}}</{{htag}}>
+{{#intro}}<div class="prose">{{{intro}}}</div>
+{{/intro}}</div>
+{{/heading}}<ul class="services__groups" role="list">
+{{#items}}<li class="services__group">
+{{#art}}<figure class="services__photo"><img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}"{{#srcset}} srcset="{{srcset}}" sizes="(max-width: 40rem) 100vw, 50vw"{{/srcset}}{{#eager}} fetchpriority="high"{{/eager}}{{^eager}} loading="lazy"{{/eager}} decoding="async"></figure>
+{{/art}}<div class="services__body">
+<{{subtag}} class="services__name">{{#link}}<a href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{name}}</a>{{/link}}{{^link}}{{name}}{{/link}}</{{subtag}}>
+{{#summary}}<div class="services__summary prose">{{{summary}}}</div>
+{{/summary}}{{#has_links}}<ul class="services__sublinks" role="list">
+{{#links}}<li><a href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{label}}</a></li>
+{{/links}}</ul>
+{{/has_links}}</div>
+</li>
+{{/items}}</ul>
+</div>

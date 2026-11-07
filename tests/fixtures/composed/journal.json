@@ -36,7 +36,7 @@
             "heading": "What a repair saves",
             "body": "Wood that has already moved and settled.",
             "art": {
-              "src": "assets/bench.svg",
+              "src": "assets/mark.svg",
               "alt": "Plan of a bench"
             },
             "caption": "A bench in plan."
@@ -58,7 +58,7 @@
       "variant": "wide",
       "content": {
         "art": {
-          "src": "assets/bench.svg",
+          "src": "assets/mark.svg",
           "alt": ""
         },
         "caption": "The workbench.",

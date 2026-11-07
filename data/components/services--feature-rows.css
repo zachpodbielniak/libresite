@@ -1,0 +1,15 @@
+/* services/feature-rows: one row per service, its photo and its words, the
+ * sides alternating (Heath Ceramics, the Evergreen feature row). Layout
+ * only. */
+.services--feature-rows .services__features { display: grid; gap: var(--space-8); margin: 0; padding: 0; list-style: none; }
+.services--feature-rows .services__feature { display: grid; gap: var(--space-5); align-items: center; }
+.design main .services--feature-rows .services__photo img { width: 100%; aspect-ratio: 3 / 2; height: auto; max-height: none; object-fit: cover; }
+.services--feature-rows .services__body { display: grid; gap: var(--space-3); max-width: 34rem; }
+.services--feature-rows .services__name { margin: 0; font-size: var(--text-7); }
+.services--feature-rows .services__summary { color: var(--muted-fg); font-size: var(--text-4); }
+.services--feature-rows .services__price { margin: 0; font-weight: 600; }
+.services--feature-rows .services__more { margin: 0; }
+@container (min-width: 52rem) {
+	.services--feature-rows .services__feature { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-9); }
+	.services--feature-rows .services__feature:nth-child(even) .services__photo { order: 2; }
+}

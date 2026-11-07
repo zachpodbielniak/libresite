@@ -360,7 +360,8 @@ ls_form_action_valid(const gchar *action){
  * honeypot, cannot reuse one. The object is only read. */
 static gboolean
 form_field_valid(JsonObject *field, GHashTable *seen){
-	static const gchar *const types[] = {"text", "email", "tel", "url", "number", "date", "textarea", NULL};
+	static const gchar *const types[] = {"text", "email", "tel", "url", "number", "date", "time", "textarea", "select",
+		"radio", "toggle", "checkbox", "switch", "range", "file", NULL};
 	const gchar *name = ls_string(field, "name");
 	const gchar *label = ls_string(field, "label");
 	const gchar *type = ls_string(field, "type");
@@ -368,7 +369,8 @@ form_field_valid(JsonObject *field, GHashTable *seen){
 	const gchar *autocomplete = ls_string(field, "autocomplete");
 	JsonNode *required = json_object_get_member(field, "required");
 	JsonNode *maxlength = json_object_get_member(field, "maxlength");
-	if (!ls_object_keys(field, "|name|label|type|required|autocomplete|maxlength|hint|", NULL) ||
+	if (!ls_object_keys(field, "|name|label|type|required|autocomplete|maxlength|hint|options|min|max|step|", NULL) ||
+		!ls_form_field_shape_valid(field) ||
 		name == NULL || *name == '\0' || strlen(name) > 40 ||
 		strspn(name, "abcdefghijklmnopqrstuvwxyz0123456789_-") != strlen(name) ||
 		label == NULL || *label == '\0' || g_utf8_strlen(label, -1) > 80 ||
@@ -384,12 +386,85 @@ form_field_valid(JsonObject *field, GHashTable *seen){
 		return FALSE;
 	return TRUE;
 }
+/* A whole number member, or @fallback when absent; FALSE for anything else. */
+static gboolean
+whole(JsonObject *object, const gchar *key, gint64 *value){
+	JsonNode *node = json_object_get_member(object, key);
+	if (node == NULL)
+		return TRUE;
+	if (!JSON_NODE_HOLDS_VALUE(node) || json_node_get_value_type(node) != G_TYPE_INT64)
+		return FALSE;
+	*value = json_node_get_int(node);
+	return TRUE;
+}
+
+gboolean
+ls_form_field_shape_valid(JsonObject *field){
+	const gchar *type = ls_string(field, "type") != NULL ? ls_string(field, "type") : "text";
+	JsonNode *node = json_object_get_member(field, "options");
+	JsonArray *options = node != NULL && JSON_NODE_HOLDS_ARRAY(node) ? json_node_get_array(node) : NULL;
+	gboolean choice = g_str_equal(type, "select") || g_str_equal(type, "radio") || g_str_equal(type, "toggle");
+	gboolean bounded = g_str_equal(type, "range") || g_str_equal(type, "number");
+	gint64 min = 0, max = 0, step = 1;
+	if (choice) {
+		g_autoptr(GHashTable) seen = g_hash_table_new(g_str_hash, g_str_equal);
+		guint i;
+		if (options == NULL || json_array_get_length(options) == 0 || json_array_get_length(options) > 30 ||
+			(g_str_equal(type, "toggle") && (json_array_get_length(options) < 2 || json_array_get_length(options) > 6)))
+			return FALSE;
+		for (i = 0; i < json_array_get_length(options); i++) {
+			JsonNode *option = json_array_get_element(options, i);
+			const gchar *text = JSON_NODE_HOLDS_VALUE(option) && json_node_get_value_type(option) == G_TYPE_STRING
+				? json_node_get_string(option) : NULL;
+			if (text == NULL || strspn(text, " \t\n") == strlen(text) || g_utf8_strlen(text, -1) > 80 ||
+				!g_hash_table_add(seen, (gpointer)text))
+				return FALSE;
+		}
+	} else if (node != NULL)
+		return FALSE;
+	if (!bounded && (json_object_has_member(field, "min") || json_object_has_member(field, "max") ||
+		json_object_has_member(field, "step")))
+		return FALSE;
+	if (!whole(field, "min", &min) || !whole(field, "max", &max) || !whole(field, "step", &step))
+		return FALSE;
+	if (json_object_has_member(field, "min") != json_object_has_member(field, "max"))
+		return FALSE;
+	if (g_str_equal(type, "range") && !json_object_has_member(field, "min"))
+		return FALSE;
+	return !json_object_has_member(field, "min") || (min < max && step >= 1 && step <= max - min &&
+		min >= -1000000000 && max <= 1000000000);
+}
+
+const gchar *
+ls_form_field_shape_rule(void){
+	return "options of 1 to 30 unique choices for select and radio (2 to 6 for toggle) and only for them, and whole "
+		"min and max (min below max) with an optional step only on range, where they are required, and number";
+}
+
+const gchar *
+ls_site_style_name(JsonObject *site){
+	JsonNode *node = site != NULL ? json_object_get_member(site, "style") : NULL;
+	if (node != NULL && JSON_NODE_HOLDS_OBJECT(node))
+		return ls_string(json_node_get_object(node), "name");
+	return site != NULL ? ls_string(site, "style") : NULL;
+}
+
+const gchar *
+ls_site_scheme(JsonObject *site){
+	JsonNode *node = site != NULL ? json_object_get_member(site, "style") : NULL;
+	if (node != NULL && JSON_NODE_HOLDS_OBJECT(node) && ls_string(json_node_get_object(node), "scheme") != NULL)
+		return ls_string(json_node_get_object(node), "scheme");
+	return site != NULL ? ls_string(site, "scheme") : NULL;
+}
+
 const gchar *
 ls_form_requirements(void){
 	return "site.form needs {action, fields, honeypot}: action a same-site path such as /api/forms/contact or an "
 		"https:// address, without spaces, quotes, ? or #; fields 1 to 12 unique {name, label, type, required, "
-		"autocomplete, maxlength, hint} with names of lowercase letters, digits, - or _ and type text, email, tel, "
-		"url, number, date or textarea; honeypot an optional field name not among the fields";
+		"autocomplete, maxlength, hint, options, min, max, step} with names of lowercase letters, digits, - or _, type "
+		"text, email, tel, url, number, date, time, textarea, select, radio, toggle, checkbox, switch, range or file, "
+		"options for select, radio and toggle only, and whole min and max with an optional step on range (required) "
+		"and number; honeypot an optional field name not among the fields";
 }
 gboolean
 ls_form_valid(JsonObject *form){

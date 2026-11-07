@@ -1,0 +1,14 @@
+/* overlay/announcement: one supplied fact in a slim band above the header,
+ * on the brand colour, with a link to the page that tells more; the
+ * visitor may dismiss it for the visit (overlay.js). */
+.design.overlay--announcement .announce { background: var(--brand); color: var(--brand-fg); font-size: var(--text-2); }
+.design.overlay--announcement .announce[hidden] { display: none; }
+.design.overlay--announcement .announce__inner { display: flex; align-items: center; justify-content: center; gap: var(--space-3); min-height: 44px; padding-block: var(--space-1); }
+.design.overlay--announcement .announce__text { margin: 0; text-align: center; }
+.design.overlay--announcement .announce__text a { color: var(--brand-fg); font-weight: 600; text-decoration: underline; text-underline-offset: 0.2em; }
+.design.overlay--announcement .announce__close {
+	display: inline-grid; place-items: center; flex: 0 0 auto; min-width: 44px; min-height: 44px; padding: 0;
+	border: 0; border-radius: var(--radius-control); background: transparent; color: var(--brand-fg); font-size: var(--text-5); cursor: pointer;
+}
+.design.overlay--announcement .announce__close[hidden] { display: none; }
+.design.overlay--announcement .announce__close:hover { background: var(--brand-hover); }

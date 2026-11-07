@@ -1,0 +1,14 @@
+{{#art}}<figure class="areas__photo"><img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}"{{#srcset}} srcset="{{srcset}}" sizes="100vw"{{/srcset}} loading="lazy" decoding="async"></figure>
+{{/art}}<div class="wrap">
+<div class="areas__card card">
+{{#heading}}<{{htag}} id="{{id}}-h">{{{heading_html}}}</{{htag}}>
+{{/heading}}{{#intro}}<div class="prose">{{{intro}}}</div>
+{{/intro}}{{#has_items}}<ul class="areas__towns" role="list">
+{{#items}}<li>{{name}}</li>
+{{/items}}</ul>
+{{/has_items}}{{#has_place}}<dl class="areas__place">
+{{#hours}}<div><dt>{{hours_label}}</dt><dd>{{hours}}</dd></div>
+{{/hours}}{{#address}}<div><dt>{{address_label}}</dt><dd>{{address}}</dd></div>
+{{/address}}</dl>
+{{/has_place}}</div>
+</div>

@@ -1,0 +1,22 @@
+/* hero/photo-pair: two full-height photos side by side with no words over
+ * them; the words follow on the page ground (Maple and June). Layout only. */
+.design main > .hero--photo-pair { padding-block: 0 var(--space-8); }
+.hero--photo-pair .hero__pair { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-2); }
+.hero--photo-pair .hero__half { margin: 0; }
+.design main > .block.hero--photo-pair .hero__half img:is([src]) { width: 100%; height: 100%; aspect-ratio: 4 / 3; max-height: none; object-fit: cover; border-radius: 0; }
+.hero--photo-pair .hero__half + .hero__half { display: none; }
+.hero--photo-pair .hero__inner { padding-top: var(--space-7); }
+.hero--photo-pair .hero__text { display: grid; gap: var(--space-4); max-width: 46rem; }
+.hero--photo-pair .hero__title { max-width: 22ch; margin: 0; font-size: var(--text-9); }
+.hero--photo-pair .hero__lede { max-width: 38rem; font-size: var(--text-4); line-height: 1.55; color: var(--muted-fg); }
+.hero--photo-pair .actions { margin: 0; }
+.hero--photo-pair .hero__phone { margin: 0; font-size: var(--text-3); }
+.hero--photo-pair .hero__phone a { font-weight: 600; }
+@container (min-width: 48rem) {
+	.hero--photo-pair .hero__pair { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+	.hero--photo-pair .hero__half + .hero__half { display: block; }
+	/* The words run under both photos: a long headline takes fewer lines. */
+	.hero--photo-pair .hero__text { max-width: 62rem; }
+	.hero--photo-pair .hero__title { max-width: 30ch; }
+	.design main > .block.hero--photo-pair .hero__half img:is([src]) { aspect-ratio: auto; height: max(12rem, min(30rem, 40cqi, 100svh - 30rem)); }
+}

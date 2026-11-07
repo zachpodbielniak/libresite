@@ -1,0 +1,17 @@
+<div class="wrap">
+{{#heading}}<div class="section-head">
+<{{htag}} id="{{id}}-h">{{{heading_html}}}</{{htag}}>
+{{#intro}}<div class="prose">{{{intro}}}</div>
+{{/intro}}</div>
+{{/heading}}<ul class="areas__blocks" role="list">
+{{#places}}<li class="areas__block">
+<{{subtag}} class="areas__name">{{name}}</{{subtag}}>
+<dl class="areas__details">
+{{#address}}<div><dt>{{address_label}}</dt><dd>{{address}}</dd></div>
+{{/address}}{{#hours}}<div><dt>{{hours_label}}</dt><dd>{{hours}}</dd></div>
+{{/hours}}</dl>
+{{#link}}<p class="areas__call"><a class="button button--outline" href="{{href}}">{{label}}</a></p>
+{{/link}}</li>
+{{/places}}</ul>
+{{#has_items}}<p class="areas__towns-line"><span class="areas__towns-label">{{towns_label}}</span> {{#items}}<span class="areas__town">{{name}}</span>{{/items}}</p>
+{{/has_items}}</div>

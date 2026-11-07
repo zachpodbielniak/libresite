@@ -9,7 +9,8 @@ G_BEGIN_DECLS
  * ls_taste_disclosure:
  * @text: (nullable): visible copy
  * @footer: whether @text is the footer note, the one place a site may
- *   disclose that its business or photographs are examples
+ *   name stock photographs, and the one place a demo build may disclose
+ *   that its business is an example (see ls_taste_example())
  *
  * Finds talk about the site itself in visible copy: the word "illustrative"
  * anywhere, and outside the footer any line about stock photographs,
@@ -18,6 +19,19 @@ G_BEGIN_DECLS
  * Returns: (nullable) (transfer none): the matched phrase, or %NULL
  */
 const gchar *ls_taste_disclosure(const gchar *text, gboolean footer);
+
+/**
+ * ls_taste_example:
+ * @text: (nullable): visible copy
+ *
+ * Finds a line saying that the business is an example: an invented,
+ * fictional or sample business, or a demo site. Only a demo build
+ * (site.demo in the recipe) may say so, and only in its footer note; a
+ * customer's site never does.
+ *
+ * Returns: (nullable) (transfer none): the matched phrase, or %NULL
+ */
+const gchar *ls_taste_example(const gchar *text);
 
 /**
  * ls_taste_chroma:

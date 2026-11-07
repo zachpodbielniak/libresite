@@ -46,7 +46,7 @@ fake_generate(LsProvider *provider, JsonObject *settings, const gchar *system, c
 		self->last_prompt = g_strdup(prompt);
 		return g_strdup(g_ptr_array_index(self->answers, index));
 	}
-	if (strstr(schema, "\"tokens\"") != NULL)
+	if (strstr(schema, "\"character\"") != NULL)
 		return fixture("plan.json");
 	if (strstr(schema, "\"required\": [\"css\"]") != NULL)
 		return g_strdup("{\"css\": \".em { color: var(--accent-text); }\"}");
@@ -719,8 +719,10 @@ test_trusted_form(void){
 	g_autoptr(GError) error = NULL;
 	g_autoptr(JsonNode) form = ls_json_parse("{\"action\":\"/enquiries/custom\",\"fields\":["
 		"{\"name\":\"custom_question\",\"label\":\"Your question\",\"type\":\"text\",\"required\":true}]}", NULL);
+	/* A choice without its options is refused (supplied forms may use every
+	 * control; see docs/components.org, "Controls"). */
 	g_autoptr(JsonNode) select_form = ls_json_parse("{\"action\":\"/enquiries/custom\",\"fields\":["
-		"{\"name\":\"custom_question\",\"label\":\"Your question\",\"type\":\"select\",\"options\":[\"One\"]}]}", NULL);
+		"{\"name\":\"custom_question\",\"label\":\"Your question\",\"type\":\"radio\"}]}", NULL);
 	g_autoptr(JsonNode) action_form = ls_json_parse("{\"action\":\"/enquiries/custom;\",\"fields\":["
 		"{\"name\":\"custom_question\",\"label\":\"Your question\",\"type\":\"text\"}]}", NULL);
 	g_autofree gchar *commit = NULL, *html = NULL, *before = NULL, *after = NULL, *outlines = NULL;

@@ -1,0 +1,13 @@
+<div class="wrap contact__inner">
+<div class="contact__lead">
+<{{htag}} class="contact__title" id="{{id}}-h">{{{heading_html}}}</{{htag}}>
+{{#body}}<div class="prose">{{{body}}}</div>
+{{/body}}{{#call}}<p class="contact__call"><a class="button contact__phone" href="{{tel}}">{{call_label}} <span class="contact__number">{{phone}}</span></a></p>
+{{/call}}</div>
+<div class="contact__card">
+{{#call}}{{#email}}<p class="contact__direct"><a href="mailto:{{email}}">{{email}}</a></p>
+{{/email}}{{/call}}<dl class="contact__items">
+{{#items}}<div><dt>{{label}}</dt><dd>{{#link}}<a href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{{value_html}}}</a>{{/link}}{{^link}}{{{value_html}}}{{/link}}</dd></div>
+{{/items}}</dl>
+</div>
+</div>

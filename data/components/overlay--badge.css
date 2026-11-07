@@ -1,0 +1,21 @@
+/* overlay/badge: one supplied fact (the rating, else the year the business
+ * started) in a round badge over the opening photo's corner on wide
+ * screens, and in a line under the opening on a phone, so it never covers
+ * the words or the call. */
+.design.overlay--badge main > .hero { position: relative; }
+.design .hero__badge {
+	display: inline-flex; align-items: baseline; gap: var(--space-2); margin: 0 var(--gutter) var(--space-5);
+	padding: var(--space-2) var(--space-4); border-radius: var(--radius-badge); background: var(--surface); color: var(--surface-fg);
+	font-size: var(--text-2); box-shadow: var(--shadow-2);
+}
+.design .hero__badge strong { font-family: var(--font-display); font-size: var(--text-5); }
+@container (min-width: 56rem) {
+	.design main > .hero:not(.hero--form) > .hero__badge {
+		position: absolute; z-index: 3; right: max(var(--gutter), calc((100cqi - var(--container)) / 2 + var(--gutter))); bottom: var(--space-7);
+		display: grid; place-content: center; justify-items: center; gap: var(--space-1); width: 9rem; height: 9rem; margin: 0;
+		padding: var(--space-3); border-radius: 50%; text-align: center; line-height: 1.2; box-shadow: var(--shadow-3);
+	}
+	.design main > .hero--stats-bar > .hero__badge { bottom: auto; top: var(--space-7); }
+	.design:is(.header--over-photo, .header--transparent-solid) main > .hero--stats-bar > .hero__badge { top: 7rem; }
+	.design .hero__badge strong { font-size: var(--text-7); line-height: 1; }
+}

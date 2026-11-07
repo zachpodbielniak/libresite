@@ -1,0 +1,10 @@
+<div class="wrap about__inner">
+{{#art}}<figure class="about__portrait"><img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}"{{#srcset}} srcset="{{srcset}}" sizes="(max-width: 48rem) 100vw, 30vw"{{/srcset}} loading="lazy" decoding="async"></figure>
+{{/art}}<div class="about__letter">
+{{#kicker}}<p class="kicker">{{kicker}}</p>
+{{/kicker}}<{{htag}} id="{{id}}-h">{{{heading_html}}}</{{htag}}>
+<div class="prose">{{{body}}}</div>
+{{#signature}}<p class="about__signature">{{signature}}</p>
+{{/signature}}{{#link}}<p><a class="link-arrow" href="{{href}}">{{label}}</a></p>
+{{/link}}</div>
+</div>

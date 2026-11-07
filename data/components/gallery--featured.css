@@ -1,0 +1,8 @@
+/* gallery/featured: two to four of the owner's photos with captions
+ * (Maple and June, Table & Tulip, Veterans). Layout only. */
+.gallery--featured .gallery__featured { display: grid; gap: var(--space-6); margin: 0; padding: 0; list-style: none; }
+.gallery--featured img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
+.gallery--featured figcaption { margin-top: var(--space-3); color: var(--muted-fg); }
+@container (min-width: 52rem) {
+	.gallery--featured .gallery__featured { grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); }
+}

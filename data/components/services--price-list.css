@@ -1,0 +1,14 @@
+/* services/price-list: ruled rows of name, one short line and the supplied
+ * price and duration, two columns on wide screens (PRESS service menu).
+ * Layout only. */
+.services--price-list .services__rows { display: grid; column-gap: var(--space-8); margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--line-firm); }
+.services--price-list .services__row { display: grid; gap: var(--space-1); padding-block: var(--space-5); border-bottom: 1px solid var(--line); }
+.services--price-list .services__row-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--space-1) var(--space-4); }
+.services--price-list .services__name { margin: 0; font-size: var(--text-6); font-weight: var(--heading-weight); }
+.services--price-list .services__price { margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+.services--price-list .services__summary { color: var(--muted-fg); max-width: 36rem; }
+.services--price-list .services__duration { margin: 0; color: var(--muted-fg); font-size: var(--text-2); }
+@container (min-width: 52rem) {
+	.services--price-list .services__rows { grid-template-columns: repeat(2, minmax(0, 1fr)); border-top: 0; }
+	.services--price-list .services__row { border-top: 1px solid var(--line-firm); border-bottom: 0; }
+}

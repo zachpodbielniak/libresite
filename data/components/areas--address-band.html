@@ -1,0 +1,11 @@
+<div class="wrap areas__band">
+<div class="areas__text">
+{{#heading}}<{{htag}} id="{{id}}-h">{{{heading_html}}}</{{htag}}>
+{{/heading}}{{#intro}}<div class="prose">{{{intro}}}</div>
+{{/intro}}</div>
+<dl class="areas__place">
+{{#address}}<div><dt>{{address_label}}</dt><dd>{{address}}</dd></div>
+{{/address}}{{#hours}}<div><dt>{{hours_label}}</dt><dd>{{hours}}</dd></div>
+{{/hours}}{{#has_items}}<div><dt>{{towns_label}}</dt><dd>{{#items}}<span class="areas__town">{{name}}</span>{{/items}}</dd></div>
+{{/has_items}}</dl>
+</div>

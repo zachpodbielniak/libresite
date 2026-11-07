@@ -1,7 +1,21 @@
-<div class="wrap booking-calendar__inner" data-booking-url="{{booking_url}}">
-<div class="section-head"><{{htag}} id="{{id}}-h">{{{heading_html}}}</{{htag}}>{{#body}}<div class="prose">{{{body}}}</div>{{/body}}</div>
-<p class="booking-calendar__fallback">Choose a time on the <a href="{{booking_url}}">booking page</a>.</p>
-<div class="booking-calendar__app" hidden>
+<div class="wrap booking-calendar__inner" data-booking-url="{{booking_url}}"{{#replaces}} data-booking-replaces="{{replaces}}"{{/replaces}}>
+<div class="section-head"><{{htag}} id="{{id}}-h">{{#request}}<span data-heading-request>{{ask_heading}}</span><span data-heading-calendar hidden>{{/request}}{{{heading_html}}}{{#request}}</span>{{/request}}</{{htag}}>{{#body}}<div class="prose"{{#request}} data-calendar-words hidden{{/request}}>{{{body}}}</div>{{/body}}</div>
+{{#request}}<div class="booking-calendar__request" data-booking-request>
+<p class="booking-calendar__request-intro">{{intro}}</p>
+{{#endpoint}}<div class="form__sent" role="status" aria-live="polite" tabindex="-1" data-form-sent hidden>
+<p class="form__sent-message">{{sent}}</p>
+<p class="form__sent-actions">{{#sent_call}}<a class="button form__sent-call" href="{{tel}}">{{call_label}} <span class="form__sent-number">{{phone}}</span></a>
+{{/sent_call}}<a class="form__sent-again" href="#{{form_id}}" data-form-again>{{send_another_label}}</a></p>
+</div>
+{{/endpoint}}<form class="form__form booking-calendar__request-form" id="{{form_id}}" aria-labelledby="{{id}}-h" action="{{target}}" method="post"{{#mailto}} enctype="text/plain"{{/mailto}}{{#endpoint}} data-endpoint-form data-sending="{{sending}}" data-failed="{{send_failed}}"{{#multipart}} enctype="multipart/form-data"{{/multipart}}{{/endpoint}} data-validate data-error-required="{{error_required}}" data-error-invalid="{{error_invalid}}" data-error-summary="{{error_summary}}">
+{{{fields_html}}}{{#endpoint}}{{#honeypot}}<div class="form__trap" aria-hidden="true"><label>Leave this field empty <input type="text" name="{{honeypot}}" tabindex="-1" autocomplete="off"></label></div>
+{{/honeypot}}{{/endpoint}}<div class="form__summary" role="alert" data-form-summary hidden></div>
+<div class="form__actions"><button class="button" type="submit">{{submit}}</button></div>
+{{#endpoint}}<p class="form__status" role="status" data-form-status></p>
+{{/endpoint}}</form>
+</div>
+{{/request}}{{^request}}{{#call}}<p class="booking-calendar__fallback"><a href="{{tel}}">{{call_label}} {{phone}}</a></p>
+{{/call}}{{/request}}<div class="booking-calendar__app" hidden>
 <div class="booking-calendar__nav"><button type="button" class="button button--ghost button--small" data-booking-prev aria-label="Previous month">Previous</button><h3 data-booking-month aria-live="polite"></h3><button type="button" class="button button--ghost button--small" data-booking-next aria-label="Next month">Next</button></div>
 <div class="booking-calendar__weekdays" aria-hidden="true"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
 <div class="booking-calendar__days" data-booking-days role="group" aria-label="Available days"></div>
@@ -11,9 +25,17 @@
 <input type="hidden" name="start" data-booking-start>
 <p data-booking-picked></p>
 <p class="booking-calendar__privacy">Before sharing your details, read our <a href="privacy.html">Privacy</a> and <a href="terms.html">Terms</a>.</p>
-<div class="field"><label for="{{id}}-name">Name</label><input id="{{id}}-name" name="name" autocomplete="name" maxlength="200" required></div>
-<div class="field"><label for="{{id}}-email">Email</label><input id="{{id}}-email" name="email" type="email" autocomplete="email" maxlength="254" required></div>
-<div class="field"><label for="{{id}}-notes">Note (optional)</label><textarea id="{{id}}-notes" name="notes" maxlength="4000" rows="3"></textarea></div>
+<div class="field"><label for="{{id}}-name">Name</label><p class="field-error" id="{{id}}-name-error" data-field-error></p><input id="{{id}}-name" name="name" autocomplete="name" maxlength="200" required aria-describedby="{{id}}-name-error"></div>
+<div class="field"><label for="{{id}}-email">Email</label><p class="field-error" id="{{id}}-email-error" data-field-error></p><input id="{{id}}-email" name="email" type="email" autocomplete="email" maxlength="254" required aria-describedby="{{id}}-email-error"></div>
+{{#services}}<fieldset class="field field--choice{{#toggle}} field--toggle{{/toggle}}" aria-describedby="{{id}}-service-error">
+<legend>{{legend}}</legend>
+<p class="field-error" id="{{id}}-service-error" data-field-error></p>
+<div class="choice-list">
+{{#choices}}<label class="choice"><input type="radio" id="{{cid}}" name="service" value="{{value}}" aria-describedby="{{id}}-service-error"><span>{{label}}</span></label>
+{{/choices}}</div>
+</fieldset>
+{{/services}}<div class="field"><label for="{{id}}-notes">Note (optional)</label><p class="field-error" id="{{id}}-notes-error" data-field-error></p><textarea id="{{id}}-notes" name="notes" maxlength="4000" rows="3" aria-describedby="{{id}}-notes-error"></textarea></div>
+<div class="field field--check"><input type="checkbox" id="{{id}}-agree" name="agree" value="yes" required aria-describedby="{{id}}-agree-error"><label for="{{id}}-agree">{{agree}}</label><p class="field-error" id="{{id}}-agree-error" data-field-error></p></div>
 <button class="button" type="submit">Confirm booking</button>
 </form>
 <div class="booking-calendar__confirmed" data-booking-confirmed role="status" aria-live="polite" tabindex="-1" hidden></div>

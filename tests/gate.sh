@@ -3,7 +3,7 @@
 set -euo pipefail
 case ${1:-} in
 -h|--help)
-	printf '%s\n' 'Usage: gate.sh WEBDRIVER_URL SITES_DIR' 'Render the sites first with SAMENESS_OUTPUT=SITES_DIR build/release/test-sameness (make gate does it all).' 'Opens every home page at 390 and 1440: text must reach WCAG AA contrast in the light and the dark' 'scheme, no text may be in outline, nothing may be tilted, no decorative circles or neon bands, nothing may' 'animate with reduced motion, no page may scroll sideways, and each home page must stay within the' 'page-weight budget. Writes gate.json and exits nonzero on any failure.'
+	printf '%s\n' 'Usage: gate.sh WEBDRIVER_URL SITES_DIR' 'Render the site first with GATE_OUTPUT=SITES_DIR build/release/test-gate (make gate does it all).' 'Opens every home page at 390 and 1440: text must reach WCAG AA contrast in the light and the dark' 'scheme, no text may be in outline, nothing may be tilted, no decorative circles or neon bands, nothing may' 'animate with reduced motion, no page may scroll sideways, and each home page must stay within the' 'page-weight budget. Writes gate.json and exits nonzero on any failure.'
 	exit 0 ;;
 --license) printf '%s\n' 'AGPL-3.0-or-later'; exit 0 ;;
 esac

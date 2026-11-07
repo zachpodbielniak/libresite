@@ -1,0 +1,14 @@
+/* skeleton/magazine: on wide screens the short sections pair up in
+ * columns under a firm rule, with a hairline between the two, like a
+ * magazine spread; long sections run the full width. Each column is its
+ * own container. Placement only. */
+@media (min-width: 64rem) {
+	.design.skeleton--magazine.page--kind-home main { display: flex; flex-wrap: wrap; align-items: stretch; }
+	.design.skeleton--magazine.page--kind-home main > * { flex: 1 1 100%; min-width: 0; }
+	.design.skeleton--magazine.page--kind-home main > :is(.facts, .steps, .about, .areas, .reviews):not(:first-child) { flex: 1 1 26rem; container-type: inline-size; }
+	.design.skeleton--magazine.page--kind-home main > :is(.facts, .steps, .about, .areas, .reviews):not(:first-child) > .wrap {
+		width: auto; margin-inline: var(--space-8); padding-top: var(--space-6); border-top: 3px solid var(--line-firm);
+	}
+	.design.skeleton--magazine.page--kind-home main > :is(.facts, .steps, .about, .areas, .reviews):not(:first-child) + :is(.facts, .steps, .about, .areas, .reviews) { border-left: 1px solid var(--line); }
+	.design.skeleton--magazine.page--kind-home main > .tone-surface:is(.facts, .steps, .about, .areas, .reviews):not(:first-child) { background: transparent; }
+}

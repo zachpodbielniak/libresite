@@ -1,0 +1,32 @@
+/* hero/form: the words over a full-bleed photo with the supplied quote
+ * form in a card beside them. The form's send button is an outline, so the
+ * first screen keeps one solid action. Layout only. */
+.hero--form {
+	position: relative; isolation: isolate;
+	background: var(--inverse); color: var(--inverse-fg);
+	--ink: var(--inverse-fg); --fg: var(--inverse-fg); --muted: var(--inverse-muted); --muted-fg: var(--inverse-fg);
+}
+.design main > .hero--form { padding-block: var(--space-8); }
+.hero--form .hero__media { position: absolute; inset: 0; z-index: -1; margin: 0; }
+.design main > .block.hero--form .hero__media img:is([src]) { width: 100%; height: 100%; max-height: none; object-fit: cover; border-radius: 0; }
+.hero--form .hero__media::after { content: ""; position: absolute; inset: 0; background: rgb(0 0 0 / calc(var(--scrim) + 0.08)); }
+.hero--form .hero__inner { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-7); align-items: center; }
+.hero--form .hero__title { max-width: 16ch; margin-bottom: var(--space-5); font-size: var(--text-9); }
+.hero--form .hero__lede { max-width: 34rem; font-size: var(--text-4); line-height: 1.55; }
+.hero--form .hero__form {
+	padding: var(--space-6); border-radius: var(--radius-box); background: var(--surface); color: var(--surface-fg);
+	--ink: var(--surface-fg); --fg: var(--surface-fg); --muted: var(--surface-fg); --muted-fg: var(--surface-fg); --paper: var(--surface);
+}
+.hero--form .hero__form .form__form { display: grid; gap: var(--space-3); }
+.hero--form .kicker { color: inherit; }
+.hero--form .button:not(.button--outline) { background: var(--photo-primary); border-color: var(--photo-primary); color: var(--photo-primary-fg); }
+.hero--form .button:not(.button--outline):hover { background: var(--photo-primary-hover); border-color: var(--photo-primary-hover); }
+.hero--form .button--outline { color: var(--inverse-fg); border-color: var(--inverse-fg); }
+.hero--form .button--outline:hover { background: var(--inverse-fg); color: var(--inverse); }
+.hero--form .hero__form .button--outline { color: var(--surface-fg); border-color: var(--surface-fg); }
+.hero--form .hero__phone { margin: var(--space-4) 0 0; font-size: var(--text-3); }
+.hero--form .hero__phone a { font-weight: 600; }
+@container (min-width: 56rem) {
+	.design main > .hero--form { padding-block: var(--space-9); }
+	.hero--form .hero__inner { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: var(--space-9); }
+}

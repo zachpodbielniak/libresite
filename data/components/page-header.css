@@ -1,6 +1,7 @@
 .page-header { padding-block: var(--space-6) var(--space-7); }
 .block.page-header + .block { padding-top: var(--space-7); }
-.crumbs ol { display: flex; flex-wrap: wrap; gap: var(--space-2); margin: 0 0 var(--space-5); padding: 0; list-style: none; font-size: var(--step--1); color: var(--muted); }
+.crumbs ol { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin: 0 0 var(--space-5); padding: 0; list-style: none; font-size: var(--step--1); color: var(--muted); }
+.crumbs li { display: inline-flex; align-items: center; }
 .crumbs li + li::before { content: "/"; margin-right: var(--space-2); color: var(--line-strong); }
 .crumbs a { color: var(--muted); }
 .page-header__title { font-size: var(--step-5); max-width: 22ch; margin-bottom: 0.3em; }

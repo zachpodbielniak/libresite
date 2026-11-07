@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>{{full_title}}</title>
+{{#scheme_toggle}}<script>try{var s=localStorage.getItem("ls-scheme");if(s==="light"||s==="dark")document.documentElement.dataset.scheme=s}catch(e){}</script>
+{{/scheme_toggle}}<title>{{full_title}}</title>
 <meta name="description" content="{{description}}">
 {{#noindex}}<meta name="robots" content="noindex">
 {{/noindex}}{{#canonical}}<link rel="canonical" href="{{canonical}}">
@@ -15,8 +16,10 @@
 {{#og_image}}<meta property="og:image" content="{{og_image}}">
 {{/og_image}}<meta name="twitter:card" content="{{twitter_card}}">
 <meta name="color-scheme" content="{{color_scheme}}">
-<meta name="theme-color" content="{{theme_color}}">
-{{#font_href}}<link rel="preconnect" href="https://fonts.bunny.net">
+{{#theme_color_dark}}<meta name="theme-color" content="{{theme_color}}" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="{{theme_color_dark}}" media="(prefers-color-scheme: dark)">
+{{/theme_color_dark}}{{^theme_color_dark}}<meta name="theme-color" content="{{theme_color}}">
+{{/theme_color_dark}}{{#font_href}}<link rel="preconnect" href="https://fonts.bunny.net">
 {{#font_preloads}}<link rel="preload" href="{{href}}" as="font" type="font/woff2" crossorigin>
 {{/font_preloads}}<link rel="stylesheet" href="{{font_href}}">
 {{/font_href}}<link rel="stylesheet" href="styles.css">
@@ -28,21 +31,35 @@
 </head>
 <body class="page page--{{slug}} page--kind-{{kind}} {{look_classes}}">
 <a class="skip-link" href="#main">{{skip_label}}</a>
-<header class="site-header">
-<div class="wrap site-header__inner">
+{{#announcement}}<div class="announce" role="region" aria-label="{{region_label}}">
+<div class="wrap announce__inner">
+<p class="announce__text"><strong>{{label}}</strong> {{text}}{{#href}} <a href="{{href}}">{{link_label}}</a>{{/href}}</p>
+<button class="announce__close" type="button" aria-label="{{dismiss_label}}" hidden>&times;</button>
+</div>
+</div>
+{{/announcement}}<header class="site-header">
+{{#header_utility}}<div class="site-header__utility">
+<div class="wrap site-header__utility-inner">
+{{#call}}<a class="site-header__phone" href="{{tel}}">{{phone}}</a>
+{{/call}}{{#secondary}}<a class="button button--outline button--small" href="{{href}}">{{label}}</a>
+{{/secondary}}</div>
+</div>
+{{/header_utility}}<div class="wrap site-header__inner">
 <a class="brand" href="index.html"{{#home}} aria-current="page"{{/home}}>{{#mark}}<img src="{{src}}" alt="" width="32" height="32">{{/mark}}<span>{{wordmark}}</span></a>
 {{#tagline}}<p class="site-header__tagline">{{tagline}}</p>
 {{/tagline}}<button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav" hidden>{{menu_label}}</button>
 <nav class="site-nav" id="site-nav" aria-label="{{nav_label}}">
-<ul>
-{{#nav}}<li{{#has_children}} class="site-nav__group{{#in_section}} is-section{{/in_section}}"{{/has_children}}><a href="{{href}}"{{#current}} aria-current="page"{{/current}}>{{label}}</a>{{#has_children}}
+{{#nav_close}}<button class="nav-close" type="button" aria-controls="site-nav" hidden>{{nav_close}}</button>
+{{/nav_close}}<ul>
+{{#nav}}<li{{#has_children}} class="site-nav__group{{#in_section}} is-section{{/in_section}}"{{/has_children}}{{#split}} data-split{{/split}}><a href="{{href}}"{{#current}} aria-current="page"{{/current}}>{{label}}</a>{{#has_children}}
 <ul class="site-nav__menu">
 {{#children}}<li><a href="{{href}}"{{#current}} aria-current="page"{{/current}}>{{label}}</a></li>
 {{/children}}</ul>
 {{/has_children}}</li>
 {{/nav}}</ul>
-{{#action}}<a class="button button--small" href="{{href}}">{{label}}</a>
-{{/action}}</nav>
+{{#action}}<a class="button{{^primary}} button--ghost{{/primary}} button--small" href="{{href}}">{{label}}</a>
+{{/action}}{{#scheme_toggle}}<button class="scheme-toggle" type="button" data-scheme-toggle hidden aria-label="{{label}}: {{system}}" data-label="{{label}}" data-system="{{system}}" data-light="{{light}}" data-dark="{{dark}}"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg><span class="scheme-toggle__state" aria-hidden="true">{{system}}</span></button>
+{{/scheme_toggle}}</nav>
 </div>
 </header>
 <main id="main" tabindex="-1">
@@ -66,19 +83,46 @@
 <div class="wrap action-bar__inner">
 {{#call}}<a class="button action-bar__call" href="{{tel}}">{{call_label}} <span class="action-bar__number">{{phone}}</span></a>
 {{/call}}{{#book}}<a class="button action-bar__book" href="{{href}}">{{label}}</a>
-{{/book}}{{#quote}}<a class="button button--ghost action-bar__quote" href="{{href}}">{{label}}</a>
-{{/quote}}</div>
+{{/book}}{{#quote}}<a class="button action-bar__quote" href="{{href}}">{{label}}</a>
+{{/quote}}{{#bar_phone}}<a class="action-bar__phone" href="{{tel}}">{{phone}}</a>
+{{/bar_phone}}</div>
 </nav>
 {{/actions}}</main>
-{{#kit_marquee}}<div class="kit-marquee" aria-hidden="true"><div class="kit-marquee__track"><span>{{site}}</span><span>{{site}}</span><span>{{site}}</span><span>{{site}}</span><span>{{site}}</span><span>{{site}}</span></div></div>
-{{/kit_marquee}}<footer class="site-footer">
+{{#quote_dialog}}<dialog class="quote-dialog" id="quote-dialog" aria-labelledby="quote-dialog-h">
+<div class="quote-dialog__head">
+<h2 id="quote-dialog-h">{{title}}</h2>
+<button class="dialog-close" type="button" aria-label="{{close_label}}">&times;</button>
+</div>
+{{{form_html}}}</dialog>
+{{/quote_dialog}}{{#lightbox}}<dialog class="lightbox" id="lightbox" aria-label="{{label}}">
+<figure class="lightbox__figure"></figure>
+<div class="lightbox__controls">
+<button class="lightbox__prev" type="button">{{previous}}</button>
+<button class="lightbox__next" type="button">{{next}}</button>
+<button class="lightbox__close dialog-close" type="button">{{close}}</button>
+</div>
+</dialog>
+{{/lightbox}}<footer class="site-footer">
+{{#footer_big}}<div class="wrap site-footer__big">
+<p class="site-footer__lead">{{lead}}</p>
+<p class="site-footer__reach"><a class="site-footer__number" href="{{tel}}">{{phone}}</a>{{#email}}
+<a class="site-footer__mail" href="mailto:{{email}}">{{email}}</a>{{/email}}</p>
+</div>
+{{/footer_big}}{{#footer_form}}<div class="wrap site-footer__form">
+<h2 class="site-footer__form-title" id="footer-form-h">{{title}}</h2>
+{{{html}}}</div>
+{{/footer_form}}
 {{#has_sitemap}}<div class="wrap"><ul class="site-footer__map" role="list">
 {{#sitemap}}<li><a href="{{href}}"{{#current}} aria-current="page"{{/current}}>{{label}}</a></li>
 {{/sitemap}}</ul></div>
 {{/has_sitemap}}<div class="wrap site-footer__inner">
 <div>
 <p class="brand">{{wordmark}}</p>
-{{#footer_note}}<div class="site-footer__note prose">{{{footer_note}}}</div>
+{{#footer_contact}}<p class="site-footer__contact"><a href="{{tel}}">{{phone}}</a>{{#email}}
+<a href="mailto:{{email}}">{{email}}</a>{{/email}}</p>
+{{/footer_contact}}{{#footer_place}}<p class="site-footer__place">{{#address}}<span>{{address}}</span>{{/address}}{{#hours}}<br><span>{{hours}}</span>{{/hours}}</p>
+{{#directions}}<p class="site-footer__directions"><a href="{{href}}" rel="noopener">{{label}}</a></p>
+{{/directions}}{{/footer_place}}{{#footer_note}}<div class="site-footer__note prose">{{{footer_note}}}</div>
 {{/footer_note}}{{#has_social}}<ul class="site-footer__social" role="list" aria-label="{{social_label}}">
 {{#social}}<li><a href="{{url}}" rel="me noopener">{{#icon}}<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path fill="currentColor" d="{{icon}}"/></svg>{{/icon}}<span class="visually-hidden">{{label}}</span></a></li>
 {{/social}}</ul>
@@ -89,7 +133,10 @@
 {{/footer_links}}</ul>
 </nav>
 </div>
-{{#credit}}<p class="wrap site-footer__credit"><a href="{{url}}" rel="noopener">{{text}}</a></p>
+{{#footer_wordmark}}<p class="wrap site-footer__wordmark" aria-hidden="true">{{wordmark}}</p>
+{{/footer_wordmark}}{{#scheme_toggle}}<p class="wrap site-footer__scheme"><button class="scheme-toggle" type="button" data-scheme-toggle hidden aria-label="{{label}}: {{system}}" data-label="{{label}}" data-system="{{system}}" data-light="{{light}}" data-dark="{{dark}}"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor"/></svg><span class="scheme-toggle__state" aria-hidden="true">{{system}}</span></button></p>
+{{/scheme_toggle}}{{#photo_credits}}<p class="wrap site-footer__photos">{{photo_credits}}</p>
+{{/photo_credits}}{{#credit}}<p class="wrap site-footer__credit"><a href="{{url}}" rel="noopener">{{text}}</a></p>
 {{/credit}}</footer>
 </body>
 </html>

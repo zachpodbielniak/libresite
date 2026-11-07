@@ -1,0 +1,8 @@
+/* about/history: the supplied starting year beside a short story (Heath,
+ * Guin). Layout only. */
+.about--history .about__since { display: grid; gap: var(--space-1); margin: 0; }
+.about--history .about__since-label { font-size: var(--text-1); font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted-fg); }
+.about--history .about__year { font-family: var(--font-display); font-size: var(--text-9); font-weight: var(--heading-weight); line-height: 1; font-variant-numeric: tabular-nums; }
+@container (min-width: 52rem) {
+	.about--history .about__inner { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: var(--space-8); align-items: start; }
+}

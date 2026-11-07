@@ -1,0 +1,9 @@
+/* faq/two-column: native expanding rows in two columns on wide screens
+ * (the Tailwind Plus FAQ arrangement, taxonomy only). Layout only. */
+.faq--two-column .faq__columns { border-top: 1px solid var(--line-firm); }
+.faq--two-column .faq__item { border-bottom: 1px solid var(--line); break-inside: avoid; }
+.faq--two-column summary { min-height: 48px; padding-block: var(--space-4); font-size: var(--text-4); font-weight: 600; cursor: pointer; }
+.faq--two-column .faq__item .prose { padding-bottom: var(--space-5); color: var(--muted-fg); }
+@container (min-width: 56rem) {
+	.faq--two-column .faq__columns { columns: 2; column-gap: var(--space-8); }
+}

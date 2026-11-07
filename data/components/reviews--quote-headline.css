@@ -1,0 +1,5 @@
+/* reviews/quote-headline: each quote led by a short headline from it
+ * (PRESS). Layout only. */
+.reviews--quote-headline .reviews__list { grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: var(--space-8); }
+.reviews--quote-headline .reviews__item { padding: 0; box-shadow: none; background: transparent; border-top: 1px solid var(--line-firm); padding-top: var(--space-5); border-radius: 0; }
+.reviews--quote-headline .reviews__headline { margin: 0; font-family: var(--font-display); font-size: var(--text-6); font-weight: var(--heading-weight); line-height: 1.2; }

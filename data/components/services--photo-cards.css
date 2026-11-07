@@ -1,0 +1,10 @@
+/* services/photo-cards: photo, name, one line and one link per card, three
+ * or four a row (The Gleamery, Mission Bowling). Layout only. */
+.services--photo-cards .services__cards { display: grid; gap: var(--space-6); grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); margin: 0; padding: 0; list-style: none; }
+.services--photo-cards .services__card { display: flex; flex-direction: column; overflow: hidden; }
+.services--photo-cards .services__photo img { width: 100%; aspect-ratio: 4 / 3; height: auto; max-height: none; object-fit: cover; border-radius: var(--radius-box) var(--radius-box) 0 0; }
+.services--photo-cards .services__body { display: flex; flex-direction: column; gap: var(--space-2); flex: 1; padding: var(--space-5); }
+.services--photo-cards .services__name { margin: 0; font-size: var(--text-5); }
+.services--photo-cards .services__summary { color: var(--muted-fg); }
+.services--photo-cards .services__price { margin: 0; font-weight: 600; }
+.services--photo-cards .services__more { margin: auto 0 0; }

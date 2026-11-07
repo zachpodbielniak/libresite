@@ -1,0 +1,12 @@
+/* services/round-photos: a round photo above each service's name and one
+ * line, three a row (Glenwood South Barberstudio). Layout only. */
+.services--round-photos .section-head { margin-inline: auto; text-align: center; }
+.services--round-photos .services__rounds { display: grid; gap: var(--space-8) var(--space-6); grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); margin: 0; padding: 0; list-style: none; }
+.services--round-photos .services__round { display: grid; justify-items: center; align-content: start; gap: var(--space-3); text-align: center; }
+.services--round-photos .services__photo { width: min(15rem, 70%); }
+.design main .services--round-photos .services__photo img { width: 100%; aspect-ratio: 1 / 1; height: auto; max-height: none; object-fit: cover; border-radius: 50%; }
+.services--round-photos .services__name { margin: var(--space-2) 0 0; font-size: var(--text-5); }
+.services--round-photos .services__name a { color: inherit; text-decoration: none; }
+.services--round-photos .services__name a:hover { text-decoration: underline; }
+.services--round-photos .services__summary { max-width: 22rem; color: var(--muted-fg); }
+.services--round-photos .services__price { margin: 0; font-weight: 600; }

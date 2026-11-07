@@ -247,7 +247,9 @@ photo_list(JsonObject *site, GError **error){
 		JsonObject *photo = JSON_NODE_HOLDS_OBJECT(entry) ? json_node_get_object(entry) : NULL;
 		const gchar *path = photo != NULL ? ls_string(photo, "path") : NULL;
 		g_autofree gchar *lower = path != NULL ? g_ascii_strdown(path, -1) : NULL;
-		if (photo == NULL || !ls_object_keys(photo, "|path|alt|credit|focus|", NULL) ||
+		if (photo == NULL || !ls_object_keys(photo, "|path|alt|credit|stock|focus|", NULL) ||
+			(json_object_has_member(photo, "stock") && (!JSON_NODE_HOLDS_VALUE(json_object_get_member(photo, "stock")) ||
+			json_node_get_value_type(json_object_get_member(photo, "stock")) != G_TYPE_BOOLEAN)) ||
 			(json_object_has_member(photo, "focus") && !ls_focus_valid(ls_string(photo, "focus"))) ||
 			!text_member(photo, "alt", TRUE, NULL) || !text_member(photo, "credit", FALSE, NULL) ||
 			path == NULL || !g_str_has_prefix(path, "assets/") || strstr(path, "..") != NULL ||
@@ -261,11 +263,118 @@ photo_list(JsonObject *site, GError **error){
 	return TRUE;
 invalid:
 	g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID,
-		"site.photos needs 1 to 48 unique {path, alt, credit, focus} entries: path an assets/ .jpg, .jpeg, .png or "
-		".webp seed without spaces or quotes, alt text up to 300 characters, credit optional text, focus an optional "
-		"position such as 'top', 'bottom right' or '70% 40%'");
+		"site.photos needs 1 to 48 unique {path, alt, credit, stock, focus} entries: path an assets/ .jpg, .jpeg, .png or "
+		".webp seed without spaces or quotes, alt text up to 300 characters, credit optional text, stock true for a "
+		"stock photo that is not the business's own, focus an optional position such as 'top', 'bottom right' or "
+		"'70% 40%'");
 	return FALSE;
 }
+/* Supplied customer reviews: quotes word for word with the customer's
+ * name, shown by the design's reviews section. Never generated. */
+static gboolean
+review_list(JsonObject *site, GError **error){
+	JsonNode *node = json_object_get_member(site, "reviews");
+	JsonArray *reviews = node != NULL && JSON_NODE_HOLDS_ARRAY(node) ? json_node_get_array(node) : NULL;
+	guint i;
+	if (reviews == NULL || json_array_get_length(reviews) == 0 || json_array_get_length(reviews) > 9)
+		goto invalid;
+	for (i = 0; i < json_array_get_length(reviews); i++) {
+		JsonNode *entry = json_array_get_element(reviews, i);
+		JsonObject *review = JSON_NODE_HOLDS_OBJECT(entry) ? json_node_get_object(entry) : NULL;
+		if (review == NULL || !ls_object_keys(review, "|quote|name|source|headline|", NULL) ||
+			!text_member(review, "quote", TRUE, NULL) || !text_member(review, "name", TRUE, NULL) ||
+			!text_member(review, "source", FALSE, NULL) || !text_member(review, "headline", FALSE, NULL) ||
+			g_utf8_strlen(ls_string(review, "quote"), -1) > 400 || g_utf8_strlen(ls_string(review, "name"), -1) > 80 ||
+			(ls_string(review, "source") != NULL && g_utf8_strlen(ls_string(review, "source"), -1) > 80) ||
+			(ls_string(review, "headline") != NULL && g_utf8_strlen(ls_string(review, "headline"), -1) > 80))
+			goto invalid;
+	}
+	return TRUE;
+invalid:
+	g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID,
+		"site.reviews needs 1 to 9 {quote, name, source, headline} entries: the customer's words up to 400 "
+		"characters and name up to 80, source and headline optional, up to 80 each");
+	return FALSE;
+}
+/* A supplied string of 1 to @max characters that is not only spaces. */
+static gboolean
+short_text(JsonNode *node, glong max){
+	const gchar *text = node != NULL && JSON_NODE_HOLDS_VALUE(node) && json_node_get_value_type(node) == G_TYPE_STRING
+		? json_node_get_string(node) : NULL;
+	return text != NULL && strspn(text, " \t\n") < strlen(text) && g_utf8_strlen(text, -1) <= max;
+}
+
+/* Supplied press and certification names the trust strip shows as
+ * written. Never generated. */
+static gboolean
+press_list(JsonObject *site, GError **error){
+	JsonNode *node = json_object_get_member(site, "press");
+	JsonArray *names = node != NULL && JSON_NODE_HOLDS_ARRAY(node) ? json_node_get_array(node) : NULL;
+	guint i;
+	if (names == NULL || json_array_get_length(names) == 0 || json_array_get_length(names) > 8)
+		goto invalid;
+	for (i = 0; i < json_array_get_length(names); i++)
+		if (!short_text(json_array_get_element(names, i), 80))
+			goto invalid;
+	return TRUE;
+invalid:
+	g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID,
+		"site.press needs 1 to 8 names of press or certifications that name the business, up to 80 characters each");
+	return FALSE;
+}
+
+/* A supplied rating: its score out of five, how many reviews it counts and
+ * where they are. Shown word for word; never generated. */
+static gboolean
+rating_object(JsonObject *site, GError **error){
+	JsonNode *node = json_object_get_member(site, "rating");
+	JsonObject *rating = node != NULL && JSON_NODE_HOLDS_OBJECT(node) ? json_node_get_object(node) : NULL;
+	JsonNode *score = rating != NULL ? json_object_get_member(rating, "score") : NULL;
+	JsonNode *count = rating != NULL ? json_object_get_member(rating, "count") : NULL;
+	if (rating == NULL || !ls_object_keys(rating, "|score|count|source|", NULL) || score == NULL ||
+		!JSON_NODE_HOLDS_VALUE(score) || (json_node_get_value_type(score) != G_TYPE_DOUBLE &&
+		json_node_get_value_type(score) != G_TYPE_INT64) || json_node_get_double(score) < 1 ||
+		json_node_get_double(score) > 5 || count == NULL || !JSON_NODE_HOLDS_VALUE(count) ||
+		json_node_get_value_type(count) != G_TYPE_INT64 || json_node_get_int(count) < 1 ||
+		json_node_get_int(count) > 10000000 || !short_text(json_object_get_member(rating, "source"), 40))
+		goto invalid;
+	return TRUE;
+invalid:
+	g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID,
+		"site.rating needs {score, count, source}: a score from 1 to 5, a whole count of reviews from 1 and the "
+		"source the reviews are on, up to 40 characters");
+	return FALSE;
+}
+
+/* Supplied shops: each with its name and address, and optional hours and
+ * phone. Never generated. */
+static gboolean
+location_list(JsonObject *site, GError **error){
+	JsonNode *node = json_object_get_member(site, "locations");
+	JsonArray *places = node != NULL && JSON_NODE_HOLDS_ARRAY(node) ? json_node_get_array(node) : NULL;
+	guint i;
+	if (places == NULL || json_array_get_length(places) == 0 || json_array_get_length(places) > 4)
+		goto invalid;
+	for (i = 0; i < json_array_get_length(places); i++) {
+		JsonNode *entry = json_array_get_element(places, i);
+		JsonObject *place = JSON_NODE_HOLDS_OBJECT(entry) ? json_node_get_object(entry) : NULL;
+		g_autofree gchar *tel = NULL;
+		if (place == NULL || !ls_object_keys(place, "|name|address|hours|phone|", NULL) ||
+			!short_text(json_object_get_member(place, "name"), 60) ||
+			!short_text(json_object_get_member(place, "address"), 200) ||
+			(json_object_has_member(place, "hours") && !short_text(json_object_get_member(place, "hours"), 200)))
+			goto invalid;
+		if (json_object_has_member(place, "phone") && (tel = ls_phone_tel(ls_string(place, "phone"))) == NULL)
+			goto invalid;
+	}
+	return TRUE;
+invalid:
+	g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID,
+		"site.locations needs 1 to 4 {name, address, hours, phone} entries: a name up to 60 characters, an address "
+		"up to 200, optional hours up to 200 and an optional phone number");
+	return FALSE;
+}
+
 /* Supplied social profiles: https addresses the builder links and shows
  * with the network's icon. Never generated. */
 static gboolean
@@ -339,7 +448,7 @@ invalid:
 	return FALSE;
 }
 /* site.avoid: fingerprints of earlier sites, as written by the builder, so
- * this one is dealt a design that is not too close to any of them. */
+ * this one cannot reuse an earlier site's signature layer (the clone check). */
 static gboolean
 avoid_list(JsonObject *site, GError **error){
 	JsonNode *node = json_object_get_member(site, "avoid");
@@ -351,7 +460,8 @@ avoid_list(JsonObject *site, GError **error){
 		JsonNode *entry = json_array_get_element(list, i);
 		JsonObject *fp = JSON_NODE_HOLDS_OBJECT(entry) ? json_node_get_object(entry) : NULL;
 		JsonNode *version = fp != NULL ? json_object_get_member(fp, "v") : NULL;
-		if (fp == NULL || !ls_object_keys(fp, "|v|look|genes|colors|fonts|home|signature|", NULL) ||
+		if (fp == NULL || !ls_object_keys(fp, "|v|look|genes|colors|fonts|home|signature|preset|skeleton|header|footer|motion|",
+			NULL) ||
 			version == NULL || !JSON_NODE_HOLDS_VALUE(version) ||
 			json_node_get_value_type(version) != G_TYPE_INT64 || json_node_get_int(version) != 1)
 			goto invalid;
@@ -360,7 +470,7 @@ avoid_list(JsonObject *site, GError **error){
 invalid:
 	g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID,
 		"site.avoid needs up to 500 site fingerprints as the builder writes them: objects with v: 1 and only "
-		"look, genes, colors, fonts, home and signature");
+		"look, genes, colors, fonts, home, signature, preset, skeleton, header, footer and motion");
 	return FALSE;
 }
 
@@ -373,7 +483,7 @@ validate_site(JsonObject *site, GError **error){
 	guint i;
 	if (!ls_object_keys(site,
 		"|brief|audience|style|stack|frontend|backend|database|requirements|pages|offers|contact|brand|copy_lock|languages|"
-		"photos|media|social|avoid|form|modules|credit|booking|",
+		"photos|media|social|avoid|form|modules|credit|booking|demo|reviews|press|rating|locations|scheme|",
 		error))
 		return FALSE;
 	if (!json_object_has_member(site, "brief")) {
@@ -416,6 +526,43 @@ validate_site(JsonObject *site, GError **error){
 					"address without spaces, quotes or angle brackets");
 				return FALSE;
 			}
+		} else if (g_str_equal(key, "style")) {
+			/* The order's style: a prompt style name, or a mapping of that
+			 * name and the colour scheme lock, style.scheme. */
+			JsonNode *node = json_object_get_member(site, key);
+			JsonObject *style = JSON_NODE_HOLDS_OBJECT(node) ? json_node_get_object(node) : NULL;
+			const gchar *name = style != NULL ? ls_string(style, "name") : ls_string(site, key);
+			const gchar *scheme = style != NULL ? ls_string(style, "scheme") : NULL;
+			gboolean ok;
+			if (style == NULL)
+				ok = name != NULL && *name != '\0';
+			else
+				ok = ls_object_keys(style, "|name|scheme|", NULL) && json_object_get_size(style) > 0 &&
+					(!json_object_has_member(style, "name") || (name != NULL && *name != '\0')) &&
+					(!json_object_has_member(style, "scheme") || g_strcmp0(scheme, "auto") == 0 ||
+					g_strcmp0(scheme, "light") == 0 || g_strcmp0(scheme, "dark") == 0);
+			if (!ok) {
+				g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID, "site.style must be a style name or {name, scheme}: "
+					"name a nonempty style name, scheme auto, light or dark");
+				return FALSE;
+			}
+		} else if (g_str_equal(key, "scheme")) {
+			/* The owner's colour scheme: auto follows the visitor; light or
+			 * dark locks the site to one. */
+			const gchar *scheme = ls_string(site, key);
+			if (scheme == NULL || (!g_str_equal(scheme, "auto") && !g_str_equal(scheme, "light") &&
+				!g_str_equal(scheme, "dark"))) {
+				g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID, "site.scheme must be auto, light or dark");
+				return FALSE;
+			}
+		} else if (g_str_equal(key, "demo")) {
+			/* An explicit demo build: the one kind of site that may say, in its
+			 * footer note, that its business is an example. */
+			JsonNode *node = json_object_get_member(site, key);
+			if (!JSON_NODE_HOLDS_VALUE(node) || json_node_get_value_type(node) != G_TYPE_BOOLEAN) {
+				g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID, "site.demo must be true or false");
+				return FALSE;
+			}
 		} else if (g_str_equal(key, "booking")) {
 			/* Where the "Book online" action leads: a host's booking page. */
 			JsonNode *node = json_object_get_member(site, key);
@@ -425,6 +572,18 @@ validate_site(JsonObject *site, GError **error){
 					"without spaces, quotes, angle brackets, ? or #");
 				return FALSE;
 			}
+		} else if (g_str_equal(key, "press")) {
+			if (!press_list(site, error))
+				return FALSE;
+		} else if (g_str_equal(key, "rating")) {
+			if (!rating_object(site, error))
+				return FALSE;
+		} else if (g_str_equal(key, "locations")) {
+			if (!location_list(site, error))
+				return FALSE;
+		} else if (g_str_equal(key, "reviews")) {
+			if (!review_list(site, error))
+				return FALSE;
 		} else if (g_str_equal(key, "copy_lock")) {
 			if (!text_list(site, key, 0, error))
 				return FALSE;

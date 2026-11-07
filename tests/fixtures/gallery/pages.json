@@ -1,0 +1,660 @@
+{
+ "index.html": {
+  "path": "index.html",
+  "sections": [
+   {
+    "component": "hero",
+    "variant": "photo-start",
+    "content": {
+     "kicker": "Fairport since 1998",
+     "heading": "Plumbing and drains for *Fairport* homes",
+     "lede": "Family plumbers for leaks, blocked drains and water heaters across Fairport, Penfield, Perinton and Webster."
+    }
+   },
+   {
+    "component": "services",
+    "variant": "photo-cards",
+    "content": {
+     "heading": "What we fix",
+     "intro": "Three kinds of work, each with a page of its own.",
+     "items": [
+      {
+       "name": "Emergency repairs",
+       "summary": "Burst pipes and leaks. A leak that keeps running can soak floors and walls fast, so shut the water off first."
+      },
+      {
+       "name": "Drain cleaning",
+       "summary": "Kitchen and main lines. Slow drains usually mean a build-up that will get worse."
+      },
+      {
+       "name": "Water heaters",
+       "summary": "Tank and tankless. Repair, replacement and new installs."
+      }
+     ]
+    }
+   },
+   {
+    "component": "steps",
+    "variant": "numbered-row",
+    "content": {
+     "heading": "How a job goes",
+     "items": [
+      {
+       "title": "Call or send the form."
+      },
+      {
+       "title": "We give a price first."
+      },
+      {
+       "title": "We fix it and clean up."
+      }
+     ]
+    }
+   },
+   {
+    "component": "about",
+    "variant": "history",
+    "content": {
+     "heading": "A Fairport plumbing firm since 1998",
+     "body": "Hartwell Plumbing has worked in Fairport since 1998. We fix leaks, clear drains and look after water heaters in homes across four towns."
+    }
+   },
+   {
+    "component": "areas",
+    "variant": "town-list",
+    "content": {
+     "heading": "Where we work",
+     "intro": "Homes in these towns, Monday to Friday."
+    }
+   },
+   {
+    "component": "reviews",
+    "variant": "card-grid",
+    "content": {
+     "heading": "What customers say",
+     "items": [
+      {
+       "quote": "They came the same evening and found the leak behind the dishwasher.",
+       "name": "Dana R.",
+       "source": "Google"
+      }
+     ]
+    }
+   },
+   {
+    "component": "faq",
+    "variant": "list",
+    "content": {
+     "heading": "Questions people ask",
+     "items": [
+      {
+       "question": "What counts as a plumbing emergency?",
+       "answer": "Water you cannot stop at a fixture valve, a burst or leaking pipe, sewage backing up, or no water at all. Turn off the main water valve first if you can find it."
+      },
+      {
+       "question": "Where is my main water shut-off valve?",
+       "answer": "In most homes it sits where the water line comes through the foundation, often in the basement near the water meter."
+      },
+      {
+       "question": "Do you clean kitchen drains and main lines?",
+       "answer": "Yes. We clear kitchen, bathroom and main sewer lines."
+      },
+      {
+       "question": "Why does my drain keep clogging?",
+       "answer": "Grease, food scraps, hair and soap build up inside pipes over time. Roots can also enter older main lines through small cracks."
+      },
+      {
+       "question": "Should I use chemical drain cleaners?",
+       "answer": "They often clear only part of a clog, and strong chemicals can damage older pipes. A cable or a camera check finds the real cause."
+      },
+      {
+       "question": "Do you install tank and tankless water heaters?",
+       "answer": "Yes, both. We repair and replace them too."
+      },
+      {
+       "question": "How long does a tank water heater last?",
+       "answer": "Many last about eight to twelve years. Hard water, sediment and how often it is drained affect its life."
+      },
+      {
+       "question": "What are signs a water heater is failing?",
+       "answer": "Rusty or cloudy hot water, rumbling or popping sounds, water around the base, or hot water that runs out sooner than it used to."
+      },
+      {
+       "question": "What are your hours?",
+       "answer": "Monday to Friday, 7am to 6pm."
+      },
+      {
+       "question": "Which towns do you serve?",
+       "answer": "Fairport, Penfield, Perinton and Webster."
+      },
+      {
+       "question": "How does a job go?",
+       "answer": "You call or send the form, we give a price first, then we fix it and clean up."
+      },
+      {
+       "question": "Can I book online?",
+       "answer": "Yes. Use the booking page to choose a time."
+      }
+     ]
+    }
+   },
+   {
+    "component": "cta",
+    "variant": "band",
+    "content": {
+     "heading": "A leak or a slow drain?",
+     "body": "Call us or send the form, and we give you a price first."
+    }
+   }
+  ]
+ },
+ "emergency-repairs.html": {
+  "path": "emergency-repairs.html",
+  "sections": [
+   {
+    "component": "page-header",
+    "variant": "plain",
+    "content": {
+     "heading": "Emergency repairs",
+     "lede": "Burst pipes and leaks."
+    }
+   },
+   {
+    "component": "text",
+    "variant": "narrow",
+    "content": {
+     "heading": "What it involves",
+     "body": "A burst pipe or a running leak can release a lot of water in a short time. The first step is always to shut off the water at the main valve or at the fixture. A plumber then finds the damaged section, replaces it and checks the joints nearby."
+    }
+   },
+   {
+    "component": "checklist",
+    "variant": "single",
+    "content": {
+     "heading": "Common signs",
+     "included_label": "Signs to look for",
+     "included": [
+      {
+       "text": "Water on the floor or ceiling"
+      },
+      {
+       "text": "A sudden drop in water pressure"
+      },
+      {
+       "text": "The sound of running water when every tap is off"
+      },
+      {
+       "text": "A damp patch that keeps growing"
+      }
+     ]
+    }
+   },
+   {
+    "component": "faq",
+    "variant": "list",
+    "content": {
+     "heading": "Questions people ask",
+     "items": [
+      {
+       "question": "Should I turn off the water?",
+       "answer": "Yes. Turn off the main valve to stop the leak while you wait."
+      },
+      {
+       "question": "Can a frozen pipe burst?",
+       "answer": "Yes. Water expands as it freezes and can split the pipe."
+      },
+      {
+       "question": "Is a small drip urgent?",
+       "answer": "A steady drip wastes water and can rot wood or grow mould over time, so fix it soon."
+      }
+     ]
+    }
+   },
+   {
+    "component": "cta",
+    "variant": "band",
+    "content": {
+     "heading": "Talk to a plumber",
+     "body": "Call or send the form and we will give you a price first."
+    }
+   }
+  ]
+ },
+ "drain-cleaning.html": {
+  "path": "drain-cleaning.html",
+  "sections": [
+   {
+    "component": "page-header",
+    "variant": "plain",
+    "content": {
+     "heading": "Drain cleaning",
+     "lede": "Kitchen and main lines."
+    }
+   },
+   {
+    "component": "text",
+    "variant": "narrow",
+    "content": {
+     "heading": "What it involves",
+     "body": "Drains slow down when grease, hair, soap and food build up inside the pipe. A cable or a water jet clears the line, and a camera can show what caused the clog. Main lines can also be blocked by roots that enter old pipes through small cracks."
+    }
+   },
+   {
+    "component": "checklist",
+    "variant": "single",
+    "content": {
+     "heading": "Common signs",
+     "included_label": "Signs to look for",
+     "included": [
+      {
+       "text": "Water that drains slowly"
+      },
+      {
+       "text": "Gurgling sounds from a drain"
+      },
+      {
+       "text": "Bad smells from a sink or floor drain"
+      },
+      {
+       "text": "Water backing up in a lower drain"
+      }
+     ]
+    }
+   },
+   {
+    "component": "faq",
+    "variant": "list",
+    "content": {
+     "heading": "Questions people ask",
+     "items": [
+      {
+       "question": "Why do several drains back up at once?",
+       "answer": "That usually points to a blockage in the main line, not in one fixture."
+      },
+      {
+       "question": "Do chemical cleaners fix clogs?",
+       "answer": "They often clear only part of a clog and can harm older pipes."
+      },
+      {
+       "question": "How can I keep drains clear?",
+       "answer": "Keep grease and food scraps out of the sink and use strainers in showers."
+      }
+     ]
+    }
+   },
+   {
+    "component": "cta",
+    "variant": "band",
+    "content": {
+     "heading": "Talk to a plumber",
+     "body": "Call or send the form and we will give you a price first."
+    }
+   }
+  ]
+ },
+ "water-heaters.html": {
+  "path": "water-heaters.html",
+  "sections": [
+   {
+    "component": "page-header",
+    "variant": "plain",
+    "content": {
+     "heading": "Water heaters",
+     "lede": "Tank and tankless."
+    }
+   },
+   {
+    "component": "text",
+    "variant": "narrow",
+    "content": {
+     "heading": "What it involves",
+     "body": "A tank heater keeps a store of hot water ready; a tankless heater heats water as it flows. Sediment from hard water settles in tanks and makes them work harder. Draining a tank now and then helps it last longer."
+    }
+   },
+   {
+    "component": "checklist",
+    "variant": "single",
+    "content": {
+     "heading": "Common signs",
+     "included_label": "Signs to look for",
+     "included": [
+      {
+       "text": "Rusty or cloudy hot water"
+      },
+      {
+       "text": "Rumbling or popping from the tank"
+      },
+      {
+       "text": "Water around the base of the heater"
+      },
+      {
+       "text": "Hot water that runs out sooner than before"
+      }
+     ]
+    }
+   },
+   {
+    "component": "faq",
+    "variant": "list",
+    "content": {
+     "heading": "Questions people ask",
+     "items": [
+      {
+       "question": "How long does a water heater last?",
+       "answer": "Many tank heaters last about eight to twelve years."
+      },
+      {
+       "question": "Is tankless better?",
+       "answer": "It saves space and heats on demand; a tank costs less to put in. The right one depends on the home."
+      },
+      {
+       "question": "Why is my hot water rusty?",
+       "answer": "Rust can come from corrosion inside the tank or from the pipes."
+      }
+     ]
+    }
+   },
+   {
+    "component": "cta",
+    "variant": "band",
+    "content": {
+     "heading": "Talk to a plumber",
+     "body": "Call or send the form and we will give you a price first."
+    }
+   }
+  ]
+ },
+ "services.html": {
+  "path": "services.html",
+  "sections": [
+   {
+    "component": "page-header",
+    "variant": "plain",
+    "content": {
+     "heading": "Services",
+     "lede": "Leaks, drains and water heaters in Fairport, Penfield, Perinton and Webster."
+    }
+   },
+   {
+    "component": "services",
+    "variant": "rows",
+    "content": {
+     "heading": "What we fix",
+     "items": [
+      {
+       "name": "Emergency repairs",
+       "summary": "Burst pipes and leaks."
+      },
+      {
+       "name": "Drain cleaning",
+       "summary": "Kitchen and main lines."
+      },
+      {
+       "name": "Water heaters",
+       "summary": "Tank and tankless."
+      }
+     ]
+    }
+   },
+   {
+    "component": "faq",
+    "variant": "list",
+    "content": {
+     "heading": "Questions people ask",
+     "items": [
+      {
+       "question": "Do you give a price first?",
+       "answer": "Yes. We give a price before the work starts."
+      },
+      {
+       "question": "Which towns do you serve?",
+       "answer": "Fairport, Penfield, Perinton and Webster."
+      },
+      {
+       "question": "What are your hours?",
+       "answer": "Monday to Friday, 7am to 6pm."
+      }
+     ]
+    }
+   }
+  ]
+ },
+ "about.html": {
+  "path": "about.html",
+  "sections": [
+   {
+    "component": "page-header",
+    "variant": "plain",
+    "content": {
+     "heading": "About",
+     "lede": "A Fairport plumbing firm since 1998."
+    }
+   },
+   {
+    "component": "text",
+    "variant": "narrow",
+    "content": {
+     "heading": "Since 1998",
+     "body": "Hartwell Plumbing started in Fairport in 1998. Today we fix leaks, clear drains and look after water heaters in four towns. Every job follows the same three steps: you call or send the form, we give a price first, and we fix it and clean up."
+    }
+   },
+   {
+    "component": "faq",
+    "variant": "list",
+    "content": {
+     "heading": "Questions people ask",
+     "items": [
+      {
+       "question": "Where are you based?",
+       "answer": "214 Main Street, Fairport."
+      },
+      {
+       "question": "Do you have a second shop?",
+       "answer": "Yes, in Webster."
+      },
+      {
+       "question": "How do I reach you?",
+       "answer": "Call or use the contact form."
+      }
+     ]
+    }
+   }
+  ]
+ },
+ "service-area.html": {
+  "path": "service-area.html",
+  "sections": [
+   {
+    "component": "page-header",
+    "variant": "plain",
+    "content": {
+     "heading": "Service area",
+     "lede": "Fairport, Penfield, Perinton and Webster."
+    }
+   },
+   {
+    "component": "text",
+    "variant": "narrow",
+    "content": {
+     "heading": "Where we work",
+     "body": "We work in homes across four towns east of Rochester. Call to check a street near the edge of the area."
+    }
+   },
+   {
+    "component": "faq",
+    "variant": "list",
+    "content": {
+     "heading": "Questions people ask",
+     "items": [
+      {
+       "question": "Do you work outside these towns?",
+       "answer": "Call us and ask about your street."
+      },
+      {
+       "question": "What are your hours?",
+       "answer": "Monday to Friday, 7am to 6pm."
+      },
+      {
+       "question": "Where are your shops?",
+       "answer": "Fairport and Webster."
+      }
+     ]
+    }
+   }
+  ]
+ },
+ "questions.html": {
+  "path": "questions.html",
+  "sections": [
+   {
+    "component": "page-header",
+    "variant": "plain",
+    "content": {
+     "heading": "Questions",
+     "lede": "Answers about leaks, drains and water heaters."
+    }
+   },
+   {
+    "component": "faq",
+    "variant": "list",
+    "content": {
+     "heading": "Questions people ask",
+     "items": [
+      {
+       "question": "What counts as a plumbing emergency?",
+       "answer": "Water you cannot stop at a fixture valve, a burst or leaking pipe, sewage backing up, or no water at all. Turn off the main water valve first if you can find it."
+      },
+      {
+       "question": "Where is my main water shut-off valve?",
+       "answer": "In most homes it sits where the water line comes through the foundation, often in the basement near the water meter."
+      },
+      {
+       "question": "Do you clean kitchen drains and main lines?",
+       "answer": "Yes. We clear kitchen, bathroom and main sewer lines."
+      },
+      {
+       "question": "Why does my drain keep clogging?",
+       "answer": "Grease, food scraps, hair and soap build up inside pipes over time. Roots can also enter older main lines through small cracks."
+      },
+      {
+       "question": "Should I use chemical drain cleaners?",
+       "answer": "They often clear only part of a clog, and strong chemicals can damage older pipes. A cable or a camera check finds the real cause."
+      },
+      {
+       "question": "Do you install tank and tankless water heaters?",
+       "answer": "Yes, both. We repair and replace them too."
+      },
+      {
+       "question": "How long does a tank water heater last?",
+       "answer": "Many last about eight to twelve years. Hard water, sediment and how often it is drained affect its life."
+      },
+      {
+       "question": "What are signs a water heater is failing?",
+       "answer": "Rusty or cloudy hot water, rumbling or popping sounds, water around the base, or hot water that runs out sooner than it used to."
+      },
+      {
+       "question": "What are your hours?",
+       "answer": "Monday to Friday, 7am to 6pm."
+      },
+      {
+       "question": "Which towns do you serve?",
+       "answer": "Fairport, Penfield, Perinton and Webster."
+      }
+     ]
+    }
+   }
+  ]
+ },
+ "book.html": {
+  "path": "book.html",
+  "sections": [
+   {
+    "component": "page-header",
+    "variant": "plain",
+    "content": {
+     "heading": "Booking",
+     "lede": "Choose a time that suits you."
+    }
+   },
+   {
+    "component": "text",
+    "variant": "narrow",
+    "content": {
+     "heading": "Before you book",
+     "body": "Pick a time below. For water you cannot stop, call instead of booking."
+    }
+   },
+   {
+    "component": "faq",
+    "variant": "list",
+    "content": {
+     "heading": "Questions people ask",
+     "items": [
+      {
+       "question": "Can I change my time?",
+       "answer": "Yes, call us."
+      },
+      {
+       "question": "What if it is urgent?",
+       "answer": "Call us and shut off the water first."
+      },
+      {
+       "question": "Do you give a price first?",
+       "answer": "Yes, before any work starts."
+      }
+     ]
+    }
+   }
+  ]
+ },
+ "contact.html": {
+  "path": "contact.html",
+  "sections": [
+   {
+    "component": "page-header",
+    "variant": "plain",
+    "content": {
+     "heading": "Contact",
+     "lede": "Call, email or send the form."
+    }
+   },
+   {
+    "component": "form",
+    "variant": "stacked",
+    "id": "quote",
+    "content": {
+     "heading": "Ask for a quote",
+     "mode": "endpoint",
+     "fields": [
+      {
+       "name": "name",
+       "label": "Your name"
+      }
+     ],
+     "submit": "Send"
+    }
+   },
+   {
+    "component": "faq",
+    "variant": "list",
+    "content": {
+     "heading": "Questions people ask",
+     "items": [
+      {
+       "question": "How soon do you answer?",
+       "answer": "During our hours, the same day."
+      },
+      {
+       "question": "Where are you?",
+       "answer": "214 Main Street, Fairport."
+      },
+      {
+       "question": "What are your hours?",
+       "answer": "Monday to Friday, 7am to 6pm."
+      }
+     ]
+    }
+   }
+  ]
+ }
+}
