@@ -7,6 +7,11 @@
 	.kit-curtain main > .block:first-child h1 { animation-delay: 90ms; }
 	.kit-curtain main > .block:first-child :is(.lede, .prose) { animation-delay: 220ms; }
 	.kit-curtain main > .block:first-child .actions { animation-delay: 340ms; }
+	/* A phone visitor must see the opening words from the first frame. The
+	 * wipe clips most of the line while the page is loading. */
+	@media (max-width: 47.99rem) {
+		.kit-curtain main > .block:first-child :is(.kicker, h1, .lede, .prose, .actions) { animation: none; }
+	}
 	.kit-curtain main > .block:first-child :is(figure, picture) { animation: kit-curtain-drop 1100ms cubic-bezier(0.65, 0, 0.35, 1) 160ms both; }
 	@supports (animation-timeline: view()) {
 		.kit-curtain main > .block:not(:first-child) .section-head { animation: kit-curtain-wipe linear both; animation-timeline: view(); animation-range: entry 10% entry 70%; }
