@@ -8265,18 +8265,10 @@ pages_with_booking_calendar(JsonObject *plan, JsonObject *pages){
 	copy = copy_page_specs(pages);
 	{
 		JsonNode *node = json_object_get_member(copy, target);
-		g_autofree gchar *saved = node != NULL ? ls_json_encode(node) : NULL;
-		g_autoptr(JsonNode) private = saved != NULL ? ls_json_parse(saved, NULL) : NULL;
-		JsonObject *page;
-		JsonArray *sections;
+		JsonObject *page = node != NULL && JSON_NODE_HOLDS_OBJECT(node) ? json_node_get_object(node) : NULL;
+		JsonArray *sections = member_array(page, "sections");
 		JsonObject *section;
 		JsonObject *content;
-		if (private != NULL) {
-			json_object_set_member(copy, target, g_steal_pointer(&private));
-			node = json_object_get_member(copy, target);
-		}
-		page = node != NULL && JSON_NODE_HOLDS_OBJECT(node) ? json_node_get_object(node) : NULL;
-		sections = member_array(page, "sections");
 		if (sections == NULL)
 			return copy;
 		section = json_object_new();

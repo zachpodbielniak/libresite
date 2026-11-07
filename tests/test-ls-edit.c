@@ -313,6 +313,14 @@ test_replace_headline(void){
 	g_assert_false(ls_editor_replace_headline(editor, site.site, "Repair your furniture with care",
 		"Repair your furniture with care", NULL, NULL, NULL, &error));
 	g_assert_no_error(error);
+	g_assert_false(ls_editor_replace_headline(editor, site.site, "Not on the page",
+		"Another headline", NULL, NULL, NULL, &error));
+	g_assert_error(error, LS_ERROR, LS_ERROR_VALIDATION);
+	g_clear_error(&error);
+	g_assert_false(ls_editor_replace_headline(editor, site.site, "Repair your furniture with care",
+		"Repair <b>this</b>", NULL, NULL, NULL, &error));
+	g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+	g_clear_error(&error);
 	after = read_file(site.site, "index.html");
 	g_assert_cmpstr(after, ==, html);
 	g_assert_cmpstr(before, !=, after);
