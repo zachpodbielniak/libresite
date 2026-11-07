@@ -706,6 +706,8 @@ The stock =motion= look (rise, reveal, lift) gave every moving site the same thr
 - Characterful hover and focus: each kit has its own hover and widens or eases the focus ring's offset. Focus rings keep the library's colour and width.
 - Weight: each kit's styles are at most 4 KB and its script at most 2 KB, checked by =/motion/files=; =/motion/render= checks that a kit adds at most 6 KB to the styles and script of a site, its class is on every page, its files come only with the dealt kit, and the marquee band appears only for marquee kits.
 
+The curtain kit keeps its opening words visible from the first frame on phone screens. Its text wipe runs on wider screens, and its picture and later section motion remain available on phones. The mobile browser gate samples the opening during the entrance so a clipped heading cannot pass by settling before the check.
+
 =tests/test-motion.c= also checks that 300 seeds deal all six kits deterministically with their look set, that themes get none, and that a bad kit name fails the plan check. =/motion/files= is the reduced-motion lint: with comments, =@keyframes= and no-preference blocks removed, a kit's CSS may not mention =animation=, =transition=, =transform= or =scroll-behavior=. With =MOTION_OUTPUT= set, the fixture site is written once per kit for the browser check:
 
 #+begin_src sh

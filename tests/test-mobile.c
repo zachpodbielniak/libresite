@@ -153,6 +153,8 @@ photo_site(LsComponents *components, const gchar *seed, const gchar *kit, GHashT
 		json_object_remove_member(structure, "variants");
 	if (kit != NULL)
 		json_object_set_string_member(structure, "kit", kit);
+	if (g_strcmp0(kit, "curtain") == 0)
+		json_object_set_string_member(structure, "opening", "hero/breakout");
 	ls_components_apply_opening(components, plan, "index.html", home);
 	ls_components_spread_photos(components, plan, home);
 	if (!ls_components_check_page(components, plan, "index.html", home, &error))
@@ -377,11 +379,12 @@ test_emit(void){
 	guint s;
 	if (output == NULL)
 		return;
-	for (s = 0; s < 8; s++) {
+	for (s = 0; s < 9; s++) {
 		g_autoptr(GHashTable) files = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, (GDestroyNotify)g_bytes_unref);
 		g_autofree gchar *seed = g_strdup_printf("mobile-%u\nA house painter %u.", s, s);
 		g_autofree gchar *name = g_strdup_printf("photos-%u", s);
-		g_autoptr(JsonNode) site = photo_site(components, seed, s == 0 ? "spotlight" : NULL, files);
+		g_autoptr(JsonNode) site = photo_site(components, seed,
+			s == 0 ? "spotlight" : (s == 8 ? "curtain" : NULL), files);
 		JsonArray *list = json_object_get_array_member(json_node_get_object(site), "files");
 		GHashTableIter iter;
 		gpointer path, bytes;
