@@ -6,10 +6,11 @@ set -euo pipefail
 
 usage() {
 	cat <<'USAGE'
-Usage: scripts/site-gate.sh [--json FILE] [--webdriver URL] SITE-DIR...
+Usage: scripts/site-gate.sh [--json FILE] [--scheme light|dark] [--webdriver URL] SITE-DIR...
 
 Serve each published SITE-DIR on 127.0.0.1, open every page in headless
-Firefox at 390x844 and 1440x900, and check what a visitor sees:
+Firefox at 390x844 and 1440x900, as a visitor whose system asks for the
+light colour scheme (or dark, with --scheme dark), and check what they see:
 
   photo     a photo (not a drawing) on the home page's first screen
   headline  the H1 is on the first screen, not under a fixed bar,
@@ -29,16 +30,18 @@ Starts its own geckodriver unless --webdriver or WEBDRIVER_URL names one.
 Examples:
   scripts/site-gate.sh ./my-site
   scripts/site-gate.sh --json gate.json sites/*/
+  scripts/site-gate.sh --scheme dark ./my-site
 
 Options:
   --json FILE      Also write every finding as JSON to FILE
+  --scheme SCHEME  The visitor's system colour scheme: light (default) or dark
   --webdriver URL  Use a running WebDriver server, such as geckodriver
   -h, --help       Show this help
   --license        Print the license notice
 USAGE
 }
 
-json='' webdriver=${WEBDRIVER_URL:-}
+json='' scheme=light webdriver=${WEBDRIVER_URL:-}
 sites=()
 while [[ $# -gt 0 ]]; do
 	case $1 in
@@ -46,12 +49,18 @@ while [[ $# -gt 0 ]]; do
 		--license) echo "libresite site-gate.sh is licensed AGPL-3.0-or-later."; exit 0 ;;
 		--json) [[ $# -ge 2 ]] || { usage >&2; exit 2; }; json=$2; shift 2 ;;
 		--webdriver) [[ $# -ge 2 ]] || { usage >&2; exit 2; }; webdriver=$2; shift 2 ;;
+		--scheme) [[ $# -ge 2 ]] || { usage >&2; exit 2; }; scheme=$2; shift 2 ;;
 		--) shift; sites+=("$@"); break ;;
 		-*) echo "site-gate.sh: unknown option $1" >&2; usage >&2; exit 2 ;;
 		*) sites+=("$1"); shift ;;
 	esac
 done
 [[ ${#sites[@]} -gt 0 ]] || { usage >&2; exit 2; }
+case $scheme in
+	light) override=1 label='' ;;
+	dark) override=0 label=' (dark)' ;;
+	*) echo "site-gate.sh: --scheme must be light or dark, not $scheme" >&2; exit 2 ;;
+esac
 for site in "${sites[@]}"; do
 	[[ -f $site/index.html ]] || { echo "site-gate.sh: $site has no index.html" >&2; exit 2; }
 done
@@ -104,11 +113,12 @@ if [[ -z $webdriver ]]; then
 fi
 webdriver=${webdriver%/}
 # Reduced motion, so entrances do not hide text; eager images, so the first
-# screen is complete when measured; no minimum window width for 390.
+# screen is complete when measured; the chosen system colour scheme (Firefox:
+# 0 dark, 1 light); no minimum window width for 390.
 mkdir -p "$work/profile/chrome"
 printf '%s\n' 'user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);' \
 	'user_pref("ui.prefersReducedMotion", 1);' 'user_pref("dom.image-lazy-loading.enabled", false);' \
-	'user_pref("layout.css.prefers-color-scheme.content-override", 1);' > "$work/profile/user.js"
+	"user_pref(\"layout.css.prefers-color-scheme.content-override\", $override);" > "$work/profile/user.js"
 printf '%s\n' '#main-window, #navigator-toolbox { min-width: 0 !important; }' > "$work/profile/chrome/userChrome.css"
 encoded=$(cd "$work/profile" && zip -qr - . | base64 -w0)
 session=$(call POST /session "$(jq -nc --arg profile "$encoded" '{capabilities:{alwaysMatch:{browserName:"firefox","moz:firefoxOptions":{args:["-headless"],profile:$profile}}}}')" | jq -er .value.sessionId) || exit 2
@@ -150,17 +160,17 @@ for site in "${sites[@]}"; do
 	kill "$server" 2> /dev/null || true
 	wait "$server" 2> /dev/null || true
 	server=
-	jq -sc --arg site "$name" --arg path "$dir" --argjson pages "${#pages[@]}" --argjson seconds "$((SECONDS - started))" --argjson order "$order" '
-		{site: $site, path: $path, pages: $pages, seconds: $seconds, findings: .,
+	jq -sc --arg site "$name" --arg scheme "$scheme" --arg path "$dir" --argjson pages "${#pages[@]}" --argjson seconds "$((SECONDS - started))" --argjson order "$order" '
+		{site: $site, scheme: $scheme, path: $path, pages: $pages, seconds: $seconds, findings: .,
 		 failed: ([.[].check] | unique | sort_by(. as $c | $order | index($c)))}' "$work/findings.ndjson" > "$work/site.json"
 	cat "$work/site.json" >> "$work/results.ndjson"
 	# One line per failed check: where, and what, merging the widths that
 	# found the same thing.
 	if jq -e '.failed | length == 0' "$work/site.json" > /dev/null; then
-		jq -r '"PASS \(.site) (\(.pages) pages at 390 and 1440, \(.seconds) s)"' "$work/site.json"
+		jq -r --arg label "$label" '"PASS \(.site)\($label) (\(.pages) pages at 390 and 1440, \(.seconds) s)"' "$work/site.json"
 	else
 		failed=1
-		jq -r '"FAIL \(.site)", (.findings as $all | .failed[] as $check |
+		jq -r --arg label "$label" '"FAIL \(.site)\($label)", (.findings as $all | .failed[] as $check |
 			[$all[] | select(.check == $check)] | group_by([.page, .detail]) |
 			map("\(.[0].page) at \([.[].width | tostring] | unique | sort_by(tonumber) | join(" and ")): \(.[0].detail)") as $where |
 			"  \($check): \($where[:3] | join("; "))\(if ($where | length) > 3 then "; and \(($where | length) - 3) more" else "" end)")' "$work/site.json"

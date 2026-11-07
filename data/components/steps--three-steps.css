@@ -1,0 +1,14 @@
+/* steps/three-steps: the owner's steps centered side by side, each under a
+ * large number (Emily's Maids, We Leave Clean). Layout only. */
+.steps--three-steps .section-head { margin-inline: auto; text-align: center; }
+.steps--three-steps .steps__three { display: grid; gap: var(--space-7); margin: 0; padding: 0; list-style: none; }
+.steps--three-steps .steps__step { display: grid; justify-items: center; align-content: start; gap: var(--space-3); text-align: center; }
+.steps--three-steps .steps__number {
+	display: grid; place-items: center; width: 3.5rem; height: 3.5rem; border-radius: var(--radius-badge);
+	background: var(--primary-soft); color: var(--primary-text); font-family: var(--font-display); font-size: var(--text-6);
+	font-weight: var(--heading-weight); font-variant-numeric: tabular-nums;
+}
+.steps--three-steps .steps__text { max-width: 22rem; margin: 0; font-size: var(--text-4); font-weight: 600; line-height: 1.4; }
+@container (min-width: 52rem) {
+	.steps--three-steps .steps__three { grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); }
+}

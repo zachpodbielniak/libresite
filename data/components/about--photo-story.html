@@ -1,0 +1,9 @@
+<div class="wrap about__inner">
+{{#art}}<figure class="about__photo"><img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}"{{#srcset}} srcset="{{srcset}}" sizes="(max-width: 48rem) 100vw, 50vw"{{/srcset}} loading="lazy" decoding="async"></figure>
+{{/art}}<div class="about__text">
+{{#kicker}}<p class="kicker">{{kicker}}</p>
+{{/kicker}}<{{htag}} id="{{id}}-h">{{{heading_html}}}</{{htag}}>
+<div class="prose">{{{body}}}</div>
+{{#link}}<p><a class="button button--outline" href="{{href}}">{{label}}</a></p>
+{{/link}}</div>
+</div>

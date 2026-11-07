@@ -1,0 +1,14 @@
+/* skeleton/alternating: the home zigzags. On wide screens a section's
+ * heading and its content sit side by side, and every other section turns
+ * round, so the heavy side alternates down the page; service rows
+ * alternate their photos on their own. Placement only. */
+@container (min-width: 60rem) {
+	.design.skeleton--alternating.page--kind-home main > :is(.steps, .faq, .reviews):not(:first-child) > .wrap:has(> .section-head) {
+		display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--space-5) var(--space-9); align-items: start;
+	}
+	.design.skeleton--alternating.page--kind-home main > :is(.steps, .faq, .reviews):not(:first-child) > .wrap > .section-head { grid-column: 1; grid-row: 1 / span 6; margin: 0; }
+	.design.skeleton--alternating.page--kind-home main > :is(.steps, .faq, .reviews):not(:first-child) > .wrap > :not(.section-head) { grid-column: 2; }
+	/* Every other section turns round: its columns run from the right. */
+	.design.skeleton--alternating.page--kind-home main > .block:not(:first-child):nth-of-type(even) > .wrap { direction: rtl; }
+	.design.skeleton--alternating.page--kind-home main > .block:not(:first-child):nth-of-type(even) > .wrap > * { direction: ltr; }
+}

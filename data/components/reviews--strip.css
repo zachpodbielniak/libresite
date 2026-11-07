@@ -1,0 +1,19 @@
+/* reviews/strip: the supplied quotes in one row that scrolls sideways by
+ * touch, trackpad or keyboard, each card snapping to the start; nothing
+ * moves on its own. Layout only. */
+.reviews--strip .reviews__strip {
+	display: grid; grid-auto-flow: column; grid-auto-columns: minmax(16rem, 82%); gap: var(--space-5);
+	margin: 0; padding: var(--space-2) var(--space-1) var(--space-5); list-style: none;
+	overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory;
+}
+.reviews--strip .reviews__strip:focus-visible { outline: 3px solid var(--focus); outline-offset: 4px; }
+.reviews--strip .reviews__strip > li { display: flex; scroll-snap-align: start; }
+.reviews--strip .reviews__item { display: flex; flex-direction: column; justify-content: space-between; gap: var(--space-5); width: 100%; margin: 0; padding: var(--space-6); }
+.reviews--strip .reviews__quote { margin: 0; font-size: var(--text-4); line-height: 1.5; }
+.reviews--strip .reviews__quote p { margin: 0; }
+.reviews--strip figcaption { display: grid; gap: var(--space-1); }
+.reviews--strip .reviews__name { font-weight: 600; }
+.reviews--strip .reviews__source { font-size: var(--text-2); color: var(--muted-fg); }
+@container (min-width: 52rem) {
+	.reviews--strip .reviews__strip { grid-auto-columns: minmax(0, calc((100% - 2 * var(--space-5)) / 3)); }
+}

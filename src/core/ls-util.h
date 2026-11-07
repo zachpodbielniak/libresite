@@ -84,6 +84,49 @@ gboolean ls_form_action_valid(const gchar *action);
  * Returns: whether @form is a form the builder draws
  */
 gboolean ls_form_valid(JsonObject *form);
+
+/**
+ * ls_form_field_shape_valid:
+ * @field: (transfer none): one form field object
+ *
+ * Whether the field's choices and bounds fit its type: select and radio
+ * list 1 to 30 unique text options, toggle 2 to 6, and no other type has
+ * options; range needs whole min and max and number may have them, min
+ * below max, with an optional whole step.
+ *
+ * Returns: whether the shape holds
+ */
+gboolean ls_form_field_shape_valid(JsonObject *field);
+
+/**
+ * ls_form_field_shape_rule:
+ *
+ * The rule ls_form_field_shape_valid() checks, as a sentence fragment.
+ *
+ * Returns: (transfer none): static text
+ */
+const gchar *ls_form_field_shape_rule(void);
+
+/**
+ * ls_site_style_name:
+ * @site: (nullable) (transfer none): a recipe's site object
+ *
+ * The prompt style the order names: site.style when it is a string, or
+ * site.style.name when it is a mapping {name, scheme}.
+ *
+ * Returns: (nullable) (transfer none): the style name, or %NULL for none
+ */
+const gchar *ls_site_style_name(JsonObject *site);
+
+/**
+ * ls_site_scheme:
+ * @site: (nullable) (transfer none): a recipe's site object
+ *
+ * The colour scheme the order locks: site.style.scheme, else site.scheme.
+ *
+ * Returns: (nullable) (transfer none): auto, light or dark, or %NULL
+ */
+const gchar *ls_site_scheme(JsonObject *site);
 /**
  * ls_form_requirements:
  *

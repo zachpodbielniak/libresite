@@ -189,6 +189,24 @@ main :is(.wrap, [class$="__list"], [class*="__list "], [class$="__grid"], [class
 	.site-footer__inner { grid-template-columns: minmax(min(100%, 16rem), 1fr) minmax(0, auto); align-items: start; }
 }
 
+/* The colour scheme toggle (docs/components.org, "Light and dark"): a
+ * quiet 44 px button, shown by its script; in the footer on phones only,
+ * where the header's links sit behind the menu. Nothing animates. */
+.scheme-toggle {
+	display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
+	min-width: 44px; min-height: 44px; padding: 0 0.6rem; border: 1px solid transparent; border-radius: 999px;
+	background: transparent; color: inherit; font: inherit; font-size: var(--step--1); cursor: pointer;
+}
+.scheme-toggle[hidden] { display: none; }
+.scheme-toggle:hover { border-color: currentColor; }
+.scheme-toggle svg { flex: none; }
+/* In the header the button is the icon alone, so it never crowds the
+ * links; its name still says the state. The footer shows the word. */
+.site-header .scheme-toggle { padding: 0; }
+.site-header .scheme-toggle__state { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.site-footer__scheme { margin: var(--space-4) auto 0; }
+@media (min-width: 48rem) { .site-footer__scheme { display: none; } }
+
 /* Forms shared by every form-bearing component. */
 .field { display: grid; gap: var(--space-1); margin-bottom: var(--space-4); }
 .field label, .field legend { font-family: var(--font-display); font-weight: 600; }

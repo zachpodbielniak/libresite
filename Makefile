@@ -20,7 +20,7 @@ PUBLIC_HEADERS = $(wildcard src/*.h src/core/*.h src/interfaces/*.h src/model/*.
 UNIT_TESTS = $(patsubst tests/%.c,%,$(wildcard tests/test-*.c))
 UNIT_BINS = $(addprefix $(OUTDIR)/,$(UNIT_TESTS))
 include rules.mk
-.PHONY: all tests test stack-tests sameness gate site-gate clean install help bundled-deps
+.PHONY: all tests test stack-tests gate site-gate clean install help bundled-deps
 all: $(CLI) $(LIB_SHARED) $(OUTDIR)/libresite-1.0.pc
 $(LIB_STATIC): $(LIB_OBJECTS)
 	$(AR) rcs $@ $^
@@ -41,38 +41,20 @@ tests test: all $(UNIT_BINS)
 	bash tests/usage.sh $(CLI)
 	bash tests/scaffold.sh $(CLI)
 	bash tests/qa.sh $(CLI)
-# The variety gate: ten home-services briefs must not come out alike
-# (docs/components.org, "Measuring sameness"). With WEBDRIVER_URL the home
-# pages are also screenshotted and compared at 390 and 1440.
-sameness: all $(OUTDIR)/test-sameness
-	rm -rf $(OUTDIR)/sameness
-	SAMENESS_GATE=1 SAMENESS_OUTPUT=$(CURDIR)/$(OUTDIR)/sameness G_DEBUG=fatal-warnings $(OUTDIR)/test-sameness
-	if [ -n "$(WEBDRIVER_URL)" ]; then bash tests/sameness.sh "$(WEBDRIVER_URL)" $(OUTDIR)/sameness; fi
-# The full variety gate in a browser (docs/components.org, "Variety gate"):
-# the sameness gate with screenshots calibrated against the home
-# compositions, the composition, variant, art direction and motion checks,
-# contrast, reduced motion and page weight at 390 and 1440, every option
-# at 390, 768 and 1440 (tests/options.sh), and the mobile findings on photo
-# sites, every option and the ten sites at 390 and 1440 (tests/mobile.sh).
+# The browser gate (docs/components.org, "Variety gate"): contrast, reduced
+# motion and page weight at 390 and 1440 (tests/gate.sh), every option at
+# 390, 768 and 1440 (tests/options.sh), and the mobile findings on photo
+# sites and every option at 390 and 1440 (tests/mobile.sh).
 GATE_OUT = $(OUTDIR)/gate
-gate: all $(OUTDIR)/test-sameness $(OUTDIR)/test-compositions $(OUTDIR)/test-variants $(OUTDIR)/test-art-direction $(OUTDIR)/test-motion $(OUTDIR)/test-options $(OUTDIR)/test-mobile $(OUTDIR)/test-showcase $(OUTDIR)/test-bar
+gate: all $(OUTDIR)/test-gate $(OUTDIR)/test-options $(OUTDIR)/test-mobile $(OUTDIR)/test-showcase $(OUTDIR)/test-bar
 	@test -n "$(WEBDRIVER_URL)" || { echo 'make gate needs WEBDRIVER_URL, such as http://localhost:4444 from geckodriver' >&2; exit 2; }
 	rm -rf $(GATE_OUT)
-	SAMENESS_OUTPUT=$(CURDIR)/$(GATE_OUT)/sameness G_DEBUG=fatal-warnings $(OUTDIR)/test-sameness
-	COMPOSITIONS_OUTPUT=$(CURDIR)/$(GATE_OUT)/compositions G_DEBUG=fatal-warnings $(OUTDIR)/test-compositions
-	VARIANTS_OUTPUT=$(CURDIR)/$(GATE_OUT)/variants G_DEBUG=fatal-warnings $(OUTDIR)/test-variants
-	ART_OUTPUT=$(CURDIR)/$(GATE_OUT)/art G_DEBUG=fatal-warnings $(OUTDIR)/test-art-direction
-	MOTION_OUTPUT=$(CURDIR)/$(GATE_OUT)/motion G_DEBUG=fatal-warnings $(OUTDIR)/test-motion
-	bash tests/compositions.sh "$(WEBDRIVER_URL)" $(GATE_OUT)/compositions
-	bash tests/compositions.sh "$(WEBDRIVER_URL)" $(GATE_OUT)/variants
-	bash tests/compositions.sh "$(WEBDRIVER_URL)" $(GATE_OUT)/art
-	bash tests/motion.sh "$(WEBDRIVER_URL)" $(GATE_OUT)/motion
-	bash tests/sameness.sh "$(WEBDRIVER_URL)" $(GATE_OUT)/sameness $(GATE_OUT)/compositions
-	bash tests/gate.sh "$(WEBDRIVER_URL)" $(GATE_OUT)/sameness
+	GATE_OUTPUT=$(CURDIR)/$(GATE_OUT)/default G_DEBUG=fatal-warnings $(OUTDIR)/test-gate
+	bash tests/gate.sh "$(WEBDRIVER_URL)" $(GATE_OUT)/default
 	OPTIONS_OUTPUT=$(CURDIR)/$(GATE_OUT)/options G_DEBUG=fatal-warnings $(OUTDIR)/test-options
 	bash tests/options.sh "$(WEBDRIVER_URL)" $(GATE_OUT)/options
 	MOBILE_OUTPUT=$(CURDIR)/$(GATE_OUT)/mobile G_DEBUG=fatal-warnings $(OUTDIR)/test-mobile
-	bash tests/mobile.sh "$(WEBDRIVER_URL)" $(GATE_OUT)/mobile $(GATE_OUT)/options $(GATE_OUT)/sameness
+	bash tests/mobile.sh "$(WEBDRIVER_URL)" $(GATE_OUT)/mobile $(GATE_OUT)/options $(GATE_OUT)/default
 	SHOWCASE_OUTPUT=$(CURDIR)/$(GATE_OUT)/showcase G_DEBUG=fatal-warnings $(OUTDIR)/test-showcase
 	bash tests/showcase.sh "$(WEBDRIVER_URL)" $(GATE_OUT)/showcase
 	BAR_OUTPUT=$(CURDIR)/$(GATE_OUT)/bar G_DEBUG=fatal-warnings $(OUTDIR)/test-bar
@@ -87,10 +69,15 @@ gate: all $(OUTDIR)/test-sameness $(OUTDIR)/test-compositions $(OUTDIR)/test-var
 	! bash tests/gate.sh "$(WEBDRIVER_URL)" $(GATE_OUT)/taste-bad >/dev/null
 	jq -e '[.pages[] | (.rotated | length) > 0 and (.blobs | length) > 0 and (.loud | length) > 0 and (.stroked | length) > 0] | all' $(GATE_OUT)/taste-bad/gate.json >/dev/null
 # The site gate's own checks (docs/site-gate.org): a good fixture site
-# passes and each defect page fails only its check. Needs firefox and
+# passes and each defect page fails only its check; then the scheme toggle
+# and the form controls in a browser (docs/components.org, "Light and
+# dark" and "Controls"), and the booking calendar and its request form
+# against a fake booking host ("Book online"). Needs firefox and
 # geckodriver, or WEBDRIVER_URL.
-site-gate:
+site-gate: all $(OUTDIR)/test-ls-design
 	bash tests/site-gate.sh
+	bash tests/controls.sh $(OUTDIR)/test-ls-design
+	bash tests/booking.sh $(OUTDIR)/test-ls-design
 # Live visual acceptance is separate from the hermetic fixture gate.
 .PHONY: visual-review
 visual-review:
@@ -124,5 +111,5 @@ bundled-deps:
 clean:
 	$(RM) -r $(OUTDIR)
 help:
-	@printf '%s\n' 'make [DEBUG=1] [ASAN=1] [UBSAN=1] [DEPS=bundled]' 'make tests | stack-tests | sameness [WEBDRIVER_URL=...] | gate WEBDRIVER_URL=... | site-gate | install DESTDIR=... PREFIX=... | clean'
+	@printf '%s\n' 'make [DEBUG=1] [ASAN=1] [UBSAN=1] [DEPS=bundled]' 'make tests | stack-tests | gate WEBDRIVER_URL=... | site-gate | install DESTDIR=... PREFIX=... | clean'
 endif

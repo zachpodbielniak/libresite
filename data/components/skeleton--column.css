@@ -1,0 +1,10 @@
+/* skeleton/column: one narrow centred column for the words, with the
+ * services, the gallery, the reviews strip, the area photo and the close
+ * breaking out to full width. Placement only. */
+@container (min-width: 48rem) {
+	.design.skeleton--column.page--kind-home main > .block:not(:first-child):not(.services, .gallery, .cta, .reviews--strip, .areas--card-over-photo) > .wrap {
+		width: min(100% - 2 * var(--gutter), var(--container-narrow));
+	}
+	.design.skeleton--column.page--kind-home main > .block:not(:first-child) .section-head { margin-inline: auto; text-align: center; }
+	.design.skeleton--column.page--kind-home main > .block:not(:first-child) .section-head .prose { margin-inline: auto; }
+}

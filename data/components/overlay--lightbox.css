@@ -1,0 +1,18 @@
+/* overlay/lightbox: a photo of the owner's work opens larger in a dialog
+ * over the page (overlay.js), with previous, next and close buttons, the
+ * arrow keys and Escape; without the script the link opens the photo. */
+.design.overlay--lightbox .gallery__zoom { display: block; cursor: zoom-in; }
+.design.overlay--lightbox .lightbox {
+	width: min(72rem, 100% - 2rem); max-width: none; max-height: calc(100svh - 2rem); padding: var(--space-4);
+	border: 0; border-radius: var(--radius-box); background: #111111; color: #ffffff;
+}
+.design.overlay--lightbox .lightbox::backdrop { background: rgb(0 0 0 / 0.8); }
+.design.overlay--lightbox .lightbox__figure { display: grid; gap: var(--space-3); margin: 0; }
+.design.overlay--lightbox .lightbox__figure img { width: 100%; max-height: calc(100svh - 10rem); object-fit: contain; border-radius: 0; }
+.design.overlay--lightbox .lightbox__figure figcaption { color: #ffffff; font-size: var(--text-2); }
+.design.overlay--lightbox .lightbox__controls { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-3); margin-top: var(--space-3); }
+.design.overlay--lightbox .lightbox__controls button {
+	min-width: 44px; min-height: 44px; padding: 0 1em; border: 1px solid #ffffff; border-radius: var(--radius-control);
+	background: #111111; color: #ffffff; font: 600 var(--text-2) var(--font-body); cursor: pointer;
+}
+.design.overlay--lightbox .lightbox__controls button:hover { background: #333333; }

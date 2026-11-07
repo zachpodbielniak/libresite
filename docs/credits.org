@@ -1,4 +1,4 @@
-#+title: Showcase photograph credits
+#+title: Credits: photographs and copied scales
 
 * Private eighteen-site showcase
 
@@ -42,3 +42,51 @@ The showcase uses StockSnap photographs under [[https://creativecommons.org/publ
 | 34 | [[https://stocksnap.io/photo/tattoo-ink-6D408625FE][Tattoo Ink]] | CC0 1.0 |
 | 35 | [[https://stocksnap.io/photo/wedding-bride-GI154PSYGF][Wedding Bride]] | CC0 1.0 |
 | 36 | [[https://stocksnap.io/photo/wedding-couple-YJHZWANTEG][Wedding Couple]] | CC0 1.0 |
+
+* Design presets and variants (docs/components.org, "Presets and the picker")
+
+The presets and variants study real sites for colour values, font names and arrangement only. No code, photos, words or logos come from them. Licensed faces on those sites are replaced by open faces under the SIL Open Font License, served by Bunny Fonts: Manrope for Satoshi, Inter for Helvetica Neue, and PT Serif and Work Sans as used. Tailwind Plus, Relume, Flowbite Blocks and Preline are studied for taxonomy only; no code from them is used.
+
+These MIT-licensed projects supplied scales, names or markup shapes. The CSS is written for libresite on its own tokens.
+
+| Project | Copyright | What we took |
+|---------+-----------+--------------|
+| Radix Themes | Copyright (c) 2023 WorkOS | the space steps (4 to 64 px) and type steps (12 to 60 px) of =--space-1..9= and =--text-1..9= |
+| daisyUI | Copyright (c) 2020 Pouya Saadeghi | the split into control, box and badge radii, and the =--depth= switch |
+| shadcn/ui | Copyright (c) 2023 shadcn | colour roles as ground and text pairs (=primary= and =primary_fg=) |
+| HyperUI | Copyright (c) Mark Mead | the arrangement of banner, card, testimonial, contact and footer sections |
+
+Each is under this licence:
+
+#+begin_example
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+#+end_example
+
+* First-slice stock photographs
+
+The first-slice sites use these Wikimedia Commons photographs. They are not in this repository. Each built site credits them in its footer as stock photos, not of the business.
+
+| Photo | Author | Licence |
+|-------+--------+---------|
+| Plumber at work | flickr user rick | CC BY 2.0 |
+| NIST 1529 | National Institute of Standards and Technology | public domain |
+| Going Green in the Virgin Islands 1 | U.S. Department of Energy | public domain |
+| Kitchen Faucet 1 and 2 | Stilfehler | CC0 1.0 |
+| Hair salon, Arlington, MA | Daderot | CC0 1.0 |
+| Hair Salon In Iran; hair salon photo 02 | Mostafa Meraji | CC0 1.0 |

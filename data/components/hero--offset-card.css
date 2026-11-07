@@ -1,0 +1,21 @@
+/* hero/offset-card: a large photo set to one side with a card of words
+ * overlapping its edge. Layout only. */
+.design main > .hero--offset-card { padding-block: var(--space-6) var(--space-8); }
+.hero--offset-card .hero__inner { display: grid; grid-template-columns: minmax(0, 1fr); }
+.hero--offset-card .hero__photo { margin: 0; }
+.design main > .block.hero--offset-card .hero__photo img:is([src]) { width: 100%; aspect-ratio: 4 / 3; height: auto; max-height: none; object-fit: cover; border-radius: var(--radius-box); }
+.hero--offset-card .hero__panel {
+	position: relative; z-index: 1; margin: calc(var(--space-8) * -1) var(--space-3) 0; padding: var(--space-6);
+	border: 1px solid var(--line); border-radius: var(--radius-box); background: var(--bg); color: var(--fg); box-shadow: var(--shadow-3);
+}
+.hero--offset-card .hero__title { max-width: 16ch; margin-bottom: var(--space-4); font-size: var(--text-9); }
+.hero--offset-card .hero__lede { font-size: var(--text-4); line-height: 1.55; color: var(--muted-fg); }
+.hero--offset-card .hero__phone { margin: var(--space-4) 0 0; font-size: var(--text-3); }
+.hero--offset-card .hero__phone a { font-weight: 600; }
+@container (min-width: 56rem) {
+	.design main > .hero--offset-card { padding-block: var(--space-8) var(--space-9); }
+	.hero--offset-card .hero__inner { grid-template-columns: repeat(12, minmax(0, 1fr)); align-items: center; }
+	.hero--offset-card .hero__photo { grid-column: 5 / -1; grid-row: 1; }
+	.design main > .block.hero--offset-card .hero__photo img:is([src]) { max-height: 40rem; }
+	.hero--offset-card .hero__panel { grid-column: 1 / 7; grid-row: 1; margin: 0; padding: var(--space-8); }
+}

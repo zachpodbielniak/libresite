@@ -52,4 +52,22 @@ for site in "${sites[@]}"; do
 		fail "$name has no plain '$want:' line"
 done
 jq -e 'all(.[]; .seconds < 60)' "$work/cases.json" > /dev/null || fail 'a site took a minute or more'
+
+# --scheme dark: the visitor's system asks for dark. A site whose dark
+# scheme loses its contrast passes in light and fails in dark.
+cp -r "$fixtures/good" "$work/dim"
+printf '%s\n' '@media (prefers-color-scheme: dark) { body, main, section { background: #111111 !important; } p { color: #333333 !important; } }' >> "$work/dim/styles.css"
+status=0
+bash "$gate" "$work/dim" > "$work/dim-light.out" 2>&1 || status=$?
+cat "$work/dim-light.out"
+[[ $status == 0 ]] || fail "the dim site failed in light ($status)"
+status=0
+bash "$gate" --scheme dark --json "$work/dim.json" "$work/dim" > "$work/dim-dark.out" 2>&1 || status=$?
+cat "$work/dim-dark.out"
+[[ $status == 1 ]] || fail "the dim site exited $status in dark, expected 1"
+[[ $(jq -r '.[0].failed | join(" ")' "$work/dim.json") == contrast ]] || fail 'the dim site did not fail contrast alone in dark'
+grep -q '^FAIL dim (dark)' "$work/dim-dark.out" || fail 'the dark run does not name its scheme'
+status=0
+bash "$gate" --scheme dusk "$work/dim" > /dev/null 2>&1 || status=$?
+[[ $status == 2 ]] || fail "an unknown scheme exited $status, expected 2"
 printf '%s\n' 'SITE GATE VERIFIED'

@@ -47,7 +47,6 @@ body.look-nav-pill .site-nav ul { gap: var(--space-2); }
 
 /* Section headings: every section heading carries id="SECTION-h". */
 .look-heads-rule main h2[id$="-h"]::before { content: ""; display: block; width: 3rem; height: calc(var(--border-strong) * 2); margin-bottom: var(--space-4); background: var(--ink); }
-.look-heads-numbered main section[style*="--ls-n"] h2[id$="-h"]::before { content: var(--ls-n); display: block; margin-bottom: var(--space-2); font: 600 var(--step--1) / 1 var(--font-mono); letter-spacing: 0.08em; color: var(--accent-text); }
 .look-heads-bar main h2[id$="-h"] { padding-left: var(--space-4); border-left: 0.3em solid var(--accent); }
 .look-heads-giant main h2[id$="-h"] { font-size: var(--step-5); line-height: 0.98; letter-spacing: calc(var(--heading-tracking) - 0.015em); }
 /* Beside a picture, a form or a list the column is narrow: giant headings step down so they keep whole words per line. */
@@ -186,8 +185,8 @@ main > .block:first-child:not(.cover--full, .cover--split) img:is([src$=".jpg"],
 .look-lettering-smallcaps :is(.kicker, .site-nav a, th, .card__meta, .site-footer nav a) { font-variant-caps: all-small-caps; letter-spacing: 0.06em; }
 /* Not on a heading set over a picture: the fill clipped to the letters would
  * wipe out the band of page colour it sits on. */
-.look-lettering-gradient main h1:not(.cover h1, .poster--backdrop h1, .hero--banner h1) { background: linear-gradient(100deg, var(--ink) 30%, var(--accent-text)); -webkit-background-clip: text; background-clip: text; color: transparent; }
-@supports not ((background-clip: text) or (-webkit-background-clip: text)) { .look-lettering-gradient main h1:not(.cover h1, .poster--backdrop h1, .hero--banner h1) { color: var(--ink); background: none; } }
+.look-lettering-gradient main h1:not(.cover h1, .hero--banner h1) { background: linear-gradient(100deg, var(--ink) 30%, var(--accent-text)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+@supports not ((background-clip: text) or (-webkit-background-clip: text)) { .look-lettering-gradient main h1:not(.cover h1, .hero--banner h1) { color: var(--ink); background: none; } }
 /* Outline lettering only on a main heading of three words or fewer, and only
  * where the column is wide: a longer heading or a phone keeps it filled. */
 @container (min-width: 40rem) {
@@ -240,7 +239,7 @@ body .split--contrast .split__panel:last-child { background: var(--accent); colo
 
 /* Rhythm. */
 .look-rhythm-bands main > .block { padding-block: calc(var(--section-space) * 0.7); }
-.look-rhythm-bands main > .block:nth-of-type(even):not(.sec-tone, .cta--band, .statement--band, .marquee--accent, .contact-card--strip, .contact-card--band, .page-header--band) { --surface: var(--ls-paper); background: var(--ls-surface); }
+.look-rhythm-bands main > .block:nth-of-type(even):not(.cta--band, .statement--band, .marquee--accent, .contact-card--strip, .contact-card--band, .page-header--band) { --surface: var(--ls-paper); background: var(--ls-surface); }
 .look-rhythm-divided main > .block + .block { padding-top: var(--section-space); border-top: var(--border) solid var(--line-strong); }
 .look-rhythm-tight { --section-space: clamp(2.5rem, 6vw, 4.5rem); }
 
@@ -406,31 +405,15 @@ h1, h2, h3 { -webkit-hyphens: manual; hyphens: manual; }
 .look-frame-center main :is(.faq--split .section-head, .text--aside .text__title) { position: static; }
 /* Side headings reserve reading room; the narrow journal frame keeps them on top. */
 @container (min-width: 52rem) {
-	.look-headpos-side:not(.look-frame-center) main > .block:not(.sec-w-narrow) > .wrap:has(> .section-head) { display: grid; grid-template-columns: minmax(18rem, 1fr) minmax(0, 2fr); column-gap: var(--space-7); align-items: start; }
-	.look-headpos-side:not(.look-frame-center) main > .block:not(.sec-w-narrow) > .wrap:has(> .section-head) > .section-head { grid-column: 1; grid-row: 1 / span 12; position: sticky; top: var(--space-6); margin-bottom: 0; }
-	.look-headpos-side:not(.look-frame-center) main > .block:not(.sec-w-narrow) > .wrap:has(> .section-head) > :not(.section-head) { grid-column: 2; min-width: 0; }
+	.look-headpos-side:not(.look-frame-center) main > .block > .wrap:has(> .section-head) { display: grid; grid-template-columns: minmax(18rem, 1fr) minmax(0, 2fr); column-gap: var(--space-7); align-items: start; }
+	.look-headpos-side:not(.look-frame-center) main > .block > .wrap:has(> .section-head) > .section-head { grid-column: 1; grid-row: 1 / span 12; position: sticky; top: var(--space-6); margin-bottom: 0; }
+	.look-headpos-side:not(.look-frame-center) main > .block > .wrap:has(> .section-head) > :not(.section-head) { grid-column: 2; min-width: 0; }
 	.look-headpos-side:not(.look-frame-center) main > .block > .wrap > .section-head :is(h2, h3) { font-size: min(var(--step-3), 2.1rem); }
 	.look-headpos-hang:not(.look-frame-center) main > .block > .wrap:has(> .section-head) { padding-left: clamp(0rem, 11cqi, 10rem); }
 	.look-headpos-hang:not(.look-frame-center) main > .block > .wrap:has(> .section-head) > .section-head { margin-left: calc(clamp(0rem, 11cqi, 10rem) * -1); }
 }
 
-/* Per-section widths: narrow reading columns, edge-to-edge visuals. */
-main > .block.sec-w-narrow > .wrap { width: min(100% - 2 * var(--gutter), var(--max-width), 42rem); }
-main > .block.sec-w-bleed > .wrap { width: calc(100% - 2 * min(var(--gutter), 1.5rem)); max-width: none; }
-/* Shift by padding, so the content narrows as it moves instead of overrunning the right. */
-@media (min-width: 56rem) { main > .block.sec-offset > .wrap { padding-left: clamp(0rem, 18%, 16rem); } }
-/* Per-section air. */
-main > .block.sec-pad-loose { padding-block: calc(var(--section-space) * 1.6); }
-main > .block.sec-pad-tight { padding-block: calc(var(--section-space) * 0.5); }
-main > .block.sec-pad-tight + .block { padding-top: calc(var(--section-space) * 0.5); }
-/* Per-section bands repaint the tokens locally, so every component inside
- * keeps its contrast. */
-main > .block.sec-tone { padding-block: var(--section-space); }
-main > .block.sec-tone + .block { padding-top: var(--section-space); }
-/* A section that paints its own accent band keeps it: a dealt tint or ink
- * would repaint the band under text coloured for the accent. */
-main > .block.sec-tone.sec-tone-tint:not(.cta--band, .statement--band, .marquee--accent, .contact-card--band) { --paper: var(--ls-surface); background: var(--ls-surface); }
-main > .block.sec-tone.sec-tone-ink:not(.cta--band, .statement--band, .marquee--accent, .contact-card--band), main .notice--banner .notice__box, main .hours--board > .wrap > .hours__list {
+main .notice--banner .notice__box, main .hours--board > .wrap > .hours__list {
 	--paper: var(--ls-ink); --ink: var(--ls-paper); --surface: color-mix(in srgb, var(--ls-paper) 10%, var(--ls-ink));
 	--muted: var(--ls-paper); --accent: var(--ls-paper); --accent-ink: var(--ls-ink); --accent-text: var(--ls-paper);
 	--line: color-mix(in srgb, var(--ls-paper) 30%, var(--ls-ink)); --line-strong: var(--ls-paper); --focus: var(--ls-paper); --field: var(--ls-ink); --danger: var(--ls-paper);
@@ -439,7 +422,7 @@ main > .block.sec-tone.sec-tone-ink:not(.cta--band, .statement--band, .marquee--
 /* Accent-painted component variants and panels take the same token swap as
  * accent bands, so labels, rules, emphasis and buttons stay visible on them,
  * even when a plan restyle colours their text with var(--accent). */
-main > .block.sec-tone.sec-tone-accent, main .block:is(.cta--band, .statement--band, .marquee--accent, .contact-card--band), main .media--flush .media__text, main .cta--sidebar .cta__text, main .facts--ribbon .facts__list,
+main .block:is(.cta--band, .statement--band, .marquee--accent, .contact-card--band), main .media--flush .media__text, main .cta--sidebar .cta__text, main .facts--ribbon .facts__list,
 main .offer__stub, main .notice--accent .notice__box, main .split--contrast .split__panel:last-child {
 	--paper: var(--ls-accent); --ink: var(--ls-accent-ink); --surface: var(--ls-accent-surface);
 	--muted: var(--ls-accent-ink); --accent: var(--ls-accent-ink); --accent-ink: var(--ls-accent); --accent-text: var(--ls-accent-ink);

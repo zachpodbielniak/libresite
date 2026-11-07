@@ -318,11 +318,12 @@ site_base_url(GHashTable *files){
 	return end != NULL && g_str_has_prefix(start, "https://") ? g_strndup(start, (gsize)(end - start)) : NULL;
 }
 
-/* Plan members the builder owns: dealt layout, supplied photos, profiles, form,
- * contact, podbay modules, the caller's footer credit and booking page, the
- * separately written signature layer and the order's missing facts. */
+/* Plan members the builder owns: the structure, supplied photos, profiles,
+ * form, contact, podbay modules, the caller's footer credit, booking page and
+ * demo flag, the separately written signature layer and the order's missing
+ * facts. */
 static const gchar *const builder_members[] = {"structure", "photos", "social", "form", "contact", "modules", "credit",
-	"booking", "signature", "missing", NULL};
+	"booking", "demo", "signature", "missing", NULL};
 
 typedef struct {
 	gchar *summary;
@@ -761,7 +762,7 @@ editor_apply(LsEditor *self, const gchar *project, const gchar *request,
 				: "{\"summary\":\"Remove the supplied contact form\",\"pages\":[]}", &edit, error))
 			goto out;
 	} else {
-		/* The model sees the request, the plan the builder did not deal and every
+		/* The model sees the request, the plan without the builder's members and every
 		 * page, so it can change exactly what was asked and keep the rest. */
 		{
 			g_autoptr(JsonObject) task = json_object_new();

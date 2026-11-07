@@ -1,0 +1,15 @@
+<div class="wrap hero__inner">
+<div class="hero__text">
+{{#kicker}}<p class="kicker">{{kicker}}</p>
+{{/kicker}}<{{htag}} class="hero__title" id="{{id}}-h">{{{heading_html}}}</{{htag}}>
+{{#lede}}<div class="hero__lede prose">{{{lede}}}</div>
+{{/lede}}{{#has_actions}}<p class="actions">{{#actions}}<a class="button{{^primary}} button--outline{{/primary}}" href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{label}}</a>{{/actions}}</p>
+{{/has_actions}}{{#phone_line}}<p class="hero__phone">{{call_label}} <a href="{{tel}}">{{phone}}</a></p>
+{{/phone_line}}</div>
+<div class="hero__gallery">
+{{#art}}<figure class="hero__photo hero__photo--main"><img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}"{{#srcset}} srcset="{{srcset}}" sizes="(max-width: 56rem) 100vw, 55vw"{{/srcset}}{{#eager}} fetchpriority="high"{{/eager}}{{^eager}} loading="lazy"{{/eager}} decoding="async"></figure>
+{{/art}}{{#has_photos}}<ul class="hero__thumbs" role="list">
+{{#photos}}{{#art}}<li><figure class="hero__photo"><img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}"{{#srcset}} srcset="{{srcset}}" sizes="(max-width: 56rem) 33vw, 18vw"{{/srcset}} loading="lazy" decoding="async"></figure></li>
+{{/art}}{{/photos}}</ul>
+{{/has_photos}}</div>
+</div>

@@ -1,8 +1,7 @@
 /* SPDX-License-Identifier: AGPL-3.0-or-later */
-/* A mobile check of twenty real-model sites found six faults, each held
- * here and in the browser gate (tests/mobile.sh): the heading fitter
- * measured through a running entrance and squeezed text to 6px; a dealt
- * tint repainted an accent band under white text; desktop photos were
+/* A mobile check of twenty real-model sites found faults, each held here
+ * and in the browser gate (tests/mobile.sh): the heading fitter measured
+ * through a running entrance and squeezed text to 6px; desktop photos were
  * served for a third of the screen; breadcrumbs and links standing alone
  * were too small to tap; web fonts swapped in late and moved the page; and
  * portrait photos were cropped to a strip. With MOBILE_OUTPUT set, photo
@@ -144,17 +143,19 @@ photo_site(LsComponents *components, const gchar *seed, const gchar *kit, GHashT
 	JsonObject *root = json_node_get_object(plan), *structure;
 	guint i;
 	json_object_set_array_member(root, "photos", photos(files));
-	g_assert_true(ls_components_apply_seed(components, plan, seed, "trades", FALSE));
+	g_assert_true(ls_components_apply_default(components, plan, FALSE));
 	json_object_set_member(root, "fonts",
 		json("[{'family':'Fraunces','weights':[400,700],'italic':true},{'family':'Work Sans','weights':[400,600]}]"));
 	structure = json_object_get_object_member(root, "structure");
 	/* The page's own variants render as written, so every shape is met. */
 	if (json_object_has_member(structure, "variants"))
 		json_object_remove_member(structure, "variants");
-	if (kit != NULL)
+	/* kinetic is an opening, not a retired motion kit. Its headline rise
+	 * clips the words, so the phone gate has one site that uses it. */
+	if (g_strcmp0(kit, "kinetic") == 0)
+		json_object_set_string_member(structure, "opening", "hero/kinetic");
+	else if (kit != NULL)
 		json_object_set_string_member(structure, "kit", kit);
-	if (g_strcmp0(kit, "curtain") == 0)
-		json_object_set_string_member(structure, "opening", "hero/breakout");
 	ls_components_apply_opening(components, plan, "index.html", home);
 	ls_components_spread_photos(components, plan, home);
 	if (!ls_components_check_page(components, plan, "index.html", home, &error))
@@ -181,19 +182,6 @@ test_fitter(void){
 	g_assert_nonnull(strstr(script, "atRest(fitAll);"));
 	g_assert_nonnull(strstr(script, "floor = Math.max(size * 0.3, Math.min(size, 16));"));
 	g_assert_null(strstr(script, "floor = size * 0.3;"));
-}
-
-/* A dealt tint or ink never repaints a section that paints its own accent
- * band; the accent band's text colour would land on the tint. */
-static void
-test_painted_bands(void){
-	g_autofree gchar *css = read_file("data/components/look.css");
-	const gchar *painted = ":not(.cta--band, .statement--band, .marquee--accent, .contact-card--band)";
-	g_autofree gchar *tint = g_strconcat("main > .block.sec-tone.sec-tone-tint", painted, " {", NULL);
-	g_autofree gchar *ink = g_strconcat("main > .block.sec-tone.sec-tone-ink", painted, ",", NULL);
-	g_assert_nonnull(strstr(css, tint));
-	g_assert_nonnull(strstr(css, ink));
-	g_assert_null(strstr(css, "main > .block.sec-tone.sec-tone-tint {"));
 }
 
 /* A rich-text paragraph or list item that is one link and nothing else is
@@ -225,6 +213,62 @@ test_tap_targets(void){
 	g_assert_nonnull(strstr(css, ".site-footer a { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; }"));
 	/* A checkbox is small; its label is the target, a full 44px row. */
 	g_assert_nonnull(strstr(css, ".field--check label { display: flex; align-items: center; min-height: 44px; }"));
+}
+
+/* The simple footer gives the business column a fixed share and lays the
+ * page links out as a wrapping grid, so a site with many pages never
+ * squeezes the name into one word per line. */
+static void
+test_simple_footer_columns(void){
+	g_autofree gchar *css = read_file("data/components/design.css");
+	g_assert_nonnull(strstr(css, ".design.footer--simple .site-footer__inner { grid-template-columns: minmax(14rem, 1fr) minmax(0, 2fr); align-items: start; }"));
+	g_assert_nonnull(strstr(css, ".design.footer--simple .site-footer nav ul { display: grid; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); gap: 0 var(--space-5); }"));
+	g_assert_null(strstr(css, "grid-template-columns: minmax(0, 1fr) minmax(0, auto); align-items: center;"));
+}
+
+/* The asymmetric skeleton holds a section's content to two thirds of the
+ * section itself. A percentage padding on the wrap measured the whole
+ * page instead, and squeezed the salon's questions into a third of their
+ * column (Ben, 2026-11-04). */
+static void
+test_asymmetric_thirds(void){
+	g_autofree gchar *css = read_file("data/components/skeleton--asymmetric.css");
+	g_assert_null(strstr(css, "padding-right: 30%"));
+	g_assert_null(strstr(css, "padding-left: 30%"));
+	g_assert_nonnull(strstr(css, ":nth-of-type(odd) > .wrap > * { max-width: calc(200% / 3); }"));
+	g_assert_nonnull(strstr(css, ".wrap:not(:has(> .section-head)) > * { max-width: calc(200% / 3); margin-inline-start: calc(100% / 3); }"));
+}
+
+/* On wide screens the sticky bar floats over the page instead of taking a
+ * slot in it, steps aside when the closing band or the footer is in view,
+ * and wears no dark ring around a lone button (Ben, 2026-11-04: Polar Air
+ * showed a third "Call" in its own row under the closing band). */
+static void
+test_sticky_bar_rests(void){
+	g_autofree gchar *css = read_file("data/components/overlay--sticky-bar.css");
+	g_autofree gchar *js = read_file("data/components/overlay.js");
+	g_assert_null(strstr(css, "position: sticky"));
+	g_assert_nonnull(strstr(css, "position: fixed; inset: auto 0 var(--space-4) 0;"));
+	g_assert_nonnull(strstr(css, ".design.overlay--sticky-bar .action-bar.is-resting { opacity: 0; visibility: hidden; }"));
+	g_assert_nonnull(strstr(css, ".design.overlay--sticky-bar .action-bar__inner:not(:has(.action-bar__phone:not([hidden]))) { padding: 0; background: transparent; box-shadow: none; }"));
+	g_assert_nonnull(strstr(css, ".design.overlay--sticky-bar .site-footer { padding-bottom: calc(var(--space-6) + 4rem); }"));
+	/* The ring follows the preset's button corners: no round ring around a square button. */
+	g_assert_null(strstr(css, "border-radius: 999px"));
+	g_assert_nonnull(strstr(css, "border-radius: calc(var(--radius-control) + var(--space-2));"));
+	g_assert_nonnull(strstr(js, "IntersectionObserver"));
+	g_assert_nonnull(strstr(js, "is-resting"));
+	/* It also rests over the opening, which already holds the call. */
+	g_assert_nonnull(strstr(js, "main > :first-child, main > .cta:last-of-type, .site-footer"));
+}
+
+/* A breadcrumb link is a 44px tap target while the current page is plain
+ * text, so the trail centres its items: the link text, the separator and
+ * the current page share one line instead of the link sitting lower. */
+static void
+test_crumbs_one_line(void){
+	g_autofree gchar *css = read_file("data/components/page-header.css");
+	g_assert_nonnull(strstr(css, ".crumbs ol { display: flex; flex-wrap: wrap; align-items: center;"));
+	g_assert_nonnull(strstr(css, ".crumbs li { display: inline-flex; align-items: center; }"));
 }
 
 /* WCAG contrast of two #rrggbb colours. */
@@ -384,7 +428,7 @@ test_emit(void){
 		g_autofree gchar *seed = g_strdup_printf("mobile-%u\nA house painter %u.", s, s);
 		g_autofree gchar *name = g_strdup_printf("photos-%u", s);
 		g_autoptr(JsonNode) site = photo_site(components, seed,
-			s == 0 ? "spotlight" : (s == 8 ? "curtain" : NULL), files);
+			s == 0 ? "spotlight" : (s == 8 ? "kinetic" : NULL), files);
 		JsonArray *list = json_object_get_array_member(json_node_get_object(site), "files");
 		GHashTableIter iter;
 		gpointer path, bytes;
@@ -419,9 +463,12 @@ int
 main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
 	g_test_add_func("/mobile/fitter", test_fitter);
-	g_test_add_func("/mobile/painted-bands", test_painted_bands);
 	g_test_add_func("/mobile/link-lines", test_link_lines);
 	g_test_add_func("/mobile/tap-targets", test_tap_targets);
+	g_test_add_func("/mobile/crumbs-one-line", test_crumbs_one_line);
+	g_test_add_func("/mobile/simple-footer-columns", test_simple_footer_columns);
+	g_test_add_func("/mobile/asymmetric-thirds", test_asymmetric_thirds);
+	g_test_add_func("/mobile/sticky-bar-rests", test_sticky_bar_rests);
 	g_test_add_func("/mobile/danger", test_danger);
 	g_test_add_func("/mobile/accent-surface", test_accent_surface);
 	g_test_add_func("/mobile/fonts-and-photos", test_fonts_and_photos);

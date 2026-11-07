@@ -1,0 +1,12 @@
+<div class="wrap hero__inner">
+{{#kicker}}<p class="kicker">{{kicker}}</p>
+{{/kicker}}<{{htag}} class="hero__title" id="{{id}}-h">{{{heading_html}}}</{{htag}}>
+<div class="hero__row">
+{{#art}}<figure class="hero__photo"><img src="{{src}}" alt="{{alt}}" width="{{width}}" height="{{height}}"{{#srcset}} srcset="{{srcset}}" sizes="(max-width: 56rem) 100vw, 30vw"{{/srcset}}{{#eager}} fetchpriority="high"{{/eager}}{{^eager}} loading="lazy"{{/eager}} decoding="async"></figure>
+{{/art}}<div class="hero__text">
+{{#lede}}<div class="hero__lede prose">{{{lede}}}</div>
+{{/lede}}{{#has_actions}}<p class="actions">{{#actions}}<a class="button{{^primary}} button--outline{{/primary}}" href="{{href}}"{{#external}} rel="noopener"{{/external}}>{{label}}</a>{{/actions}}</p>
+{{/has_actions}}{{#phone_line}}<p class="hero__phone">{{call_label}} <a href="{{tel}}">{{phone}}</a></p>
+{{/phone_line}}</div>
+</div>
+</div>

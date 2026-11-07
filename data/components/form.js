@@ -1,3 +1,66 @@
+/* Inline messages (docs/components.org, "Controls"). A mail or posted
+ * form marked data-validate checks its fields before it is sent: each
+ * problem shows in the field's own error line, which aria-describedby
+ * ties to the control, a summary counts them and the first takes the
+ * focus. A radio group is one question. Without scripts the browser's own
+ * checks apply. */
+function lsFieldError(control) {
+	var field = control.closest(".field");
+	return field ? field.querySelector("[data-field-error]") : document.getElementById(control.id + "-error");
+}
+document.querySelectorAll("[data-validate]").forEach(function (form) {
+	var summary = form.querySelector("[data-form-summary]");
+	function check(control) {
+		if (control.validity.valueMissing) return form.getAttribute("data-error-required");
+		if (!control.validity.valid) return form.getAttribute("data-error-invalid");
+		return "";
+	}
+	function mark(control, message) {
+		var marked = control.type === "radio" ? control.closest(".field") : control;
+		var error = lsFieldError(control);
+		if (error) error.textContent = message;
+		if (!marked) return;
+		if (message) marked.setAttribute("aria-invalid", "true"); else marked.removeAttribute("aria-invalid");
+	}
+	form.noValidate = true;
+	form.addEventListener("submit", function (event) {
+		var invalid = [];
+		var asked = {};
+		Array.prototype.forEach.call(form.querySelectorAll(".field input, .field select, .field textarea"), function (control) {
+			var message;
+			if (control.type === "radio") {
+				if (asked[control.name]) return;
+				asked[control.name] = true;
+			}
+			message = check(control);
+			mark(control, message);
+			if (message) invalid.push(control);
+		});
+		if (summary) {
+			summary.hidden = invalid.length === 0;
+			summary.textContent = invalid.length ? form.getAttribute("data-error-summary").replace("{n}", String(invalid.length)) : "";
+		}
+		if (invalid.length) {
+			event.preventDefault();
+			event.stopImmediatePropagation();
+			invalid[0].focus();
+		}
+	});
+	/* A corrected field loses its message at once. */
+	form.addEventListener("change", function (event) {
+		var control = event.target;
+		var field = control.closest ? control.closest(".field") : null;
+		if (field && field.querySelector("[aria-invalid], [data-field-error]:not(:empty)") && check(control) === "")
+			mark(control, "");
+	});
+});
+
+/* A slider shows its value beside it; without scripts it shows the start. */
+document.querySelectorAll("[data-range]").forEach(function (range) {
+	var output = document.getElementById(range.id + "-value");
+	if (output) range.addEventListener("input", function () { output.textContent = range.value; });
+});
+
 /* Local forms build a plain-text file in the browser. Nothing is sent over the
  * network; entered text is only ever written with textContent. */
 document.querySelectorAll("[data-local-form]").forEach(function (form) {
@@ -17,7 +80,7 @@ document.querySelectorAll("[data-local-form]").forEach(function (form) {
 		Array.prototype.slice.call(text.querySelectorAll(".required")).forEach(function (node) { node.remove(); });
 		return text.textContent.trim();
 	}
-	function errorOf(control) { return document.getElementById(control.id + "-error"); }
+	function errorOf(control) { return lsFieldError(control); }
 	function clear() {
 		controls.forEach(function (control) {
 			control.removeAttribute("aria-invalid");
@@ -30,8 +93,13 @@ document.querySelectorAll("[data-local-form]").forEach(function (form) {
 		if (url) { URL.revokeObjectURL(url); url = null; }
 		download.setAttribute("href", "#");
 	}
+	function chosen(control) {
+		var picked = form.querySelector('input[type="radio"][name="' + control.name + '"]:checked');
+		return picked ? picked.value : "";
+	}
 	function check(control) {
-		var value = control.type === "checkbox" ? (control.checked ? "yes" : "") : control.value.trim();
+		var value = control.type === "checkbox" ? (control.checked ? "yes" : "") : control.type === "radio" ? chosen(control)
+			: control.value.trim();
 		if (control.required && value === "") return form.getAttribute("data-error-required");
 		if (value !== "" && control.type !== "checkbox" && control.checkValidity && !control.checkValidity())
 			return form.getAttribute("data-error-invalid");
@@ -59,8 +127,17 @@ document.querySelectorAll("[data-local-form]").forEach(function (form) {
 			invalid[0].focus();
 			return;
 		}
-		controls.forEach(function (control) {
-			var value = control.type === "checkbox" ? (control.checked ? "yes" : "no") : control.value.replace(/\r\n?/g, "\n").trim();
+		controls.forEach(function (control, index) {
+			var value;
+			/* A radio group is one answer, under its legend. */
+			if (control.type === "radio") {
+				if (controls.slice(0, index).some(function (other) { return other.type === "radio" && other.name === control.name; })) return;
+				value = chosen(control);
+				lines.push(control.closest("fieldset").querySelector("legend").textContent.replace(/\s*\(.*\)\s*$/, "").trim() + ":\n" + (value === "" ? "-" : value) + "\n");
+				return;
+			}
+			if (control.type === "file") return;
+			value = control.type === "checkbox" ? (control.checked ? "yes" : "no") : control.value.replace(/\r\n?/g, "\n").trim();
 			lines.push(labelOf(control) + ":\n" + (value === "" ? "-" : value) + "\n");
 		});
 		preview.textContent = lines.join("\n");
@@ -98,6 +175,7 @@ document.querySelectorAll("[data-endpoint-form]").forEach(function (form) {
 	var again = sent ? sent.querySelector("[data-form-again]") : null;
 	var controls = Array.prototype.slice.call(form.querySelectorAll(".field input, .field select, .field textarea"));
 	var calm = !window.matchMedia || window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+	var multipart = form.getAttribute("enctype") === "multipart/form-data";
 	var pending = false;
 	var returned = null;
 	function say(text, state) {
@@ -115,7 +193,7 @@ document.querySelectorAll("[data-endpoint-form]").forEach(function (form) {
 		sent.focus({ preventScroll: true });
 		reveal(sent);
 	}
-	function errorOf(control) { return document.getElementById(control.id + "-error"); }
+	function errorOf(control) { return lsFieldError(control); }
 	function clear() {
 		controls.forEach(function (control) {
 			control.removeAttribute("aria-invalid");
@@ -161,7 +239,12 @@ document.querySelectorAll("[data-endpoint-form]").forEach(function (form) {
 		if (button) button.disabled = true;
 		clear();
 		say(form.getAttribute("data-sending"), null);
-		fetch(form.action, {
+		/* A form with a photo upload sends its files with the fields. */
+		fetch(form.action, multipart ? {
+			method: "POST",
+			headers: { "Accept": "application/json" },
+			body: new FormData(form)
+		} : {
 			method: "POST",
 			headers: { "Content-Type": "application/x-www-form-urlencoded", "Accept": "application/json" },
 			body: new URLSearchParams(new FormData(form)).toString()

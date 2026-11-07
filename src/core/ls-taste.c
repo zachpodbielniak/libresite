@@ -11,34 +11,52 @@ whole(const gchar *lower, const gchar *at, const gchar *phrase, gboolean prefix)
 	return (at == lower || !g_ascii_isalnum(at[-1])) && (prefix || !g_ascii_isalnum(after));
 }
 
+/* Stems end in '*': they match longer words too. */
+static const gchar *const stock_talk[] = {"stock photo*", "stock image*", "stock picture*", "visual reference*",
+	"mood reference*", NULL};
+static const gchar *const example_talk[] = {"invented business", "fictional business", "fictitious business",
+	"not a real business", "does not represent a real", "example business", "sample business", "fictional demo",
+	"demo site", "demo business", "demo website", NULL};
+
+/* The first entry of @list found in @lower as whole words, or NULL. */
+static const gchar *
+find_talk(const gchar *lower, const gchar *const *list){
+	guint i;
+	for (i = 0; list != NULL && list[i] != NULL; i++) {
+		const gchar *entry = list[i];
+		gsize length = strlen(entry);
+		gboolean prefix = entry[length - 1] == '*';
+		g_autofree gchar *phrase = g_strndup(entry, prefix ? length - 1 : length);
+		const gchar *at;
+		for (at = strstr(lower, phrase); at != NULL; at = strstr(at + 1, phrase))
+			if (whole(lower, at, phrase, prefix))
+				return entry;
+	}
+	return NULL;
+}
+
 const gchar *
 ls_taste_disclosure(const gchar *text, gboolean footer){
-	/* Stems end in '*': they match longer words too. */
 	static const gchar *const anywhere[] = {"illustrative", NULL};
-	static const gchar *const outside_footer[] = {"stock photo*", "stock image*", "stock picture*",
-		"visual reference*", "mood reference*", "invented business", "fictional business", "fictitious business",
-		"not a real business", "does not represent a real", "example business", "sample business",
-		"fictional demo", "demo site", "demo business", "demo website", NULL};
-	const gchar *const *lists[2];
 	g_autofree gchar *lower = NULL;
-	guint l, i;
+	const gchar *found;
 	if (text == NULL)
 		return NULL;
 	lower = g_ascii_strdown(text, -1);
-	lists[0] = anywhere;
-	lists[1] = footer ? NULL : outside_footer;
-	for (l = 0; l < G_N_ELEMENTS(lists); l++)
-		for (i = 0; lists[l] != NULL && lists[l][i] != NULL; i++) {
-			const gchar *entry = lists[l][i];
-			gsize length = strlen(entry);
-			gboolean prefix = entry[length - 1] == '*';
-			g_autofree gchar *phrase = g_strndup(entry, prefix ? length - 1 : length);
-			const gchar *at;
-			for (at = strstr(lower, phrase); at != NULL; at = strstr(at + 1, phrase))
-				if (whole(lower, at, phrase, prefix))
-					return entry;
-		}
-	return NULL;
+	if ((found = find_talk(lower, anywhere)) != NULL || footer)
+		return found;
+	if ((found = find_talk(lower, stock_talk)) != NULL)
+		return found;
+	return find_talk(lower, example_talk);
+}
+
+const gchar *
+ls_taste_example(const gchar *text){
+	g_autofree gchar *lower = NULL;
+	if (text == NULL)
+		return NULL;
+	lower = g_ascii_strdown(text, -1);
+	return find_talk(lower, example_talk);
 }
 
 static gboolean

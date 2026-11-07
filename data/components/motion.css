@@ -1,0 +1,28 @@
+/* Motion (docs/components.org, "Skeletons, motion and overlays"): calm and
+ * lively levels. Every rule waits for the visitor to allow motion, and
+ * nothing here hides content by itself: the hidden state needs the
+ * is-pending class, which only motion.js adds, and only to content below
+ * the first screen. */
+@media (prefers-reduced-motion: no-preference) {
+	html:has(body:is(.motion--calm, .motion--lively)) { scroll-behavior: smooth; }
+	/* Fade and rise on scroll; lively rises further and in turn. */
+	.motion--calm .is-pending, .motion--lively .is-pending { opacity: 0; transform: translateY(1.25rem); }
+	.motion--lively .is-pending { transform: translateY(2rem); }
+	.motion--calm .is-shown, .motion--lively .is-shown {
+		transition: opacity 600ms ease-out, transform 600ms ease-out; transition-delay: var(--reveal-delay, 0ms);
+	}
+	/* Cards and photos lift a little under the pointer. */
+	:is(.motion--calm, .motion--lively) main :is(.services__card, .services__group, .reviews__item, .gallery__featured figure, .areas__place-card, .card) {
+		transition: transform 200ms ease, box-shadow 200ms ease;
+	}
+	:is(.motion--calm, .motion--lively) main :is(.services__card, .services__group, .reviews__item, .gallery__featured figure, .card):is(:hover, :focus-within) {
+		transform: translateY(-4px); box-shadow: var(--shadow-3);
+	}
+	/* The header changes colour and size gently as the page scrolls. */
+	:is(.motion--calm, .motion--lively) .site-header, :is(.motion--calm, .motion--lively) .site-header__inner, :is(.motion--calm, .motion--lively) .site-header .brand {
+		transition: background-color 250ms ease, box-shadow 250ms ease, padding 250ms ease, font-size 250ms ease;
+	}
+	/* Lively: the opening photo settles from a slow zoom, once. */
+	.motion--lively main > .block:first-child :is(.hero__media, .hero__photo--main, .hero__photo) img { animation: ls-settle 12s ease-out both; }
+	@keyframes ls-settle { from { transform: scale(1.08); } to { transform: none; } }
+}

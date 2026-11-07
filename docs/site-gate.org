@@ -19,11 +19,14 @@ The gate does not change the site. It does not call a model. It does not run cod
 #+begin_src bash
 scripts/site-gate.sh ./my-site
 scripts/site-gate.sh --json gate.json sites/*/
+scripts/site-gate.sh --scheme dark ./my-site
 #+end_src
 
 You need =firefox=, =geckodriver=, =python3=, =jq=, =curl= and =zip=. On Fedora, the packages are =firefox=, =python3=, =jq=, =curl= and =zip=. Get =geckodriver= from its release page. To use a WebDriver server that runs already, give =--webdriver URL= or set =WEBDRIVER_URL=.
 
 The gate serves each site on =127.0.0.1= only. It opens every page at 390 x 844 px and at 1440 x 900 px. These are the sizes of the page, not of the window. Motion is reduced, and images load at once. One site takes 10 to 20 seconds.
+
+The visitor's system asks for the light colour scheme. Give =--scheme dark= to check the site as a visitor whose system asks for dark. The site then shows its dark scheme if it has one. Its line says =(dark)= after the name, and the JSON gives =scheme=. Run the gate once for each scheme to check both.
 
 * What it prints
 
@@ -52,7 +55,7 @@ The first screen is the part of the page that shows before the visitor scrolls. 
 - clipped :: No text runs out of a box that hides overflow.
 - contrast :: Text reaches WCAG AA contrast against the first solid colour behind it: 4.5:1, or 3:1 for large text. Text on a picture is not measured.
 
-The sideways, clipped and contrast checks follow the checks of =make gate= (=tests/gate.sh= and =tests/options.sh=). The gate measures contrast in the light colour scheme only.
+The sideways, clipped and contrast checks follow the checks of =make gate= (=tests/gate.sh= and =tests/options.sh=). The gate measures contrast in the scheme that =--scheme= gives: light when you do not give it.
 
 * What it does not check
 

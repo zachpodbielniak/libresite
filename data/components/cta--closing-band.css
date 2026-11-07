@@ -1,0 +1,16 @@
+/* cta/closing-band: one line, the one primary action, the phone and the
+ * email on the brand colour (Mission Bowling, Evergreen). Layout only. */
+.cta--closing-band .cta__inner { display: grid; gap: var(--space-6); align-items: center; }
+.cta--closing-band .cta__title { margin: 0 0 var(--space-3); }
+.cta--closing-band .cta__text .prose { font-size: var(--text-4); color: var(--muted-fg); max-width: 40rem; }
+.cta--closing-band .actions { margin: 0; }
+.cta--closing-band.tone-brand .button { background: var(--brand-fg); border-color: var(--brand-fg); color: var(--brand); }
+.cta--closing-band.tone-brand .button--outline { background: transparent; color: var(--brand-fg); border-color: var(--brand-fg); }
+.cta--closing-band .cta__direct { display: flex; flex-wrap: wrap; gap: var(--space-1) var(--space-5); margin: var(--space-4) 0 0; }
+.cta--closing-band .cta__direct a { display: inline-flex; align-items: center; min-height: 44px; color: inherit; font-weight: 600; overflow-wrap: anywhere; }
+@container (min-width: 52rem) {
+	.cta--closing-band .cta__inner { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: var(--space-8); }
+}
+/* Inside a reading page's column the band is a rounded panel with its own
+ * inner space, clear of the footer. */
+.page-main .cta--closing-band.block { margin: var(--space-8) 0 var(--section-y); padding: var(--space-7) var(--space-6); border-radius: var(--radius-box); }

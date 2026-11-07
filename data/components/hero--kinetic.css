@@ -32,6 +32,11 @@
 			animation-timeline: auto, view(); animation-range: normal, exit 0% exit 100%;
 		}
 	}
+	/* A phone visitor must see the headline from the first frame. The rise
+	 * clips the line while the page is loading. */
+	@media (max-width: 47.99rem) {
+		.hero--kinetic .hero__title { animation: none; }
+	}
 }
 @keyframes ls-kinetic-rise { from { clip-path: inset(-0.2em -0.2em 100% -0.2em); transform: translateY(0.4em); } to { clip-path: inset(-0.2em -0.2em -0.3em -0.2em); transform: none; } }
 @keyframes ls-kinetic-sweep { from { background-size: 0% 0.2em; } to { background-size: 100% 0.2em; } }

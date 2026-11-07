@@ -1,0 +1,94 @@
+/* Form controls (docs/components.org, "Controls"). Every control is its
+ * native element: checkboxes, radio buttons, a switch that is a checkbox
+ * with role="switch", toggle buttons that are radio buttons, select, text,
+ * number, date, time, range and file inputs. They take the preset's
+ * control corners, borders, accent and weight, work in both colour
+ * schemes, keep a 44 px target and the site's focus ring, and show the
+ * error above the control, after the label and hint. Corners are capped
+ * so a pill preset gives round buttons, not round text boxes. */
+.field input, .field select, .field textarea { font: inherit; }
+.field label, .field legend { font-weight: var(--heading-weight, 600); }
+.field > label, .field > legend { color: var(--ink); }
+.field input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+.field select, .field textarea {
+	min-height: 2.75rem; border: max(var(--border), 1px) solid var(--line-strong);
+	border-radius: min(var(--radius-control, var(--radius)), 0.75rem);
+	background-color: var(--field, var(--paper)); color: var(--ink);
+}
+.field textarea { border-radius: min(var(--radius-control, var(--radius)), 0.75rem); }
+.field select {
+	appearance: none; padding-right: 2.75rem;
+	background-image: linear-gradient(45deg, transparent 50%, currentColor 50%), linear-gradient(135deg, currentColor 50%, transparent 50%);
+	background-position: calc(100% - 1.4rem) 55%, calc(100% - 1rem) 55%;
+	background-size: 0.4rem 0.4rem; background-repeat: no-repeat;
+}
+.field :is(input, select, textarea):focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+.field [aria-invalid="true"], .field--choice[aria-invalid="true"] .choice-list { border-color: var(--danger); }
+.field-error:not(:empty) { display: flex; gap: var(--space-2); align-items: baseline; margin: 0; }
+.field-error:not(:empty)::before { content: ""; flex: none; width: 0.25rem; align-self: stretch; background: currentColor; border-radius: 1px; }
+
+/* Checkboxes and radio buttons: a drawn box and dot on the native input,
+ * the label beside it a full 44 px target. */
+.field input[type="checkbox"], .field input[type="radio"] {
+	appearance: none; display: inline-grid; place-content: center; flex: none;
+	width: 1.375rem; height: 1.375rem; min-height: 0; margin: 0; padding: 0;
+	border: max(var(--border), 2px) solid var(--line-strong); background: var(--field, var(--paper)); color: var(--ink);
+	border-radius: min(var(--radius-control, var(--radius)), 0.375rem); cursor: pointer;
+}
+.field input[type="radio"] { border-radius: 50%; }
+.field input[type="checkbox"]::before {
+	content: ""; width: 0.75rem; height: 0.75rem; transform: scale(0);
+	clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%); background: var(--primary-fg, var(--accent-ink));
+}
+.field input[type="radio"]::before { content: ""; width: 0.6rem; height: 0.6rem; border-radius: 50%; transform: scale(0); background: var(--primary-fg, var(--accent-ink)); }
+.field input[type="checkbox"]:checked, .field input[type="radio"]:checked { background: var(--primary, var(--accent)); border-color: var(--primary, var(--accent)); }
+.field input[type="checkbox"]:checked::before, .field input[type="radio"]:checked::before { transform: scale(1); }
+.field--check { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: var(--space-3); }
+.field--check > label { display: flex; flex-wrap: wrap; align-items: center; gap: 0 0.35em; min-height: 2.75rem; cursor: pointer; }
+.field--check > .hint, .field--check > .field-error { grid-column: 2; }
+
+/* A choice: radio buttons in a fieldset under a legend, each row a
+ * 44 px target. */
+.field--choice { min-width: 0; margin: 0 0 var(--space-4); padding: 0; border: 0; }
+.field--choice > legend { padding: 0; margin-bottom: var(--space-1); }
+.choice-list { display: grid; gap: var(--space-1); }
+.choice { display: flex; align-items: center; gap: var(--space-3); min-height: 2.75rem; min-width: 2.75rem; cursor: pointer; font-weight: 400; }
+
+/* Toggle buttons: the same radio buttons drawn as a row of buttons; the
+ * input stays in place, unseen, for the keyboard and the form. */
+.field--toggle .choice-list { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.field--toggle .choice {
+	position: relative; justify-content: center; padding: 0.5rem 1.1rem;
+	border: max(var(--border), 1px) solid var(--line-strong); border-radius: min(var(--radius-control, var(--radius)), 1.5rem);
+	background: var(--field, var(--paper)); color: var(--ink); font-weight: var(--heading-weight, 600);
+}
+.field--toggle .choice input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; margin: 0; cursor: pointer; }
+.field--toggle .choice:has(input:checked) { background: var(--primary, var(--accent)); border-color: var(--primary, var(--accent)); color: var(--primary-fg, var(--accent-ink)); }
+.field--toggle .choice:has(input:focus-visible) { outline: 3px solid var(--focus); outline-offset: 2px; }
+
+/* The switch: on or off at once, drawn as a track and a knob. */
+.field--switch input[role="switch"] {
+	width: 2.75rem; height: 1.5rem; border-radius: 999px; place-content: center start; padding: 0 0.15rem;
+}
+.field--switch input[role="switch"]::before {
+	clip-path: none; width: 1rem; height: 1rem; border-radius: 50%; transform: none; background: var(--line-strong);
+}
+.field--switch input[role="switch"]:checked { place-content: center end; }
+.field--switch input[role="switch"]:checked::before { background: var(--primary-fg, var(--accent-ink)); }
+
+/* The range: the native slider in the preset's accent, with its value. */
+.field input[type="range"] { width: 100%; min-height: 2.75rem; margin: 0; padding: 0; border: 0; background: transparent; accent-color: var(--primary, var(--accent)); }
+.range { display: grid; grid-template-columns: minmax(0, 1fr) minmax(4ch, max-content); align-items: center; gap: var(--space-3); }
+.range__value { min-width: 4ch; font-variant-numeric: tabular-nums; font-weight: var(--heading-weight, 600); text-align: end; }
+
+/* The file upload: the native picker with the button drawn as a button. */
+.field input[type="file"] {
+	width: 100%; min-height: 2.75rem; padding: 0.4rem; color: var(--muted);
+	border: max(var(--border), 1px) dashed var(--line-strong); border-radius: min(var(--radius-control, var(--radius)), 0.75rem);
+	background: var(--field, var(--paper));
+}
+.field input[type="file"]::file-selector-button {
+	min-height: 2.25rem; margin-right: var(--space-3); padding: 0.4rem 1rem; font: inherit; font-weight: var(--heading-weight, 600);
+	border: max(var(--border), 1px) solid var(--line-strong); border-radius: min(var(--radius-control, var(--radius)), 1.5rem);
+	background: var(--surface); color: var(--ink); cursor: pointer;
+}

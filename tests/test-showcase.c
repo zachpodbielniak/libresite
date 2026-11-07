@@ -23,112 +23,6 @@ write_bytes(const gchar *directory, const gchar *path, gconstpointer data, gssiz
 	g_assert_true(g_file_set_contents(out, data, size, NULL));
 }
 
-static const gchar *const photos_json = "[{\"path\":\"assets/photos/shop.jpg\",\"alt\":\"A shop front\",\"width\":2000,\"height\":1300}]";
-
-/* The fixture plan dealt from @seed with a supplied photo. */
-static JsonNode *
-photo_plan(LsComponents *components, const gchar *seed){
-	JsonNode *plan = load("tests/fixtures/composed/plan.json");
-	json_object_set_member(json_node_get_object(plan), "photos", ls_json_parse(photos_json, NULL));
-	g_assert_true(ls_components_apply_seed(components, plan, seed, "trades", FALSE));
-	return plan;
-}
-
-static const gchar *
-plan_opening(JsonNode *plan){
-	return json_object_get_string_member(json_object_get_object_member(json_node_get_object(plan), "structure"),
-		"opening");
-}
-
-/* The showcase's photo sites: four of thirteen opened on the same card over
- * a photograph, because a layout with one photo-led opening always fell
- * back on it. Photo openings spread across the whole set. */
-static void
-test_photo_spread(void){
-	g_autoptr(GError) error = NULL;
-	g_autoptr(LsComponents) components = ls_components_new(&error);
-	g_autoptr(GHashTable) counts = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
-	GHashTableIter iter;
-	gpointer key, value;
-	guint s, sites = 400, most = 0;
-	const gchar *top = NULL;
-	g_assert_no_error(error);
-	for (s = 0; s < sites; s++) {
-		g_autofree gchar *seed = g_strdup_printf("showcase-%u\nA business %u.", s, s);
-		g_autofree gchar *opening = ls_components_suggest_photo_opening(components, seed);
-		guint n = GPOINTER_TO_UINT(g_hash_table_lookup(counts, opening)) + 1;
-		g_hash_table_insert(counts, g_steal_pointer(&opening), GUINT_TO_POINTER(n));
-	}
-	g_hash_table_iter_init(&iter, counts);
-	while (g_hash_table_iter_next(&iter, &key, &value))
-		if (GPOINTER_TO_UINT(value) > most) {
-			most = GPOINTER_TO_UINT(value);
-			top = key;
-		}
-	g_test_message("photo openings: %u kinds, most common %s on %u of %u", g_hash_table_size(counts), top, most, sites);
-	/* Taste leaves about a dozen calm photo openings, so one may lead a
-	 * little more often than the old 12 percent. */
-	if (most * 100 > sites * 15)
-		g_error("%s opens %u of %u photo sites (limit 15%%)", top, most, sites);
-}
-
-/* Eighteen photo sites built in turn, each steering away from the ones
- * before it, never open the same way three times: the steering weighs the
- * opening a photo site actually wears, not the one dealt before the swap. */
-static void
-test_photo_steering(void){
-	g_autoptr(GError) error = NULL;
-	g_autoptr(LsComponents) components = ls_components_new(&error);
-	g_autoptr(JsonArray) avoid = json_array_new();
-	g_autoptr(GHashTable) counts = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
-	guint s, worst = 0;
-	g_assert_no_error(error);
-	for (s = 0; s < 18; s++) {
-		g_autofree gchar *seed = g_strdup_printf("showcase-%u\nA business %u.", s, s);
-		g_autofree gchar *chosen = ls_components_choose_photo_seed(components, seed, "trades", avoid, NULL);
-		g_autoptr(JsonNode) plan = photo_plan(components, chosen);
-		JsonObject *fp = ls_components_fingerprint(components, plan, NULL);
-		JsonArray *home = json_array_new();
-		guint n = GPOINTER_TO_UINT(g_hash_table_lookup(counts, plan_opening(plan))) + 1;
-		g_hash_table_insert(counts, g_strdup(plan_opening(plan)), GUINT_TO_POINTER(n));
-		worst = MAX(worst, n);
-		json_array_add_string_element(home, plan_opening(plan));
-		json_object_set_array_member(fp, "home", home);
-		json_array_add_object_element(avoid, fp);
-	}
-	g_test_message("18 steered photo sites: %u openings, at most %u alike", g_hash_table_size(counts), worst);
-	g_assert_cmpuint(worst, <=, 2);
-}
-
-/* Under a masthead nameplate the cinema cover's ink bars, wide screen and
- * title card push its headline below the first screen, so a photo site
- * with that frame opens another way. */
-static void
-test_masthead_cinema(void){
-	g_autoptr(GError) error = NULL;
-	g_autoptr(LsComponents) components = ls_components_new(&error);
-	guint s, mastheads = 0, cinemas = 0;
-	g_assert_no_error(error);
-	for (s = 0; s < 600; s++) {
-		g_autofree gchar *seed = g_strdup_printf("showcase-%u\nA business %u.", s, s);
-		g_autoptr(JsonNode) plan = photo_plan(components, seed);
-		g_autofree gchar *suggested = ls_components_suggest_photo_opening(components, seed);
-		const gchar *frame = json_object_get_string_member(json_object_get_object_member(json_node_get_object(plan), "look"),
-			"frame");
-		g_assert_cmpstr(suggested, ==, plan_opening(plan));
-		cinemas += g_str_equal(plan_opening(plan), "cover/cinema");
-		if (g_strcmp0(frame, "masthead") != 0)
-			continue;
-		mastheads++;
-		if (g_str_equal(plan_opening(plan), "cover/cinema"))
-			g_error("seed %u opens on the cinema cover under a masthead", s);
-	}
-	g_test_message("%u masthead photo sites, %u cinema openings elsewhere", mastheads, cinemas);
-	/* Taste deals no masthead frame any more; the guard stays for themes. */
-	g_assert_cmpuint(mastheads, ==, 0);
-	g_assert_cmpuint(cinemas, >, 0);
-}
-
 static void
 test_opening_copy(void){
 	g_autoptr(GError) error = NULL;
@@ -175,8 +69,8 @@ test_photo_covers(void){
 			/* A live signature erased the label's backing over a photograph. */
 			json_object_set_string_member(root, "signature", ".kicker { background: transparent; color: var(--muted); }");
 			json_object_set_string_member(json_object_get_object_member(root, "look"), "photos", looks[l]);
-			/* The tall masthead pushed live openings below the first screen;
-			 * the builder no longer pairs it with the cinema cover. */
+			/* The tall masthead pushed live openings below the first screen,
+			 * so the cinema cover is shown without it. */
 			if (!g_str_equal(variants[v], "cinema"))
 				json_object_set_string_member(json_object_get_object_member(root, "look"), "frame", "masthead");
 			for (i = 0; i < G_N_ELEMENTS(routes); i++) {
@@ -239,8 +133,5 @@ main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
 	g_test_add_func("/showcase/photo-covers", test_photo_covers);
 	g_test_add_func("/showcase/opening-copy", test_opening_copy);
-	g_test_add_func("/showcase/photo-spread", test_photo_spread);
-	g_test_add_func("/showcase/photo-steering", test_photo_steering);
-	g_test_add_func("/showcase/masthead-cinema", test_masthead_cinema);
 	return g_test_run();
 }

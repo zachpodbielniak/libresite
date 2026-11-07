@@ -1,0 +1,21 @@
+/* hero/split-screen: the screen split in half edge to edge, the words on
+ * the surface colour beside a photo that fills its half. Layout only. */
+.design main > .hero--split-screen { padding: 0; }
+.hero--split-screen .hero__split { display: grid; grid-template-columns: minmax(0, 1fr); }
+.hero--split-screen .hero__side { display: flex; align-items: center; padding: var(--space-7) var(--gutter) var(--space-8); background: var(--surface); color: var(--surface-fg); }
+.hero--split-screen .hero__text { max-width: 34rem; }
+.hero--split-screen .hero__title { max-width: 16ch; margin-bottom: var(--space-5); font-size: var(--text-9); }
+.hero--split-screen .hero__lede { font-size: var(--text-4); line-height: 1.55; }
+.hero--split-screen .hero__photo { order: -1; margin: 0; }
+.design main > .block.hero--split-screen .hero__photo img:is([src]) { display: block; width: 100%; height: 100%; aspect-ratio: 4 / 3; max-height: none; object-fit: cover; border-radius: 0; }
+.hero--split-screen .hero__phone { margin: var(--space-4) 0 0; font-size: var(--text-3); }
+.hero--split-screen .hero__phone a { font-weight: 600; }
+@container (min-width: 56rem) {
+	.hero--split-screen .hero__split { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: min(46rem, 52cqi); }
+	.hero--split-screen .hero__photo { order: 0; }
+	.hero--split-screen .hero__side {
+		justify-content: flex-end;
+		padding: var(--space-9) var(--space-9) var(--space-9) max(var(--gutter), calc((100cqi - var(--container)) / 2 + var(--gutter)));
+	}
+	.design main > .block.hero--split-screen .hero__photo img:is([src]) { aspect-ratio: auto; }
+}

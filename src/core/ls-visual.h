@@ -42,7 +42,7 @@ gboolean ls_visual_check_assets(JsonObject *owner, LsContext *context, GError **
  * ls_visual_apply_plan:
  * @plan: (nullable): a plan with a valid visual sequence
  *
- * Paints the dealt world's colours and type onto the plan and retires the
+ * Paints the chosen world's colours and type onto the plan and retires the
  * look axes and signature the sequence owns. A plan that fails
  * ls_visual_check_plan() is left alone.
  */

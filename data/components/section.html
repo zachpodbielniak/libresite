@@ -1,3 +1,4 @@
-<section class="block block--{{component}} {{component}} {{component}}--{{variant}}{{#bleed}} block--bleed{{/bleed}}{{structure}}" id="{{id}}"{{#number}} style="--ls-n: '{{number}}'"{{/number}}{{#labelled}} aria-labelledby="{{id}}-h"{{/labelled}}{{#label}} aria-label="{{label}}"{{/label}}>
+<section class="block block--{{component}} {{component}} {{component}}--{{variant}}{{#tone}} tone-{{tone}}{{/tone}}{{#bleed}} block--bleed{{/bleed}}" id="{{id}}"{{#hidden}} hidden{{/hidden}}{{#labelled}} aria-labelledby="{{id}}-h"{{/labelled}}{{#label}} aria-label="{{label}}"{{/label}}>
 {{{inner}}}
-</section>
+{{#badge}}<p class="hero__badge"><strong>{{value}}</strong> <span>{{label}}</span></p>
+{{/badge}}</section>

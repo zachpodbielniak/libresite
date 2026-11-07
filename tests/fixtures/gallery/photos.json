@@ -1,0 +1,58 @@
+[
+ {
+  "path": "assets/photos/gallery-1.jpg",
+  "alt": "A plumber kneels at an open kitchen sink cabinet with his tools.",
+  "credit": "Plumber at work, flickr user rick, CC BY 2.0, Wikimedia Commons",
+  "stock": true,
+  "width": 1600,
+  "height": 1200
+ },
+ {
+  "path": "assets/photos/gallery-2.jpg",
+  "alt": "A white water heater with copper pipes and valves on a wall.",
+  "credit": "NIST 1529, National Institute of Standards and Technology, public domain",
+  "stock": true,
+  "width": 1600,
+  "height": 899
+ },
+ {
+  "path": "assets/photos/gallery-3.jpg",
+  "alt": "Two installers on a red roof beside a water heater panel.",
+  "credit": "Going Green in the Virgin Islands 1, U.S. Department of Energy, public domain",
+  "stock": true,
+  "width": 1600,
+  "height": 900
+ },
+ {
+  "path": "assets/photos/gallery-4.jpg",
+  "alt": "A wall-hung boiler with copper pipes, pumps and valves in a basement.",
+  "credit": "ModCon boiler system, Audetat, CC BY-SA 3.0, Wikimedia Commons",
+  "stock": true,
+  "width": 1600,
+  "height": 1200
+ },
+ {
+  "path": "assets/photos/gallery-5.jpg",
+  "alt": "A stainless kitchen faucet with a pull-down spray head.",
+  "credit": "Kitchen Faucet 1, Stilfehler, CC0, Wikimedia Commons",
+  "stock": true,
+  "width": 1200,
+  "height": 1600
+ },
+ {
+  "path": "assets/photos/gallery-6.jpg",
+  "alt": "A brushed steel faucet and shower head on a display wall.",
+  "credit": "Kitchen Faucet 2, Stilfehler, CC0, Wikimedia Commons",
+  "stock": true,
+  "width": 1200,
+  "height": 1600
+ },
+ {
+  "path": "assets/photos/gallery-7.jpg",
+  "alt": "Water runs from a chrome tap in low light.",
+  "credit": "Kitchen Faucet in Sunlight, Wikimedia Commons, CC BY-SA 4.0",
+  "stock": true,
+  "width": 1067,
+  "height": 1600
+ }
+]

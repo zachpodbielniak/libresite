@@ -1,0 +1,31 @@
+/* hero/split-card: the words in a rounded card of the brand colour, a
+ * rounded photo beside it that runs past the card's foot (Lindholm
+ * Roofing). Layout only. */
+.design main > .hero--split-card { padding-block: var(--space-7) var(--space-9); }
+.hero--split-card .hero__inner { display: grid; grid-template-columns: minmax(0, 1fr); }
+.hero--split-card .hero__card {
+	grid-row: 2; position: relative; z-index: 1; margin: calc(var(--space-7) * -1) var(--space-3) 0;
+	padding: var(--space-7) var(--space-6); border-radius: var(--radius-box);
+	background: var(--brand); color: var(--brand-fg);
+	--ink: var(--brand-fg); --fg: var(--brand-fg); --muted: var(--brand-muted); --muted-fg: var(--brand-muted);
+}
+.hero--split-card .hero__photo { grid-row: 1; margin: 0; }
+.design main > .block.hero--split-card .hero__photo img:is([src]) { width: 100%; aspect-ratio: 4 / 3; height: auto; max-height: none; object-fit: cover; border-radius: var(--radius-box); }
+.hero--split-card .hero__title { max-width: 18ch; margin-bottom: var(--space-4); font-size: var(--text-9); }
+.hero--split-card .hero__lede { font-size: var(--text-4); line-height: 1.55; }
+.hero--split-card .kicker { color: var(--brand-muted); }
+.hero--split-card .button--outline { color: var(--brand-fg); border-color: var(--brand-fg); }
+.hero--split-card .button--outline:hover { background: var(--brand-fg); color: var(--brand); }
+.hero--split-card .hero__phone { margin: var(--space-4) 0 0; }
+.hero--split-card .hero__phone a { font-weight: 600; }
+@container (min-width: 56rem) {
+	.design main > .hero--split-card { padding-block: var(--space-8) var(--space-9); }
+	.hero--split-card .hero__inner { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); align-items: stretch; }
+	.hero--split-card .hero__card {
+		grid-column: 1 / -1; grid-row: 1; margin: 0; min-height: 30rem;
+		padding: var(--space-9) calc(50% + var(--space-6)) var(--space-9) var(--space-8);
+		display: flex; flex-direction: column; justify-content: center;
+	}
+	.hero--split-card .hero__photo { grid-column: 2; grid-row: 1; position: relative; z-index: 2; margin: var(--space-7) var(--space-7) calc(var(--space-8) * -1) 0; }
+	.design main > .block.hero--split-card .hero__photo img:is([src]) { height: 100%; aspect-ratio: auto; }
+}

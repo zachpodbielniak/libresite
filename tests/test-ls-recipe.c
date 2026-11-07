@@ -219,6 +219,107 @@ modules_invalid(void){
 	}
 }
 
+/* The owner may lock the site to one colour scheme; auto follows the
+ * visitor. Anything else is refused with the rule. */
+static void
+scheme_recipe(void){
+	const gchar *valid[] = {"light", "dark", "auto"};
+	const gchar *invalid[] = {"night", "''", "1", "{mode: dark}", "[dark]", "Dark"};
+	guint i;
+	for (i = 0; i < G_N_ELEMENTS(valid); i++) {
+		g_autofree gchar *text = g_strdup_printf("version: 1\nname: test\nsite: {brief: hi, scheme: %s}\n"
+			"pipeline: {steps: [{id: a, type: frontend}]}", valid[i]);
+		g_autoptr(GError) error = NULL;
+		g_autoptr(LsRecipe) recipe = ls_recipe_new(text, &error);
+		g_assert_no_error(error);
+		g_assert_nonnull(recipe);
+	}
+	for (i = 0; i < G_N_ELEMENTS(invalid); i++) {
+		g_autofree gchar *text = g_strdup_printf("version: 1\nname: test\nsite: {brief: hi, scheme: %s}\n"
+			"pipeline: {steps: [{id: a, type: frontend}]}", invalid[i]);
+		g_autoptr(GError) error = NULL;
+		g_autoptr(LsRecipe) recipe = ls_recipe_new(text, &error);
+		g_assert_null(recipe);
+		g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+		if (strstr(error->message, "site.scheme") == NULL)
+			g_error("%s: unexpected message %s", invalid[i], error->message);
+	}
+}
+
+/* A supplied form may use every control: choices with their options, a
+ * switch, a time, a range with its bounds and a file upload. Choices
+ * without options, options on a text field and a range without bounds are
+ * refused. */
+static void
+form_controls_recipe(void){
+	const gchar *valid[] = {
+		"{name: service, label: Service, type: radio, options: [Repair, Install], required: true}",
+		"{name: size, label: Size, type: toggle, options: [Small, Large]}",
+		"{name: town, label: Town, type: select, options: [Fairport, Webster]}",
+		"{name: urgent, label: This is urgent, type: switch}",
+		"{name: agree, label: I agree, type: checkbox, required: true}",
+		"{name: at, label: Time, type: time}",
+		"{name: budget, label: Budget, type: range, min: 0, max: 5000, step: 250}",
+		"{name: rooms, label: Rooms, type: number, min: 1, max: 20}",
+		"{name: photos, label: Photos, type: file, hint: Up to five photos}"};
+	const gchar *invalid[] = {
+		"{name: service, label: Service, type: radio}",
+		"{name: service, label: Service, type: toggle, options: []}",
+		"{name: note, label: Note, type: text, options: [A]}",
+		"{name: budget, label: Budget, type: range}",
+		"{name: budget, label: Budget, type: range, min: 10, max: 5}",
+		"{name: urgent, label: Urgent, type: switch, options: [On]}",
+		"{name: c, label: Colour, type: color}",
+		"{name: service, label: Service, type: radio, options: [A, A]}"};
+	guint i;
+	for (i = 0; i < G_N_ELEMENTS(valid); i++) {
+		g_autofree gchar *text = g_strdup_printf("version: 1\nname: test\nsite: {brief: hi, form: {action: /api/forms/q, "
+			"fields: [%s]}}\npipeline: {steps: [{id: a, type: frontend}]}", valid[i]);
+		g_autoptr(GError) error = NULL;
+		g_autoptr(LsRecipe) recipe = ls_recipe_new(text, &error);
+		if (error != NULL)
+			g_error("%s: %s", valid[i], error->message);
+		g_assert_nonnull(recipe);
+	}
+	for (i = 0; i < G_N_ELEMENTS(invalid); i++) {
+		g_autofree gchar *text = g_strdup_printf("version: 1\nname: test\nsite: {brief: hi, form: {action: /api/forms/q, "
+			"fields: [%s]}}\npipeline: {steps: [{id: a, type: frontend}]}", invalid[i]);
+		g_autoptr(GError) error = NULL;
+		g_autoptr(LsRecipe) recipe = ls_recipe_new(text, &error);
+		if (recipe != NULL)
+			g_error("%s was accepted", invalid[i]);
+		g_assert_error(error, LS_ERROR, LS_ERROR_INVALID);
+		g_assert_nonnull(strstr(error->message, "site.form"));
+	}
+}
+
+/* The order's style.scheme, as the platform writes it: site.style may be a
+ * mapping {name, scheme}; name is the prompt style, scheme the lock. */
+static void
+style_scheme_recipe(void){
+	const gchar *valid[] = {"{scheme: dark}", "{scheme: light}", "{scheme: auto}", "{name: editorial, scheme: dark}",
+		"editorial"};
+	const gchar *invalid[] = {"{scheme: night}", "{scheme: ''}", "{colour: dark}", "{name: '', scheme: dark}", "{}", "[dark]"};
+	guint i;
+	for (i = 0; i < G_N_ELEMENTS(valid); i++) {
+		g_autofree gchar *text = g_strdup_printf("version: 1\nname: test\nsite: {brief: hi, style: %s}\n"
+			"pipeline: {steps: [{id: a, type: frontend}]}", valid[i]);
+		g_autoptr(GError) error = NULL;
+		g_autoptr(LsRecipe) recipe = ls_recipe_new(text, &error);
+		if (error != NULL)
+			g_error("%s: %s", valid[i], error->message);
+	}
+	for (i = 0; i < G_N_ELEMENTS(invalid); i++) {
+		g_autofree gchar *text = g_strdup_printf("version: 1\nname: test\nsite: {brief: hi, style: %s}\n"
+			"pipeline: {steps: [{id: a, type: frontend}]}", invalid[i]);
+		g_autoptr(GError) error = NULL;
+		g_autoptr(LsRecipe) recipe = ls_recipe_new(text, &error);
+		if (recipe != NULL)
+			g_error("%s was accepted", invalid[i]);
+		g_assert_nonnull(strstr(error->message, "site.style"));
+	}
+}
+
 int
 main(int argc, char **argv){
 	g_test_init(&argc, &argv, NULL);
@@ -226,6 +327,9 @@ main(int argc, char **argv){
 	g_test_add_func("/recipe/contact-invalid", contact_invalid);
 	g_test_add_func("/recipe/credit", credit_recipe);
 	g_test_add_func("/recipe/booking", booking_recipe);
+	g_test_add_func("/recipe/scheme", scheme_recipe);
+	g_test_add_func("/recipe/style-scheme", style_scheme_recipe);
+	g_test_add_func("/recipe/form-controls", form_controls_recipe);
 	g_test_add_func("/recipe/modules-valid", modules_valid);
 	g_test_add_func("/recipe/modules-invalid", modules_invalid);
 	return g_test_run();

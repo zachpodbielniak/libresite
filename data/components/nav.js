@@ -90,9 +90,12 @@
 		for (round = 0; round < 3; round++) {
 			over = Math.max(title.getBoundingClientRect().bottom, action ? action.getBoundingClientRect().bottom : 0) +
 				window.scrollY + 16 - window.innerHeight;
-			/* The tallest picture starting above the headline. */
+			/* The tallest picture starting above the headline; a photo the
+			 * headline is drawn over never pushes it down, so it keeps its size. */
 			img = pictures.filter(function (each) {
-				return each.offsetHeight > 0 && each.getBoundingClientRect().top < title.getBoundingClientRect().top;
+				var r = each.getBoundingClientRect(), t = title.getBoundingClientRect();
+				var under = r.left < t.right && r.right > t.left && r.top < t.bottom && r.bottom > t.top;
+				return each.offsetHeight > 0 && r.top < t.top && !under;
 			}).sort(function (a, b) { return b.offsetHeight - a.offsetHeight; })[0];
 			if (over <= 0 || !img) return;
 			/* A picture laid over its box takes the box's height. */

@@ -18,6 +18,123 @@
     <file>components/visual.css</file>
 
     <file>components/look.css</file>
+    <file>components/design.css</file>
+    <file>components/hero--photo-start.html</file>
+    <file>components/hero--photo-start.css</file>
+    <file>components/hero--photo-center.html</file>
+    <file>components/hero--photo-center.css</file>
+    <file>components/hero--split-card.html</file>
+    <file>components/hero--split-card.css</file>
+    <file>components/services--photo-cards.html</file>
+    <file>components/services--photo-cards.css</file>
+    <file>components/services--price-list.html</file>
+    <file>components/services--price-list.css</file>
+    <file>components/services--sublinks.html</file>
+    <file>components/services--sublinks.css</file>
+    <file>components/reviews--card-grid.html</file>
+    <file>components/reviews--card-grid.css</file>
+    <file>components/reviews--quote-headline.html</file>
+    <file>components/reviews--quote-headline.css</file>
+    <file>components/contact--split.html</file>
+    <file>components/contact--split.css</file>
+    <file>components/contact--call-first.html</file>
+    <file>components/contact--call-first.css</file>
+    <file>components/reviews.html</file>
+    <file>components/reviews.css</file>
+    <file>components/facts--strip.html</file>
+    <file>components/facts--strip.css</file>
+    <file>components/hero--split-frame.html</file>
+    <file>components/hero--split-frame.css</file>
+    <file>components/hero--text-first.html</file>
+    <file>components/hero--text-first.css</file>
+    <file>components/hero--photo-pair.html</file>
+    <file>components/hero--photo-pair.css</file>
+    <file>components/hero--fullscreen.html</file>
+    <file>components/hero--fullscreen.css</file>
+    <file>components/hero--split-screen.html</file>
+    <file>components/hero--split-screen.css</file>
+    <file>components/hero--offset-card.html</file>
+    <file>components/hero--offset-card.css</file>
+    <file>components/hero--collage.html</file>
+    <file>components/hero--collage.css</file>
+    <file>components/hero--big-type.html</file>
+    <file>components/hero--big-type.css</file>
+    <file>components/hero--thumb-strip.html</file>
+    <file>components/hero--thumb-strip.css</file>
+    <file>components/hero--form.html</file>
+    <file>components/hero--form.css</file>
+    <file>components/hero--stats-bar.html</file>
+    <file>components/hero--stats-bar.css</file>
+    <file>components/reviews--strip.html</file>
+    <file>components/reviews--strip.css</file>
+    <file>components/areas--card-over-photo.html</file>
+    <file>components/areas--card-over-photo.css</file>
+    <file>components/header.js</file>
+    <file>components/motion.css</file>
+    <file>components/motion.js</file>
+    <file>components/overlay--announcement.css</file>
+    <file>components/overlay--badge.css</file>
+    <file>components/overlay--lightbox.css</file>
+    <file>components/overlay--modal-form.css</file>
+    <file>components/overlay--sticky-bar.css</file>
+    <file>components/overlay.js</file>
+    <file>components/quote-form.html</file>
+    <file>components/skeleton--alternating.css</file>
+    <file>components/skeleton--asymmetric.css</file>
+    <file>components/skeleton--bento.css</file>
+    <file>components/skeleton--column.css</file>
+    <file>components/skeleton--magazine.css</file>
+    <file>components/skeleton--overlap.css</file>
+    <file>components/skeleton--stack.css</file>
+    <file>components/skeleton--sticky-side.css</file>
+    <file>components/services--round-photos.html</file>
+    <file>components/services--round-photos.css</file>
+    <file>components/services--feature-rows.html</file>
+    <file>components/services--feature-rows.css</file>
+    <file>components/facts--band.html</file>
+    <file>components/facts--band.css</file>
+    <file>components/facts--logos.html</file>
+    <file>components/facts--logos.css</file>
+    <file>components/facts--rating.html</file>
+    <file>components/facts--rating.css</file>
+    <file>components/steps--three-steps.html</file>
+    <file>components/steps--three-steps.css</file>
+    <file>components/about--owner-letter.html</file>
+    <file>components/about--owner-letter.css</file>
+    <file>components/areas--location-blocks.html</file>
+    <file>components/areas--location-blocks.css</file>
+    <file>components/areas--shop-chooser.html</file>
+    <file>components/areas--shop-chooser.css</file>
+    <file>components/faq--two-column.html</file>
+    <file>components/faq--two-column.css</file>
+    <file>components/cta--photo-band.html</file>
+    <file>components/cta--photo-band.css</file>
+    <file>components/steps--numbered-row.html</file>
+    <file>components/steps--numbered-row.css</file>
+    <file>components/steps--expect.html</file>
+    <file>components/steps--expect.css</file>
+    <file>components/about.html</file>
+    <file>components/about.css</file>
+    <file>components/about--history.html</file>
+    <file>components/about--history.css</file>
+    <file>components/about--photo-story.html</file>
+    <file>components/about--photo-story.css</file>
+    <file>components/areas--town-list.html</file>
+    <file>components/areas--town-list.css</file>
+    <file>components/areas--address-band.html</file>
+    <file>components/areas--address-band.css</file>
+    <file>components/gallery--featured.html</file>
+    <file>components/gallery--featured.css</file>
+    <file>components/faq--questions.html</file>
+    <file>components/faq--questions.css</file>
+    <file>components/faq--side-heading.html</file>
+    <file>components/faq--side-heading.css</file>
+    <file>components/cta--closing-band.html</file>
+    <file>components/cta--closing-band.css</file>
+    <file>components/cta--promise.html</file>
+    <file>components/cta--promise.css</file>
+    <file>components/contact.html</file>
+    <file>components/contact.css</file>
     <file>components/look-lettering-wide.css</file>
     <file>components/look-lettering-italic.css</file>
     <file>components/look-images-blob.css</file>
@@ -43,11 +160,6 @@
     <file>components/look-panels-paper.css</file>
     <file>components/look-panels-stack.css</file>
     <file>components/look-rhythm-airy.css</file>
-    <file>components/art-duotone.css</file>
-    <file>components/art-cutout.css</file>
-    <file>components/art-framed.css</file>
-    <file>components/art-collage.css</file>
-    <file>components/art-lineart.css</file>
     <file>components/services--ledger.css</file>
     <file>components/services--tiles.css</file>
     <file>components/voices--stack.css</file>
@@ -62,19 +174,6 @@
     <file>components/contact-card--postcard.css</file>
     <file>components/gallery--polaroid.css</file>
     <file>components/gallery--filmstrip.css</file>
-    <file>components/kit-cascade.css</file>
-    <file>components/kit-parallax.css</file>
-    <file>components/kit-aurora.css</file>
-    <file>components/kit-ticker.css</file>
-    <file>components/kit-spotlight.css</file>
-    <file>components/kit-still.css</file>
-    <file>components/motion-counters.js</file>
-    <file>components/home-full-bleed.css</file>
-    <file>components/home-editorial.css</file>
-    <file>components/home-bento.css</file>
-    <file>components/home-oversized-type.css</file>
-    <file>components/home-stacked-cards.css</file>
-    <file>components/home-zigzag.css</file>
     <file>components/themes.yaml</file>
     <file>components/identities.yaml</file>
     <file>components/pairings.yaml</file>
@@ -132,6 +231,9 @@
     <file>components/form.css</file>
     <file>components/form.html</file>
     <file>components/form.js</file>
+    <file>components/controls.css</file>
+    <file>components/scheme.js</file>
+    <file>components/fields.html</file>
     <file>components/module.css</file>
     <file>components/module.html</file>
     <file>components/module.js</file>
@@ -206,8 +308,6 @@
     <file>components/directory.html</file>
     <file>components/locations.css</file>
     <file>components/locations.html</file>
-    <file>components/manifesto.css</file>
-    <file>components/manifesto.html</file>
     <file>components/marquee.css</file>
     <file>components/marquee.html</file>
     <file>components/notice.css</file>
@@ -237,8 +337,6 @@
     <file>components/big-list.html</file>
     <file>components/offer.css</file>
     <file>components/offer.html</file>
-    <file>components/poster.css</file>
-    <file>components/poster.html</file>
     <file>components/profile.css</file>
     <file>components/profile.html</file>
     <file>components/showcase.css</file>
@@ -291,19 +389,6 @@
     <file>components/look-nav-segmented.css</file>
     <file>components/look-nav-wavy.css</file>
     <file>components/look-nav-arrow.css</file>
-    <file>components/art-halftone.css</file>
-    <file>components/art-stamp.css</file>
-    <file>components/art-blueprint.css</file>
-    <file>components/art-window.css</file>
-    <file>components/art-layers.css</file>
-    <file>components/art-torn.css</file>
-    <file>components/art-glow.css</file>
-    <file>components/kit-curtain.css</file>
-    <file>components/kit-bloom.css</file>
-    <file>components/kit-hinge.css</file>
-    <file>components/kit-beacon.css</file>
-    <file>components/kit-spring.css</file>
-    <file>components/kit-wash.css</file>
     <file>components/look-rhythm-sheets.css</file>
     <file>components/look-rhythm-stacked.css</file>
     <file>components/look-rhythm-fade.css</file>
@@ -335,32 +420,15 @@
     <file>components/look-heads-highlight.css</file>
     <file>components/look-heads-caps.css</file>
     <file>components/look-heads-trail.css</file>
-    <file>components/look-heads-ghost.css</file>
     <file>components/look-heads-bracket.css</file>
     <file>components/look-heads-framed.css</file>
     <file>components/look-heads-newsprint.css</file>
     <file>components/look-heads-shadow.css</file>
-    <file>components/look-heads-disc.css</file>
     <file>components/look-heads-initial.css</file>
     <file>components/look-heads-panel.css</file>
     <file>components/hero--slab.css</file>
     <file>components/cover--band.css</file>
     <file>components/cover--letterbox.css</file>
-    <file>components/poster--front.css</file>
-    <file>components/manifesto--run.css</file>
-    <file>components/manifesto--tiles.css</file>
-    <file>components/home-banded.css</file>
-    <file>components/home-chapters.css</file>
-    <file>components/home-gazette.css</file>
-    <file>components/home-halves.css</file>
-    <file>components/home-lead.css</file>
-    <file>components/home-mosaic.css</file>
-    <file>components/home-pinned.css</file>
-    <file>components/home-register.css</file>
-    <file>components/home-slant.css</file>
-    <file>components/home-spine.css</file>
-    <file>components/home-spread.css</file>
-    <file>components/home-wall.css</file>
     <file>components/cover--flood.css</file>
     <file>components/cover--wordmark.css</file>
     <file>components/cover--halves.css</file>
@@ -371,8 +439,6 @@
     <file>components/hero--brutal.css</file>
     <file>components/hero--kinetic.css</file>
     <file>components/hero--breakout.css</file>
-    <file>components/poster--fold.css</file>
-    <file>components/manifesto--stepped.css</file>
     <file>components/slabs.html</file>
     <file>components/slabs.css</file>
     <file>components/menuboard.html</file>

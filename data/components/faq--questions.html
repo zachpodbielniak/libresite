@@ -1,0 +1,12 @@
+<div class="wrap faq__column">
+{{#heading}}<div class="section-head">
+<{{htag}} id="{{id}}-h">{{{heading_html}}}</{{htag}}>
+{{#intro}}<div class="prose">{{{intro}}}</div>
+{{/intro}}</div>
+{{/heading}}<div class="faq__list">
+{{#items}}<details class="faq__item">
+<summary>{{question}}</summary>
+<div class="prose">{{{answer}}}</div>
+</details>
+{{/items}}</div>
+</div>

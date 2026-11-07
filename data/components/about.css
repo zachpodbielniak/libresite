@@ -1,0 +1,4 @@
+/* about: the business in a few true sentences. Layout only. */
+.about__inner { display: grid; gap: var(--space-6); align-items: center; }
+.about__text { max-width: 44rem; }
+.about__text .prose { font-size: var(--text-4); }

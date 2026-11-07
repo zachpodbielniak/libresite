@@ -1,0 +1,5 @@
+/* contact/split: heading, a line and the one primary action on the left;
+ * the supplied details in a card on the right (Harte Law). Layout only. */
+@container (min-width: 52rem) {
+	.contact--split .contact__inner { grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr); gap: var(--space-9); }
+}

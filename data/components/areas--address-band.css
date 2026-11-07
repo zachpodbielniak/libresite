@@ -1,0 +1,11 @@
+/* areas/address-band: the supplied address, hours and towns in one band
+ * (Nosotros). Layout only. */
+.areas--address-band .areas__band { display: grid; gap: var(--space-6); }
+.areas--address-band .areas__place { display: grid; gap: var(--space-5); margin: 0; }
+.areas--address-band .areas__place dt { font-size: var(--text-1); font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted-fg); }
+.areas--address-band .areas__place dd { margin: var(--space-1) 0 0; font-size: var(--text-4); }
+.areas--address-band .areas__town:not(:last-child)::after { content: ", "; }
+@container (min-width: 52rem) {
+	.areas--address-band .areas__band { grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); gap: var(--space-8); align-items: start; }
+	.areas--address-band .areas__place { grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); }
+}
