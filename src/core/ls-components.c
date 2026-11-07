@@ -8150,6 +8150,58 @@ quote_href(JsonObject *plan, JsonObject *pages){
 	return NULL;
 }
 
+/* json_node_copy() only takes another reference on objects and arrays, so
+ * inserting a section through that copy would change the caller's pages.
+ * Containers are copied; scalar values are immutable and shared. */
+static JsonNode *
+duplicate_node(JsonNode *node){
+	JsonNode *copy;
+	if (node == NULL)
+		return NULL;
+	if (JSON_NODE_HOLDS_OBJECT(node)) {
+		JsonObject *object = json_node_get_object(node);
+		JsonObject *out = json_object_new();
+		GList *names = object != NULL ? json_object_get_members(object) : NULL;
+		GList *item;
+		copy = json_node_new(JSON_NODE_OBJECT);
+		for (item = names; item != NULL; item = item->next) {
+			JsonNode *child = json_object_get_member(object, item->data);
+			if (child != NULL)
+				json_object_set_member(out, item->data, duplicate_node(child));
+		}
+		g_list_free(names);
+		json_node_take_object(copy, out);
+		return copy;
+	}
+	if (JSON_NODE_HOLDS_ARRAY(node)) {
+		JsonArray *array = json_node_get_array(node);
+		JsonArray *out = json_array_new();
+		guint i;
+		guint n = array != NULL ? json_array_get_length(array) : 0;
+		copy = json_node_new(JSON_NODE_ARRAY);
+		for (i = 0; i < n; i++)
+			json_array_add_element(out, duplicate_node(json_array_get_element(array, i)));
+		json_node_take_array(copy, out);
+		return copy;
+	}
+	return json_node_copy(node);
+}
+
+/* A deep copy of every page specification. The caller still owns @pages. */
+static JsonObject *
+copy_page_specs(JsonObject *pages){
+	JsonObject *copy = json_object_new();
+	GList *names = json_object_get_members(pages);
+	GList *item;
+	for (item = names; item != NULL; item = item->next) {
+		JsonNode *node = json_object_get_member(pages, item->data);
+		if (node != NULL)
+			json_object_set_member(copy, item->data, duplicate_node(node));
+	}
+	g_list_free(names);
+	return copy;
+}
+
 /* A booking, contact or visit page outranks a name that merely contains
  * those letters. Zero means leave the page alone. */
 static gint
@@ -8176,7 +8228,6 @@ static JsonObject *
 pages_with_booking_calendar(JsonObject *plan, JsonObject *pages){
 	JsonArray *planned = member_array(plan, "pages");
 	JsonObject *copy;
-	GList *names, *item;
 	const gchar *target = NULL;
 	gint best = 0;
 	guint i;
@@ -8211,14 +8262,7 @@ pages_with_booking_calendar(JsonObject *plan, JsonObject *pages){
 	}
 	if (target == NULL)
 		return json_object_ref(pages);
-	copy = json_object_new();
-	names = json_object_get_members(pages);
-	for (item = names; item != NULL; item = item->next) {
-		JsonNode *node = json_object_get_member(pages, item->data);
-		if (node != NULL)
-			json_object_set_member(copy, item->data, json_node_copy(node));
-	}
-	g_list_free(names);
+	copy = copy_page_specs(pages);
 	{
 		JsonNode *node = json_object_get_member(copy, target);
 		JsonObject *page = node != NULL && JSON_NODE_HOLDS_OBJECT(node) ? json_node_get_object(node) : NULL;
@@ -8256,15 +8300,13 @@ supplied_form_score(JsonObject *entry){
 /* Give a site with a supplied form one form section when no page has one, at
  * its most relevant page: the model may leave it out, and then visitors have
  * no way to write. The words are the builder's; the target and fields are the
- * supplied form's. Copy the page specifications as the calendar does. */
+ * supplied form's. Copy the specifications only when inserting, the same way
+ * the calendar does: the caller and the checkpoint still own their originals. */
 static JsonObject *
 pages_with_supplied_form(JsonObject *plan, JsonObject *pages){
 	JsonArray *planned = member_array(plan, "pages");
 	JsonObject *form = member_object(plan, "form");
 	JsonObject *copy;
-	g_autoptr(JsonNode) source = NULL;
-	g_autoptr(JsonNode) parsed = NULL;
-	g_autofree gchar *encoded = NULL;
 	const gchar *target = NULL;
 	gint best = 0;
 	guint i;
@@ -8288,6 +8330,7 @@ pages_with_supplied_form(JsonObject *plan, JsonObject *pages){
 			if (section != NULL && g_strcmp0(ls_string(section, "component"), "form") == 0)
 				return json_object_ref(pages);
 		}
+		/* A full page cannot take another section; try the next candidate. */
 		if (sections == NULL || json_array_get_length(sections) >= MAX_SECTIONS)
 			continue;
 		score = supplied_form_score(entry);
@@ -8298,11 +8341,7 @@ pages_with_supplied_form(JsonObject *plan, JsonObject *pages){
 	}
 	if (target == NULL)
 		return json_object_ref(pages);
-	source = json_node_new(JSON_NODE_OBJECT);
-	json_node_set_object(source, pages);
-	encoded = ls_json_encode(source);
-	parsed = ls_json_parse(encoded, NULL);
-	copy = json_object_ref(json_node_get_object(parsed));
+	copy = copy_page_specs(pages);
 	{
 		JsonNode *node = json_object_get_member(copy, target);
 		JsonObject *page = node != NULL && JSON_NODE_HOLDS_OBJECT(node) ? json_node_get_object(node) : NULL;

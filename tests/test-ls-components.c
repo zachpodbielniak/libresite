@@ -2593,14 +2593,16 @@ test_supplied_form_default_page(void){
 	JsonArray *planned = json_object_get_array_member(root, "pages");
 	const gchar *contact;
 	json_object_set_member(root, "form", json(
-		"{'action':'/api/v1/sites/harbor/enquiries','fields':["
+		"{'action':'/api/v1/sites/harbor/enquiries','honeypot':'website','fields':["
 		"{'name':'first-name','label':'First name','type':'text','required':true},"
 		"{'name':'message','label':'Message','type':'textarea','required':true}]}"));
 	json_object_set_member(root, "booking", json("{'href':'/book'}"));
 	json_array_add_element(planned, json("{'path':'contact.html','kind':'contact','title':'Contact',"
 		"'description':'Reach us and choose a time.','brief':'Contact'}"));
+	/* The model kept the calendar and dropped the enquiry form. */
 	json_object_set_member(pages, "contact.html", json("{'path':'contact.html',"
-		"'sections':[{'component':'page-header','content':{'heading':'Contact and quote requests'}}]}"));
+		"'sections':[{'component':'page-header','content':{'heading':'Contact and quote requests'}},"
+		"{'component':'booking-calendar','variant':'month','content':{'heading':'Choose a time'}}]}"));
 	/* The start page's form is the only one; without it no page has a form. */
 	json_object_set_member(pages, "start.html", json("{'path':'start.html',"
 		"'sections':[{'component':'page-header','content':{'heading':'Start'}}]}"));
@@ -2608,20 +2610,72 @@ test_supplied_form_default_page(void){
 	contact = file_content(bundle, "contact.html");
 	contains(contact, "data-endpoint-form");
 	contains(contact, "action=\"/api/v1/sites/harbor/enquiries\"");
+	contains(contact, ">Send a message");
+	contains(contact, ">Send</button>");
+	contains(contact, "name=\"website\"");
 	contains(contact, ">First name");
-	contains(contact, "class=\"block block--booking-calendar");
+	contains(contact, ">Choose a time");
+	g_assert_cmpuint(occurrences(contact, "class=\"block block--booking-calendar"), ==, 1);
+	g_assert_true(strstr(contact, "Choose a time") < strstr(contact, "Send a message"));
 	lacks(file_content(bundle, "visit.html"), "data-endpoint-form");
 	lacks(file_content(bundle, "index.html"), "data-endpoint-form");
 	/* The quote action leads to the form it placed. */
 	contains(file_content(bundle, "index.html"), "href=\"contact.html#");
 	/* Composition did not change the caller's page specification. */
 	g_assert_cmpuint(json_array_get_length(json_object_get_array_member(
-		json_node_get_object(json_object_get_member(pages, "contact.html")), "sections")), ==, 1);
+		json_node_get_object(json_object_get_member(pages, "contact.html")), "sections")), ==, 2);
 	/* With the start page's own form back, contact gets no second one. */
 	json_object_set_member(pages, "start.html", load("start.json"));
 	kept = compose_bundle(components, plan, pages);
 	lacks(file_content(kept, "contact.html"), "data-endpoint-form");
 	contains(file_content(kept, "start.html"), "data-endpoint-form");
+}
+
+/* A full contact page cannot grow, so the form lands on the visit page.
+ * When that page is full too, a page of kind form still can. Nothing here
+ * changes the caller's specifications. */
+static void
+test_supplied_form_placement(void){
+	g_autoptr(LsComponents) components = library();
+	g_autoptr(JsonNode) plan = load("plan.json");
+	g_autoptr(JsonObject) pages = fixture_pages();
+	g_autoptr(JsonNode) bundle = NULL;
+	JsonObject *root = json_node_get_object(plan);
+	JsonArray *planned = json_object_get_array_member(root, "pages");
+	JsonArray *contact_sections;
+	JsonArray *visit_sections;
+	guint n;
+	json_object_set_member(root, "form", json(
+		"{'action':'/api/v1/sites/harbor/enquiries','fields':["
+		"{'name':'message','label':'Message','type':'textarea','required':true}]}"));
+	json_array_add_element(planned, json("{'path':'contact.html','kind':'contact','title':'Contact',"
+		"'description':'Reach us.','brief':'Contact'}"));
+	json_object_set_member(pages, "contact.html", json("{'path':'contact.html',"
+		"'sections':[{'component':'page-header','content':{'heading':'Contact'}}]}"));
+	json_object_set_member(pages, "start.html", json("{'path':'start.html',"
+		"'sections':[{'component':'page-header','content':{'heading':'Start'}}]}"));
+	contact_sections = json_object_get_array_member(
+		json_node_get_object(json_object_get_member(pages, "contact.html")), "sections");
+	for (n = json_array_get_length(contact_sections); n < 16; n++)
+		json_array_add_element(contact_sections, json("{'component':'text','content':{'heading':'Extra note',"
+			"'body':'A short note.'}}"));
+	bundle = compose_bundle(components, plan, pages);
+	contains(file_content(bundle, "visit.html"), "data-endpoint-form");
+	contains(file_content(bundle, "visit.html"), ">Send a message");
+	lacks(file_content(bundle, "contact.html"), "data-endpoint-form");
+	lacks(file_content(bundle, "start.html"), "data-endpoint-form");
+	g_assert_cmpuint(json_array_get_length(contact_sections), ==, 16);
+	g_clear_pointer(&bundle, json_node_unref);
+	visit_sections = json_object_get_array_member(
+		json_node_get_object(json_object_get_member(pages, "visit.html")), "sections");
+	for (n = json_array_get_length(visit_sections); n < 16; n++)
+		json_array_add_element(visit_sections, json("{'component':'text','content':{'heading':'Extra note',"
+			"'body':'A short note.'}}"));
+	bundle = compose_bundle(components, plan, pages);
+	contains(file_content(bundle, "start.html"), "data-endpoint-form");
+	lacks(file_content(bundle, "visit.html"), "data-endpoint-form");
+	lacks(file_content(bundle, "contact.html"), "data-endpoint-form");
+	g_assert_cmpuint(json_array_get_length(visit_sections), ==, 16);
 }
 
 /* "facebook.html" contains the letters book, and a full visit page cannot
@@ -3044,6 +3098,7 @@ main(int argc, char **argv){
 	g_test_add_func("/components/booking-calendar-default-page", test_booking_calendar_default_page);
 	g_test_add_func("/components/booking-calendar-placement", test_booking_calendar_placement);
 	g_test_add_func("/components/supplied-form-default-page", test_supplied_form_default_page);
+	g_test_add_func("/components/supplied-form-placement", test_supplied_form_placement);
 	g_test_add_func("/components/footer-credit", test_footer_credit);
 	g_test_add_func("/components/missing-talk", test_missing_talk);
 	return g_test_run();
