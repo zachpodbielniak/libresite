@@ -549,7 +549,7 @@ text_entry(const gchar *path, const gchar *content){
 
 static gboolean
 editor_apply(LsEditor *self, const gchar *project, const gchar *request,
-	gboolean replace_form, JsonObject *form, gchar **summary,
+	gboolean replace_form, JsonObject *form, const gchar *headline_before, const gchar *headline_after, gchar **summary,
 	gchar **commit, GCancellable *cancellable, GError **error){
 	g_autofree gchar *absolute = NULL, *record_path = NULL, *record_text = NULL, *lock_path = NULL;
 	g_autofree gchar *outlines_path = NULL, *outlines_text = NULL, *new_outlines_text = NULL;
@@ -574,7 +574,7 @@ editor_apply(LsEditor *self, const gchar *project, const gchar *request,
 	gboolean okay = FALSE, touched = FALSE;
 	guint i;
 	g_return_val_if_fail(LS_IS_EDITOR(self), FALSE);
-	g_return_val_if_fail(project != NULL && (replace_form || request != NULL), FALSE);
+	g_return_val_if_fail(project != NULL && (replace_form || headline_after != NULL || request != NULL), FALSE);
 	g_return_val_if_fail(error == NULL || *error == NULL, FALSE);
 	/* A bad form is refused before the site is read or locked. NULL removes
 	 * the supplied form; that is not a form object to check. */
@@ -582,7 +582,13 @@ editor_apply(LsEditor *self, const gchar *project, const gchar *request,
 		g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID, ls_form_requirements());
 		return FALSE;
 	}
-	if (!replace_form && (*request == '\0' || strspn(request, " \t\r\n") == strlen(request) || strlen(request) > 4000)) {
+	if (headline_after != NULL && (headline_before == NULL || !*headline_before || !*headline_after ||
+		!g_utf8_validate(headline_after, -1, NULL) || strlen(headline_after) > 500 ||
+		strpbrk(headline_after, "<>{}`\r\n") != NULL)) {
+		g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID, "The headline needs plain UTF-8 text of 1 to 500 bytes");
+		return FALSE;
+	}
+	if (!replace_form && headline_after == NULL && (*request == '\0' || strspn(request, " \t\r\n") == strlen(request) || strlen(request) > 4000)) {
 		g_set_error_literal(error, LS_ERROR, LS_ERROR_INVALID, "The change request must be 1 to 4000 characters");
 		return FALSE;
 	}
@@ -693,7 +699,41 @@ editor_apply(LsEditor *self, const gchar *project, const gchar *request,
 	if (components == NULL)
 		goto out;
 	base_url = site_base_url(files);
-	if (replace_form) {
+	if (headline_after != NULL) {
+		g_autoptr(JsonNode) page = NULL, answer = json_node_new(JSON_NODE_OBJECT);
+		g_autofree gchar *text = NULL;
+		JsonObject *root = json_object_new();
+		JsonArray *sections, *pages = json_array_new();
+		JsonObject *spec, *content;
+		guint found = 0;
+		page = deep_copy(json_object_get_member(old_pages, "index.html"));
+		spec = page != NULL && JSON_NODE_HOLDS_OBJECT(page) ? json_node_get_object(page) : NULL;
+		sections = member_array(spec, "sections");
+		for (i = 0; sections != NULL && i < json_array_get_length(sections); i++) {
+			JsonObject *section = json_array_get_object_element(sections, i);
+			content = member_object(section, "content");
+			if (g_strcmp0(ls_string(content, "heading"), headline_before) == 0) {
+				json_object_set_string_member(content, "heading", headline_after);
+				found++;
+			}
+		}
+		if (found != 1) {
+			g_set_error_literal(error, LS_ERROR, LS_ERROR_VALIDATION,
+				"The saved home page needs one matching headline");
+			json_object_unref(root);
+			json_array_unref(pages);
+			goto out;
+		}
+		json_array_add_element(pages, g_steal_pointer(&page));
+		json_object_set_string_member(root, "summary", "Replace the home page headline");
+		json_object_set_array_member(root, "pages", pages);
+		json_node_take_object(answer, root);
+		text = ls_json_encode(answer);
+		if (!merge_answer(components, old_plan, old_pages,
+			signature_entry != NULL ? ls_string(signature_entry, "content") : NULL,
+			text, &edit, error))
+			goto out;
+	} else if (replace_form) {
 		g_autoptr(JsonNode) desired = deep_copy(old_plan);
 		/* Only this explicit caller operation changes the builder-owned form.
 		 * The caller's object stays untouched: the plan receives a private
@@ -1004,11 +1044,17 @@ out:
 gboolean
 ls_editor_apply(LsEditor *self, const gchar *project, const gchar *request, gchar **summary,
 	gchar **commit, GCancellable *cancellable, GError **error){
-	return editor_apply(self, project, request, FALSE, NULL, summary, commit, cancellable, error);
+	return editor_apply(self, project, request, FALSE, NULL, NULL, NULL, summary, commit, cancellable, error);
 }
 
 gboolean
 ls_editor_replace_form(LsEditor *self, const gchar *project, JsonObject *form, gchar **summary,
 	gchar **commit, GCancellable *cancellable, GError **error){
-	return editor_apply(self, project, NULL, TRUE, form, summary, commit, cancellable, error);
+	return editor_apply(self, project, NULL, TRUE, form, NULL, NULL, summary, commit, cancellable, error);
+}
+
+gboolean
+ls_editor_replace_headline(LsEditor *self, const gchar *project, const gchar *before, const gchar *after,
+	gchar **summary, gchar **commit, GCancellable *cancellable, GError **error){
+	return editor_apply(self, project, NULL, FALSE, NULL, before, after, summary, commit, cancellable, error);
 }
