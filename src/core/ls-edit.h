@@ -71,6 +71,25 @@ gboolean ls_editor_apply(LsEditor *self, const gchar *project, const gchar *requ
 gboolean ls_editor_replace_form(LsEditor *self, const gchar *project, JsonObject *form, gchar **summary,
 	gchar **commit, GCancellable *cancellable, GError **error);
 /**
+ * ls_editor_replace_headline:
+ * @self: an editor
+ * @project: a committed composed site, as for ls_editor_apply()
+ * @before: the current home page headline
+ * @after: the exact new headline text
+ * @summary: (out) (optional) (transfer full): one-line version note
+ * @commit: (out) (optional) (transfer full): new commit hash
+ * @cancellable: (nullable): cancellation token
+ * @error: return location for an error
+ *
+ * Replaces the matching home page heading in the saved page specification.
+ * Checks and recomposes the site without a model call. A missing or ambiguous
+ * heading is refused. The ordinary edit's clean-tree, hash, lock and rollback
+ * checks apply. FALSE without an error means no visible change.
+ * Returns: whether a new version was committed
+ */
+gboolean ls_editor_replace_headline(LsEditor *self, const gchar *project, const gchar *before, const gchar *after,
+	gchar **summary, gchar **commit, GCancellable *cancellable, GError **error);
+/**
  * ls_outlines_text:
  * @context: (transfer none): a finished composed build
  *
