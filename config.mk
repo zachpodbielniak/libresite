@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Configuration follows ai-glib/clawtilla's three-file build layout.
 PROJECT_NAME = libresite
-VERSION = 0.1.1
+VERSION = 0.1.0
 PREFIX ?= /usr/local
 BINDIR ?= $(PREFIX)/bin
 LIBDIR ?= $(PREFIX)/lib

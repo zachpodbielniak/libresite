@@ -239,7 +239,9 @@ document.querySelectorAll("[data-endpoint-form]").forEach(function (form) {
 		if (button) button.disabled = true;
 		clear();
 		say(form.getAttribute("data-sending"), null);
-		/* A form with a photo upload sends its files with the fields. */
+		/* A form with a photo upload sends its files with the fields.
+		 * The honeypot is inert, which keeps people out of it, and it is
+		 * not disabled, so FormData still posts a filled value. */
 		fetch(form.action, multipart ? {
 			method: "POST",
 			headers: { "Accept": "application/json" },
