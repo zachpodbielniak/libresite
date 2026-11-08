@@ -2125,6 +2125,8 @@ test_forms_use_controls(void){
 				g_error("%s/%s: the supplied radio group is not drawn", places[p][0], places[p][1]);
 			g_assert_null(field_of(home, "urgent"));
 			check_controls_labelled(places[p][1], strstr(home, "<form class=\"form__form quote-form"));
+			/* The quote form's honeypot is inert and still a named control. */
+			g_assert_nonnull(strstr(home, "<div class=\"form__trap\" aria-hidden=\"true\" inert><label>Leave this field empty <input type=\"text\" name=\"website\" tabindex=\"-1\" autocomplete=\"off\"></label></div>"));
 		}
 	}
 }

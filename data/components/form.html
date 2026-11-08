@@ -11,7 +11,7 @@
 {{/sent_call}}<a class="form__sent-again" href="#{{form_id}}" data-form-again>{{send_another_label}}</a></p>
 </div>
 {{/endpoint}}<form class="form__form" id="{{form_id}}" aria-labelledby="{{id}}-h"{{#local}} method="dialog" novalidate data-local-form data-download-name="{{download_name}}" data-error-required="{{error_required}}" data-error-invalid="{{error_invalid}}" data-error-summary="{{error_summary}}"{{/local}}{{#mailto}} action="{{target}}" method="post" enctype="text/plain" data-validate data-error-required="{{error_required}}" data-error-invalid="{{error_invalid}}" data-error-summary="{{error_summary}}"{{/mailto}}{{#endpoint}} action="{{target}}" method="post" data-endpoint-form data-sending="{{sending}}" data-failed="{{send_failed}}" data-error-invalid="{{error_invalid}}"{{#multipart}} enctype="multipart/form-data"{{/multipart}} data-validate data-error-required="{{error_required}}" data-error-summary="{{error_summary}}"{{/endpoint}}>
-{{{fields_html}}}{{#endpoint}}{{#honeypot}}<div class="form__trap" aria-hidden="true"><label>Leave this field empty <input type="text" name="{{honeypot}}" tabindex="-1" autocomplete="off"></label></div>
+{{{fields_html}}}{{#endpoint}}{{#honeypot}}<div class="form__trap" aria-hidden="true" inert><label>Leave this field empty <input type="text" name="{{honeypot}}" tabindex="-1" autocomplete="off"></label></div>
 {{/honeypot}}{{/endpoint}}<div class="form__summary" role="alert" data-form-summary hidden></div>
 <div class="form__actions"{{#local}} data-form-actions hidden{{/local}}>
 <button class="button" type="submit">{{submit}}</button>
