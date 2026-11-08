@@ -1885,6 +1885,9 @@ test_supplied_form(void){
 	contains(html, "<textarea id=");
 	contains(html, "name=\"message\" rows=\"5\" required maxlength=\"4000\"");
 	contains(html, "name=\"website\" tabindex=\"-1\" autocomplete=\"off\"");
+	/* The honeypot is out of reach: no focus, no click and nothing for a screen
+	 * reader to read out, not only an ARIA hint. */
+	contains(html, "<div class=\"form__trap\" aria-hidden=\"true\" inert>");
 	contains(html, "role=\"status\" data-form-status");
 	lacks(html, "invented");
 	lacks(html, "data-local-form");
@@ -1963,6 +1966,29 @@ occurrences(const gchar *text, const gchar *needle){
 	}
 	return n;
 }
+/* Every honeypot a template draws is out of reach: inert, so no visitor can
+ * focus it, click it or hear its label, not only an ARIA hint. */
+static void
+test_honeypots_inert(void){
+	g_autoptr(GDir) dir = g_dir_open("data/components", 0, NULL);
+	const gchar *name;
+	guint traps = 0;
+	g_assert_nonnull(dir);
+	while ((name = g_dir_read_name(dir)) != NULL) {
+		g_autofree gchar *path = NULL;
+		g_autofree gchar *text = NULL;
+		if (!g_str_has_suffix(name, ".html"))
+			continue;
+		path = g_build_filename("data/components", name, NULL);
+		g_assert_true(g_file_get_contents(path, &text, NULL, NULL));
+		g_test_message("%s", name);
+		traps += occurrences(text, "class=\"form__trap\"");
+		g_assert_cmpuint(occurrences(text, "class=\"form__trap\""), ==,
+			occurrences(text, "<div class=\"form__trap\" aria-hidden=\"true\" inert>"));
+	}
+	g_assert_cmpuint(traps, >=, 3);
+}
+
 
 /* A supplied booking page puts "Book online" in the action bar on every page,
  * beside the call and quote actions, and alone when neither is supplied. The
@@ -2614,6 +2640,7 @@ main(int argc, char **argv){
 	g_test_add_func("/components/address-breaks", test_address_breaks);
 	g_test_add_func("/components/accent-text", test_accent_text);
 	g_test_add_func("/components/supplied-form", test_supplied_form);
+	g_test_add_func("/components/honeypots-inert", test_honeypots_inert);
 	g_test_add_func("/components/contact-actions", test_contact_actions);
 	g_test_add_func("/components/booking-action", test_booking_action);
 	g_test_add_func("/components/booking-calendar", test_booking_calendar);
